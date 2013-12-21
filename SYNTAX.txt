@@ -1,0 +1,419 @@
+A specification for a new assembly script language [v0.05] -- Work in Progress
+=======================================================================================
+This document copyright Kroc Camen 2013
+Licenced under Creative Commons Attribution 3.0
+
+i.	Goals:
+=======================================================================================
+:: Accessible
+	The primary goal is to educate others and preserve code for the future.
+	The purpose of this new assembler language is to be readable, obvious, more
+	self-documenting and less cryptic than other syntaxes
+
+:: Flexible, Portable
+	Features are provided so that, when used properly, source code can be re-used,
+	re-ordered, modified, expanded and contracted with hopefully a minimum amount
+	of adjustment. In this regard, it goes further than any previous assembler
+
+:: Minimal
+	Effort has been made to use a concise vocabulary, to work with the best
+	assumptions under doubt and to not duplicate functionality across multiple
+	features
+
+It's important to note that source compatibility with existing assemblers is *not* a
+goal. Most assemblers are very good but fall short in a few areas that cannot be
+overcome without a new, clean language design.
+
+
+1.	Expressions:
+=======================================================================================
+In the format descriptors given throughout this document, the term "<expr>" can
+be substituted for a Number, a Label, a Variable, a Property or a calculation of any
+combination using the Operators, to produce a value.
+
+1.1	Numbers
+---------------------------------------------------------------------------------------
+Decimal number: 	1
+Binary number: 		%00000001
+Hexadecimal (8-bit):	$01
+Hexadecimal (16-bit):	$0001
+...
+
+1.2	Operators
+---------------------------------------------------------------------------------------
+The standard operators are supported as `+` add, `-` subtract, `*` multiply,
+`/` divide, `^` power & `MOD` modulus.
+
+&, AND
+|, OR
+<<
+>>
+
+A final special operator `x` is supported. This repeats the preceding value by the
+value on the right hand side. For example, the following:
+
+```
+DATA $80 x 6
+```
+
+Would insert 6 bytes of $80
+
+1.3	Variables
+---------------------------------------------------------------------------------------
+Format:
+	SET !<variableName> <expr>
+	
+A variable is name-associated value that you can choose to change later. You would use
+variables to associate commonly used values with friendlier names so as to make the
+code more readable and to allow changing a common value quickly throughout the program.
+
+All variables are prefixed with an exclamation point any place where they appear in
+the program. Variables are created and updated using the SET directive:
+
+```
+SET !SMS_SOUND_PORT $7F
+out (!SMS_SOUND_PORT), a
+```
+
+1.4	Labels
+---------------------------------------------------------------------------------------
+Format:
+	:<labelName>
+
+A label is a little like a variable, however the value assigned is a memory
+address based on where in your code it goes. It allows you to refer to points in code
+without using the real hexadecimal address (which will be calculated for you).
+
+```
+:infiniteLoop
+	nop
+	jr :infiniteLoop
+```
+
+TODO: sub-labels
+...
+
+1.5	Properties
+---------------------------------------------------------------------------------------
+Format:
+	!<variableName>.hi|lo
+	:<labelName>.hi|lo|bank|<sublabelName>
+	:<tableName>.hi|lo|bank|size|<rowIndexName>
+	#<structureName>.size|<propertyName>
+	:<objectName>.hi|lo|bank|size|<propertyName>
+
+A property is a means of extracting some sub-component of a Label, Variable or
+Structure/Object.
+
+In an expression you can retrieve the high-order or low-order bytes of the 16-bit
+value behind a Label or Variable using the `.hi` and `.lo` properties, respectively.
+
+```
+DATA !variable.hi, !variable.lo, :label.hi, :label.lo
+```
+
+The `.bank` property retrieves the bank number of where the Label resides.
+(see section 3, "Banks & Slots")
+
+```
+SET !labelBank :label.bank
+```
+
+TODO: Explain sub-labels
+TODO: Explain structure/object properties
+...
+
+2.6	Comments
+---------------------------------------------------------------------------------------
+...
+
+3.	Banks & Slots
+=======================================================================================
+Format:
+	BANK <expr>[, <expr> ...] [SLOT <expr> [, <expr> ...]]
+
+The Master System can address 64 KB of memory which is mapped into different 
+configurable slots. Since a cartridge may contain more than 64 KB (typically 256 KB
+or 512 KB), the contents of the cartridge can be "paged" into the slots in memory in
+16 KB chunks known as "banks".
+
+Here's a map of the Master System's memory as seen by the Z80 processor.
+
+	$FFFF	+-----------------+
+	        | RAM (mirror)    |
+	$E000	+-----------------+
+	        | RAM             | 8 KB
+	$C000	+-----------------+
+		|                 |
+		| SLOT 2          | 16 KB
+		|                 |
+	$8000	+-----------------+
+		|                 |
+		| SLOT 1          | 16 KB
+		|                 |
+	$4000	+-----------------+
+		|                 |
+		| SLOT 0          | 15 KB
+	$0400	+ - - - - - - - - +
+	$0000	+-----------------+ 1 KB
+
+It's important to note that the first 1 KB of memory is *always* paged in to the first
+1 KB of the cartridge, regardless of which bank in the cartridge slot 0 is assigned to.
+That means that $0000-$03FF in the memory is always mapped to $0000-$03FF in the ROM.
+
+The `BANK` directive tells the assembler which bank of the cartridge the following
+code is to be assembled into and automatically sets the origin to $0000 -- the start
+of the bank.
+
+In its simplest form just state the bank number, the slot is assumed to be 0.
+
+```
+BANK 0
+```
+
+You can also specify the slot number explicitly:
+
+```
+BANK 5 SLOT 1
+```
+
+This will assemble the code as if it is located between $4000-$7FFF even though it is
+positioned at $10000-$13FFF in the ROM.
+
+An error will occur if the assembler overflows the 16 KB limit of the bank.
+
+If you are assembling a large amount of code or data that is bigger than 16 KB you may
+not want to manage the boundary line manually as this is inflexible. Instead you can
+specify more than one bank number (separated by commas) and the data will overflow
+from one bank into the next automatically, i.e.
+
+```
+BANK 10, 11, 12
+```
+
+When the slot number is not specified it will begin at 0 and increase with each
+automatic bank change until it reaches 2, before restarting back at 0.
+
+You can specify a slot number which will be used for each bank, or a series of slot
+numbers which will be used in order, e.g.
+
+```
+BANK 10, 11, 12 SLOT 2
+BANK 3, 4, 5, 6 SLOT 0, 1, 0, 1
+```
+
+If no `BANK` declaration exists before the first line of assembled code,
+`BANK 0 SLOT 0` will be assumed.
+
+TODO: Bank map
+...
+
+3.1	Setting the Assembly Point
+---------------------------------------------------------------------------------------
+Format:
+	AT <expr>
+
+If you need to place a piece of code or data starting in a particular location within
+a bank the `AT` statement specifies an offset address from the beginning of the bank
+to the desired starting point. In other assemblers this is usually known as `ORG`.
+
+```
+BANK 5		;bank 5 begins at $10000
+AT $2000	;begin assembling at $12000
+```
+
+
+#.	Data:
+=======================================================================================
+#.#.	Data statements
+---------------------------------------------------------------------------------------
+Format:
+	DATA <expr>[, <expr> ...]
+
+The data statement assembles numbers and text into the output file. It is used for
+storing non-code data in the output ROM such as graphics, text and sound.
+
+The data statement accepts one or more expressions separated by commas.
+
+```
+DATA $00, $FF, $00FF, $FF00, "STRING", :label, !variable
+```
+
+It's important to note that 16-bit numbers are stored in little-endian format, that is
+the low-order byte is first and the hi-order byte second, therefore `$1234` would be
+outputted as `$34, $12`. This is the format understood by the Master System.
+
+#.#.	Filling Space
+---------------------------------------------------------------------------------------
+Format:
+	FILL [BINARY] <expr>[, <expr> ...]
+
+Fills unused space from the point of the declaration onwards with the given value,
+string or binary file. The filling is done in a repeating background fashion so that
+it will appear as if the assembled code/data has been placed over the top of an area
+previously filled with the `FILL` value.
+
+```
+FILL $FF
+FILL $00, $80, $FF
+FILL "Copyright (C) SEGA"
+FILL BINARY "filename.bin"
+```
+
+#.#.	ASCII Maps
+---------------------------------------------------------------------------------------
+...
+
+
+#.	Includes:
+=======================================================================================
+Format:
+	INCLUDE [BINARY] <expr> [START <expr> [LENGTH <expr>|STOP <expr>]]
+...
+
+
+#.	Program Flow:
+=======================================================================================
+#.#	Anonymous Labels
+---------------------------------------------------------------------------------------
+...
+
+#.#.	Logic
+---------------------------------------------------------------------------------------
+Format:
+	IF [NOT] [<expr>|SET !<variableName>|EXISTS <filename>]
+		<code>
+	[ELSE IF <expr>
+		<code> ...]
+	[ELSE
+		<code>]
+	END IF
+
+TODO: "EXIT IF"
+...
+
+#.#.	Loops
+---------------------------------------------------------------------------------------
+Format:
+	BEGIN LOOP [<expr>]
+		<code>
+		[EXIT LOOP]
+	END LOOP
+...
+
+
+#.	Sections:
+=======================================================================================
+Format:
+	BEGIN SECTION :<sectionName>
+		<code>
+	END SECTION
+
+A SECTION defines a standard label, but with an additional `.size` property that will
+give the number of bytes in the section *after* assembly. This will allow you to
+determine how large a block of code/data is, and to include this value in your code.
+
+
+#.	Macros & Functions:
+=======================================================================================
+#.#	Macros
+---------------------------------------------------------------------------------------
+Format:
+	BEGIN MACRO @<macroName> [ARGS !<variableName>[, !<variableName> ...]]
+		<code>
+	END MACRO
+
+TODO: "SHIFT", variable arguments, "NARGS"
+TODO: "EXIT MACRO"
+...
+
+#.#	Functions
+---------------------------------------------------------------------------------------
+Format:
+	BEGIN FUNCTION ?<functionName> [ARGS !<variableName>[, !<variableName> ...]]
+		<code>
+		SET ?<functionName> <expr>
+	END FUNCTION
+
+A function is similar to a macro but is used to calculate values at expression points,
+rather than inserting whole lines or blocks of code.
+
+Since the purpose of a function is to calculate and return a value, functions cannot
+contain assembly code and can only use these statements:
+
+BEGIN / END LOOP, EXIT IF / FUNCTION / LOOP, IF / ELSE / ELSE IF / END IF, SET
+
+
+TODO: "EXIT FUNCTION"
+...
+
+Format:
+	(?<functionName> [<expr>[, <expr> ...]])
+
+```
+DATA $AA, (?functionName $10, $20, $30), $BB, $CC
+```
+
+...
+
+
+#.	Arrays:
+=======================================================================================
+Format:
+	ARRAY :<arrayName> DATA <expr>[, <expr> ...]
+
+An array is much the same as a DATA statement in that it lets you define a list of
+numbers, but has the added benefit of defining a size property that will give you the
+length of the array.
+
+```
+ARRAY :arrayName DATA 0, 1, 2, 3	;`:arrayName.size` is 4
+```
+
+
+#.	Objects:
+=======================================================================================
+Format:
+	BEGIN OBJECT #<objectName>
+		.<propertyName>	BYTE|WORD [x <expr>]
+		.<propertyName> OBJECT #<objectName>
+		...
+	END OBJECT
+
+TODO: Using object properties
+...
+
+#.#.	Creating Structures
+---------------------------------------------------------------------------------------
+Format:
+	BEGIN STRUCT :<structureName> [USE OBJECT #<objectName>]
+		DATA <expr>[, <expr> ...]
+		 ... |
+		SET .<propertyName> <expr>
+		 ...
+	END STRUCT
+
+TODO: Using structure properties
+...
+
+
+#.	Data Tables:
+=======================================================================================
+Format:
+	BEGIN TABLE :<tableName>
+		ROW .<rowIndexName>
+		<data> ...
+		[ROW .<rowIndexName>
+		<data> ...]
+	END TABLE
+...
+
+
+#.	Memory Layout:
+=======================================================================================
+Format:
+	BEGIN ENUM [AT <expr>]
+		!<variableName>	[AT <expr>] BYTE|WORD [x <expr>]
+		!<variableName> [AT <expr>] OBJECT #<objectName>
+		...
+	END ENUM

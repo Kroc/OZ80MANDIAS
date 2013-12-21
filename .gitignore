@@ -1,0 +1,9 @@
+*
+!.gitignore
+!.gitattributes
+
+!CODE
+
+!OZ80MANDIAS.vbp
+!README.md
+!SYNTAX.txt

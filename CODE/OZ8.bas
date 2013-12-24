@@ -28,23 +28,26 @@ Private Const OZ80_KEYWORDS = "|" & OZ80_KEYWORD_SET & "|"
 
 Private Enum OZ80_CONTEXT
     UNKNOWN = 0
-    
-    KEYWORD = 10
-    EXPRESSION = 11
-    
-    LABEL = 100
-    VARIABLE = 101
-    MACRO = 102
-    FUNCT = 103
-    
     'When inside a string, i.e. `... "some text" ...`
-    QUOTED = 100
+    QUOTED = 1
     
-    KEYWORD_SET = 1000
+    LABEL = 10
+    VARIABLE = 11
+    MACRO = 12
+    FUNCT = 13
+    
+    EXPRESSION = 100
+    OPERAND = 101
+    NUMBER = 102
+    
+    KEYWORD = 1000
+    KEYWORD_SET = 1001
 End Enum
 #If False Then
-    Private UNKNOWN, KEYWORD, EXPRESSION, LABEL, MACRO, FUNCT, QUOTED, _
-            KEYWORD_SET
+    Private UNKNOWN, QUOTED, _
+            LABEL, VARIABLE, MACRO, FUNCT, _
+            EXPRESSION, OPERAND, NUMBER, _
+            KEYWORD, KEYWORD_SET
 #End If
 
 'Contexts can be nested (e.g. a label within calculation within a data statement), _
@@ -113,8 +116,34 @@ Private Function ProcessFile(ByVal FilePath As String) As OZ80_ERROR
             
             Case OZ80_CONTEXT.EXPRESSION: '--------------------------------------------
                 'An expression is anything that results in a value, i.e. a number, _
-                 a label/property, a calculation, &c.
+                 a label/property, a calculation, a function call &c.
+                 
+                'All expressions are a series of one or more operands separated by _
+                 operators. begin by reading the first operand
+                Call PushContext(OPERAND)
+                 
+                'TODO:
+                '* Operands
+                '* Operaters inbetween values
             
+            Case OZ80_CONTEXT.OPERAND: '-----------------------------------------------
+                'An operand is a singular value in a calculation. numbers, labels and _
+                 function calls are allowed and paranthesis (for nested expresssions), _
+                 but keywords are not allowed as an operand
+                
+                'TODO: Need to handle the following:
+                '* Paranethesis (nested expressions)
+                '* Function calls
+                '* Numbers, Labels
+                
+                GoSub ReadWord
+                
+            Case OZ80_CONTEXT.NUMBER: '------------------------------------------------
+                'TODO:
+                '* Decimal
+                '* Hexadecimal
+                '* Binary
+                
             Case OZ80_CONTEXT.LABEL: '-------------------------------------------------
                 'Label names must begin with ":", contain A-Z, 0-9, underscore and _
                  dash with the restriction that the first letter must be A-Z or an _
@@ -123,6 +152,8 @@ Private Function ProcessFile(ByVal FilePath As String) As OZ80_ERROR
                     Let ProcessFile = INVALID_LABEL: GoTo Finish
                 End If
                 Call PopContext
+                
+                'TODO: Sub-labels
             
             Case OZ80_CONTEXT.KEYWORD: '-----------------------------------------------
                 'Which keyword has been specified?

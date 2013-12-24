@@ -169,7 +169,15 @@ ReadWord:
 ReadChar:
     Dim Char As String * 1
     'Read a charcter. If the file ends, treat it as a remaining end of line
-    If EOF(FileNumber) = True Then Let Char = vbCr Else Get #FileNumber, , Char
+    If EOF(FileNumber) = True Then GoTo EndWord Else Get #FileNumber, , Char
+    
+    'Ignore whitespace and line-breaks prior to beginning a word
+    If Word = vbNullString Then
+        If IsWhitespace(Char) = True Then GoTo ReadChar
+        If IsEndOfLine(Char) = True Then GoTo ReadChar
+        'Is this a comment? (in which case don't end the word on spaces)
+        If Char = OZ80_SYNTAX_COMMENT Then Let IsComment = True
+    End If
     
     'If the line ends, so does the word
     If IsEndOfLine(Char) = True Then
@@ -179,11 +187,6 @@ ReadChar:
         If IsComment = True Then GoTo ReadWord
         'Otherwise return to the context processor with the word we've extracted
         GoTo EndWord
-    End If
-    
-    'Is this a comment? (in which case don't end the word on spaces)
-    If Word = vbNullString Then
-        If Char = OZ80_SYNTAX_COMMENT Then Let IsComment = True
     End If
     
     'If not a comment, end the word on a space instead of at the end of the line

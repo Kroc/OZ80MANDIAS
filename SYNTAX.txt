@@ -1,7 +1,8 @@
-A specification for a new assembly script language [v0.05] -- Work in Progress
 =======================================================================================
-This document copyright Kroc Camen 2013
-Licenced under Creative Commons Attribution 3.0
+OZ80MANDIAS: a Z80 assembler; Copyright (C) Kroc Camen, 2013
+Licenced under a Creative Commons 3.0 Attribution Licence
+--You may use and modify this code how you see fit as long as you give credit
+=======================================================================================
 
 i.	Goals:
 =======================================================================================
@@ -33,7 +34,7 @@ combination using the Operators, to produce a value.
 
 1.1	Numbers
 ---------------------------------------------------------------------------------------
-Decimal number: 	1
+Decimal number: 	1		(number above 255 are implicitly 16-bit)
 Binary number: 		%00000001
 Hexadecimal (8-bit):	$01
 Hexadecimal (16-bit):	$0001
@@ -99,11 +100,11 @@ Format:
 	!<variableName>.hi|lo
 	:<labelName>.hi|lo|bank|<sublabelName>
 	:<tableName>.hi|lo|bank|size|<rowIndexName>
-	#<structureName>.size|<propertyName>
+	#<objcet>.size|<propertyName>
 	:<objectName>.hi|lo|bank|size|<propertyName>
 
 A property is a means of extracting some sub-component of a Label, Variable or
-Structure/Object.
+Object.
 
 In an expression you can retrieve the high-order or low-order bytes of the 16-bit
 value behind a Label or Variable using the `.hi` and `.lo` properties, respectively.

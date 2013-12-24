@@ -12,5 +12,5 @@ Option Explicit
 'MAIN : "Look on my works ye Mighty, and despair!" _
  ======================================================================================
 Public Sub Main()
-    
+    Call OZ8.Assemble(App.Path & "\test.OZ8.asm")
 End Sub

@@ -100,14 +100,25 @@ Private Function ProcessFile(ByVal FilePath As String) As OZ80_ERROR
     Dim Word As String
     
     Do
-ProcessContext:
         'Check the current context to see what we should be doing with this information
         Select Case Context
             Case OZ80_CONTEXT.UNKNOWN: '-----------------------------------------------
                 'Lines can begin with whitespace, labels & keywords; _
                  parenthesis, variables and numbers are not allowed
                 GoSub ReadWord
-                GoTo ProcessContext
+                
+                Select Case True
+                    Case Word = vbNullString
+                        '
+                    Case Left$(Word, 1) = OZ80_SYNTAX_COMMENT
+                        '
+                    Case Left$(Word, 1) = OZ80_SYNTAX_LABEL
+                        Call PushContext(LABEL)
+                    Case Else
+                        'If a line does not begin with a comment, label or macro name _
+                        then it may only begin with a keyword
+                        Call PushContext(KEYWORD)
+                End Select
             
             Case OZ80_CONTEXT.COMMENT: '-----------------------------------------------
                 'Comments can contain any characters, but finish at the end of the line
@@ -149,6 +160,7 @@ ProcessContext:
                 Call PopContext
                 
         End Select
+        
     Loop While EOF(FileNumber) = False
     GoTo Finish
     
@@ -160,51 +172,24 @@ ReadChar:
     'If the file ends, treat it as a remaining end of line
     If EOF(FileNumber) = True Then Let Char = vbCr Else Get #FileNumber, , Char
     'If this is just a blank line, skip
-    ''If Word = vbNullString And IsEndOfLine(Char) = True Then Return
-    If IsEndOfLine(Char) = True Then Return
+    If IsEndOfLine(Char) = True Then GoTo EndWord
     
-    Select Case Context
-        Case OZ80_CONTEXT.UNKNOWN: '---------------------------------------------------
-            'Lines can begin with whitespace, labels & keywords; _
-             parenthesis, variables and numbers are not allowed
-            
-            'Ignore whitespace at the start of lines
-            If IsWhitespace(Char) = True Then GoTo ReadChar
-            
-            Select Case Char
-                Case OZ80_SYNTAX_COMMENT         'defining a comment
-                    Call PushContext(COMMENT)
-                Case OZ80_SYNTAX_LABEL           'defining a label
-                    Call PushContext(LABEL)
-                Case OZ80_SYNTAX_MACRO           'calling a macro
-                    Call PushContext(MACRO)
-                Case Else
-                    'If a line does not begin with a comment, label or macro name _
-                     then it may only begin with a keyword
-                    Call PushContext(KEYWORD)
-            End Select
-        
-        Case OZ80_CONTEXT.COMMENT: '---------------------------------------------------
-            'Comments can contain any characters, but finish at the end of the line
-            'this subroutine already handles automatic end of line termination, _
-             so we don't need to do anything explicit here
-        
-        Case OZ80_CONTEXT.LABEL, OZ80_CONTEXT.VARIABLE: '------------------------------
-            If IsWhitespace(Char) = True Then GoTo EndWord
-        
-        Case OZ80_CONTEXT.MACRO: '-----------------------------------------------------
-            
-        Case OZ80_CONTEXT.KEYWORD: '---------------------------------------------------
-            If IsWhitespace(Char) = True Then GoTo EndWord
-            
-    End Select
+    'Is this a comment? (in which case don't end the word on spaces)
+    If Word = vbNullString Then
+        If Char = OZ80_SYNTAX_COMMENT Then Call PushContext(COMMENT)
+    End If
     
-    If IsEndOfLine(Char) = True Then Return
+    'If not a comment, end the word on a space instead of at the end of the line
+    If Context <> COMMENT Then
+        If IsWhitespace(Char) = True Then GoTo EndWord
+    End If
+    
+    If IsEndOfLine(Char) = True Then GoTo EndWord
     Let Word = Word & Char
     GoTo ReadChar
 
 EndWord:
-    Log Word
+    If Word <> vbNullString Then Log Word
     Return
     
 Finish:
@@ -264,4 +249,8 @@ End Function
  ======================================================================================
 Private Property Get Context() As OZ80_CONTEXT
     Let Context = ContextStack(ContextPointer)
+End Property
+
+Private Property Let Context(NewContext As OZ80_CONTEXT)
+    Let ContextStack(ContextPointer) = NewContext
 End Property

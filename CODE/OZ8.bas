@@ -28,21 +28,22 @@ Private Const OZ80_KEYWORDS = "|" & OZ80_KEYWORD_SET & "|"
 
 Private Enum OZ80_CONTEXT
     UNKNOWN = 0
-    'Inside a comment
-    COMMENT = 1
     
-    KEYWORD = 2
-    LABEL = 3
-    VARIABLE = 4
-    MACRO = 5
+    KEYWORD = 10
+    EXPRESSION = 11
+    
+    LABEL = 100
+    VARIABLE = 101
+    MACRO = 102
+    FUNCT = 103
+    
     'When inside a string, i.e. `... "some text" ...`
-    
     QUOTED = 100
     
     KEYWORD_SET = 1000
 End Enum
 #If False Then
-    Private UNKNOWN, COMMENT, KEYWORD, LABEL, MACRO, QUOTED, _
+    Private UNKNOWN, KEYWORD, EXPRESSION, LABEL, MACRO, FUNCT, QUOTED, _
             KEYWORD_SET
 #End If
 
@@ -102,10 +103,6 @@ Private Function ProcessFile(ByVal FilePath As String) As OZ80_ERROR
                 GoSub ReadWord
                 
                 Select Case True
-                    Case Word = vbNullString
-                        '
-                    Case Left$(Word, 1) = OZ80_SYNTAX_COMMENT
-                        '
                     Case Left$(Word, 1) = OZ80_SYNTAX_LABEL
                         Call PushContext(LABEL)
                     Case Else
@@ -114,11 +111,9 @@ Private Function ProcessFile(ByVal FilePath As String) As OZ80_ERROR
                         Call PushContext(KEYWORD)
                 End Select
             
-            Case OZ80_CONTEXT.COMMENT: '-----------------------------------------------
-                'Comments can contain any characters, but finish at the end of the line
-                'We don't need to process comments any further once read, just leave _
-                 the comment context and continue
-                Call PopContext
+            Case OZ80_CONTEXT.EXPRESSION: '--------------------------------------------
+                'An expression is anything that results in a value, i.e. a number, _
+                 a label/property, a calculation, &c.
             
             Case OZ80_CONTEXT.LABEL: '-------------------------------------------------
                 'Label names must begin with ":", contain A-Z, 0-9, underscore and _

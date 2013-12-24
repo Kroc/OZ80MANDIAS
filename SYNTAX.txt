@@ -34,7 +34,7 @@ combination using the Operators, to produce a value.
 
 1.1	Numbers
 ---------------------------------------------------------------------------------------
-Decimal number: 	1		(number above 255 are implicitly 16-bit)
+Decimal number: 	1		(numbers above 255 are implicitly 16-bit)
 Binary number: 		%00000001
 Hexadecimal (8-bit):	$01
 Hexadecimal (16-bit):	$0001
@@ -91,10 +91,28 @@ without using the real hexadecimal address (which will be calculated for you).
 	jr :infiniteLoop
 ```
 
-TODO: sub-labels
-...
+1.5	Sub-Labels
+---------------------------------------------------------------------------------------
+Labels that begin with a dot are attached as properties to the last regular label
+defined, for example:
 
-1.5	Properties
+```
+:myRoutine
+	<code>
+	...
+.loop	<code>
+	...
+	jr .loop
+
+:aDifferentRoutine
+	jp :myRoutine.loop
+```
+
+Here the sub-label `.loop` is defined and recognised as `:myRoutine.loop`.
+Outside of the label `:myRoutine`, it is referred to via the full label name
+(to not confuse it with a potential `:aDifferentRoutine.loop`).
+
+1.6	Properties
 ---------------------------------------------------------------------------------------
 Format:
 	!<variableName>.hi|lo
@@ -120,15 +138,14 @@ The `.bank` property retrieves the bank number of where the Label resides.
 SET !labelBank :label.bank
 ```
 
-TODO: Explain sub-labels
 TODO: Explain structure/object properties
 ...
 
-2.6	Comments
+1.7	Comments
 ---------------------------------------------------------------------------------------
 ...
 
-3.	Banks & Slots
+2.	Banks & Slots
 =======================================================================================
 Format:
 	BANK <expr>[, <expr> ...] [SLOT <expr> [, <expr> ...]]
@@ -209,7 +226,7 @@ If no `BANK` declaration exists before the first line of assembled code,
 TODO: Bank map
 ...
 
-3.1	Setting the Assembly Point
+2.1	Setting the Assembly Point
 ---------------------------------------------------------------------------------------
 Format:
 	AT <expr>
@@ -260,6 +277,15 @@ FILL $00, $80, $FF
 FILL "Copyright (C) SEGA"
 FILL BINARY "filename.bin"
 ```
+
+
+#.	Strings:
+=======================================================================================
+...
+
+#.#.	Escape Sequences
+---------------------------------------------------------------------------------------
+...
 
 #.#.	ASCII Maps
 ---------------------------------------------------------------------------------------
@@ -418,3 +444,25 @@ Format:
 		!<variableName> [AT <expr>] OBJECT #<objectName>
 		...
 	END ENUM
+...
+
+
+#.	The `!SYSTEM` Variables:
+=======================================================================================
+A special variable `!SYSTEM` holds a number of pieces of information that the
+assembler updates as it progresses.
+
+:: `!SYSTEM.PC`
+	Gives the current assembly address (accounting for BANK and SLOT)
+	
+:: `!SYSTEM.PC.bank`
+	Gives the current bank number of the assembly point
+
+:: `!SYSTEM.PC.slot`
+	Gives the current slot number of the assembly point
+
+:: `!SYSTEM.TABLE.row`
+	Within a ROW definition, gives the index number of the row.
+	An error will occur if used outside of a ROW definition
+
+...

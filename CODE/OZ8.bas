@@ -24,6 +24,8 @@ Private Const OZ80_SYNTAX_NUMERIC = "0123456789-"
 Private Const OZ80_KEYWORD_SET = "SET"
 Private Const OZ80_KEYWORDS = "|" & OZ80_KEYWORD_SET & "|"
 
+'--------------------------------------------------------------------------------------
+
 Private Enum OZ80_CONTEXT
     UNKNOWN = 0
     'Inside a comment
@@ -48,6 +50,8 @@ End Enum
  so a stack is managed to handle the recursive nature
 Private ContextStack(0 To 255) As OZ80_CONTEXT
 Private ContextPointer As Long
+
+'--------------------------------------------------------------------------------------
 
 Public Enum OZ80_ERROR
     NOERROR = 0
@@ -158,23 +162,32 @@ Private Function ProcessFile(ByVal FilePath As String) As OZ80_ERROR
 ReadWord:
     Let Word = vbNullString
     Let EndOfLine = False
+    
+    Dim IsComment As Boolean
+    Let IsComment = False
+    
 ReadChar:
     Dim Char As String * 1
-    'If the file ends, treat it as a remaining end of line
+    'Read a charcter. If the file ends, treat it as a remaining end of line
     If EOF(FileNumber) = True Then Let Char = vbCr Else Get #FileNumber, , Char
-    'If this is just a blank line, skip
+    
+    'If the line ends, so does the word
     If IsEndOfLine(Char) = True Then
         Let EndOfLine = True
+        'If the 'word' was a comment, discard it and read the next word until we _
+         get something meaningful
+        If IsComment = True Then GoTo ReadWord
+        'Otherwise return to the context processor with the word we've extracted
         GoTo EndWord
     End If
     
     'Is this a comment? (in which case don't end the word on spaces)
     If Word = vbNullString Then
-        If Char = OZ80_SYNTAX_COMMENT Then Call PushContext(COMMENT)
+        If Char = OZ80_SYNTAX_COMMENT Then Let IsComment = True
     End If
     
     'If not a comment, end the word on a space instead of at the end of the line
-    If Context <> COMMENT Then
+    If IsComment = False Then
         If IsWhitespace(Char) = True Then GoTo EndWord
     End If
     
@@ -242,8 +255,4 @@ End Function
  ======================================================================================
 Private Property Get Context() As OZ80_CONTEXT
     Let Context = ContextStack(ContextPointer)
-End Property
-
-Private Property Let Context(NewContext As OZ80_CONTEXT)
-    Let ContextStack(ContextPointer) = NewContext
 End Property

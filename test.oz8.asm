@@ -2,4 +2,5 @@
 
 :A
 
-SET !a
+SET ;test
+!a

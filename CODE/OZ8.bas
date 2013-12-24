@@ -21,8 +21,8 @@ Private Const OZ80_SYNTAX_OBJECT = "#"
 Private Const OZ80_SYNTAX_ALPHA = "ABCDEFGHIJKLMNOPQRSTUVQXYZ_"
 Private Const OZ80_SYNTAX_NUMERIC = "0123456789-"
 
-Dim Keywords As New Dictionary
 Private Const OZ80_KEYWORD_SET = "SET"
+Private Const OZ80_KEYWORDS = "|" & OZ80_KEYWORD_SET & "|"
 
 Private Enum OZ80_CONTEXT
     UNKNOWN = 0
@@ -66,22 +66,11 @@ Public Function Assemble( _
 ) As OZ80_ERROR
     Log "OZ80MANDIAS"
     
-    'Populate the table of keywords that begin new statements
-    Call Keywords.RemoveAll
-    Dim Key As Variant
-    For Each Key In Array( _
-        OZ80_KEYWORD_SET, "BANK", "AT", "DATA", "FILL", "INCLUDE", "IF", "BEGIN", _
-        "EXIT" _
-    )
-        Call Keywords.Add(CStr(Key), CStr(Key))
-    Next Key
-    
     Erase ContextStack
     Let ContextPointer = 0
     
     Log ProcessFile(FilePath)
     
-    Call Keywords.RemoveAll
     Debug.Print
 End Function
 
@@ -98,6 +87,7 @@ Private Function ProcessFile(ByVal FilePath As String) As OZ80_ERROR
     
     'As we process characters we wait for a whole word or statement to build up
     Dim Word As String
+    Dim EndOfLine As Boolean
     
     Do
         'Check the current context to see what we should be doing with this information
@@ -167,12 +157,16 @@ Private Function ProcessFile(ByVal FilePath As String) As OZ80_ERROR
     '==================================================================================
 ReadWord:
     Let Word = vbNullString
+    Let EndOfLine = False
 ReadChar:
     Dim Char As String * 1
     'If the file ends, treat it as a remaining end of line
     If EOF(FileNumber) = True Then Let Char = vbCr Else Get #FileNumber, , Char
     'If this is just a blank line, skip
-    If IsEndOfLine(Char) = True Then GoTo EndWord
+    If IsEndOfLine(Char) = True Then
+        Let EndOfLine = True
+        GoTo EndWord
+    End If
     
     'Is this a comment? (in which case don't end the word on spaces)
     If Word = vbNullString Then
@@ -184,7 +178,6 @@ ReadChar:
         If IsWhitespace(Char) = True Then GoTo EndWord
     End If
     
-    If IsEndOfLine(Char) = True Then GoTo EndWord
     Let Word = Word & Char
     GoTo ReadChar
 

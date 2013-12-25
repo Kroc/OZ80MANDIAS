@@ -24,6 +24,17 @@ Private Const OZ80_SYNTAX_NUMERIC = "0123456789-"
 Private Const OZ80_KEYWORD_SET = "SET"
 Private Const OZ80_KEYWORDS = "|" & OZ80_KEYWORD_SET & "|"
 
+Private Const OZ80_OPERAND_ADD = "+"
+Private Const OZ80_OPERAND_SUB = "-"
+Private Const OZ80_OPERAND_MUL = "*"
+Private Const OZ80_OPERAND_DIV = "/"
+Private Const OZ80_OPERAND_POW = "^"
+
+Private Const OZ80_OPERANDS = _
+    "|" & OZ80_OPERAND_ADD & "|" & OZ80_OPERAND_SUB & "|" & OZ80_OPERAND_MUL & _
+    "|" & OZ80_OPERAND_DIV & "|" & OZ80_OPERAND_POW & "|"
+    
+
 '--------------------------------------------------------------------------------------
 
 Private Enum OZ80_CONTEXT
@@ -37,8 +48,6 @@ Private Enum OZ80_CONTEXT
     FUNCT = 13
     
     EXPRESSION = 100
-    OPERAND = 101
-    NUMBER = 102
     
     KEYWORD = 1000
     KEYWORD_SET = 1001
@@ -46,7 +55,7 @@ End Enum
 #If False Then
     Private UNKNOWN, QUOTED, _
             LABEL, VARIABLE, MACRO, FUNCT, _
-            EXPRESSION, OPERAND, NUMBER, _
+            EXPRESSION, _
             KEYWORD, KEYWORD_SET
 #End If
 
@@ -120,29 +129,25 @@ Private Function ProcessFile(ByVal FilePath As String) As OZ80_ERROR
                  
                 'All expressions are a series of one or more operands separated by _
                  operators. begin by reading the first operand
-                Call PushContext(OPERAND)
-                 
-                'TODO:
-                '* Operands
-                '* Operaters inbetween values
-            
-            Case OZ80_CONTEXT.OPERAND: '-----------------------------------------------
-                'An operand is a singular value in a calculation. numbers, labels and _
-                 function calls are allowed and paranthesis (for nested expresssions), _
-                 but keywords are not allowed as an operand
+'                'Call PushContext(OPERAND)
+                
+                GoSub ReadWord
                 
                 'TODO: Need to handle the following:
                 '* Paranethesis (nested expressions)
                 '* Function calls
                 '* Numbers, Labels
                 
-                GoSub ReadWord
+                Select Case True
+                    Case IsLabel(Word)
+                        Call PushContext(LABEL)
+                    Case Else
+                        'Not a recognised operand
+                End Select
                 
-            Case OZ80_CONTEXT.NUMBER: '------------------------------------------------
                 'TODO:
-                '* Decimal
-                '* Hexadecimal
-                '* Binary
+                '* Operands
+                '* Operaters inbetween values
                 
             Case OZ80_CONTEXT.LABEL: '-------------------------------------------------
                 'Label names must begin with ":", contain A-Z, 0-9, underscore and _
@@ -268,6 +273,24 @@ Private Function IsValidName(ByVal ItemName As String) As Boolean
     Let IsValidName = True
     If ItemName Like "?[!_A-Z]*" Then IsValidName = False: Exit Function
     If ItemName Like "??*[!A-Z_0-9-]*" Then IsValidName = False: Exit Function
+End Function
+
+'IsKeyword _
+ ======================================================================================
+Private Function IsKeyword(ByVal Word As String)
+    Let IsKeyword = (InStr(OZ80_KEYWORDS, "|" & Word & "|") > 0)
+End Function
+
+'IsOperator _
+ ======================================================================================
+Private Function IsOperator(ByVal Word As String) As Boolean
+    Let IsOperator = (InStr(OZ80_OPERATORS, "|" & Word & "|") > 0)
+End Function
+
+'IsLabel _
+ ======================================================================================
+Private Function IsLabel(ByVal Word As String) As Boolean
+    If Left$(Word, 1) = OZ8_SYNTAX_LABEL Then Let IsLabel = IsValidName(Word)
 End Function
 
 'Log _

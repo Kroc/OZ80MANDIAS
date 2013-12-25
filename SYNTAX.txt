@@ -43,7 +43,7 @@ Hexadecimal (16-bit):	$0001
 1.2	Operators
 ---------------------------------------------------------------------------------------
 The standard operators are supported as `+` add, `-` subtract, `*` multiply,
-`/` divide, `^` power & `MOD` modulus.
+`/` divide, `^` power & `\` modulus.
 
 &, AND
 |, OR

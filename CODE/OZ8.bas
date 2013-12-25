@@ -17,6 +17,8 @@ Private Const OZ80_SYNTAX_LABEL = ":"
 Private Const OZ80_SYNTAX_VARIABLE = "!"
 Private Const OZ80_SYNTAX_MACRO = "@"
 Private Const OZ80_SYNTAX_OBJECT = "#"
+Private Const OZ80_SYNTAX_NUMBER_HEX = "$"
+Private Const OZ80_SYNTAX_NUMBER_BIN = "%"
 
 Private Const OZ80_SYNTAX_ALPHA = "ABCDEFGHIJKLMNOPQRSTUVQXYZ_"
 Private Const OZ80_SYNTAX_NUMERIC = "0123456789-"
@@ -29,10 +31,11 @@ Private Const OZ80_OPERAND_SUB = "-"
 Private Const OZ80_OPERAND_MUL = "*"
 Private Const OZ80_OPERAND_DIV = "/"
 Private Const OZ80_OPERAND_POW = "^"
+Private Const OZ80_OPERAND_MOD = "\"
 
-Private Const OZ80_OPERANDS = _
+Private Const OZ80_OPERATORS = _
     "|" & OZ80_OPERAND_ADD & "|" & OZ80_OPERAND_SUB & "|" & OZ80_OPERAND_MUL & _
-    "|" & OZ80_OPERAND_DIV & "|" & OZ80_OPERAND_POW & "|"
+    "|" & OZ80_OPERAND_DIV & "|" & OZ80_OPERAND_POW & "|" & OZ80_OPERAND_MOD & "|"
     
 
 '--------------------------------------------------------------------------------------
@@ -42,10 +45,11 @@ Private Enum OZ80_CONTEXT
     'When inside a string, i.e. `... "some text" ...`
     QUOTED = 1
     
-    LABEL = 10
-    VARIABLE = 11
-    MACRO = 12
-    FUNCT = 13
+    NUMBER = 10
+    LABEL = 11
+    VARIABLE = 12
+    MACRO = 13
+    FUNCT = 14
     
     EXPRESSION = 100
     
@@ -54,15 +58,10 @@ Private Enum OZ80_CONTEXT
 End Enum
 #If False Then
     Private UNKNOWN, QUOTED, _
-            LABEL, VARIABLE, MACRO, FUNCT, _
+            NUMBER, LABEL, VARIABLE, MACRO, FUNCT, _
             EXPRESSION, _
             KEYWORD, KEYWORD_SET
 #End If
-
-'Contexts can be nested (e.g. a label within calculation within a data statement), _
- so a stack is managed to handle the recursive nature
-Private ContextStack(0 To 255) As OZ80_CONTEXT
-Private ContextPointer As Long
 
 '--------------------------------------------------------------------------------------
 
@@ -72,6 +71,10 @@ Public Enum OZ80_ERROR
     INVALID_VARIABLE = 2
     UNKNOWN_KEYWORD = 3
 End Enum
+
+Private FileNumber As Integer
+Private Word As String
+Private Context As OZ80_CONTEXT
 
 '/// PUBLIC PROCEDURES ////////////////////////////////////////////////////////////////
 
@@ -83,9 +86,6 @@ Public Function Assemble( _
 ) As OZ80_ERROR
     Log "OZ80MANDIAS"
     
-    Erase ContextStack
-    Let ContextPointer = 0
-    
     Log ProcessFile(FilePath)
     
     Debug.Print
@@ -96,104 +96,77 @@ End Function
 'ProcessFile : Since files can be nested (with `INCLUDE`) make this process recursive _
  ======================================================================================
 Private Function ProcessFile(ByVal FilePath As String) As OZ80_ERROR
-    Dim FileNumber As Integer: Let FileNumber = FreeFile()
+    Let FileNumber = FreeFile()
     Open FilePath For Binary Access Read Lock Write As #FileNumber
     
     Log "Reading file: " & FilePath
     Log "Length: " & LOF(FileNumber) & " bytes"
     
-    'As we process characters we wait for a whole word or statement to build up
-    Dim Word As String
-    Dim EndOfLine As Boolean
-    
     Do
-        'Check the current context to see what we should be doing with this information
-        Select Case Context
-            Case OZ80_CONTEXT.UNKNOWN: '-----------------------------------------------
-                'Lines can begin with whitespace, labels & keywords; _
-                 parenthesis, variables and numbers are not allowed
-                GoSub ReadWord
-                
-                Select Case True
-                    Case Left$(Word, 1) = OZ80_SYNTAX_LABEL
-                        Call PushContext(LABEL)
-                    Case Else
-                        'If a line does not begin with a comment, label or macro name _
-                        then it may only begin with a keyword
-                        Call PushContext(KEYWORD)
-                End Select
-            
-            Case OZ80_CONTEXT.EXPRESSION: '--------------------------------------------
-                'An expression is anything that results in a value, i.e. a number, _
-                 a label/property, a calculation, a function call &c.
-                 
-                'All expressions are a series of one or more operands separated by _
-                 operators. begin by reading the first operand
-'                'Call PushContext(OPERAND)
-                
-                GoSub ReadWord
-                
-                'TODO: Need to handle the following:
-                '* Paranethesis (nested expressions)
-                '* Function calls
-                '* Numbers, Labels
-                
-                Select Case True
-                    Case IsLabel(Word)
-                        Call PushContext(LABEL)
-                    Case Else
-                        'Not a recognised operand
-                End Select
-                
-                'TODO:
-                '* Operands
-                '* Operaters inbetween values
-                
-            Case OZ80_CONTEXT.LABEL: '-------------------------------------------------
-                'Label names must begin with ":", contain A-Z, 0-9, underscore and _
-                 dash with the restriction that the first letter must be A-Z or an _
-                 underscore and not a numeral
-                If IsValidName(Word) = False Then
-                    Let ProcessFile = INVALID_LABEL: GoTo Finish
-                End If
-                Call PopContext
-                
-                'TODO: Sub-labels
-            
-            Case OZ80_CONTEXT.KEYWORD: '-----------------------------------------------
-                'Which keyword has been specified?
-                Select Case Word
-                    Case OZ80_KEYWORD_SET:      PushContext (KEYWORD_SET)
-                    Case Else
-                        'Unknown keyword!
-                        Let ProcessFile = UNKNOWN_KEYWORD: GoTo Finish
-                End Select
-            
-            Case OZ80_CONTEXT.KEYWORD_SET: '-------------------------------------------
-                'Format: _
-                        SET !<variableName> <expr>
-                
-                'Get the variable name
-                Call PushContext(VARIABLE)
-                GoSub ReadWord
-                
-                If IsValidName(Word) = False Then
-                    Let ProcessFile = INVALID_VARIABLE: GoTo Finish
-                End If
-                
-                Call PopContext
-                Call PopContext
-                
-        End Select
+        Call GetWord
+        If Word = vbNullString Then Exit Do
         
-    Loop While EOF(FileNumber) = False
-    GoTo Finish
+        Call ContextRoot
+    Loop
     
-    '==================================================================================
+    Close #FileNumber
+End Function
+
+'ContextRoot : The context at the start of a line (and not within a block) _
+ ======================================================================================
+Private Function ContextRoot() As OZ80_CONTEXT
+    'Lines can begin with labels & keywords; _
+     parenthesis, variables and numbers are not allowed
+     
+    Call GetWord
+    Select Case Context
+        Case OZ80_CONTEXT.LABEL
+            Call ContextLabel
+            
+        Case OZ80_CONTEXT.KEYWORD
+            Call ContextKeyword
+            
+        Case Else
+            
+    End Select
+End Function
+
+'ContextLabel _
+ ======================================================================================
+Private Function ContextLabel() As OZ80_CONTEXT
+    'Label names must begin with ":", contain A-Z, 0-9, underscore and _
+     dash with the restriction that the first letter must be A-Z or an _
+     underscore and not a numeral
+End Function
+
+'ContextKeyword _
+ ======================================================================================
+Private Function ContextKeyword() As OZ80_CONTEXT
+    Select Case Word
+        Case OZ80_KEYWORD_SET
+            'Format: _
+                SET !<variableName> <expr>
+    End Select
+End Function
+
+'ContextVariable _
+ ======================================================================================
+Private Function ContextVariable() As OZ80_CONTEXT
+    '
+End Function
+
+'ContextExpression _
+ ======================================================================================
+Private Function ContextExpression() As OZ80_CONTEXT
+    'An expression is anything that results in a value, i.e. a number, _
+     a label/property, a calculation, a function call &c.
+End Function
+
+'GetWord : Read the next unit of text from the file _
+ ======================================================================================
+Private Sub GetWord()
 ReadWord:
     Let Word = vbNullString
-    Let EndOfLine = False
-    
     Dim IsComment As Boolean
     Let IsComment = False
     
@@ -212,11 +185,10 @@ ReadChar:
     
     'If the line ends, so does the word
     If IsEndOfLine(Char) = True Then
-        Let EndOfLine = True
         'If the 'word' was a comment, discard it and read the next word until we _
          get something meaningful
         If IsComment = True Then GoTo ReadWord
-        'Otherwise return to the context processor with the word we've extracted
+        'Otherwise return to the context with the word we've extracted
         GoTo EndWord
     End If
     
@@ -229,26 +201,17 @@ ReadChar:
     GoTo ReadChar
 
 EndWord:
+    Select Case True
+        Case Left$(Word, 1) = OZ80_SYNTAX_LABEL: Let Context = LABEL
+        Case Left$(Word, 1) = OZ80_SYNTAX_VARIABLE: Let Context = VARIABLE
+        Case Left$(Word, 1) = OZ80_SYNTAX_MACRO: Let Context = MACRO
+        Case IsKeyword(Word): Let Context = KEYWORD
+        Case IsNumber(Word): Let Context = NUMBER
+        Case Else
+            Let Context = UNKNOWN
+    End Select
     If Word <> vbNullString Then Log Word
-    Return
-    
-Finish:
-    Close #FileNumber
-End Function
-
-'PushContext : Add a new context to the stack _
- ======================================================================================
-Private Sub PushContext(ByVal Context As OZ80_CONTEXT)
-    Let ContextPointer = ContextPointer + 1
-    Let ContextStack(ContextPointer) = Context
 End Sub
-
-'PopContext : End a context and return to the previous one _
- ======================================================================================
-Private Function PopContext() As OZ80_CONTEXT
-    Let ContextPointer = ContextPointer - 1
-    Let PopContext = ContextStack(ContextPointer)
-End Function
 
 'IsWhitespace : check for meaningless whitespace (space, tab) _
  ======================================================================================
@@ -290,21 +253,21 @@ End Function
 'IsLabel _
  ======================================================================================
 Private Function IsLabel(ByVal Word As String) As Boolean
-    If Left$(Word, 1) = OZ8_SYNTAX_LABEL Then Let IsLabel = IsValidName(Word)
+    If Left$(Word, 1) = OZ80_SYNTAX_LABEL Then Let IsLabel = True
+End Function
+
+'IsNumber _
+ ======================================================================================
+Private Function IsNumber(ByVal Word As String) As Boolean
+    If Left$(Word, 1) = OZ80_SYNTAX_NUMBER_HEX Then Let IsNumber = True: Exit Function
+    If Left$(Word, 1) = OZ80_SYNTAX_NUMBER_BIN Then Let IsNumber = True: Exit Function
+    Let IsNumber = Not (Word Like "*[!0-9]*")
 End Function
 
 'Log _
  ======================================================================================
 Private Function Log(ByVal Msg As String, Optional ByVal Depth As Long = -1)
-    If Depth = -1 Then Let Depth = ContextPointer
-    If Depth > 0 Then Debug.Print String(Depth - 1, vbTab);
+'    If Depth = -1 Then Let Depth = ContextPointer
+'    If Depth > 0 Then Debug.Print String(Depth - 1, vbTab);
     Debug.Print Msg
 End Function
-
-'/// PRIVATE PROPERTIES ///////////////////////////////////////////////////////////////
-
-'PROPERTY Context : Current syntax context (i.e. if we are in a macro, data &.c) _
- ======================================================================================
-Private Property Get Context() As OZ80_CONTEXT
-    Let Context = ContextStack(ContextPointer)
-End Property

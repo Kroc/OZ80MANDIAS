@@ -8,9 +8,11 @@ Option Compare Text
 '======================================================================================
 'MODULE :: OZ8
 
-'The assembler core code
+'This module parses the source text files and creates a stream of tokens in the _
+ assembler. The assembler then uses the token stream internally so that the _
+ expensive operation of walking the text files doesn't need to be done again
 
-'/// PRIVATE VARS /////////////////////////////////////////////////////////////////////
+'/// CONSTANTS ////////////////////////////////////////////////////////////////////////
 
 Private Const OZ80_SYNTAX_COMMENT = ";"
 Private Const OZ80_SYNTAX_LABEL = ":"
@@ -26,22 +28,22 @@ Private Const OZ80_SYNTAX_NUMERIC = "0123456789-"
 Private Const OZ80_KEYWORD_SET = "SET"
 Private Const OZ80_KEYWORDS = "|" & OZ80_KEYWORD_SET & "|"
 
-Private Const OZ80_OPERAND_ADD = "+"
-Private Const OZ80_OPERAND_SUB = "-"
-Private Const OZ80_OPERAND_MUL = "*"
-Private Const OZ80_OPERAND_DIV = "/"
-Private Const OZ80_OPERAND_POW = "^"
-Private Const OZ80_OPERAND_MOD = "\"
+Private Const OZ80_OPERATOR_ADD = "+"
+Private Const OZ80_OPERATOR_SUB = "-"
+Private Const OZ80_OPERATOR_MUL = "*"
+Private Const OZ80_OPERATOR_DIV = "/"
+Private Const OZ80_OPERATOR_POW = "^"
+Private Const OZ80_OPERATOR_MOD = "\"
 
 Private Const OZ80_OPERATORS = _
-    "|" & OZ80_OPERAND_ADD & "|" & OZ80_OPERAND_SUB & "|" & OZ80_OPERAND_MUL & _
-    "|" & OZ80_OPERAND_DIV & "|" & OZ80_OPERAND_POW & "|" & OZ80_OPERAND_MOD & "|"
-    
+    "|" & OZ80_OPERATOR_ADD & "|" & OZ80_OPERATOR_SUB & "|" & OZ80_OPERATOR_MUL & _
+    "|" & OZ80_OPERATOR_DIV & "|" & OZ80_OPERATOR_POW & "|" & OZ80_OPERATOR_MOD & "|"
 
 '--------------------------------------------------------------------------------------
 
 Private Enum OZ80_CONTEXT
-    UNKNOWN = 0
+    'When parsing Z80 code
+    ASM = 0
     'When inside a string, i.e. `... "some text" ...`
     QUOTED = 1
     
@@ -57,7 +59,7 @@ Private Enum OZ80_CONTEXT
     KEYWORD_SET = 1001
 End Enum
 #If False Then
-    Private UNKNOWN, QUOTED, _
+    Private ASM, QUOTED, _
             NUMBER, LABEL, VARIABLE, MACRO, FUNCT, _
             EXPRESSION, _
             KEYWORD, KEYWORD_SET
@@ -72,11 +74,13 @@ Public Enum OZ80_ERROR
     UNKNOWN_KEYWORD = 3
 End Enum
 
+'/// VARIABLES ////////////////////////////////////////////////////////////////////////
+
 Private FileNumber As Integer
 Private Word As String
 Private Context As OZ80_CONTEXT
 
-'/// PUBLIC PROCEDURES ////////////////////////////////////////////////////////////////
+'/// PUBLIC INTERFACE /////////////////////////////////////////////////////////////////
 
 'Assemble : Parse and assemble a file into a binary _
  ======================================================================================
@@ -84,11 +88,7 @@ Public Function Assemble( _
     ByVal FilePath As String, _
     Optional ByVal OutputPath As String = vbNullString _
 ) As OZ80_ERROR
-    Log "OZ80MANDIAS"
-    
     Log ProcessFile(FilePath)
-    
-    Debug.Print
 End Function
 
 '/// PRIVATE PROCEDURES ///////////////////////////////////////////////////////////////
@@ -110,56 +110,6 @@ Private Function ProcessFile(ByVal FilePath As String) As OZ80_ERROR
     Loop
     
     Close #FileNumber
-End Function
-
-'ContextRoot : The context at the start of a line (and not within a block) _
- ======================================================================================
-Private Function ContextRoot() As OZ80_CONTEXT
-    'Lines can begin with labels & keywords; _
-     parenthesis, variables and numbers are not allowed
-     
-    Call GetWord
-    Select Case Context
-        Case OZ80_CONTEXT.LABEL
-            Call ContextLabel
-            
-        Case OZ80_CONTEXT.KEYWORD
-            Call ContextKeyword
-            
-        Case Else
-            
-    End Select
-End Function
-
-'ContextLabel _
- ======================================================================================
-Private Function ContextLabel() As OZ80_CONTEXT
-    'Label names must begin with ":", contain A-Z, 0-9, underscore and _
-     dash with the restriction that the first letter must be A-Z or an _
-     underscore and not a numeral
-End Function
-
-'ContextKeyword _
- ======================================================================================
-Private Function ContextKeyword() As OZ80_CONTEXT
-    Select Case Word
-        Case OZ80_KEYWORD_SET
-            'Format: _
-                SET !<variableName> <expr>
-    End Select
-End Function
-
-'ContextVariable _
- ======================================================================================
-Private Function ContextVariable() As OZ80_CONTEXT
-    '
-End Function
-
-'ContextExpression _
- ======================================================================================
-Private Function ContextExpression() As OZ80_CONTEXT
-    'An expression is anything that results in a value, i.e. a number, _
-     a label/property, a calculation, a function call &c.
 End Function
 
 'GetWord : Read the next unit of text from the file _
@@ -201,17 +151,88 @@ ReadChar:
     GoTo ReadChar
 
 EndWord:
+    'We'll detect the type of the word here so that the context functions do not have _
+     to be concerned with the specifics of testing another context
     Select Case True
-        Case Left$(Word, 1) = OZ80_SYNTAX_LABEL: Let Context = LABEL
+        Case Left$(Word, 1) = OZ80_SYNTAX_LABEL:    Let Context = LABEL
         Case Left$(Word, 1) = OZ80_SYNTAX_VARIABLE: Let Context = VARIABLE
-        Case Left$(Word, 1) = OZ80_SYNTAX_MACRO: Let Context = MACRO
-        Case IsKeyword(Word): Let Context = KEYWORD
-        Case IsNumber(Word): Let Context = NUMBER
-        Case Else
-            Let Context = UNKNOWN
+        Case Left$(Word, 1) = OZ80_SYNTAX_MACRO:    Let Context = MACRO
+        Case IsKeyword(Word):                       Let Context = KEYWORD
+        Case IsNumber(Word):                        Let Context = NUMBER
+        Case Else:                                  Let Context = ASM
     End Select
     If Word <> vbNullString Then Log Word
 End Sub
+
+'/// CONTEXT PROCEDURES ///////////////////////////////////////////////////////////////
+
+'ContextRoot : The context at the start of a line (and not within a block) _
+ ======================================================================================
+Private Function ContextRoot() As OZ80_CONTEXT
+    'Lines can begin with Z80 code, labels & keywords; _
+     parenthesis, variables and numbers are not allowed
+    
+    Select Case Context
+        Case OZ80_CONTEXT.ASM
+            Call ContextAssembly
+            
+        Case OZ80_CONTEXT.LABEL
+            Call ContextLabel
+            
+        Case OZ80_CONTEXT.KEYWORD
+            Call ContextKeyword
+            
+        Case Else
+            
+    End Select
+End Function
+
+'ContextAssembly : Parse Z80 assembly source _
+ ======================================================================================
+Private Function ContextAssembly() As OZ80_CONTEXT
+    'Check the mneomic
+End Function
+
+'ContextLabel _
+ ======================================================================================
+Private Function ContextLabel() As OZ80_CONTEXT
+    'Label names must begin with ":", contain A-Z, 0-9, underscore and dash with the _
+     restriction that the first letter must be A-Z or an underscore
+End Function
+
+'ContextKeyword _
+ ======================================================================================
+Private Function ContextKeyword() As OZ80_CONTEXT
+    Select Case Word
+        Case OZ80_KEYWORD_SET
+            'Format: _
+                SET !<variableName> <expr>
+            
+            Call GetWord
+            If Context <> VARIABLE Then
+                '
+            End If
+            
+            Call ContextVariable
+            Call ContextExpression
+            
+    End Select
+End Function
+
+'ContextVariable _
+ ======================================================================================
+Private Function ContextVariable() As OZ80_CONTEXT
+    '
+End Function
+
+'ContextExpression _
+ ======================================================================================
+Private Function ContextExpression() As OZ80_CONTEXT
+    'An expression is anything that results in a value, i.e. a number, _
+     a label/property, a calculation, a function call &c.
+End Function
+
+'/// VALIDATION PROCEDURES ////////////////////////////////////////////////////////////
 
 'IsWhitespace : check for meaningless whitespace (space, tab) _
  ======================================================================================
@@ -262,12 +283,4 @@ Private Function IsNumber(ByVal Word As String) As Boolean
     If Left$(Word, 1) = OZ80_SYNTAX_NUMBER_HEX Then Let IsNumber = True: Exit Function
     If Left$(Word, 1) = OZ80_SYNTAX_NUMBER_BIN Then Let IsNumber = True: Exit Function
     Let IsNumber = Not (Word Like "*[!0-9]*")
-End Function
-
-'Log _
- ======================================================================================
-Private Function Log(ByVal Msg As String, Optional ByVal Depth As Long = -1)
-'    If Depth = -1 Then Let Depth = ContextPointer
-'    If Depth > 0 Then Debug.Print String(Depth - 1, vbTab);
-    Debug.Print Msg
 End Function

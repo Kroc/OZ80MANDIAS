@@ -12,5 +12,14 @@ Option Explicit
 'MAIN : "Look on my works ye Mighty, and despair!" _
  ======================================================================================
 Public Sub Main()
+    Log "OZ80MANDIAS"
     Call OZ8.Assemble(App.Path & "\test.OZ8.asm")
+    Debug.Print
 End Sub
+
+'Log _
+ ======================================================================================
+Public Sub Log(ByVal Msg As String)
+    Debug.Print Msg
+End Sub
+

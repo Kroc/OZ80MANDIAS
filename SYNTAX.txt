@@ -38,6 +38,9 @@ Decimal number: 	1		(numbers above 255 are implicitly 16-bit)
 Binary number: 		%00000001
 Hexadecimal (8-bit):	$01
 Hexadecimal (16-bit):	$0001
+Suffixes:		1 K		= 1'000
+			1 KB		= 1'024
+			1 Kb		= 128 (1 Kibibit)
 ...
 
 1.2	Operators
@@ -62,17 +65,17 @@ Would insert 6 bytes of $80
 1.3	Variables
 ---------------------------------------------------------------------------------------
 Format:
-	SET !<variableName> <expr>
+	LET !<variableName> <expr>
 	
 A variable is name-associated value that you can choose to change later. You would use
 variables to associate commonly used values with friendlier names so as to make the
 code more readable and to allow changing a common value quickly throughout the program.
 
 All variables are prefixed with an exclamation point any place where they appear in
-the program. Variables are created and updated using the SET directive:
+the program. Variables are created and updated using the LET directive:
 
 ```
-SET !SMS_SOUND_PORT $7F
+LET !SMS_SOUND_PORT $7F
 out (!SMS_SOUND_PORT), a
 ```
 
@@ -135,7 +138,7 @@ The `.bank` property retrieves the bank number of where the Label resides.
 (see section 3, "Banks & Slots")
 
 ```
-SET !labelBank :label.bank
+LET !labelBank :label.bank
 ```
 
 TODO: Explain structure/object properties
@@ -308,7 +311,7 @@ Format:
 #.#.	Logic
 ---------------------------------------------------------------------------------------
 Format:
-	IF [NOT] [<expr>|SET !<variableName>|EXISTS <filename>]
+	IF [NOT] [<expr>|LET !<variableName>|EXISTS <filename>]
 		<code>
 	[ELSE IF <expr>
 		<code> ...]
@@ -332,7 +335,7 @@ Format:
 #.	Sections:
 =======================================================================================
 Format:
-	BEGIN SECTION :<sectionName>
+	BEGIN SECTION :<sectionName> [MAXSIZE <expr>]
 		<code>
 	END SECTION
 
@@ -359,7 +362,7 @@ TODO: "EXIT MACRO"
 Format:
 	BEGIN FUNCTION ?<functionName> [ARGS !<variableName>[, !<variableName> ...]]
 		<code>
-		SET ?<functionName> <expr>
+		LET ?<functionName> <expr>
 	END FUNCTION
 
 A function is similar to a macro but is used to calculate values at expression points,
@@ -368,7 +371,7 @@ rather than inserting whole lines or blocks of code.
 Since the purpose of a function is to calculate and return a value, functions cannot
 contain assembly code and can only use these statements:
 
-BEGIN / END LOOP, EXIT IF / FUNCTION / LOOP, IF / ELSE / ELSE IF / END IF, SET
+BEGIN / END LOOP, EXIT IF / FUNCTION / LOOP, IF / ELSE / ELSE IF / END IF, LET
 
 
 TODO: "EXIT FUNCTION"
@@ -416,7 +419,7 @@ Format:
 	BEGIN STRUCT :<structureName> [USE OBJECT #<objectName>]
 		DATA <expr>[, <expr> ...]
 		 ... |
-		SET .<propertyName> <expr>
+		LET .<propertyName> <expr>
 		 ...
 	END STRUCT
 

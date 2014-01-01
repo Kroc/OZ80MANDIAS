@@ -13,7 +13,7 @@ Option Explicit
  ======================================================================================
 Public Sub Main()
     Log "OZ80MANDIAS"
-    Call OZ8.Assemble(App.Path & "\test.OZ8.asm")
+    Call OZ80.Assemble(App.Path & "\test.OZ8.asm")
     Debug.Print
 End Sub
 

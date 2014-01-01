@@ -1,4 +1,4 @@
-Attribute VB_Name = "OZ8"
+Attribute VB_Name = "OZ80"
 Option Explicit
 Option Compare Text
 '======================================================================================
@@ -191,6 +191,301 @@ End Function
  ======================================================================================
 Private Function ContextAssembly() As OZ80_CONTEXT
     'Check the mneomic
+    Select Case Word
+        Case "adc"
+            Call OZ80_Assembler.AddToken(TOKEN_Z80_ADC)
+            'TODO: Paremters
+                'adc A, r|$n|(HL|IX+$n|IY+$n)
+                'adc HL, BC|DE|HL|SP
+        
+        Case "add"
+            Call OZ80_Assembler.AddToken(TOKEN_Z80_ADD)
+            'TODO: Paremters
+                'add A, r|$n|(HL|IX+$n|IY+$n)
+                'add HL, BC|DE|HL|SP
+                'add IX, BC|DE|IX|SP
+                'add IY, BC|DE|IY|SP
+            
+        Case "and"
+            Call OZ80_Assembler.AddToken(TOKEN_Z80_AND)
+            'Todo: Parameters
+                'and r|$n|(HL|IX+$n|IY+$n)
+        
+        Case "bit"
+            Call OZ80_Assembler.AddToken(TOKEN_Z80_BIT)
+            'TODO: Parameters
+                'bit b, r|(HL|IX+$n|IY+$n)
+            
+        Case "call"
+            Call OZ80_Assembler.AddToken(TOKEN_Z80_CALL)
+            'TODO: Parameters
+                'call $nn
+                'call c|nc|m|p|z|nz|pe|po, $nn
+        
+        Case "ccf"
+            Call OZ80_Assembler.AddToken(TOKEN_Z80_CCF)
+            
+        Case "cp"
+            Call OZ80_Assembler.AddToken(TOKEN_Z80_CP)
+            'TODO: Parameters
+                'cp r|$n|(HL|IX+$n|IY+$n)
+        
+        Case "cpd"
+            Call OZ80_Assembler.AddToken(TOKEN_Z80_CPD)
+        
+        Case "cpdr"
+            Call OZ80_Assembler.AddToken(TOKEN_Z80_CPDR)
+        
+        Case "cpi"
+            Call OZ80_Assembler.AddToken(TOKEN_Z80_CPI)
+                
+        Case "cpir"
+            Call OZ80_Assembler.AddToken(TOKEN_Z80_CPIR)
+        
+        Case "cpl"
+            Call OZ80_Assembler.AddToken(TOKEN_Z80_CPL)
+            
+        Case "daa"
+            Call OZ80_Assembler.AddToken(TOKEN_Z80_DAA)
+        
+        Case "dec"
+            Call OZ80_Assembler.AddToken(TOKEN_Z80_DEC)
+            'TODO: Parameters
+                'dec A|B|C|D|E|H|L|(HL|IX+$n|IY+$n)|BC|DE|HL|SP|IX|IY
+        
+        Case "di"
+            Call OZ80_Assembler.AddToken(TOKEN_Z80_DI)
+        
+        Case "djnz"
+            Call OZ80_Assembler.AddToken(TOKEN_Z80_DJNZ)
+            'TODO: Parameters
+                'djnz $n
+            
+        Case "ei"
+            Call OZ80_Assembler.AddToken(TOKEN_Z80_EI)
+            
+        Case "ex"
+            Call OZ80_Assembler.AddToken(TOKEN_Z80_EX)
+            'TODO: Parameters
+                'ex (SP), HL|IX|IY
+                'ex AF, AF'
+                'ex DE, HL
+        
+        Case "exx"
+            Call OZ80_Assembler.AddToken(TOKEN_Z80_EXX)
+        
+        Case "halt"
+            Call OZ80_Assembler.AddToken(TOKEN_Z80_HALT)
+            
+        Case "im"
+            Call OZ80_Assembler.AddToken(TOKEN_Z80_IM)
+            'TODO: Parameters
+                'im 0|1|2
+        
+        Case "in"
+            Call OZ80_Assembler.AddToken(TOKEN_Z80_IN)
+            'TODO: Parameters
+                'in (C)
+                'in A|B|C|D|E|H|L, (C)
+            
+        Case "inc"
+            Call OZ80_Assembler.AddToken(TOKEN_Z80_INC)
+            'TODO: Parameters
+                'inc A|B|C|D|E|H|L|BC|DE|HL|SP|IX|IY|(HL|IX+$n|IY+$n)
+            
+        Case "ind"
+            Call OZ80_Assembler.AddToken(TOKEN_Z80_IND)
+        
+        Case "indr"
+            Call OZ80_Assembler.AddToken(TOKEN_Z80_INDR)
+            
+        Case "ini"
+            Call OZ80_Assembler.AddToken(TOKEN_Z80_INI)
+        
+        Case "inir"
+            Call OZ80_Assembler.AddToken(TOKEN_Z80_INIR)
+        
+        Case "jp"
+            Call OZ80_Assembler.AddToken(TOKEN_Z80_JP)
+            'TODO: Parameters
+                'jp $nn|(HL|IX|IY)
+                'jp c|nc|m|p|z|nz|pe|po, $nn
+                
+        Case "jr"
+            Call OZ80_Assembler.AddToken(TOKEN_Z80_JR)
+            'TODO: Parameters
+                'jr $n
+                'jr c|nc|z|nz, $n
+        
+        Case "ld"
+            Call OZ80_Assembler.AddToken(TOKEN_Z80_LD)
+            'TODO: Parameters
+                'ld I|R, A
+                'ld A, R|r|$n|(BC|DE|HL|IX+$n|IY+$n|$nn)
+                'ld B|C|D|E|H|L, r|$n|(HL|IX+$n|IY+$n)
+                'ld BC|DE|HL|IX|IY, ($nn)|$nn
+                'ld SP, ($nn)|HL|IX|IY|$nn
+                'ld (HL), r|$n
+                'ld (BC|DE), A
+                'ld ($nn), A|BC|DE|HL|IX|IY|SP
+                'ld (IX+$n|IY+$n), r|$n
+                
+        Case "ldd"
+            Call OZ80_Assembler.AddToken(TOKEN_Z80_LDD)
+            
+        Case "lddr"
+            Call OZ80_Assembler.AddToken(TOKEN_Z80_LDDR)
+            
+        Case "ldi"
+            Call OZ80_Assembler.AddToken(TOKEN_Z80_LDI)
+            
+        Case "ldir"
+            Call OZ80_Assembler.AddToken(TOKEN_Z80_LDIR)
+        
+        Case "neg"
+            Call OZ80_Assembler.AddToken(TOKEN_Z80_NEG)
+            
+        Case "nop"
+            Call OZ80_Assembler.AddToken(TOKEN_Z80_NOP)
+            
+        Case "or"
+            Call OZ80_Assembler.AddToken(TOKEN_Z80_OR)
+            'TODO: Parameters
+                'or r|$n|(HL|IX+$n|IY+$n)
+                
+        Case "out"
+            Call OZ80_Assembler.AddToken(TOKEN_Z80_OUT)
+            'TODO: Parameters
+                'out ($n), A
+                'out (C), 0|A|B|C|D|E|H|L
+            
+        Case "outd"
+            Call OZ80_Assembler.AddToken(TOKEN_Z80_OUTD)
+        
+        Case "outdr"
+            Call OZ80_Assembler.AddToken(TOKEN_Z80_OUTDR)
+        
+        Case "outi"
+            Call OZ80_Assembler.AddToken(TOKEN_Z80_OUTI)
+        
+        Case "outir"
+            Call OZ80_Assembler.AddToken(TOKEN_Z80_OUTIR)
+        
+        Case "pop"
+            Call OZ80_Assembler.AddToken(TOKEN_Z80_POP)
+            'TODO: Parameters
+                'pop AF|BC|DE|HL|IX|IY
+            
+        Case "push"
+            Call OZ80_Assembler.AddToken(TOKEN_Z80_PUSH)
+            'TODO: Parameters
+                'push AF|BC|DE|HL|IX|IY
+            
+        Case "res"
+            Call OZ80_Assembler.AddToken(TOKEN_Z80_RES)
+            'TODO: Parameters
+                'res b, r|(HL|IX+$n|IY+$n)
+            
+        Case "ret"
+            Call OZ80_Assembler.AddToken(TOKEN_Z80_RET)
+            'TODO: Parameters
+                'ret c|nc|m|p|z|nz|pe|po
+                
+        Case "reti"
+            Call OZ80_Assembler.AddToken(TOKEN_Z80_RETI)
+        
+        Case "retn"
+            Call OZ80_Assembler.AddToken(TOKEN_Z80_RETN)
+        
+        Case "rla"
+            Call OZ80_Assembler.AddToken(TOKEN_Z80_RLA)
+        
+        Case "rl"
+            Call OZ80_Assembler.AddToken(TOKEN_Z80_RL)
+            'TODO: Parameters
+                'rl r|(HL|IX+$n|IY+$n)
+            
+        Case "rlca"
+            Call OZ80_Assembler.AddToken(TOKEN_Z80_RLCA)
+        
+        Case "rlc"
+            Call OZ80_Assembler.AddToken(TOKEN_Z80_RLC)
+            'TODO: Parameters
+                'rlc r|(HL|IX+$n|IY+$n)
+            
+        Case "rld"
+            Call OZ80_Assembler.AddToken(TOKEN_Z80_RLD)
+        
+        Case "rra"
+            Call OZ80_Assembler.AddToken(TOKEN_Z80_RRA)
+            
+        Case "rr"
+            Call OZ80_Assembler.AddToken(TOKEN_Z80_RR)
+            'TODO: Parameters
+                'rr r|(HL|IX+$n|IY+$n)
+        
+        Case "rrca"
+            Call OZ80_Assembler.AddToken(TOKEN_Z80_RRCA)
+            
+        Case "rrc"
+            Call OZ80_Assembler.AddToken(TOKEN_Z80_RRC)
+            'TODO: Parameters
+                'rrc r|(HL|IX+$n|IY+$n)
+                
+        Case "rrd"
+            Call OZ80_Assembler.AddToken(TOKEN_Z80_RRD)
+            
+        Case "rst"
+            Call OZ80_Assembler.AddToken(TOKEN_Z80_RST)
+            'TODO: Parameters
+                'rst 0|$08|$10|$18|$20|$28|$30|$38
+        
+        Case "sbc"
+            Call OZ80_Assembler.AddToken(TOKEN_Z80_SBC)
+            'TODO: Parameters
+                'sbc r
+                'sbc A, $n|(IX+$n|IY+$n)
+                'sbc (HL)
+                'sbc HL, BC|DE|HL|SP
+                
+        Case "scf"
+            Call OZ80_Assembler.AddToken(TOKEN_Z80_SCF)
+            
+        Case "set"
+            Call OZ80_Assembler.AddToken(TOKEN_Z80_SET)
+            'TODO: Parameters
+                'set b, r|(HL|IX+$n|IY+$n)
+            
+        Case "sla"
+            Call OZ80_Assembler.AddToken(TOKEN_Z80_SLA)
+            'TODO: Parameters
+                'sla r|(HL|IX+$n|IY+$n)
+                
+        Case "sra"
+            Call OZ80_Assembler.AddToken(TOKEN_Z80_SRA)
+            'TODO: Parameters
+                'sra r|(HL|IX+$n|IY+$n)
+            
+        Case "sll"
+            Call OZ80_Assembler.AddToken(TOKEN_Z80_SLL)
+            'TODO: Parameters
+                'sll r|(HL|IX+$n|IY+$n)
+            
+        Case "srl"
+            'TODO: Parameters
+                'srl r|(HL|IX+$n|IY+$n)
+        
+        Case "sub"
+            Call OZ80_Assembler.AddToken(TOKEN_Z80_SUB)
+            'TODO: Parameters
+                'sub r|$n|(HL|IX+$n|IY+$n)
+                
+        Case "xor"
+            Call OZ80_Assembler.AddToken(TOKEN_Z80_XOR)
+            'TODO: Parameters
+                'xor r|$n|(HL|IX+$n|IY+$n)
+            
+    End Select
 End Function
 
 'ContextLabel _

@@ -1,4 +1,4 @@
-Attribute VB_Name = "OZ8_Assembler"
+Attribute VB_Name = "OZ80_Assembler"
 Option Explicit
 '======================================================================================
 'OZ80MANDIAS: a Z80 assembler; Copyright (C) Kroc Camen, 2013
@@ -7,13 +7,20 @@ Option Explicit
 '======================================================================================
 'MODULE :: OZ80_Assembler
 
+'Copy raw memory from one place to another _
+ <msdn.microsoft.com/en-us/library/windows/desktop/aa366535%28v=vs.85%29.aspx>
+Public Declare Sub kernel32_RtlMoveMemory Lib "kernel32" Alias "RtlMoveMemory" ( _
+    ByRef ptrDestination As Any, _
+    ByRef ptrSource As Any, _
+    ByVal Length As Long _
+)
+
 Public Enum OZ80_TOKEN
-    TOKEN_LABEL = &HFF000000
+    'NOTE: Token numbers 0 - 65'535 represent actual numbers 0 - 65'535
     
     'Z80 Assembly Mnemonics -----------------------------------------------------------
-    'These are just the mnemonic tokens -- the assembly routine itself checks the _
-     parameters and determines which opcode should be used. The source text parser _
-     is not concerned with the variety of allowable parameter combinations
+    'These are just the mnemonic tokens -- the assembly routine itself checks the
+     'parameters and determines which opcode should be used
     TOKEN_Z80_ADC = &H1         'Add with Carry
     TOKEN_Z80_ADD = &H2         'Add
     TOKEN_Z80_AND = &H3         'Bitwise AND
@@ -82,26 +89,62 @@ Public Enum OZ80_TOKEN
     TOKEN_Z80_SRL = &H42        'Shift Right Logical
     TOKEN_Z80_SUB = &H43        'Subtract
     TOKEN_Z80_XOR = &H44        'Bitwise XOR
+    
+    TOKEN_NUMBER = &H45
+    TOKEN_LABEL = &H46
 End Enum
 
 Private Type Token
     File As Byte
     Line As Long
     Col As Integer
-    Kind As Byte
+    Kind As Long
 End Type
 
-Private Code() As Token
+Private Tokens() As Token
 
 '/// PUBLIC INTERFACE /////////////////////////////////////////////////////////////////
 
 'AddToken : Add a token to the assembler's internal tokenised code representation _
  ======================================================================================
 Public Sub AddToken( _
-    ByVal Kind As OZ80_TOKEN, _
+    ByVal Kind As Byte, _
     Optional ByVal File As Byte = 0, _
     Optional ByVal Line As Long = -1, _
     Optional ByVal Col As Integer = -1 _
 )
-        
+    'Add an element to the Tokens array
+    Static Dimmed As Boolean
+    If Dimmed = False Then
+        ReDim Tokens(0) As Token
+        Let Dimmed = True
+    Else
+        ReDim Preserve Tokens(UBound(Tokens) + 1) As Token
+    End If
+    
+    With Tokens(UBound(Tokens))
+        Let .Kind = Kind
+    End With
 End Sub
+
+'ArrayDimmed : Is an array dimmed? _
+ ======================================================================================
+'Taken from: https://groups.google.com/forum/?_escaped_fragment_=msg/microsoft.public.vb.general.discussion/3CBPw3nMX2s/zCcaO-hiCI0J#!msg/microsoft.public.vb.general.discussion/3CBPw3nMX2s/zCcaO-hiCI0J
+Private Function ArrayDimmed(varArray As Variant) As Boolean
+    Dim pSA As Long
+    'Make sure an array was passed in:
+    If IsArray(varArray) Then
+        'Get the pointer out of the Variant:
+        Call kernel32_RtlMoveMemory( _
+            ptrDestination:=pSA, ptrSource:=ByVal VarPtr(varArray) + 8, Length:=4 _
+        )
+        If pSA Then
+            'Try to get the descriptor:
+            Call kernel32_RtlMoveMemory( _
+                ptrDestination:=pSA, ptrSource:=ByVal pSA, Length:=4 _
+            )
+            'Array is initialized only if we got the SAFEARRAY descriptor:
+            Let ArrayDimmed = (pSA <> 0)
+        End If
+    End If
+End Function

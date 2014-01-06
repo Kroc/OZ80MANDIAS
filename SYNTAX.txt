@@ -40,7 +40,7 @@ Hexadecimal (8-bit):	$01
 Hexadecimal (16-bit):	$0001
 Suffixes:		1 K		= 1'000
 			1 KB		= 1'024
-			1 Kb		= 128 (1 Kibibit)
+			1 Kbit		= 128 (1 Kibibit)
 ...
 
 1.2	Operators
@@ -65,18 +65,19 @@ Would insert 6 bytes of $80
 1.3	Variables
 ---------------------------------------------------------------------------------------
 Format:
-	LET !<variableName> <expr>
+	LET #<variableName> <expr>
 	
 A variable is name-associated value that you can choose to change later. You would use
 variables to associate commonly used values with friendlier names so as to make the
 code more readable and to allow changing a common value quickly throughout the program.
 
-All variables are prefixed with an exclamation point any place where they appear in
-the program. Variables are created and updated using the LET directive:
+All variables are prefixed with a hash (or 'pound', 'sharp' or 'octothorpe') any place
+where they appear in the program. Variables are created and updated using the LET
+directive:
 
 ```
-LET !SMS_SOUND_PORT $7F
-out (!SMS_SOUND_PORT), a
+LET #SMS_SOUND_PORT $7F
+out (#SMS_SOUND_PORT), a
 ```
 
 1.4	Labels
@@ -118,27 +119,27 @@ Outside of the label `:myRoutine`, it is referred to via the full label name
 1.6	Properties
 ---------------------------------------------------------------------------------------
 Format:
-	!<variableName>.hi|lo
+	#<variableName>.hi|lo
 	:<labelName>.hi|lo|bank|<sublabelName>
 	:<tableName>.hi|lo|bank|size|<rowIndexName>
 	#<objcet>.size|<propertyName>
-	:<objectName>.hi|lo|bank|size|<propertyName>
+	:<structureName>.hi|lo|bank|size|<propertyName>
 
-A property is a means of extracting some sub-component of a Label, Variable or
-Object.
+A property is a means of extracting some sub-component of a Label, Variable, Object
+or Structure.
 
 In an expression you can retrieve the high-order or low-order bytes of the 16-bit
 value behind a Label or Variable using the `.hi` and `.lo` properties, respectively.
 
 ```
-DATA !variable.hi, !variable.lo, :label.hi, :label.lo
+DATA #variable.hi, #variable.lo, :label.hi, :label.lo
 ```
 
 The `.bank` property retrieves the bank number of where the Label resides.
 (see section 3, "Banks & Slots")
 
 ```
-LET !labelBank :label.bank
+LET #labelBank :label.bank
 ```
 
 TODO: Explain structure/object properties
@@ -257,7 +258,7 @@ storing non-code data in the output ROM such as graphics, text and sound.
 The data statement accepts one or more expressions separated by commas.
 
 ```
-DATA $00, $FF, $00FF, $FF00, "STRING", :label, !variable
+DATA $00, $FF, $00FF, $FF00, "STRING", :label, #variable
 ```
 
 It's important to note that 16-bit numbers are stored in little-endian format, that is
@@ -311,7 +312,7 @@ Format:
 #.#.	Logic
 ---------------------------------------------------------------------------------------
 Format:
-	IF [NOT] [<expr>|LET !<variableName>|EXISTS <filename>]
+	IF [NOT] [<expr>|LET #<variableName>|EXISTS <filename>]
 		<code>
 	[ELSE IF <expr>
 		<code> ...]
@@ -349,7 +350,7 @@ determine how large a block of code/data is, and to include this value in your c
 #.#	Macros
 ---------------------------------------------------------------------------------------
 Format:
-	BEGIN MACRO @<macroName> [ARGS !<variableName>[, !<variableName> ...]]
+	BEGIN MACRO @<macroName> [ARGS #<variableName>[, #<variableName> ...]]
 		<code>
 	END MACRO
 
@@ -360,7 +361,7 @@ TODO: "EXIT MACRO"
 #.#	Functions
 ---------------------------------------------------------------------------------------
 Format:
-	BEGIN FUNCTION ?<functionName> [ARGS !<variableName>[, !<variableName> ...]]
+	BEGIN FUNCTION ?<functionName> [ARGS #<variableName>[, #<variableName> ...]]
 		<code>
 		LET ?<functionName> <expr>
 	END FUNCTION
@@ -398,15 +399,15 @@ length of the array.
 
 ```
 ARRAY :arrayName DATA 0, 1, 2, 3	;`:arrayName.size` is 4
-```
+``` 
 
 
 #.	Objects:
 =======================================================================================
 Format:
 	BEGIN OBJECT #<objectName>
-		.<propertyName>	BYTE|WORD [x <expr>]
-		.<propertyName> OBJECT #<objectName>
+		.<propertyName> AS BYTE|WORD [x <expr>]
+		.<propertyName> AS OBJECT #<objectName>
 		...
 	END OBJECT
 
@@ -443,8 +444,8 @@ Format:
 =======================================================================================
 Format:
 	BEGIN ENUM [AT <expr>]
-		!<variableName>	[AT <expr>] BYTE|WORD [x <expr>]
-		!<variableName> [AT <expr>] OBJECT #<objectName>
+		LET #<variableName> [AT <expr>] AS BYTE|WORD [x <expr>]
+		LET #<variableName> [AT <expr>] AS OBJECT #<objectName>
 		...
 	END ENUM
 ...
@@ -452,19 +453,19 @@ Format:
 
 #.	The `!SYSTEM` Variables:
 =======================================================================================
-A special variable `!SYSTEM` holds a number of pieces of information that the
+A special variable `#SYSTEM` holds a number of pieces of information that the
 assembler updates as it progresses.
 
-:: `!SYSTEM.PC`
+:: `#SYSTEM.PC`
 	Gives the current assembly address (accounting for BANK and SLOT)
 	
-:: `!SYSTEM.PC.bank`
+:: `#SYSTEM.PC.bank`
 	Gives the current bank number of the assembly point
 
-:: `!SYSTEM.PC.slot`
+:: `#SYSTEM.PC.slot`
 	Gives the current slot number of the assembly point
 
-:: `!SYSTEM.TABLE.row`
+:: `#SYSTEM.TABLE.row`
 	Within a ROW definition, gives the index number of the row.
 	An error will occur if used outside of a ROW definition
 

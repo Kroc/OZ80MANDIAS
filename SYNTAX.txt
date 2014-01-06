@@ -48,10 +48,15 @@ Suffixes:		1 K		= 1'000
 The standard operators are supported as `+` add, `-` subtract, `*` multiply,
 `/` divide, `^` power & `\` modulus.
 
-&, AND
-|, OR
-<<
->>
+TODO:
+& (AND)
+| (OR)
+! (NOT)
+~ (XOR)
+<< (Shift Left)
+>> (Shift Right)
+<<< (Rotate Left)?
+>>> (Rotate Right)?
 
 A final special operator `x` is supported. This repeats the preceding value by the
 value on the right hand side. For example, the following:
@@ -323,6 +328,10 @@ Format:
 TODO: "EXIT IF"
 ...
 
+#.#.	Logical Operators
+---------------------------------------------------------------------------------------
+TODO: =, !=, <, <=, >, >=, AND, OR (`&`/`|` are purely bitwise operators)
+
 #.#.	Loops
 ---------------------------------------------------------------------------------------
 Format:
@@ -354,7 +363,7 @@ Format:
 		<code>
 	END MACRO
 
-TODO: "SHIFT", variable arguments, "NARGS"
+TODO: "SHIFT", variable arguments, "ARGS.size"?
 TODO: "EXIT MACRO"
 ...
 
@@ -401,6 +410,8 @@ length of the array.
 ARRAY :arrayName DATA 0, 1, 2, 3	;`:arrayName.size` is 4
 ``` 
 
+'TODO: Is this needed? Too similar to SECTION/TABLE?
+
 
 #.	Objects:
 =======================================================================================
@@ -443,11 +454,11 @@ Format:
 #.	Memory Layout:
 =======================================================================================
 Format:
-	BEGIN ENUM [AT <expr>]
+	BEGIN RAM [AT <expr>]
 		LET #<variableName> [AT <expr>] AS BYTE|WORD [x <expr>]
 		LET #<variableName> [AT <expr>] AS OBJECT #<objectName>
 		...
-	END ENUM
+	END RAM
 ...
 
 

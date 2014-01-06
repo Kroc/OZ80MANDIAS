@@ -1,5 +1,5 @@
 =======================================================================================
-OZ80MANDIAS: a Z80 assembler; Copyright (C) Kroc Camen, 2013
+OZ80MANDIAS: a Z80 assembler; Copyright (C) Kroc Camen, 2013-14
 Licenced under a Creative Commons 3.0 Attribution Licence
 --You may use and modify this code how you see fit as long as you give credit
 =======================================================================================
@@ -70,18 +70,18 @@ Would insert 6 bytes of $80
 1.3	Variables
 ---------------------------------------------------------------------------------------
 Format:
-	LET #<variableName> <expr>
+	DEF #<variableName> <expr>
 	
 A variable is name-associated value that you can choose to change later. You would use
 variables to associate commonly used values with friendlier names so as to make the
 code more readable and to allow changing a common value quickly throughout the program.
 
 All variables are prefixed with a hash (or 'pound', 'sharp' or 'octothorpe') any place
-where they appear in the program. Variables are created and updated using the LET
+where they appear in the program. Variables are created and updated using the DEF
 directive:
 
 ```
-LET #SMS_SOUND_PORT $7F
+DEF #SMS_SOUND_PORT $7F
 out (#SMS_SOUND_PORT), a
 ```
 
@@ -125,8 +125,8 @@ Outside of the label `:myRoutine`, it is referred to via the full label name
 ---------------------------------------------------------------------------------------
 Format:
 	#<variableName>.hi|lo
-	:<labelName>.hi|lo|bank|<sublabelName>
-	:<tableName>.hi|lo|bank|size|<rowIndexName>
+	:<labelName>.hi|lo|bank|slot|<sublabelName>
+	:<tableName>.hi|lo|bank|slot|size|<rowIndexName>
 	#<objcet>.size|<propertyName>
 	:<structureName>.hi|lo|bank|size|<propertyName>
 
@@ -140,11 +140,13 @@ value behind a Label or Variable using the `.hi` and `.lo` properties, respectiv
 DATA #variable.hi, #variable.lo, :label.hi, :label.lo
 ```
 
-The `.bank` property retrieves the bank number of where the Label resides.
+The `.bank` property retrieves the bank number of where the Label resides,
+the `.slot` property does likewise for the slot number - 0, 1 or 2 
 (see section 3, "Banks & Slots")
 
 ```
-LET #labelBank :label.bank
+DEF #labelBank :label.bank
+DEF #RealAddr :label.slot * $4000
 ```
 
 TODO: Explain structure/object properties
@@ -317,7 +319,7 @@ Format:
 #.#.	Logic
 ---------------------------------------------------------------------------------------
 Format:
-	IF [NOT] [<expr>|LET #<variableName>|EXISTS <filename>]
+	IF [NOT] [<expr>|DEF #<variableName>|EXISTS <filename>]
 		<code>
 	[ELSE IF <expr>
 		<code> ...]
@@ -330,7 +332,7 @@ TODO: "EXIT IF"
 
 #.#.	Logical Operators
 ---------------------------------------------------------------------------------------
-TODO: =, !=, <, <=, >, >=, AND, OR (`&`/`|` are purely bitwise operators)
+TODO: =, NOT, <, <=, >, >=, AND, OR (`&`/`|`/`!` are purely bitwise operators)
 
 #.#.	Loops
 ---------------------------------------------------------------------------------------
@@ -341,39 +343,43 @@ Format:
 	END LOOP
 ...
 
+'TODO: `DEF LOOP` doesn't seem right..., need better syntax?
 
 #.	Sections:
 =======================================================================================
 Format:
-	BEGIN SECTION :<sectionName> [MAXSIZE <expr>]
+	DEF SECTION :<sectionName> [MAXSIZE <expr>]
 		<code>
-	END SECTION
+	END DEF
 
 A SECTION defines a standard label, but with an additional `.size` property that will
 give the number of bytes in the section *after* assembly. This will allow you to
 determine how large a block of code/data is, and to include this value in your code.
 
+'TODO: MAXSIZE property
+'TODO: BANK/SLOT/AT parameters?
 
 #.	Macros & Functions:
 =======================================================================================
 #.#	Macros
 ---------------------------------------------------------------------------------------
 Format:
-	BEGIN MACRO @<macroName> [ARGS #<variableName>[, #<variableName> ...]]
+	DEF MACRO @<macroName> [ARGS #<variableName>[, #<variableName> ...]]
 		<code>
 	END MACRO
 
 TODO: "SHIFT", variable arguments, "ARGS.size"?
-TODO: "EXIT MACRO"
+TODO: EXIT MACRO
+TODO: USE MACRO @macroName
 ...
 
 #.#	Functions
 ---------------------------------------------------------------------------------------
 Format:
-	BEGIN FUNCTION ?<functionName> [ARGS #<variableName>[, #<variableName> ...]]
+	DEF FUNCTION ?<functionName> [ARGS #<variableName>[, #<variableName> ...]]
 		<code>
 		LET ?<functionName> <expr>
-	END FUNCTION
+	END DEF
 
 A function is similar to a macro but is used to calculate values at expression points,
 rather than inserting whole lines or blocks of code.
@@ -381,7 +387,7 @@ rather than inserting whole lines or blocks of code.
 Since the purpose of a function is to calculate and return a value, functions cannot
 contain assembly code and can only use these statements:
 
-BEGIN / END LOOP, EXIT IF / FUNCTION / LOOP, IF / ELSE / ELSE IF / END IF, LET
+BEGIN / END LOOP, DEF :<label>, EXIT IF / FUNCTION / LOOP, IF / ELSE / ELSE IF / END IF
 
 
 TODO: "EXIT FUNCTION"
@@ -410,17 +416,17 @@ length of the array.
 ARRAY :arrayName DATA 0, 1, 2, 3	;`:arrayName.size` is 4
 ``` 
 
-'TODO: Is this needed? Too similar to SECTION/TABLE?
+'TODO: Is this needed? Too similar to SECTION/TABLE? Better syntax?
 
 
 #.	Objects:
 =======================================================================================
 Format:
-	BEGIN OBJECT #<objectName>
+	DEF OBJECT #<objectName>
 		.<propertyName> AS BYTE|WORD [x <expr>]
 		.<propertyName> AS OBJECT #<objectName>
 		...
-	END OBJECT
+	END DEF
 
 TODO: Using object properties
 ...
@@ -428,12 +434,12 @@ TODO: Using object properties
 #.#.	Creating Structures
 ---------------------------------------------------------------------------------------
 Format:
-	BEGIN STRUCT :<structureName> [USE OBJECT #<objectName>]
+	DEF STRUCT :<structureName> [USE OBJECT #<objectName>]
 		DATA <expr>[, <expr> ...]
 		 ... |
 		LET .<propertyName> <expr>
 		 ...
-	END STRUCT
+	END DEF
 
 TODO: Using structure properties
 ...
@@ -442,23 +448,23 @@ TODO: Using structure properties
 #.	Data Tables:
 =======================================================================================
 Format:
-	BEGIN TABLE :<tableName>
+	DEF TABLE :<tableName>
 		ROW .<rowIndexName>
 		<data> ...
 		[ROW .<rowIndexName>
 		<data> ...]
-	END TABLE
+	END DEF
 ...
 
 
 #.	Memory Layout:
 =======================================================================================
 Format:
-	BEGIN RAM [AT <expr>]
-		LET #<variableName> [AT <expr>] AS BYTE|WORD [x <expr>]
-		LET #<variableName> [AT <expr>] AS OBJECT #<objectName>
+	DEF RAM [AT <expr>]
+		DEF #<variableName> [AT <expr>] AS BYTE|WORD [x <expr>]
+		DEF #<variableName> [AT <expr>] AS OBJECT #<objectName>
 		...
-	END RAM
+	END DEF
 ...
 
 
@@ -481,3 +487,5 @@ assembler updates as it progresses.
 	An error will occur if used outside of a ROW definition
 
 ...
+
+'TODO: Is this needed? Is there a better way to do it? Name-squatting is bad

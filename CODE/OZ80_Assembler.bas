@@ -16,8 +16,6 @@ Public Declare Sub kernel32_RtlMoveMemory Lib "kernel32" Alias "RtlMoveMemory" (
 )
 
 Public Enum OZ80_TOKEN
-    'NOTE: Token numbers 0 - 65'535 represent actual numbers 0 - 65'535
-    
     'Z80 Assembly Mnemonics -----------------------------------------------------------
     'These are just the mnemonic tokens -- the assembly routine itself checks the
      'parameters and determines which opcode should be used
@@ -98,7 +96,7 @@ Private Type Token
     File As Byte
     Line As Long
     Col As Integer
-    Kind As Long
+    Kind As Byte
 End Type
 
 Private Tokens() As Token

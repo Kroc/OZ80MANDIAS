@@ -16,17 +16,16 @@ Option Compare Text
 
 Private Const OZ80_SYNTAX_COMMENT = ";"
 Private Const OZ80_SYNTAX_LABEL = ":"
-Private Const OZ80_SYNTAX_VARIABLE = "!"
+Private Const OZ80_SYNTAX_VARIABLE = "#"
 Private Const OZ80_SYNTAX_MACRO = "@"
-Private Const OZ80_SYNTAX_OBJECT = "#"
 Private Const OZ80_SYNTAX_NUMBER_HEX = "$"
 Private Const OZ80_SYNTAX_NUMBER_BIN = "%"
 
 Private Const OZ80_SYNTAX_ALPHA = "ABCDEFGHIJKLMNOPQRSTUVQXYZ_"
 Private Const OZ80_SYNTAX_NUMERIC = "0123456789-"
 
-Private Const OZ80_KEYWORD_SET = "SET"
-Private Const OZ80_KEYWORDS = "|" & OZ80_KEYWORD_SET & "|"
+Private Const OZ80_KEYWORD_DEF = "DEF"
+Private Const OZ80_KEYWORDS = "|" & OZ80_KEYWORD_DEF & "|"
 
 Private Const OZ80_OPERATOR_ADD = "+"
 Private Const OZ80_OPERATOR_SUB = "-"
@@ -499,9 +498,9 @@ End Function
  ======================================================================================
 Private Function ContextKeyword() As OZ80_CONTEXT
     Select Case Word
-        Case OZ80_KEYWORD_SET
+        Case OZ80_KEYWORD_DEF
             'Format: _
-                SET !<variableName> <expr>
+                DEF #<variableName> <expr>
             
             Call GetWord
             If Context <> VARIABLE Then

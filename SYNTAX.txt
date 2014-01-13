@@ -26,6 +26,17 @@ goal. Most assemblers are very good but fall short in a few areas that cannot be
 overcome without a new, clean language design.
 
 
+TODO:
+*	A way of specifying the hi & lo byte *addresses* of a label / RAM address
+	(when the code access two 8-bit numbers at the same time, or reads the hi-byte
+	 of a variable)
+
+*	A better way of using IY/IX with RAM addresses, e.g.
+	instead of:	ld a, (iy+#object.offset)
+	use:		ld a, (iy, #RAMAddress)
+	and the offset will be calculated automatically
+
+
 1.	Expressions:
 =======================================================================================
 In the format descriptors given throughout this document, the term "<expr>" can
@@ -468,7 +479,7 @@ Format:
 ...
 
 
-#.	The `!SYSTEM` Variables:
+#.	The `#SYSTEM` Variables:
 =======================================================================================
 A special variable `#SYSTEM` holds a number of pieces of information that the
 assembler updates as it progresses.

@@ -37,24 +37,269 @@ TODO:
 	and the offset will be calculated automatically
 
 
-1.	Expressions:
+#	Comments
 =======================================================================================
-In the format descriptors given throughout this document, the term "<expr>" can
-be substituted for a Number, a Label, a Variable, a Property or a calculation of any
-combination using the Operators, to produce a value.
+...
+	
 
-1.1	Numbers
+#.	Defining Values
+=======================================================================================
+#.#	Numbers
 ---------------------------------------------------------------------------------------
-Decimal number: 	1		(numbers above 255 are implicitly 16-bit)
-Binary number: 		%00000001
-Hexadecimal (8-bit):	$01
-Hexadecimal (16-bit):	$0001
+It's safe to say you know how to use numbers. With Z80 code some instructions will
+require 8-bit numbers and some 16-bit numbers.
+
+Any decimal number above 255 is implicitly a 16-bit number, therefore the following
+would not work:
+
+	ld a, 4096			;can't load 16-bit number into 8-bit register!
+
+It's fine to use an 8-bit number on 16-bit instructions though, i.e.
+
+	ld bc, 8
+
+The number will be used as 16-bit with the correct high and low byte order.
+(the high byte will be 0) 
+
+Hexadecimal numbers are prefixed with the dollar sign "$", e.g.
+
+	ld de, $ABCD
+
+Binary numbers are prefixed with the percent sign "%".
+You can include all 8 digits or only as many as you need
+
+	ld h, %00001111
+	ld h, %1111
+
+For 16-bit numbers either use more digits, or place another binary number after the
+first (for better readability), e.g.
+	
+	ld hl, %0000111100001111
+	ld hl, %00001111%00001111
+
+The second convention allows you to abbreviate 16-bit words like so:
+
+	ld hl, %1%1			;%00000001%00000001 = 257
+
+TODO:
 Suffixes:		1 K		= 1'000
 			1 KB		= 1'024
 			1 Kbit		= 128 (1 Kibibit)
 ...
 
-1.2	Operators
+#.#	Variables
+---------------------------------------------------------------------------------------
+Format:
+	DEF #<variableName> [<expr>]
+	
+The key benefit of a macro assembler over just an assembler is the ability to define
+names for common values and use these names throughout to provide you a single point
+to change that value in the future.
+
+In its simplest form a variable is defined using the DEF statement, a name and a value:
+(see the Numbers section for details on using decimal and hexadecimal numbers)
+
+	DEF #SMS_SOUND_PORT $7F
+
+Anywhere you would normally use a value, you can now instead use the variable name:
+
+	out (#SMS_SOUND_PORT), a
+
+All variables are prefixed with a hash (a.k.a. 'pound', 'sharp' or 'octothorpe') any
+place where they appear in the program. This convention is used so as to distinguish
+in code (to any reader) that the variable is an arbitrary value defined by the
+assembler and not native Z80 code (that would work on any assembler). This convention
+also reduces confusion with the use of labels (see the section on Labels for details)
+
+If the value expression is omitted, a variable defaults to 0, e.g.
+
+	DEF #ZERO
+
+But a variable is re-defined without a value, it defaults to its previous value, e.g.
+
+	DEF #ONE	1		;set to 1
+	DEF #ONE			;value is still 1, not zero
+
+The practical application of this behaviour will be demonstrated later when it comes
+to using properties and defining RAM addresses
+
+#.#	Properties
+---------------------------------------------------------------------------------------
+Format:
+	#<variableName>.<propertyName>
+	
+A property is a sub-value of a variable that tells you something about that variable.
+
+Oftentimes in Z80 assembly you need to access the high or low bytes of a 16-bit value.
+Instead of specifying these bytes in a fixed fashion, you can use the flexibility of
+variables with the `hi` & `lo` properties, e.g.
+
+	DEF #foo	$1234
+	ld b, #foo.lo			;"$34"
+	ld c, #foo.hi			;"$12"
+
+Notice that BC is loaded in low, high order due to the Z80 being little-endian.
+
+TODO:
+	.bank, .slot
+	.size
+...
+
+The `.bank` property retrieves the bank number of where the Label resides,
+the `.slot` property does likewise for the slot number - 0, 1 or 2 
+(see section 3, "Banks & Slots")
+
+```
+DEF #labelBank :label.bank
+DEF #RealAddr :label.slot * $4000
+```
+
+#.#	Labels
+---------------------------------------------------------------------------------------
+Format:
+	:<labelName>
+
+A label is a little like a variable, however the value assigned is a memory
+address based on where in your code it goes. It allows you to refer to points in code
+without using the real hexadecimal address (which will be calculated for you).
+
+```
+:infiniteLoop
+	nop
+	jr :infiniteLoop
+```
+
+#.#	Sub-Labels
+---------------------------------------------------------------------------------------
+Labels that begin with a dot are attached as properties to the last regular label
+defined, for example:
+
+```
+:myRoutine
+	<code>
+	...
+.loop	<code>
+	...
+	jr .loop
+
+:aDifferentRoutine
+	jp :myRoutine.loop
+```
+
+Here the sub-label `.loop` is defined and recognised as `:myRoutine.loop`.
+Outside of the label `:myRoutine`, it is referred to via the full label name
+(to not confuse it with a potential `:aDifferentRoutine.loop`).
+
+#.#	Anonymous Labels
+---------------------------------------------------------------------------------------
+...
+
+#.#	Objects
+---------------------------------------------------------------------------------------
+Format:
+	DEF #<objectName>
+	DEF .<propertyName> [AS BYTE|WORD [x <expr>]]
+
+In your code you will likely be handling structured data of some kind.
+A common example would be sprite definitions for players and enemies.
+The structured data would normally consist of a number of parameters offset from some
+starting point, for example X position, Y position, ID, speed and so forth.
+
+Managing these objects in a flexible manner is possible by using object constructs,
+essentially variables extended with custom properties defined by you.
+
+Let's imagine an enemy object:
+
+	DEF #enemy
+	DEF .x		AS WORD
+	DEF .y		AS WORD
+	DEF .id		AS BYTE
+	DEF .speed	AS BYTE
+
+First, a variable is defined, #enemy, with a value of 0 -- the starting offset point.
+Additional properties are defined, each with a given size. These properties hold the
+value of their offset, for example.
+
+	ld ix, :alien			;the location of an enemy instance
+	ld a, (ix+#enemy.id)		;gives 4
+	ld bc, (ix+#enemy.x)		;gives 0
+	ld de, (ix+#enemy.y)		;gives 2
+	ld l, (ix+#enemy.speed)		;gives 5
+
+As you can see, using an object provides the flexibility to rearrange the object's
+properties, insert new ones in the middle or remove properties from any point without
+breaking your assembly code (other than instances where reading bytes linearly).
+
+Supported data types are "BYTE" & "WORD" (2 bytes). More types will be supported in
+future (including 24 / 32-bit words and single bits)
+
+When you need to specify a property bigger than 2 bytes, you may use the `x` operator
+to give multiples of bytes or words; for example:
+
+	DEF #thing
+	DEF .someStuff	AS BYTE x 8
+	DEF .moreStuff	AS WORD x 16
+
+All variables and properties have a sub-property `.size` which gives the size of the
+variable or property in bytes. E.g.
+
+	PRINT #thing.moreStuff.size	;outputs 32 (16 words)
+	PRINT #thing.size		;outputs 40 (8 + 32)
+
+Objects can also contain other objects, allowing finer grained structure.
+
+	DEF #position
+	DEF .x 		AS WORD
+	DEF .y 		AS WORD
+	
+	DEF #path
+	DEF .start	AS #position
+	DEF .end	AS #position
+	
+These sub-properties would be accessed with `#path.start.x`, for example.
+
+Sub-objects can be repeated too, though this can get complex.
+
+	DEF #enemies
+	DEF .positions	AS #position x 3
+	
+This would define the following variables:
+
+	Variable Name			Value
+	-------------			-----
+	#enemies			0
+	#enemies.positions		0
+	#enemies.positions.0		0
+	#enemies.positions.0.x		0
+	#enemies.positions.0.y		2
+	#enemies.positions.1		4
+	#enemies.positions.1.x		4
+	#enemies.positions.1.y		6
+	#enemies.positions.2		8
+	#enemies.positions.2.x		8
+	#enemies.positions.2.y		10
+	#enemies.size			12
+
+...
+
+#.#	Structures
+---------------------------------------------------------------------------------------
+TODO: inline method for instances?
+TODO: using data statements instead of DEFs
+
+	DEF :<instanceName> AS #<objectName>
+	DEF .<propertyName> <expr>
+	DATA <expr>[, <expr> ...]
+...
+
+
+#.	Expressions:
+=======================================================================================
+In the format descriptors given throughout this document, the term "<expr>" can
+be substituted for a Number, a Label, a Variable, a Property or a calculation of any
+combination using the Operators, to produce a value.
+
+#.#	Operators
 ---------------------------------------------------------------------------------------
 The standard operators are supported as `+` add, `-` subtract, `*` multiply,
 `/` divide, `^` power & `\` modulus.
@@ -78,99 +323,13 @@ DATA $80 x 6
 
 Would insert 6 bytes of $80
 
-1.3	Variables
----------------------------------------------------------------------------------------
-Format:
-	DEF #<variableName> <expr>
-	
-A variable is name-associated value that you can choose to change later. You would use
-variables to associate commonly used values with friendlier names so as to make the
-code more readable and to allow changing a common value quickly throughout the program.
 
-All variables are prefixed with a hash (or 'pound', 'sharp' or 'octothorpe') any place
-where they appear in the program. Variables are created and updated using the DEF
-directive:
-
-```
-DEF #SMS_SOUND_PORT $7F
-out (#SMS_SOUND_PORT), a
-```
-
-1.4	Labels
----------------------------------------------------------------------------------------
-Format:
-	:<labelName>
-
-A label is a little like a variable, however the value assigned is a memory
-address based on where in your code it goes. It allows you to refer to points in code
-without using the real hexadecimal address (which will be calculated for you).
-
-```
-:infiniteLoop
-	nop
-	jr :infiniteLoop
-```
-
-1.5	Sub-Labels
----------------------------------------------------------------------------------------
-Labels that begin with a dot are attached as properties to the last regular label
-defined, for example:
-
-```
-:myRoutine
-	<code>
-	...
-.loop	<code>
-	...
-	jr .loop
-
-:aDifferentRoutine
-	jp :myRoutine.loop
-```
-
-Here the sub-label `.loop` is defined and recognised as `:myRoutine.loop`.
-Outside of the label `:myRoutine`, it is referred to via the full label name
-(to not confuse it with a potential `:aDifferentRoutine.loop`).
-
-1.6	Properties
----------------------------------------------------------------------------------------
-Format:
-	#<variableName>.hi|lo
-	:<labelName>.hi|lo|bank|slot|<sublabelName>
-	:<tableName>.hi|lo|bank|slot|size|<rowIndexName>
-	#<objcet>.size|<propertyName>
-	:<structureName>.hi|lo|bank|size|<propertyName>
-
-A property is a means of extracting some sub-component of a Label, Variable, Object
-or Structure.
-
-In an expression you can retrieve the high-order or low-order bytes of the 16-bit
-value behind a Label or Variable using the `.hi` and `.lo` properties, respectively.
-
-```
-DATA #variable.hi, #variable.lo, :label.hi, :label.lo
-```
-
-The `.bank` property retrieves the bank number of where the Label resides,
-the `.slot` property does likewise for the slot number - 0, 1 or 2 
-(see section 3, "Banks & Slots")
-
-```
-DEF #labelBank :label.bank
-DEF #RealAddr :label.slot * $4000
-```
-
-TODO: Explain structure/object properties
-...
-
-1.7	Comments
----------------------------------------------------------------------------------------
-...
-
-2.	Banks & Slots
+#.	Banks & Slots
 =======================================================================================
 Format:
 	BANK <expr>[, <expr> ...] [SLOT <expr> [, <expr> ...]]
+
+TODO: This may very well be replaced by SECTION use
 
 The Master System can address 64 KB of memory which is mapped into different 
 configurable slots. Since a cartridge may contain more than 64 KB (typically 256 KB
@@ -245,10 +404,7 @@ BANK 3, 4, 5, 6 SLOT 0, 1, 0, 1
 If no `BANK` declaration exists before the first line of assembled code,
 `BANK 0 SLOT 0` will be assumed.
 
-TODO: Bank map
-...
-
-2.1	Setting the Assembly Point
+#.#	Setting the Assembly Point
 ---------------------------------------------------------------------------------------
 Format:
 	AT <expr>
@@ -261,6 +417,9 @@ to the desired starting point. In other assemblers this is usually known as `ORG
 BANK 5		;bank 5 begins at $10000
 AT $2000	;begin assembling at $12000
 ```
+
+TODO: SKIP
+...
 
 
 #.	Data:
@@ -411,48 +570,6 @@ Format:
 DATA $AA, (?functionName $10, $20, $30), $BB, $CC
 ```
 
-...
-
-
-#.	Arrays:
-=======================================================================================
-Format:
-	ARRAY :<arrayName> DATA <expr>[, <expr> ...]
-
-An array is much the same as a DATA statement in that it lets you define a list of
-numbers, but has the added benefit of defining a size property that will give you the
-length of the array.
-
-```
-ARRAY :arrayName DATA 0, 1, 2, 3	;`:arrayName.size` is 4
-``` 
-
-'TODO: Is this needed? Too similar to SECTION/TABLE? Better syntax?
-
-
-#.	Objects:
-=======================================================================================
-Format:
-	DEF OBJECT #<objectName>
-		.<propertyName> AS BYTE|WORD [x <expr>]
-		.<propertyName> AS OBJECT #<objectName>
-		...
-	END DEF
-
-TODO: Using object properties
-...
-
-#.#.	Creating Structures
----------------------------------------------------------------------------------------
-Format:
-	DEF STRUCT :<structureName> [USE OBJECT #<objectName>]
-		DATA <expr>[, <expr> ...]
-		 ... |
-		LET .<propertyName> <expr>
-		 ...
-	END DEF
-
-TODO: Using structure properties
 ...
 
 

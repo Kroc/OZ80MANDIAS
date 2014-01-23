@@ -1,7 +1,7 @@
 Attribute VB_Name = "Run"
 Option Explicit
 '======================================================================================
-'OZ80MANDIAS: a Z80 assembler; Copyright (C) Kroc Camen, 2013
+'OZ80MANDIAS: a Z80 assembler; Copyright (C) Kroc Camen, 2013-14
 'Licenced under a Creative Commons 3.0 Attribution Licence
 '--You may use and modify this code how you see fit as long as you give credit
 '======================================================================================
@@ -13,7 +13,7 @@ Option Explicit
  ======================================================================================
 Public Sub Main()
     Log "OZ80MANDIAS"
-    Call OZ80.Assemble(App.Path & "\test.OZ8.asm")
+    Call OZ80_Parser.Parse(App.Path & "\test.OZ8.asm")
     Debug.Print
 End Sub
 

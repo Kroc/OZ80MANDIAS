@@ -26,26 +26,74 @@ goal. Most assemblers are very good but fall short in a few areas that cannot be
 overcome without a new, clean language design.
 
 
-TODO:
-*	A way of specifying the hi & lo byte *addresses* of a label / RAM address
-	(when the code access two 8-bit numbers at the same time, or reads the hi-byte
-	 of a variable)
-
-*	A better way of using IY/IX with RAM addresses, e.g.
-	instead of:	ld a, (iy+#object.offset)
-	use:		ld a, (iy, #RAMAddress)
-	and the offset will be calculated automatically
-
-
 #	Comments
 =======================================================================================
-...
-	
+Format:
+	;single-line
+	/* multi-
+	line */
 
-#.	Defining Values
+The first thing available to you to make writing Z80 assembly easier is the ability
+to add descriptive comments to your source.
+
+The purpose of comments is to describe why things happen the way they do in the code
+(such as an algorithm) as the purpose of a series of instructions cannot always be
+gleamed just by looking at them alone.
+
+	/* in the solidity data, bit 7 determines that the tile should appear in front
+	   of sprites. rotate the byte three times to position bit 7 at bit 4.
+	   this byte will form the high-byte of the 16-bit value for the name table
+	   entry (bit 4 will therefore become bit 12) */
+	rrca
+	rrca
+	rrca
+
+
+#	Register Hints
 =======================================================================================
-#.#	Numbers
----------------------------------------------------------------------------------------
+Format:
+	<register>\<hintName>
+
+The Z80 registers are your temporary working space for manipulating information with
+the CPU, as such register contents change constantly, for differing purposes.
+
+Register hints provide the ability to keep track of the temporary "role" of registers.
+It allows you to explain 'what' a register currently is, without resorting to comments
+(which are bulkier and should be used to describe rather than just name things)
+
+Take for example this section of Z80 code in the middle of a routine:
+
+	ld      c, a
+	ld      b, $00
+	ld      hl, (#RAM_TEMP3)
+	add     hl, bc
+
+What's the purpose of this code? Adding comments can answer that, but we can better
+visualise at a glance the flow of information by providing register hints like so:
+  
+	ld      c\blockIndex, a\blockIndex
+	ld      b\blockIndex, $00
+	ld      hl\solidityData, (#RAM_TEMP3)
+	add     hl\solidityData, bc\blockIndex
+
+Now we can see that #RAM_TEMP3 contained "solidityData" this time (even though it
+could be used for other purposes else where in the code) -- thus you do not have to
+scroll around to find where #RAM_TEMP3 was last assigned.
+
+Overall, we can see that the "blockIndex" in register A is copied to BC and then added
+to the "solidityData" in HL.
+
+Note that register hints are completely arbitrary, anything A-Z, 0-9 and underscore
+can appear after the backslash ("\") and is not stored or referenced by the assembler.
+They are purely for readability.
+
+Register hints do not replace the need for comments since comments should be used to
+explain why this piece of code is doing what it is, but register hints do remove the
+need to waste comments on explaining the mechanics of basic information flow.
+
+
+#	Numbers
+=======================================================================================
 It's safe to say you know how to use numbers. With Z80 code some instructions will
 require 8-bit numbers and some 16-bit numbers.
 
@@ -87,8 +135,8 @@ Suffixes:		1 K		= 1'000
 			1 Kbit		= 128 (1 Kibibit)
 ...
 
-#.#	Variables
----------------------------------------------------------------------------------------
+#	Variables
+=======================================================================================
 Format:
 	DEF #<variableName> [<expr>]
 	
@@ -96,8 +144,8 @@ The key benefit of a macro assembler over just an assembler is the ability to de
 names for common values and use these names throughout to provide you a single point
 to change that value in the future.
 
-In its simplest form a variable is defined using the DEF statement, a name and a value:
-(see the Numbers section for details on using decimal and hexadecimal numbers)
+In its simplest form a variable is defined using the DEF statement,
+a name and a value:
 
 	DEF #SMS_SOUND_PORT $7F
 
@@ -140,11 +188,6 @@ variables with the `hi` & `lo` properties, e.g.
 
 Notice that BC is loaded in low, high order due to the Z80 being little-endian.
 
-TODO:
-	.bank, .slot
-	.size
-...
-
 The `.bank` property retrieves the bank number of where the Label resides,
 the `.slot` property does likewise for the slot number - 0, 1 or 2 
 (see section 3, "Banks & Slots")
@@ -154,8 +197,13 @@ DEF #labelBank :label.bank
 DEF #RealAddr :label.slot * $4000
 ```
 
-#.#	Labels
----------------------------------------------------------------------------------------
+TODO:
+	.size
+...
+
+
+#	Labels
+=======================================================================================
 Format:
 	:<labelName>
 
@@ -194,11 +242,12 @@ Outside of the label `:myRoutine`, it is referred to via the full label name
 ---------------------------------------------------------------------------------------
 ...
 
-#.#	Objects
----------------------------------------------------------------------------------------
+
+#	Objects
+=======================================================================================
 Format:
 	DEF #<objectName>
-	DEF .<propertyName> [AS BYTE|WORD [x <expr>]]
+	DEF .<propertyName> [AS BYTE|WORD [x <expr>]|#<objectName>]
 
 In your code you will likely be handling structured data of some kind.
 A common example would be sprite definitions for players and enemies.
@@ -228,7 +277,7 @@ value of their offset, for example.
 
 As you can see, using an object provides the flexibility to rearrange the object's
 properties, insert new ones in the middle or remove properties from any point without
-breaking your assembly code (other than instances where reading bytes linearly).
+breaking your assembly code (other than when reading bytes linearly).
 
 Supported data types are "BYTE" & "WORD" (2 bytes). More types will be supported in
 future (including 24 / 32-bit words and single bits)
@@ -258,39 +307,40 @@ Objects can also contain other objects, allowing finer grained structure.
 	
 These sub-properties would be accessed with `#path.start.x`, for example.
 
-Sub-objects can be repeated too, though this can get complex.
-
-	DEF #enemies
-	DEF .positions	AS #position x 3
-	
-This would define the following variables:
-
-	Variable Name			Value
-	-------------			-----
-	#enemies			0
-	#enemies.positions		0
-	#enemies.positions.0		0
-	#enemies.positions.0.x		0
-	#enemies.positions.0.y		2
-	#enemies.positions.1		4
-	#enemies.positions.1.x		4
-	#enemies.positions.1.y		6
-	#enemies.positions.2		8
-	#enemies.positions.2.x		8
-	#enemies.positions.2.y		10
-	#enemies.size			12
-
 ...
 
 #.#	Structures
 ---------------------------------------------------------------------------------------
-TODO: inline method for instances?
-TODO: using data statements instead of DEFs
+Format:
+	DEF :<structureName> AS #<objectName>
+	DEF .<propertyName> <expr>[, <expr> ...]
 
-	DEF :<instanceName> AS #<objectName>
-	DEF .<propertyName> <expr>
-	DATA <expr>[, <expr> ...]
-...
+Objects are abstract concepts as defining one does not write any data in to the ROM;
+they are for your convenience in referring to structured data. To make maintaining the
+data statements easier, you can use the structure syntax, for example:
+
+	DEF :alien AS #enemy
+	DEF .x		$0080
+	DEF .y		$0020
+	DEF .id		$3F
+	DEF .speed	$1A
+
+This defines a structure labelled :alien, using the #enemy object as a template.
+Each of the properties defined by the object are given a value.
+
+What's interesting is that the order of the properties here does not have to be in the
+same order as they are defined by the object! The assembler will automatically output
+bytes in the order defined by the object, filling in the correct values in the correct
+places.
+
+What's more, you can omit properties entirely from the structure, and 0 will be used
+by default!
+
+	DEF :alien AS #enemy
+	DEF .id		$3F
+	
+Even though this omits properties, the full object will assembled,
+in the correct order.
 
 
 #.	Expressions:
@@ -482,10 +532,6 @@ Format:
 
 #.	Program Flow:
 =======================================================================================
-#.#	Anonymous Labels
----------------------------------------------------------------------------------------
-...
-
 #.#.	Logic
 ---------------------------------------------------------------------------------------
 Format:
@@ -514,6 +560,8 @@ Format:
 ...
 
 'TODO: `DEF LOOP` doesn't seem right..., need better syntax?
+	Could use recursive macros and do away with any specific loop syntax
+
 
 #.	Sections:
 =======================================================================================
@@ -528,6 +576,7 @@ determine how large a block of code/data is, and to include this value in your c
 
 'TODO: MAXSIZE property
 'TODO: BANK/SLOT/AT parameters?
+
 
 #.	Macros & Functions:
 =======================================================================================
@@ -590,7 +639,7 @@ Format:
 Format:
 	DEF RAM [AT <expr>]
 		DEF #<variableName> [AT <expr>] AS BYTE|WORD [x <expr>]
-		DEF #<variableName> [AT <expr>] AS OBJECT #<objectName>
+		DEF #<variableName> [AT <expr>] AS #<objectName>
 		...
 	END DEF
 ...

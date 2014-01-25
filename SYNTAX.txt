@@ -4,29 +4,46 @@ Licenced under a Creative Commons 3.0 Attribution Licence
 --You may use and modify this code how you see fit as long as you give credit
 =======================================================================================
 
+				TABLE OF CONTENTS
+	
+	i.		Goals
+	ii.		Concepts
+	
+	
+
 i.	Goals:
-=======================================================================================
+---------------------------------------------------------------------------------------
 :: Accessible
 	The primary goal is to educate others and preserve code for the future.
 	The purpose of this new assembler language is to be readable, obvious, more
-	self-documenting and less cryptic than other syntaxes
-
+	self-documenting and less ambiguous than other syntaxes
+	
 :: Flexible, Portable
 	Features are provided so that, when used properly, source code can be re-used,
 	re-ordered, modified, expanded and contracted with hopefully a minimum amount
 	of adjustment. In this regard, it goes further than any previous assembler
-
+	
 :: Minimal
 	Effort has been made to use a concise vocabulary, to work with the best
 	assumptions under doubt and to not duplicate functionality across multiple
 	features
-
+	
 It's important to note that source compatibility with existing assemblers is *not* a
 goal. Most assemblers are very good but fall short in a few areas that cannot be
 overcome without a new, clean language design.
 
+ii.	Concepts:
+---------------------------------------------------------------------------------------
+To be concise this syntax uses a small number of flexible concepts. To give you the
+"skinny" on the full content of this document, here is a brief description of these
+concepts:
 
-#	Comments
+*	Both variables (arbitrary values) and labels (locations in ROM) are
+	extensible with properties (sub-values). Almost everything revolves around
+	defining and using variables, labels and their properties.
+
+
+#.	Comments
 =======================================================================================
 Format:
 	;single-line
@@ -38,7 +55,7 @@ to add descriptive comments to your source.
 
 The purpose of comments is to describe why things happen the way they do in the code
 (such as an algorithm) as the purpose of a series of instructions cannot always be
-gleamed just by looking at them alone.
+gleaned just by looking at them alone.
 
 	/* in the solidity data, bit 7 determines that the tile should appear in front
 	   of sprites. rotate the byte three times to position bit 7 at bit 4.
@@ -49,7 +66,7 @@ gleamed just by looking at them alone.
 	rrca
 
 
-#	Register Hints
+#.	Register Hints
 =======================================================================================
 Format:
 	<register>\<hintName>
@@ -83,16 +100,16 @@ scroll around to find where #RAM_TEMP3 was last assigned.
 Overall, we can see that the "blockIndex" in register A is copied to BC and then added
 to the "solidityData" in HL.
 
-Note that register hints are completely arbitrary, anything A-Z, 0-9 and underscore
-can appear after the backslash ("\") and is not stored or referenced by the assembler.
-They are purely for readability.
+Note that register hints are optional and completely arbitrary, anything A-Z, 0-9 and
+underscore can appear after the backslash ("\") and is not stored or referenced by
+the assembler. They are purely for readability.
 
 Register hints do not replace the need for comments since comments should be used to
 explain why this piece of code is doing what it is, but register hints do remove the
 need to waste comments on explaining the mechanics of basic information flow.
 
 
-#	Numbers
+#.	Numbers
 =======================================================================================
 It's safe to say you know how to use numbers. With Z80 code some instructions will
 require 8-bit numbers and some 16-bit numbers.
@@ -129,13 +146,27 @@ The second convention allows you to abbreviate 16-bit words like so:
 
 	ld hl, %1%1			;%00000001%00000001 = 257
 
-TODO:
-Suffixes:		1 K		= 1'000
+TODO: negative numbers (8/16-bit)
+TODO: Suffixes:		1 K		= 1'000
 			1 KB		= 1'024
 			1 Kbit		= 128 (1 Kibibit)
 ...
 
-#	Variables
+
+#.	Strings
+=======================================================================================
+...
+
+#.#.	Escape Sequences:
+---------------------------------------------------------------------------------------
+...
+
+#.#.	ASCII Maps:
+---------------------------------------------------------------------------------------
+...
+
+
+#.	Variables
 =======================================================================================
 Format:
 	DEF #<variableName> [<expr>]
@@ -147,11 +178,11 @@ to change that value in the future.
 In its simplest form a variable is defined using the DEF statement,
 a name and a value:
 
-	DEF #SMS_SOUND_PORT $7F
+	DEF #sirLancelotsFavouriteColour $30
 
 Anywhere you would normally use a value, you can now instead use the variable name:
 
-	out (#SMS_SOUND_PORT), a
+	ld a, #sirLancelotsFavouriteColour
 
 All variables are prefixed with a hash (a.k.a. 'pound', 'sharp' or 'octothorpe') any
 place where they appear in the program. This convention is used so as to distinguish
@@ -171,8 +202,9 @@ But a variable is re-defined without a value, it defaults to its previous value,
 The practical application of this behaviour will be demonstrated later when it comes
 to using properties and defining RAM addresses
 
-#.#	Properties
----------------------------------------------------------------------------------------
+
+#.	Properties
+=======================================================================================
 Format:
 	#<variableName>.<propertyName>
 	
@@ -202,13 +234,13 @@ TODO:
 ...
 
 
-#	Labels
+#.	Labels
 =======================================================================================
 Format:
 	:<labelName>
 
-A label is a little like a variable, however the value assigned is a memory
-address based on where in your code it goes. It allows you to refer to points in code
+A label is a little like a variable, however the value assigned is a ROM address
+based on where in your code it goes. It allows you to refer to points in code
 without using the real hexadecimal address (which will be calculated for you).
 
 ```
@@ -217,7 +249,7 @@ without using the real hexadecimal address (which will be calculated for you).
 	jr :infiniteLoop
 ```
 
-#.#	Sub-Labels
+#.#.	Sub-Labels
 ---------------------------------------------------------------------------------------
 Labels that begin with a dot are attached as properties to the last regular label
 defined, for example:
@@ -238,16 +270,16 @@ Here the sub-label `.loop` is defined and recognised as `:myRoutine.loop`.
 Outside of the label `:myRoutine`, it is referred to via the full label name
 (to not confuse it with a potential `:aDifferentRoutine.loop`).
 
-#.#	Anonymous Labels
+#.#.	Anonymous Labels
 ---------------------------------------------------------------------------------------
 ...
 
 
-#	Objects
+#.	Objects
 =======================================================================================
 Format:
 	DEF #<objectName>
-	DEF .<propertyName> [AS BYTE|WORD [x <expr>]|#<objectName>]
+	DEF .<propertyName> [AS BYTE|WORD [x <expr>]|#<objectName>] [DEFAULT <expr>]
 
 In your code you will likely be handling structured data of some kind.
 A common example would be sprite definitions for players and enemies.
@@ -309,20 +341,21 @@ These sub-properties would be accessed with `#path.start.x`, for example.
 
 ...
 
-#.#	Structures
+#.#.	Structures
 ---------------------------------------------------------------------------------------
 Format:
 	DEF :<structureName> AS #<objectName>
 	DEF .<propertyName> <expr>[, <expr> ...]
+	[...]
 
 Objects are abstract concepts as defining one does not write any data in to the ROM;
 they are for your convenience in referring to structured data. To make maintaining the
 data statements easier, you can use the structure syntax, for example:
 
 	DEF :alien AS #enemy
+	DEF .id		$3F
 	DEF .x		$0080
 	DEF .y		$0020
-	DEF .id		$3F
 	DEF .speed	$1A
 
 This defines a structure labelled :alien, using the #enemy object as a template.
@@ -333,14 +366,21 @@ same order as they are defined by the object! The assembler will automatically o
 bytes in the order defined by the object, filling in the correct values in the correct
 places.
 
-What's more, you can omit properties entirely from the structure, and 0 will be used
-by default!
+What's more, you can omit properties entirely from the structure, and the default
+value will be used: either 0 if undefined, or the DEFAULT attribute from the object
+definition, e.g.:
+	
+	DEF #enemy
+	DEF .x		AS WORD
+	DEF .y		AS WORD
+	DEF .id		AS BYTE
+	DEF .speed	AS BYTE DEFAULT 5
 
 	DEF :alien AS #enemy
 	DEF .id		$3F
 	
 Even though this omits properties, the full object will assembled,
-in the correct order.
+in the correct order and the 6th byte (speed) will be 5.
 
 
 #.	Expressions:
@@ -349,7 +389,7 @@ In the format descriptors given throughout this document, the term "<expr>" can
 be substituted for a Number, a Label, a Variable, a Property or a calculation of any
 combination using the Operators, to produce a value.
 
-#.#	Operators
+#.#.	Operators
 ---------------------------------------------------------------------------------------
 The standard operators are supported as `+` add, `-` subtract, `*` multiply,
 `/` divide, `^` power & `\` modulus.
@@ -454,7 +494,7 @@ BANK 3, 4, 5, 6 SLOT 0, 1, 0, 1
 If no `BANK` declaration exists before the first line of assembled code,
 `BANK 0 SLOT 0` will be assumed.
 
-#.#	Setting the Assembly Point
+#.#.	Setting the Assembly Point
 ---------------------------------------------------------------------------------------
 Format:
 	AT <expr>
@@ -510,19 +550,6 @@ FILL BINARY "filename.bin"
 ```
 
 
-#.	Strings:
-=======================================================================================
-...
-
-#.#.	Escape Sequences
----------------------------------------------------------------------------------------
-...
-
-#.#.	ASCII Maps
----------------------------------------------------------------------------------------
-...
-
-
 #.	Includes:
 =======================================================================================
 Format:
@@ -552,21 +579,13 @@ TODO: =, NOT, <, <=, >, >=, AND, OR (`&`/`|`/`!` are purely bitwise operators)
 
 #.#.	Loops
 ---------------------------------------------------------------------------------------
-Format:
-	BEGIN LOOP [<expr>]
-		<code>
-		[EXIT LOOP]
-	END LOOP
-...
-
-'TODO: `DEF LOOP` doesn't seem right..., need better syntax?
-	Could use recursive macros and do away with any specific loop syntax
+'TODO: Could use recursive macros and do away with any specific loop syntax
 
 
 #.	Sections:
 =======================================================================================
 Format:
-	DEF SECTION :<sectionName> [MAXSIZE <expr>]
+	DEF :<sectionName> [BANK <expr>] [SLOT <expr>] [AT <expr>] [MAXSIZE <expr>]
 		<code>
 	END DEF
 
@@ -574,30 +593,30 @@ A SECTION defines a standard label, but with an additional `.size` property that
 give the number of bytes in the section *after* assembly. This will allow you to
 determine how large a block of code/data is, and to include this value in your code.
 
-'TODO: MAXSIZE property
-'TODO: BANK/SLOT/AT parameters?
+TODO: MAXSIZE property
+TODO: BANK/SLOT/AT parameters?
 
 
 #.	Macros & Functions:
 =======================================================================================
-#.#	Macros
+#.#.	Macros
 ---------------------------------------------------------------------------------------
 Format:
-	DEF MACRO @<macroName> [ARGS #<variableName>[, #<variableName> ...]]
+	DEF @<macroName> [ARGS #<variableName>[, #<variableName> ...]]
 		<code>
-	END MACRO
+	END DEF
 
 TODO: "SHIFT", variable arguments, "ARGS.size"?
 TODO: EXIT MACRO
 TODO: USE MACRO @macroName
 ...
 
-#.#	Functions
+#.#.	Functions
 ---------------------------------------------------------------------------------------
 Format:
-	DEF FUNCTION ?<functionName> [ARGS #<variableName>[, #<variableName> ...]]
+	DEF ?<functionName> [ARGS #<variableName>[, #<variableName> ...]]
 		<code>
-		LET ?<functionName> <expr>
+		DEF ?<functionName> <expr>
 	END DEF
 
 A function is similar to a macro but is used to calculate values at expression points,
@@ -606,14 +625,14 @@ rather than inserting whole lines or blocks of code.
 Since the purpose of a function is to calculate and return a value, functions cannot
 contain assembly code and can only use these statements:
 
-BEGIN / END LOOP, DEF :<label>, EXIT IF / FUNCTION / LOOP, IF / ELSE / ELSE IF / END IF
-
+TODO: update this list
+DEF :<label>, EXIT IF / FUNCTION / LOOP, IF / ELSE / ELSE IF / END IF
 
 TODO: "EXIT FUNCTION"
 ...
 
 Format:
-	(?<functionName> [<expr>[, <expr> ...]])
+	?<functionName> [<expr>[, <expr> ...]]
 
 ```
 DATA $AA, (?functionName $10, $20, $30), $BB, $CC
@@ -636,14 +655,23 @@ Format:
 
 #.	Memory Layout:
 =======================================================================================
-Format:
-	DEF RAM [AT <expr>]
-		DEF #<variableName> [AT <expr>] AS BYTE|WORD [x <expr>]
-		DEF #<variableName> [AT <expr>] AS #<objectName>
-		...
-	END DEF
-...
+TODO: RAM can be easier defined using the object syntax
 
+	DEF #RAM		$C000
+	DEF .FloorLayout	AS BYTE x 4 KB
+	
+	[...]
+	
+	;RAM will continue where it left off:
+	DEF #RAM
+	DEF .someThing		AS WORD
+
+Downside of this is that it forces a prefix, i.e. #RAM.FloorLayout
+Could be that any var defined "AS TYPE" will offset from the nearest var, e.g.
+
+	DEF #RAM
+	DEF #FloorLayout		AS WORD
+...
 
 #.	The `#SYSTEM` Variables:
 =======================================================================================

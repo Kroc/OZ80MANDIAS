@@ -1,11 +1,23 @@
-Attribute VB_Name = "OZ80_TokenStream"
+VERSION 1.0 CLASS
+BEGIN
+  MultiUse = -1  'True
+  Persistable = 0  'NotPersistable
+  DataBindingBehavior = 0  'vbNone
+  DataSourceBehavior  = 0  'vbNone
+  MTSTransactionMode  = 0  'NotAnMTSObject
+END
+Attribute VB_Name = "oz80TokenStream"
+Attribute VB_GlobalNameSpace = False
+Attribute VB_Creatable = True
+Attribute VB_PredeclaredId = False
+Attribute VB_Exposed = False
 Option Explicit
 '======================================================================================
 'OZ80MANDIAS: a Z80 assembler; Copyright (C) Kroc Camen, 2013-14
 'Licenced under a Creative Commons 3.0 Attribution Licence
 '--You may use and modify this code how you see fit as long as you give credit
 '======================================================================================
-'MODULE :: OZ80_TokenStream
+'CLASS:: oz80TokenStream
 
 'A Token Stream is machine-readable representation of the original source code that _
  does away for the need to refer to the source text files again. The assembler uses _
@@ -206,3 +218,5 @@ Private Function ArrayDimmed(varArray As Variant) As Boolean
         End If
     End If
 End Function
+
+

@@ -1,4 +1,16 @@
-Attribute VB_Name = "OZ80_Parser"
+VERSION 1.0 CLASS
+BEGIN
+  MultiUse = -1  'True
+  Persistable = 0  'NotPersistable
+  DataBindingBehavior = 0  'vbNone
+  DataSourceBehavior  = 0  'vbNone
+  MTSTransactionMode  = 0  'NotAnMTSObject
+END
+Attribute VB_Name = "oz80TextParser"
+Attribute VB_GlobalNameSpace = False
+Attribute VB_Creatable = True
+Attribute VB_PredeclaredId = False
+Attribute VB_Exposed = False
 Option Explicit
 Option Compare Text
 '======================================================================================
@@ -6,12 +18,7 @@ Option Compare Text
 'Licenced under a Creative Commons 3.0 Attribution Licence
 '--You may use and modify this code how you see fit as long as you give credit
 '======================================================================================
-'MODULE :: OZ8_Parser
-
-'This module parses the source text files and creates a token stream that represents _
- a normalised machine-readable representation of the source. The assembler then uses _
- the token stream internally so that the expensive operation of walking the text files _
- doesn't need to be done again
+'CLASS :: OZ8_Parser
 
 '/// CONSTANTS ////////////////////////////////////////////////////////////////////////
 
@@ -114,7 +121,7 @@ Private Words() As OZ80_WORD
  ======================================================================================
 Public Function Parse( _
     ByVal FilePath As String, _
-    Optional ByVal OutputPath As String = vbNullString _
+    ByRef TokenStream As oz80TokenStream _
 ) As OZ80_ERROR
     'Initialise the array of register mappings from text to data values
     Set REGISTERS = Nothing
@@ -152,7 +159,7 @@ Public Function Parse( _
     Call REGISTERS.Add("DE'", TOKEN_REGISTER_DE)
     Call REGISTERS.Add("HL'", TOKEN_REGISTER_HL)
     
-    Log ExplodeFile(FilePath)
+    Debug.Print ExplodeFile(FilePath)
 End Function
 
 '/// PRIVATE PROCEDURES ///////////////////////////////////////////////////////////////
@@ -164,10 +171,10 @@ Private Function ExplodeFile(ByVal FilePath As String) As OZ80_ERROR
     
     Dim FileNumber As String
     Let FileNumber = FreeFile
-    Log "Exploding file: " & FilePath
+    Debug.Print "Exploding file: " & FilePath
     Open FilePath For Input Access Read Lock Write As #FileNumber
     Let Text = StrConv(InputB(VBA.LOF(FileNumber), FileNumber), vbUnicode)
-    Log "Length: " & LOF(FileNumber) & " bytes"
+    Debug.Print "Length: " & LOF(FileNumber) & " bytes"
     Close #FileNumber
     
     Dim TextPos As Long
@@ -511,3 +518,5 @@ Private Function IsWhitespace(ByVal Char As String) As Boolean
     If Char = " " Then Let IsWhitespace = True: Exit Function
     If Char = vbTab Then Let IsWhitespace = True: Exit Function
 End Function
+
+

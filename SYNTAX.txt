@@ -7,7 +7,17 @@ Licenced under a Creative Commons 3.0 Attribution Licence
 				TABLE OF CONTENTS
 	
 	i.		Goals
-	ii.		Concepts
+	1.		Comments
+	2.		Register Hints
+	3.		Numbers
+	3.1.		Number Suffixes
+	3.2.		Signed Numbers
+	4.		Banks & Slots
+	4.1.		Setting the Assembly Point
+	5.		Labels
+	5.1.		Procedures
+	5.2.		Sub-Labels
+	5.3.		Anonymous Labels
 	
 	
 
@@ -32,18 +42,8 @@ It's important to note that source compatibility with existing assemblers is *no
 goal. Most assemblers are very good but fall short in a few areas that cannot be
 overcome without a new, clean language design.
 
-ii.	Concepts:
----------------------------------------------------------------------------------------
-To be concise this syntax uses a small number of flexible concepts. To give you the
-"skinny" on the full content of this document, here is a brief description of these
-concepts:
 
-*	Both variables (arbitrary values) and labels (locations in ROM) are
-	extensible with properties (sub-values). Almost everything revolves around
-	defining and using variables, labels and their properties.
-
-
-#.	Comments
+1.	Comments
 =======================================================================================
 Format:
 	;single-line
@@ -57,6 +57,14 @@ The purpose of comments is to describe why things happen the way they do in the 
 (such as an algorithm) as the purpose of a series of instructions cannot always be
 gleaned just by looking at them alone.
 
+A single-line comment begins with a semi-colon. All text from that point to the end
+of the line is ignored.
+
+	ld	de, 3			;sprite table is 3 bytes per sprite
+
+A multi-line comment begins with "/*" and continues until the closing sequence "*/"
+is encountered. All text in between is ignored.
+	
 	/* in the solidity data, bit 7 determines that the tile should appear in front
 	   of sprites. rotate the byte three times to position bit 7 at bit 4.
 	   this byte will form the high-byte of the 16-bit value for the name table
@@ -66,10 +74,10 @@ gleaned just by looking at them alone.
 	rrca
 
 
-#.	Register Hints
+2.	Register Hints
 =======================================================================================
 Format:
-	<register>\<hintName>
+	<register>__<hintName>
 
 The Z80 registers are your temporary working space for manipulating information with
 the CPU, as such register contents change constantly, for differing purposes.
@@ -88,10 +96,10 @@ Take for example this section of Z80 code in the middle of a routine:
 What's the purpose of this code? Adding comments can answer that, but we can better
 visualise at a glance the flow of information by providing register hints like so:
   
-	ld      c\blockIndex, a\blockIndex
-	ld      b\blockIndex, $00
-	ld      hl\solidityData, (#RAM_TEMP3)
-	add     hl\solidityData, bc\blockIndex
+	ld      c__blockIndex, a__blockIndex
+	ld      b__blockIndex, $00
+	ld      hl__solidityData, (#RAM_TEMP3)
+	add     hl__solidityData, bc__blockIndex
 
 Now we can see that #RAM_TEMP3 contained "solidityData" this time (even though it
 could be used for other purposes else where in the code) -- thus you do not have to
@@ -101,15 +109,15 @@ Overall, we can see that the "blockIndex" in register A is copied to BC and then
 to the "solidityData" in HL.
 
 Note that register hints are optional and completely arbitrary, anything A-Z, 0-9 and
-underscore can appear after the backslash ("\") and is not stored or referenced by
+underscore can appear after the double underscore and is not stored or referenced by
 the assembler. They are purely for readability.
 
 Register hints do not replace the need for comments since comments should be used to
-explain why this piece of code is doing what it is, but register hints do remove the
+explain why a piece of code is doing what it is, but register hints do remove the
 need to waste comments on explaining the mechanics of basic information flow.
 
 
-#.	Numbers
+3.	Numbers
 =======================================================================================
 It's safe to say you know how to use numbers. With Z80 code some instructions will
 require 8-bit numbers and some 16-bit numbers.
@@ -117,7 +125,8 @@ require 8-bit numbers and some 16-bit numbers.
 Any decimal number above 255 is implicitly a 16-bit number, therefore the following
 would not work:
 
-	ld a, 4096			;can't load 16-bit number into 8-bit register!
+	;can't load 16-bit number into 8-bit register!
+	ld a, 4096
 
 It's fine to use an 8-bit number on 16-bit instructions though, i.e.
 
@@ -146,23 +155,176 @@ The second convention allows you to abbreviate 16-bit words like so:
 
 	ld hl, %1%1			;%00000001%00000001 = 257
 
-TODO: negative numbers (8/16-bit)
-TODO: Suffixes:		1 K		= 1'000
-			1 KB		= 1'024
-			1 Kbit		= 128 (1 Kibibit)
-...
+3.1.	Number Suffixes:
+---------------------------------------------------------------------------------------
+Some number suffixes (units) are supported to represent larger number in a simpler
+fashion.
+
+	1 K		= 1'000 (kilobytes)
+	1 KB		= 1'024 (kibibytes)
+	1 Kbit		= 128 (kibibits)
+	
+3.2.	Signed Numbers:
+---------------------------------------------------------------------------------------
+Numbers are assumed to be positive and filling the full space of the 8 or 16-bits
+available, i.e. 0-255 or 0-65535.
+
+Negative numbers are represented on the Master System by having bit 7 set.
+This limits a negative number to -127 (8-bit) or -32'767 (16-bit).
+
+TODO: Is this one or two's compliment???
 
 
-#.	Strings
+4.	Banks & Slots
 =======================================================================================
+Format:
+	BANK <expr>[, <expr> ...] [SLOT <expr> [, <expr> ...]]
+
+TODO: This will ideally be replaced by SECTION use, e.g.
+      SECTION :<sectionName> [BANK <expr> SLOT <expr>] [AT <expr>]
+
+The Master System can address 64 KB of memory which is mapped into different 
+configurable slots. Since a cartridge may contain more than 64 KB (typically 256 KB
+or 512 KB), the contents of the cartridge can be "paged" into the slots in memory in
+16 KB chunks known as "banks".
+
+Here's a map of the Master System's memory as seen by the Z80 processor.
+
+	$FFFF	+-----------------+
+	        | RAM (mirror)    |
+	$E000	+-----------------+
+	        | RAM             | 8 KB
+	$C000	+-----------------+
+		|                 |
+		| SLOT 2          | 16 KB
+		|                 |
+	$8000	+-----------------+
+		|                 |
+		| SLOT 1          | 16 KB
+		|                 |
+	$4000	+-----------------+
+		|                 |
+		| SLOT 0          | 15 KB
+	$0400	+ - - - - - - - - +
+	$0000	+-----------------+ 1 KB
+
+It's important to note that the first 1 KB of memory is *always* paged in to the first
+1 KB of the cartridge, regardless of which bank in the cartridge slot 0 is assigned to.
+That means that $0000-$03FF in the memory is always mapped to $0000-$03FF in the ROM.
+
+The `BANK` directive tells the assembler which bank of the cartridge the following
+code is to be assembled into and automatically sets the origin to $0000 -- the start
+of the bank.
+
+In its simplest form just state the bank number, the slot is assumed to be 0.
+
+	BANK 0
+
+You can also specify the slot number explicitly:
+
+	BANK 5 SLOT 1
+
+This will assemble the code as if it is located between $4000-$7FFF even though it is
+positioned at $10000-$13FFF in the ROM.
+
+An error will occur if the assembler overflows the 16 KB limit of the bank.
+
+If you are assembling a large amount of code or data that is bigger than 16 KB you may
+not want to manage the boundary line manually as this is inflexible. Instead you can
+specify more than one bank number (separated by commas) and the data will overflow
+from one bank into the next automatically, i.e.
+
+	BANK 10, 11, 12
+
+When the slot number is not specified it will begin at 0 and increase with each
+automatic bank change until it reaches 2, before restarting back at 0.
+
+You can specify a slot number which will be used for each bank, or a series of slot
+numbers which will be used in order, e.g.
+
+	BANK 10, 11, 12 SLOT 2
+	BANK 3, 4, 5, 6 SLOT 0, 1, 0, 1
+
+If no `BANK` declaration exists before the first line of assembled code,
+`BANK 0 SLOT 0` will be assumed.
+
+4.1.	Setting the Assembly Point
+---------------------------------------------------------------------------------------
+Format:
+	AT <expr>
+
+If you need to place a piece of code or data starting in a particular location within
+a bank the `AT` statement specifies an offset address from the beginning of the bank
+to the desired starting point. In other assemblers this is usually known as `ORG`.
+
+```
+BANK 5		;bank 5 begins at $10000
+AT $2000	;begin assembling at $12000
+```
+
+TODO: SKIP
 ...
 
-#.#.	Escape Sequences:
+
+5.	Labels
+=======================================================================================
+Format:
+	:<labelName>
+
+When writing assembly code flexibility in the assembler is needed to handle the
+inherit in-flexibility of assembly language. With pure assembly, inserting a single
+instruction would throw off every consequent memory address!
+
+Labels allow you to point to an address in the ROM in a flexible & safe manner so that
+your code can expand, contract or even change order without breaking the ROM addresses
+used in the jump and load instructions (amongst others).
+
+A label gives a name to a place in the code and the assembler will fill in the final
+ROM address (accounting for the correct bank & slot) everywhere the name is used.
+	
+	:someData
+	DATA $3B
+	
+	[...]
+	
+	ld a, (:someData)
+
+5.1.	Procedures
 ---------------------------------------------------------------------------------------
+Format:
+	PROC :<procedureName> {
+		<code>
+	}
+
 ...
 
-#.#.	ASCII Maps:
+5.2.	Sub-Labels
 ---------------------------------------------------------------------------------------
+Labels that begin with a dot are attached as properties to the last regular label
+defined, for example:
+
+	PROC :myRoutine {
+		<code>
+		...
+	.loop	<code>
+		...
+		jr .loop
+	}
+	
+	PROC :aDifferentRoutine {
+		jp :myRoutine.loop
+	}
+
+Here the sub-label `.loop` is defined and recognised as `:myRoutine.loop`.
+Outside of the label `:myRoutine`, it is referred to via the full label name
+(to not confuse it with a potential `:aDifferentRoutine.loop`).
+
+5.3.	Anonymous Labels
+---------------------------------------------------------------------------------------
+Format:
+	-	<code>			;negative label
+	+	<code>			;forward label
+	=	<code>			;bi-directional label
 ...
 
 
@@ -200,7 +362,7 @@ But a variable is re-defined without a value, it defaults to its previous value,
 	DEF #ONE			;value is still 1, not zero
 
 The practical application of this behaviour will be demonstrated later when it comes
-to using properties and defining RAM addresses
+to using properties and defining RAM addresses.
 
 
 #.	Properties
@@ -224,62 +386,21 @@ The `.bank` property retrieves the bank number of where the Label resides,
 the `.slot` property does likewise for the slot number - 0, 1 or 2 
 (see section 3, "Banks & Slots")
 
-```
-DEF #labelBank :label.bank
-DEF #RealAddr :label.slot * $4000
-```
+	DEF #labelBank :label.bank
+	DEF #realAddr :label.slot * $4000
 
 TODO:
 	.size
 ...
 
 
-#.	Labels
-=======================================================================================
-Format:
-	:<labelName>
-
-A label is a little like a variable, however the value assigned is a ROM address
-based on where in your code it goes. It allows you to refer to points in code
-without using the real hexadecimal address (which will be calculated for you).
-
-```
-:infiniteLoop
-	nop
-	jr :infiniteLoop
-```
-
-#.#.	Sub-Labels
----------------------------------------------------------------------------------------
-Labels that begin with a dot are attached as properties to the last regular label
-defined, for example:
-
-```
-:myRoutine
-	<code>
-	...
-.loop	<code>
-	...
-	jr .loop
-
-:aDifferentRoutine
-	jp :myRoutine.loop
-```
-
-Here the sub-label `.loop` is defined and recognised as `:myRoutine.loop`.
-Outside of the label `:myRoutine`, it is referred to via the full label name
-(to not confuse it with a potential `:aDifferentRoutine.loop`).
-
-#.#.	Anonymous Labels
----------------------------------------------------------------------------------------
-...
-
-
 #.	Objects
 =======================================================================================
 Format:
-	DEF #<objectName>
-	DEF .<propertyName> [AS BYTE|WORD [x <expr>]|#<objectName>] [DEFAULT <expr>]
+	OBJECT #<objectName> {
+		.<propertyName> [AS BYTE|WORD [x <expr>]|#<object>] [DEFAULT <expr>]
+		[...]
+	}
 
 In your code you will likely be handling structured data of some kind.
 A common example would be sprite definitions for players and enemies.
@@ -291,21 +412,22 @@ essentially variables extended with custom properties defined by you.
 
 Let's imagine an enemy object:
 
-	DEF #enemy
-	DEF .x		AS WORD
-	DEF .y		AS WORD
-	DEF .id		AS BYTE
-	DEF .speed	AS BYTE
+	OBJECT #enemy {
+		.x		AS WORD
+		.y		AS WORD
+		.id		AS BYTE
+		.speed		AS BYTE
+	}
 
 First, a variable is defined, #enemy, with a value of 0 -- the starting offset point.
 Additional properties are defined, each with a given size. These properties hold the
 value of their offset, for example.
 
-	ld ix, :alien			;the location of an enemy instance
-	ld a, (ix+#enemy.id)		;gives 4
-	ld bc, (ix+#enemy.x)		;gives 0
-	ld de, (ix+#enemy.y)		;gives 2
-	ld l, (ix+#enemy.speed)		;gives 5
+	ld ix, :alien				;the location of an enemy instance
+	ld a, (ix+#enemy.id)			;gives 4
+	ld bc, (ix+#enemy.x)			;gives 0
+	ld de, (ix+#enemy.y)			;gives 2
+	ld l, (ix+#enemy.speed)			;gives 5
 
 As you can see, using an object provides the flexibility to rearrange the object's
 properties, insert new ones in the middle or remove properties from any point without
@@ -317,9 +439,10 @@ future (including 24 / 32-bit words and single bits)
 When you need to specify a property bigger than 2 bytes, you may use the `x` operator
 to give multiples of bytes or words; for example:
 
-	DEF #thing
-	DEF .someStuff	AS BYTE x 8
-	DEF .moreStuff	AS WORD x 16
+	OBJECT #thing {
+		.someStuff	AS BYTE x 8
+		.moreStuff	AS WORD x 16
+	}
 
 All variables and properties have a sub-property `.size` which gives the size of the
 variable or property in bytes. E.g.
@@ -329,13 +452,15 @@ variable or property in bytes. E.g.
 
 Objects can also contain other objects, allowing finer grained structure.
 
-	DEF #position
-	DEF .x 		AS WORD
-	DEF .y 		AS WORD
+	OBJECT #position {
+		.x 		AS WORD
+		.y 		AS WORD
+	}
 	
-	DEF #path
-	DEF .start	AS #position
-	DEF .end	AS #position
+	OBJECT #path {
+		.start		AS #position
+		.end		AS #position
+	}
 	
 These sub-properties would be accessed with `#path.start.x`, for example.
 
@@ -344,19 +469,21 @@ These sub-properties would be accessed with `#path.start.x`, for example.
 #.#.	Structures
 ---------------------------------------------------------------------------------------
 Format:
-	DEF :<structureName> AS #<objectName>
-	DEF .<propertyName> <expr>[, <expr> ...]
-	[...]
+	STRUCT :<structureName> AS #<objectName> {
+		.<propertyName> <expr>[, <expr> ...]
+		[...]
+	}
 
 Objects are abstract concepts as defining one does not write any data in to the ROM;
 they are for your convenience in referring to structured data. To make maintaining the
 data statements easier, you can use the structure syntax, for example:
 
-	DEF :alien AS #enemy
-	DEF .id		$3F
-	DEF .x		$0080
-	DEF .y		$0020
-	DEF .speed	$1A
+	STRUCT :alien AS #enemy {
+		.id		$3F
+		.x		$0080
+		.y		$0020
+		.speed		$1A
+	}
 
 This defines a structure labelled :alien, using the #enemy object as a template.
 Each of the properties defined by the object are given a value.
@@ -370,20 +497,24 @@ What's more, you can omit properties entirely from the structure, and the defaul
 value will be used: either 0 if undefined, or the DEFAULT attribute from the object
 definition, e.g.:
 	
-	DEF #enemy
-	DEF .x		AS WORD
-	DEF .y		AS WORD
-	DEF .id		AS BYTE
-	DEF .speed	AS BYTE DEFAULT 5
-
-	DEF :alien AS #enemy
-	DEF .id		$3F
+	OBJECT #enemy {
+		.x		AS WORD
+		.y		AS WORD
+		.id		AS BYTE
+		.speed		AS BYTE DEFAULT 5
+	}
+	
+	STRUCT :alien AS #enemy {
+		.id		$3F
+	}
 	
 Even though this omits properties, the full object will assembled,
 in the correct order and the 6th byte (speed) will be 5.
 
+TODO: sub-objects of a structure
 
-#.	Expressions:
+
+#.	Expressions
 =======================================================================================
 In the format descriptors given throughout this document, the term "<expr>" can
 be substituted for a Number, a Label, a Variable, a Property or a calculation of any
@@ -414,105 +545,7 @@ DATA $80 x 6
 Would insert 6 bytes of $80
 
 
-#.	Banks & Slots
-=======================================================================================
-Format:
-	BANK <expr>[, <expr> ...] [SLOT <expr> [, <expr> ...]]
-
-TODO: This may very well be replaced by SECTION use
-
-The Master System can address 64 KB of memory which is mapped into different 
-configurable slots. Since a cartridge may contain more than 64 KB (typically 256 KB
-or 512 KB), the contents of the cartridge can be "paged" into the slots in memory in
-16 KB chunks known as "banks".
-
-Here's a map of the Master System's memory as seen by the Z80 processor.
-
-	$FFFF	+-----------------+
-	        | RAM (mirror)    |
-	$E000	+-----------------+
-	        | RAM             | 8 KB
-	$C000	+-----------------+
-		|                 |
-		| SLOT 2          | 16 KB
-		|                 |
-	$8000	+-----------------+
-		|                 |
-		| SLOT 1          | 16 KB
-		|                 |
-	$4000	+-----------------+
-		|                 |
-		| SLOT 0          | 15 KB
-	$0400	+ - - - - - - - - +
-	$0000	+-----------------+ 1 KB
-
-It's important to note that the first 1 KB of memory is *always* paged in to the first
-1 KB of the cartridge, regardless of which bank in the cartridge slot 0 is assigned to.
-That means that $0000-$03FF in the memory is always mapped to $0000-$03FF in the ROM.
-
-The `BANK` directive tells the assembler which bank of the cartridge the following
-code is to be assembled into and automatically sets the origin to $0000 -- the start
-of the bank.
-
-In its simplest form just state the bank number, the slot is assumed to be 0.
-
-```
-BANK 0
-```
-
-You can also specify the slot number explicitly:
-
-```
-BANK 5 SLOT 1
-```
-
-This will assemble the code as if it is located between $4000-$7FFF even though it is
-positioned at $10000-$13FFF in the ROM.
-
-An error will occur if the assembler overflows the 16 KB limit of the bank.
-
-If you are assembling a large amount of code or data that is bigger than 16 KB you may
-not want to manage the boundary line manually as this is inflexible. Instead you can
-specify more than one bank number (separated by commas) and the data will overflow
-from one bank into the next automatically, i.e.
-
-```
-BANK 10, 11, 12
-```
-
-When the slot number is not specified it will begin at 0 and increase with each
-automatic bank change until it reaches 2, before restarting back at 0.
-
-You can specify a slot number which will be used for each bank, or a series of slot
-numbers which will be used in order, e.g.
-
-```
-BANK 10, 11, 12 SLOT 2
-BANK 3, 4, 5, 6 SLOT 0, 1, 0, 1
-```
-
-If no `BANK` declaration exists before the first line of assembled code,
-`BANK 0 SLOT 0` will be assumed.
-
-#.#.	Setting the Assembly Point
----------------------------------------------------------------------------------------
-Format:
-	AT <expr>
-
-If you need to place a piece of code or data starting in a particular location within
-a bank the `AT` statement specifies an offset address from the beginning of the bank
-to the desired starting point. In other assemblers this is usually known as `ORG`.
-
-```
-BANK 5		;bank 5 begins at $10000
-AT $2000	;begin assembling at $12000
-```
-
-TODO: SKIP
-...
-
-
-#.	Data:
+#.	Data
 =======================================================================================
 #.#.	Data statements
 ---------------------------------------------------------------------------------------
@@ -524,9 +557,7 @@ storing non-code data in the output ROM such as graphics, text and sound.
 
 The data statement accepts one or more expressions separated by commas.
 
-```
-DATA $00, $FF, $00FF, $FF00, "STRING", :label, #variable
-```
+	DATA $00, $FF, $00FF, $FF00, "STRING", :label, #variable
 
 It's important to note that 16-bit numbers are stored in little-endian format, that is
 the low-order byte is first and the hi-order byte second, therefore `$1234` would be
@@ -542,22 +573,37 @@ string or binary file. The filling is done in a repeating background fashion so 
 it will appear as if the assembled code/data has been placed over the top of an area
 previously filled with the `FILL` value.
 
-```
-FILL $FF
-FILL $00, $80, $FF
-FILL "Copyright (C) SEGA"
-FILL BINARY "filename.bin"
-```
+	FILL $FF
+	FILL $00, $80, $FF
+	FILL "Copyright (C) SEGA"
+	FILL BINARY "filename.bin"
 
 
-#.	Includes:
+#.	Strings
+=======================================================================================
+Textual data can be represented easily:
+
+	DATA "The quick brown fox"
+
+Will write out the ASCII bytes for the given string of text between quotes.
+
+#.#.	Escape Sequences
+---------------------------------------------------------------------------------------
+...
+
+#.#.	ASCII Maps
+---------------------------------------------------------------------------------------
+...
+
+
+#.	Includes
 =======================================================================================
 Format:
 	INCLUDE [BINARY] <expr> [START <expr> [LENGTH <expr>|STOP <expr>]]
 ...
 
 
-#.	Program Flow:
+#.	Program Flow
 =======================================================================================
 #.#.	Logic
 ---------------------------------------------------------------------------------------
@@ -582,12 +628,12 @@ TODO: =, NOT, <, <=, >, >=, AND, OR (`&`/`|`/`!` are purely bitwise operators)
 'TODO: Could use recursive macros and do away with any specific loop syntax
 
 
-#.	Sections:
+#.	Sections
 =======================================================================================
 Format:
-	DEF :<sectionName> [BANK <expr>] [SLOT <expr>] [AT <expr>] [MAXSIZE <expr>]
+	SECTION :<sectionName> [BANK <expr> SLOT <expr>] [AT <expr>] [MAXSIZE <expr>] {
 		<code>
-	END DEF
+	}
 
 A SECTION defines a standard label, but with an additional `.size` property that will
 give the number of bytes in the section *after* assembly. This will allow you to
@@ -597,14 +643,14 @@ TODO: MAXSIZE property
 TODO: BANK/SLOT/AT parameters?
 
 
-#.	Macros & Functions:
+#.	Macros & Functions
 =======================================================================================
 #.#.	Macros
 ---------------------------------------------------------------------------------------
 Format:
-	DEF @<macroName> [ARGS #<variableName>[, #<variableName> ...]]
+	MACRO @<macroName> [ARGS #<variableName>[, #<variableName> ...]] {
 		<code>
-	END DEF
+	}
 
 TODO: "SHIFT", variable arguments, "ARGS.size"?
 TODO: EXIT MACRO
@@ -614,10 +660,10 @@ TODO: USE MACRO @macroName
 #.#.	Functions
 ---------------------------------------------------------------------------------------
 Format:
-	DEF ?<functionName> [ARGS #<variableName>[, #<variableName> ...]]
+	FUNCTION ?<functionName> [ARGS #<variableName>[, #<variableName> ...]] {
 		<code>
 		DEF ?<functionName> <expr>
-	END DEF
+	}
 
 A function is similar to a macro but is used to calculate values at expression points,
 rather than inserting whole lines or blocks of code.
@@ -641,39 +687,37 @@ DATA $AA, (?functionName $10, $20, $30), $BB, $CC
 ...
 
 
-#.	Data Tables:
+#.	Data Tables
 =======================================================================================
 Format:
-	DEF TABLE :<tableName>
-		ROW .<rowIndexName>
+	TABLE :<tableName> {
+		.<rowIndexName>
 		<data> ...
-		[ROW .<rowIndexName>
+		[.<rowIndexName>
 		<data> ...]
-	END DEF
+	}
 ...
 
 
-#.	Memory Layout:
+#.	Memory Layout
 =======================================================================================
 TODO: RAM can be easier defined using the object syntax
 
-	DEF #RAM		$C000
-	DEF .FloorLayout	AS BYTE x 4 KB
+	OBJECT #RAM		$C000 {
+		.floorLayout	AS BYTE x 4 KB
+	}
 	
 	[...]
 	
 	;RAM will continue where it left off:
-	DEF #RAM
-	DEF .someThing		AS WORD
+	OBJECT #RAM {
+		.someThing	AS WORD
+	}
 
-Downside of this is that it forces a prefix, i.e. #RAM.FloorLayout
-Could be that any var defined "AS TYPE" will offset from the nearest var, e.g.
+Downside of this is that it forces a prefix, i.e. #RAM.floorLayout
 
-	DEF #RAM
-	DEF #FloorLayout		AS WORD
-...
 
-#.	The `#SYSTEM` Variables:
+#.	The `#SYSTEM` Variables
 =======================================================================================
 A special variable `#SYSTEM` holds a number of pieces of information that the
 assembler updates as it progresses.

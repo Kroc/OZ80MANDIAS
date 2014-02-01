@@ -12,14 +12,11 @@ Option Explicit
 'MAIN : "Look on my works ye Mighty, and despair!" _
  ======================================================================================
 Public Sub Main()
-    Log "OZ80MANDIAS"
-    Call OZ80_Parser.Parse(App.Path & "\test.OZ8.asm")
-    Debug.Print
-End Sub
-
-'Log _
- ======================================================================================
-Public Sub Log(ByVal Msg As String)
-    Debug.Print Msg
+    Dim Assembler As oz80Assembler
+    Set Assembler = New oz80Assembler
+    
+    Call Assembler.Assemble(App.Path & "\test.OZ8.asm")
+    
+    Set Assembler = Nothing
 End Sub
 

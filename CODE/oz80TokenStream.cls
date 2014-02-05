@@ -64,7 +64,8 @@ End Enum
 'The data field of a token can be any 32-bit number and not just limited to the defs _
  below. These are provided for tokens that have well defined data values
 Public Enum OZ80_TOKEN_DATA
-    'Z80 Assembly Mnemonics -----------------------------------------------------------
+    'Z80 Assembly Mnemonics:
+    '----------------------------------------------------------------------------------
     'These are just the mnemonic tokens -- the assembly routine itself checks the
      'parameters and determines which opcode should be used
     TOKEN_Z80_ADC = &H1                 'Add with Carry
@@ -136,8 +137,10 @@ Public Enum OZ80_TOKEN_DATA
     TOKEN_Z80_SUB = &H43                'Subtract
     TOKEN_Z80_XOR = &H44                'Bitwise XOR
     
+    'Z80 Registers:
     '----------------------------------------------------------------------------------
     'When the token is OZ80_TOKEN_REGISTER then the following specifies which register
+    
     TOKEN_REGISTER_A = &HF00000         'Accumulator
     TOKEN_REGISTER_B = &HF00001
     TOKEN_REGISTER_C = &HF00002
@@ -173,6 +176,20 @@ Private Type Token
 End Type
 
 Private Tokens() As Token
+
+'/// EVENTS ///////////////////////////////////////////////////////////////////////////
+
+'CLASS Initialize _
+ ======================================================================================
+Private Sub Class_Initialize()
+    '
+End Sub
+
+'CLASS Terminate _
+ ======================================================================================
+Private Sub Class_Terminate()
+    Erase Tokens
+End Sub
 
 '/// PUBLIC INTERFACE /////////////////////////////////////////////////////////////////
 
@@ -218,5 +235,3 @@ Private Function ArrayDimmed(varArray As Variant) As Boolean
         End If
     End If
 End Function
-
-

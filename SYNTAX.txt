@@ -18,6 +18,7 @@ Licenced under a Creative Commons 3.0 Attribution Licence
 	5.1.		Procedures
 	5.2.		Sub-Labels
 	5.3.		Anonymous Labels
+	6.		Variables
 	
 	
 
@@ -296,28 +297,47 @@ Format:
 		<code>
 	}
 
-...
+Procedures (also known as routines) are the sections of code which you `call` into and
+return from (`ret`).
+
+To help organise your procedures and make them more portable, a specific procedure
+syntax (`PROC`) is provided.
+
+	PROC :myProcedure {
+		ret
+	}
+	
+	[...]
+	
+	call :myProcedure
+
+The procedure is defined with a label, giving you a means to name your procedure and
+the assembler will calculate the label's address in memory for you.
+
+The curly braces form a "block", a special encapsulation that define the beginning
+and end of the code that makes up the procedure.
 
 5.2.	Sub-Labels
 ---------------------------------------------------------------------------------------
-Labels that begin with a dot are attached as properties to the last regular label
-defined, for example:
+Within procedure blocks (explained above), labels that begin with a dot are attached
+as properties of the procedure, e.g.
 
-	PROC :myRoutine {
-		<code>
-		...
-	.loop	<code>
-		...
-		jr .loop
+	PROC :myProcedure {
+		ld b, 10
+	.loop	nop
+		djnz .loop
+		ret
 	}
 	
-	PROC :aDifferentRoutine {
-		jp :myRoutine.loop
-	}
+	[...]
+	
+	ld b, 20
+	call :myProcedure.loop
 
-Here the sub-label `.loop` is defined and recognised as `:myRoutine.loop`.
-Outside of the label `:myRoutine`, it is referred to via the full label name
-(to not confuse it with a potential `:aDifferentRoutine.loop`).
+Here the sub-label `.loop` is defined and recognised as `:myProcedure.loop` but can be
+referred to within the procedure as `.loop`. This prevents common labels within
+procedures (such as "loop") from clashing with other procedures' internal labelling.
+Outside of "myProcedure", it is referred to via the full label name.
 
 5.3.	Anonymous Labels
 ---------------------------------------------------------------------------------------
@@ -328,7 +348,7 @@ Format:
 ...
 
 
-#.	Variables
+6.	Variables
 =======================================================================================
 Format:
 	DEF #<variableName> [<expr>]
@@ -377,10 +397,10 @@ Instead of specifying these bytes in a fixed fashion, you can use the flexibilit
 variables with the `hi` & `lo` properties, e.g.
 
 	DEF #foo	$1234
-	ld b, #foo.lo			;"$34"
-	ld c, #foo.hi			;"$12"
+	ld h, #foo.lo			;"$34"
+	ld l, #foo.hi			;"$12"
 
-Notice that BC is loaded in low, high order due to the Z80 being little-endian.
+Notice that HL is loaded in low, high order due to the Z80 being little-endian.
 
 The `.bank` property retrieves the bank number of where the Label resides,
 the `.slot` property does likewise for the slot number - 0, 1 or 2 
@@ -391,6 +411,58 @@ the `.slot` property does likewise for the slot number - 0, 1 or 2
 
 TODO:
 	.size
+...
+
+#.	Data
+=======================================================================================
+#.#.	Data statements
+---------------------------------------------------------------------------------------
+Format:
+	DATA <expr>[, <expr> ...]
+
+The data statement assembles numbers and text into the output file. It is used for
+storing non-code data in the output ROM such as graphics, text and sound.
+
+The data statement accepts one or more expressions separated by commas.
+
+	DATA $00, $FF, $00FF, $FF00, "string", :label, #variable, 1+2
+
+It's important to note that 16-bit numbers are stored in little-endian format, that is
+the low-order byte is first and the hi-order byte second, therefore `$1234` would be
+outputted as `$34, $12`. This is the format understood by the Master System.
+
+#.#.	Filling Space
+---------------------------------------------------------------------------------------
+Format:
+	FILL [BINARY] <expr>[, <expr> ...]
+
+Fills unused space from the point of the declaration onwards with the given value,
+string or binary file. The filling is done in a repeating background fashion so that
+it will appear as if the assembled code/data has been placed over the top of an area
+previously filled with the `FILL` value.
+
+	FILL $FF
+	FILL $00, $80, $FF
+	FILL "Copyright (C) SEGA"
+	FILL BINARY "filename.bin"
+
+
+#.	Includes
+=======================================================================================
+Format:
+	INCLUDE [BINARY] <expr> [START <expr> [LENGTH <expr>|STOP <expr>]]
+...
+
+
+#.	Data Tables
+=======================================================================================
+Format:
+	TABLE :<tableName> {
+		.<rowIndexName>
+		<data> ...
+		[.<rowIndexName>
+		<data> ...]
+	}
 ...
 
 
@@ -523,7 +595,7 @@ combination using the Operators, to produce a value.
 #.#.	Operators
 ---------------------------------------------------------------------------------------
 The standard operators are supported as `+` add, `-` subtract, `*` multiply,
-`/` divide, `^` power & `\` modulus.
+`/` divide, `^` power & `\` modulus (remainder of division).
 
 TODO:
 & (AND)
@@ -545,40 +617,6 @@ DATA $80 x 6
 Would insert 6 bytes of $80
 
 
-#.	Data
-=======================================================================================
-#.#.	Data statements
----------------------------------------------------------------------------------------
-Format:
-	DATA <expr>[, <expr> ...]
-
-The data statement assembles numbers and text into the output file. It is used for
-storing non-code data in the output ROM such as graphics, text and sound.
-
-The data statement accepts one or more expressions separated by commas.
-
-	DATA $00, $FF, $00FF, $FF00, "STRING", :label, #variable
-
-It's important to note that 16-bit numbers are stored in little-endian format, that is
-the low-order byte is first and the hi-order byte second, therefore `$1234` would be
-outputted as `$34, $12`. This is the format understood by the Master System.
-
-#.#.	Filling Space
----------------------------------------------------------------------------------------
-Format:
-	FILL [BINARY] <expr>[, <expr> ...]
-
-Fills unused space from the point of the declaration onwards with the given value,
-string or binary file. The filling is done in a repeating background fashion so that
-it will appear as if the assembled code/data has been placed over the top of an area
-previously filled with the `FILL` value.
-
-	FILL $FF
-	FILL $00, $80, $FF
-	FILL "Copyright (C) SEGA"
-	FILL BINARY "filename.bin"
-
-
 #.	Strings
 =======================================================================================
 Textual data can be represented easily:
@@ -596,25 +634,18 @@ Will write out the ASCII bytes for the given string of text between quotes.
 ...
 
 
-#.	Includes
-=======================================================================================
-Format:
-	INCLUDE [BINARY] <expr> [START <expr> [LENGTH <expr>|STOP <expr>]]
-...
-
-
 #.	Program Flow
 =======================================================================================
 #.#.	Logic
 ---------------------------------------------------------------------------------------
 Format:
-	IF [NOT] [<expr>|DEF #<variableName>|EXISTS <filename>]
+	IF [NOT] <expr>|DEF #<variableName>|EXISTS <filename> {
 		<code>
-	[ELSE IF <expr>
+	[} ELSE IF <expr> {
 		<code> ...]
-	[ELSE
+	[} ELSE {
 		<code>]
-	END IF
+	}
 
 TODO: "EXIT IF"
 ...
@@ -687,18 +718,6 @@ DATA $AA, (?functionName $10, $20, $30), $BB, $CC
 ...
 
 
-#.	Data Tables
-=======================================================================================
-Format:
-	TABLE :<tableName> {
-		.<rowIndexName>
-		<data> ...
-		[.<rowIndexName>
-		<data> ...]
-	}
-...
-
-
 #.	Memory Layout
 =======================================================================================
 TODO: RAM can be easier defined using the object syntax
@@ -715,26 +734,3 @@ TODO: RAM can be easier defined using the object syntax
 	}
 
 Downside of this is that it forces a prefix, i.e. #RAM.floorLayout
-
-
-#.	The `#SYSTEM` Variables
-=======================================================================================
-A special variable `#SYSTEM` holds a number of pieces of information that the
-assembler updates as it progresses.
-
-:: `#SYSTEM.PC`
-	Gives the current assembly address (accounting for BANK and SLOT)
-	
-:: `#SYSTEM.PC.bank`
-	Gives the current bank number of the assembly point
-
-:: `#SYSTEM.PC.slot`
-	Gives the current slot number of the assembly point
-
-:: `#SYSTEM.TABLE.row`
-	Within a ROW definition, gives the index number of the row.
-	An error will occur if used outside of a ROW definition
-
-...
-
-'TODO: Is this needed? Is there a better way to do it? Name-squatting is bad

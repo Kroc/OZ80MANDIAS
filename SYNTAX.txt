@@ -47,7 +47,7 @@ overcome without a new, clean language design.
 1.	Comments
 =======================================================================================
 Format:
-	;single-line
+	//single-line
 	/* multi-
 	line */
 
@@ -61,7 +61,7 @@ gleaned just by looking at them alone.
 A single-line comment begins with a semi-colon. All text from that point to the end
 of the line is ignored.
 
-	ld	de, 3			;sprite table is 3 bytes per sprite
+	ld	de, 3			//sprite table is 3 bytes per sprite
 
 A multi-line comment begins with "/*" and continues until the closing sequence "*/"
 is encountered. All text in between is ignored.
@@ -97,10 +97,10 @@ Take for example this section of Z80 code in the middle of a routine:
 What's the purpose of this code? Adding comments can answer that, but we can better
 visualise at a glance the flow of information by providing register hints like so:
   
-	ld      c__blockIndex, a__blockIndex
-	ld      b__blockIndex, $00
-	ld      hl__solidityData, (#RAM_TEMP3)
-	add     hl__solidityData, bc__blockIndex
+	ld      c;blockIndex, a;blockIndex
+	ld      b;blockIndex, $00
+	ld      hl;solidityData, (#RAM_TEMP3)
+	add     hl;solidityData, bc;blockIndex
 
 Now we can see that #RAM_TEMP3 contained "solidityData" this time (even though it
 could be used for other purposes else where in the code) -- thus you do not have to
@@ -110,8 +110,8 @@ Overall, we can see that the "blockIndex" in register A is copied to BC and then
 to the "solidityData" in HL.
 
 Note that register hints are optional and completely arbitrary, anything A-Z, 0-9 and
-underscore can appear after the double underscore and is not stored or referenced by
-the assembler. They are purely for readability.
+underscore can appear after the semi-colon and is not stored or referenced by the
+assembler. They are purely for readability.
 
 Register hints do not replace the need for comments since comments should be used to
 explain why a piece of code is doing what it is, but register hints do remove the
@@ -126,7 +126,7 @@ require 8-bit numbers and some 16-bit numbers.
 Any decimal number above 255 is implicitly a 16-bit number, therefore the following
 would not work:
 
-	;can't load 16-bit number into 8-bit register!
+	//can't load 16-bit number into 8-bit register!
 	ld a, 4096
 
 It's fine to use an 8-bit number on 16-bit instructions though, i.e.
@@ -154,7 +154,7 @@ first (for better readability), e.g.
 
 The second convention allows you to abbreviate 16-bit words like so:
 
-	ld hl, %1%1			;%00000001%00000001 = 257
+	ld hl, %1%1			//%00000001%00000001 = 257
 
 3.1.	Number Suffixes:
 ---------------------------------------------------------------------------------------
@@ -258,10 +258,8 @@ If you need to place a piece of code or data starting in a particular location w
 a bank the `AT` statement specifies an offset address from the beginning of the bank
 to the desired starting point. In other assemblers this is usually known as `ORG`.
 
-```
-BANK 5		;bank 5 begins at $10000
-AT $2000	;begin assembling at $12000
-```
+	BANK 5				//bank 5 begins at $10000
+	AT $2000			//begin assembling at $12000
 
 TODO: SKIP
 ...
@@ -342,9 +340,9 @@ Outside of "myProcedure", it is referred to via the full label name.
 5.3.	Anonymous Labels
 ---------------------------------------------------------------------------------------
 Format:
-	-	<code>			;negative label
-	+	<code>			;forward label
-	=	<code>			;bi-directional label
+	-	<code>			//negative label
+	+	<code>			//forward label
+	=	<code>			//bi-directional label
 ...
 
 
@@ -378,8 +376,8 @@ If the value expression is omitted, a variable defaults to 0, e.g.
 
 But a variable is re-defined without a value, it defaults to its previous value, e.g.
 
-	DEF #ONE	1		;set to 1
-	DEF #ONE			;value is still 1, not zero
+	DEF #ONE	1		//set to 1
+	DEF #ONE			//value is still 1, not zero
 
 The practical application of this behaviour will be demonstrated later when it comes
 to using properties and defining RAM addresses.
@@ -397,8 +395,8 @@ Instead of specifying these bytes in a fixed fashion, you can use the flexibilit
 variables with the `hi` & `lo` properties, e.g.
 
 	DEF #foo	$1234
-	ld h, #foo.lo			;"$34"
-	ld l, #foo.hi			;"$12"
+	ld h, #foo.lo			//"$34"
+	ld l, #foo.hi			//"$12"
 
 Notice that HL is loaded in low, high order due to the Z80 being little-endian.
 
@@ -495,11 +493,11 @@ First, a variable is defined, #enemy, with a value of 0 -- the starting offset p
 Additional properties are defined, each with a given size. These properties hold the
 value of their offset, for example.
 
-	ld ix, :alien				;the location of an enemy instance
-	ld a, (ix+#enemy.id)			;gives 4
-	ld bc, (ix+#enemy.x)			;gives 0
-	ld de, (ix+#enemy.y)			;gives 2
-	ld l, (ix+#enemy.speed)			;gives 5
+	ld ix, :alien			//the location of an enemy instance
+	ld a, (ix+#enemy.id)		//gives 4
+	ld bc, (ix+#enemy.x)		//gives 0
+	ld de, (ix+#enemy.y)		//gives 2
+	ld l, (ix+#enemy.speed)		//gives 5
 
 As you can see, using an object provides the flexibility to rearrange the object's
 properties, insert new ones in the middle or remove properties from any point without
@@ -519,8 +517,8 @@ to give multiples of bytes or words; for example:
 All variables and properties have a sub-property `.size` which gives the size of the
 variable or property in bytes. E.g.
 
-	PRINT #thing.moreStuff.size	;outputs 32 (16 words)
-	PRINT #thing.size		;outputs 40 (8 + 32)
+	PRINT #thing.moreStuff.size	//outputs 32 (16 words)
+	PRINT #thing.size		//outputs 40 (8 + 32)
 
 Objects can also contain other objects, allowing finer grained structure.
 
@@ -728,7 +726,7 @@ TODO: RAM can be easier defined using the object syntax
 	
 	[...]
 	
-	;RAM will continue where it left off:
+	//the offset will continue where it left off:
 	OBJECT #RAM {
 		.someThing	AS WORD
 	}

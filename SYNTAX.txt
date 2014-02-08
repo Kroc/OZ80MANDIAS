@@ -343,6 +343,7 @@ Format:
 	-	<code>			//negative label
 	+	<code>			//forward label
 	=	<code>			//bi-directional label
+		jp : | djnz :		//refers to the PROC's label
 ...
 
 

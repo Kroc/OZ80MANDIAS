@@ -27,12 +27,13 @@ Option Compare Text
 
 '/// CONSTANTS ////////////////////////////////////////////////////////////////////////
 
-Private REGISTERS As Scripting.Dictionary
+Private RegisterTokens As Scripting.Dictionary
+Private OperatorTokens As Scripting.Dictionary
 
 Private Const SYNTAX_ALPHA = "ABCDEFGHIJKLMNOPQRSTUVQXYZ_"
 Private Const SYNTAX_NUMERIC = "0123456789"
 
-Private Const SYNTAX_COMMENT = ";"
+Private Const SYNTAX_COMMENT = "//"
 Private Const SYNTAX_COMMENT_OPEN = "/*"
 Private Const SYNTAX_COMMENT_CLOSE = "*/"
 Private Const SYNTAX_QUOTE = """"
@@ -48,22 +49,22 @@ Private Const SYNTAX_PAREN_CLOSE = ")"
 Private Const SYNTAX_BLOCK_OPEN = "{"
 Private Const SYNTAX_BLOCK_CLOSE = "}"
 
-Private Const OPERATOR_ADD = "+"
-Private Const OPERATOR_SUB = "-"
-Private Const OPERATOR_MUL = "*"
-Private Const OPERATOR_DIV = "/"
-Private Const OPERATOR_POW = "^"
-Private Const OPERATOR_MOD = "\"
+Private Const SYNTAX_OPERATOR_ADD = "+"
+Private Const SYNTAX_OPERATOR_SUB = "-"
+Private Const SYNTAX_OPERATOR_MUL = "*"
+Private Const SYNTAX_OPERATOR_DIV = "/"
+Private Const SYNTAX_OPERATOR_POW = "^"
+Private Const SYNTAX_OPERATOR_MOD = "\"
 
-Private Const OPERATORS = _
-    OPERATOR_ADD & OPERATOR_SUB & OPERATOR_MUL & OPERATOR_DIV & OPERATOR_POW & _
-    OPERATOR_MOD
+Private Const Operators = _
+    SYNTAX_OPERATOR_ADD & SYNTAX_OPERATOR_SUB & SYNTAX_OPERATOR_MUL & _
+    SYNTAX_OPERATOR_DIV & SYNTAX_OPERATOR_POW & SYNTAX_OPERATOR_MOD
 
 'These characters can break a word without spaces to separate, _
  they also form a word on their own
 Private Const SYNTAX_WORDBREAKS = _
-    SYNTAX_COMMENT & SYNTAX_LIST & SYNTAX_PAREN_OPEN & SYNTAX_PAREN_CLOSE & _
-    SYNTAX_BLOCK_OPEN & SYNTAX_BLOCK_CLOSE & OPERATORS
+    SYNTAX_LIST & SYNTAX_PAREN_OPEN & SYNTAX_PAREN_CLOSE & _
+    SYNTAX_BLOCK_OPEN & SYNTAX_BLOCK_CLOSE & Operators
 
 Private Const KEYWORD_DEF = "DEF"
 Private Const KEYWORDS = "|" & KEYWORD_DEF & "|"
@@ -88,7 +89,7 @@ End Type
 
 Private Enum OZ80_WORDKIND
     ASM = 1
-    NUMBER = 2
+    Number = 2
     KEYWORD = 3
     LABEL = 4
     VARIABLE = 5
@@ -97,9 +98,11 @@ Private Enum OZ80_WORDKIND
     PAREN = 8
     BLOCK = 9
     LIST = 10
+    OPERATOR = 11
 End Enum
 #If False Then
-    Private ASM, NUMBER, KEYWORD, LABEL, VARIABLE, MACRO, FUNCT, PAREN, BLOCK, LIST
+    Private ASM, Number, KEYWORD, LABEL, VARIABLE, MACRO, FUNCT, PAREN, BLOCK, LIST, _
+            OPERATOR
 #End If
 
 '/// VARIABLES ////////////////////////////////////////////////////////////////////////
@@ -107,15 +110,72 @@ End Enum
 Private Words() As OZ80_WORD
 Private index As Long                   'index number of current word being tokenised
 
-'A tokenStream object is passed to us by the `Parse` method. This is where we will _
- feed the result of our text parsing
+'A tokenStream object is passed to us by the `Parse` method. _
+ This is where we will feed the result of our text parsing
 Private TokenStream As oz80TokenStream
 
 '/// EVENTS ///////////////////////////////////////////////////////////////////////////
 
+'CLASS Initialize _
+ ======================================================================================
+Private Sub Class_Initialize()
+    'Initialise the array of register mappings from text to data values
+    Set RegisterTokens = New Scripting.Dictionary
+    With RegisterTokens
+        Call .Add("A", TOKEN_REGISTER_A)
+        Call .Add("B", TOKEN_REGISTER_B)
+        Call .Add("C", TOKEN_REGISTER_C)
+        Call .Add("D", TOKEN_REGISTER_D)
+        Call .Add("E", TOKEN_REGISTER_E)
+        Call .Add("H", TOKEN_REGISTER_H)
+        Call .Add("I", TOKEN_REGISTER_I)
+        Call .Add("L", TOKEN_REGISTER_L)
+        Call .Add("R", TOKEN_REGISTER_R)
+        Call .Add("AF", TOKEN_REGISTER_AF)
+        Call .Add("BC", TOKEN_REGISTER_BC)
+        Call .Add("DE", TOKEN_REGISTER_DE)
+        Call .Add("HL", TOKEN_REGISTER_HL)
+        Call .Add("IXL", TOKEN_REGISTER_IXL)
+        Call .Add("IXH", TOKEN_REGISTER_IXH)
+        Call .Add("IX", TOKEN_REGISTER_IX)
+        Call .Add("IYL", TOKEN_REGISTER_IYL)
+        Call .Add("IYH", TOKEN_REGISTER_IYH)
+        Call .Add("IY", TOKEN_REGISTER_IY)
+        Call .Add("SP", TOKEN_REGISTER_SP)
+        Call .Add("PC", TOKEN_REGISTER_PC)
+        'and the shadow registers -- you can't actually manipulate these directly _
+         on a z80, this is just a way of labelling for your convenience
+        Call .Add("A'", TOKEN_REGISTER_A)
+        Call .Add("B'", TOKEN_REGISTER_B)
+        Call .Add("C'", TOKEN_REGISTER_C)
+        Call .Add("D'", TOKEN_REGISTER_D)
+        Call .Add("E'", TOKEN_REGISTER_E)
+        Call .Add("H'", TOKEN_REGISTER_H)
+        Call .Add("AF'", TOKEN_REGISTER_AF)
+        Call .Add("BC'", TOKEN_REGISTER_BC)
+        Call .Add("DE'", TOKEN_REGISTER_DE)
+        Call .Add("HL'", TOKEN_REGISTER_HL)
+    End With
+    
+    'Initialise the array of operator mappings from text to data values
+    Set OperatorTokens = New Scripting.Dictionary
+    With OperatorTokens
+        Call .Add(SYNTAX_OPERATOR_ADD, OZ80_TOKEN_DATA.TOKEN_OPERATOR_ADD)
+        Call .Add(SYNTAX_OPERATOR_SUB, OZ80_TOKEN_DATA.TOKEN_OPERATOR_SUB)
+        Call .Add(SYNTAX_OPERATOR_MUL, OZ80_TOKEN_DATA.TOKEN_OPERATOR_MUL)
+        Call .Add(SYNTAX_OPERATOR_DIV, OZ80_TOKEN_DATA.TOKEN_OPERATOR_DIV)
+        Call .Add(SYNTAX_OPERATOR_POW, OZ80_TOKEN_DATA.TOKEN_OPERATOR_POW)
+        Call .Add(SYNTAX_OPERATOR_MOD, OZ80_TOKEN_DATA.TOKEN_OPERATOR_MOD)
+    End With
+End Sub
+
 'CLASS Terminate _
  ======================================================================================
 Private Sub Class_Terminate()
+    'Clean up the arrays
+    Erase Words
+    Set RegisterTokens = Nothing
+    Set OperatorTokens = Nothing
     'Dereference the tokenStream object we were given by the assembler
     Set TokenStream = Nothing
 End Sub
@@ -131,48 +191,14 @@ Public Function Parse( _
     'Remember the token stream we need to feed into
     Set TokenStream = DestTokenStream
     
-    'Initialise the array of register mappings from text to data values
-    Set REGISTERS = Nothing
-    Set REGISTERS = New Scripting.Dictionary
-    Call REGISTERS.Add("A", TOKEN_REGISTER_A)
-    Call REGISTERS.Add("B", TOKEN_REGISTER_B)
-    Call REGISTERS.Add("C", TOKEN_REGISTER_C)
-    Call REGISTERS.Add("D", TOKEN_REGISTER_D)
-    Call REGISTERS.Add("E", TOKEN_REGISTER_E)
-    Call REGISTERS.Add("H", TOKEN_REGISTER_H)
-    Call REGISTERS.Add("I", TOKEN_REGISTER_I)
-    Call REGISTERS.Add("L", TOKEN_REGISTER_L)
-    Call REGISTERS.Add("R", TOKEN_REGISTER_R)
-    Call REGISTERS.Add("AF", TOKEN_REGISTER_AF)
-    Call REGISTERS.Add("BC", TOKEN_REGISTER_BC)
-    Call REGISTERS.Add("DE", TOKEN_REGISTER_DE)
-    Call REGISTERS.Add("HL", TOKEN_REGISTER_HL)
-    Call REGISTERS.Add("IXL", TOKEN_REGISTER_IXL)
-    Call REGISTERS.Add("IXH", TOKEN_REGISTER_IXH)
-    Call REGISTERS.Add("IX", TOKEN_REGISTER_IX)
-    Call REGISTERS.Add("IYL", TOKEN_REGISTER_IYL)
-    Call REGISTERS.Add("IYH", TOKEN_REGISTER_IYH)
-    Call REGISTERS.Add("IY", TOKEN_REGISTER_IY)
-    Call REGISTERS.Add("SP", TOKEN_REGISTER_SP)
-    Call REGISTERS.Add("PC", TOKEN_REGISTER_PC)
-    '(and the shadow registers)
-    Call REGISTERS.Add("A'", TOKEN_REGISTER_A)
-    Call REGISTERS.Add("B'", TOKEN_REGISTER_B)
-    Call REGISTERS.Add("C'", TOKEN_REGISTER_C)
-    Call REGISTERS.Add("D'", TOKEN_REGISTER_D)
-    Call REGISTERS.Add("E'", TOKEN_REGISTER_E)
-    Call REGISTERS.Add("H'", TOKEN_REGISTER_H)
-    Call REGISTERS.Add("AF'", TOKEN_REGISTER_AF)
-    Call REGISTERS.Add("BC'", TOKEN_REGISTER_BC)
-    Call REGISTERS.Add("DE'", TOKEN_REGISTER_DE)
-    Call REGISTERS.Add("HL'", TOKEN_REGISTER_HL)
-    
     'Split the source file into separate words for our "Look-Ahead Left Right" parser
     ExplodeFile (FilePath)
     
     'Now parse the words, validate and tokenise them
     Let index = 0
-    
+    Do While index < UBound(Words)
+        Call ContextRoot
+    Loop
 End Function
 
 '/// PRIVATE PROCEDURES ///////////////////////////////////////////////////////////////
@@ -198,6 +224,7 @@ Private Function ExplodeFile(ByVal FilePath As String) As OZ80_ERROR
     
     Dim IsQuote As Boolean
     Dim IsComment As Boolean
+    Dim IsCommentMulti As Boolean
     
     '----------------------------------------------------------------------------------
 ReadWord:
@@ -205,14 +232,16 @@ ReadWord:
     Let Word = vbNullString
     
 ReadChar:
-    Dim Char As String
-    'Read a charcter. If the file ends, treat it as a remaining end of line
+    'If the file ends, treat it as a remaining end of line
     If TextPos >= Len(Text) Then
         GoTo EndWord
     Else
         'Look at the current character _
          (without moving forward to the next)
-        Let Char = Mid$(Text, TextPos + 1, 1)
+        Dim EscSeq As String
+        Let EscSeq = Mid$(Text, TextPos + 1, 2)
+        Dim Char As String
+        Let Char = Left$(EscSeq, 1)
     End If
     
     'Special handling for the beginning of a word:
@@ -223,6 +252,7 @@ ReadChar:
     End If
     
     'Look for the end of a quote
+    'TODO: handle escape chars, skip tabs and line breaks
     If IsQuote = True Then
         If Char = SYNTAX_QUOTE Then Let IsQuote = False: GoTo EndWord
         GoTo NextChar
@@ -232,17 +262,32 @@ ReadChar:
     If IsEndOfLine(Char) = True Then
         'If the 'word' was a comment, discard it and read the next word until we _
          get something meaningful
-        If IsComment = True Then
-            Let IsComment = False
-            GoTo SkipWord
-        End If
+        If IsComment = True Then Let IsComment = False: GoTo SkipWord
         GoTo EndWord
     End If
     
     'Word breaking rules are different when in comments and quotes
     If IsComment = False And IsQuote = False Then
-        'Is this a comment? (in which case don't end the word on spaces)
-        If Char = SYNTAX_COMMENT Then Let IsComment = True: GoTo NextChar
+        'Check two characters for the comment styles (`//`, `/*` & `*/`)
+        Select Case EscSeq
+            Case SYNTAX_COMMENT
+                Let IsComment = True: Let IsCommentMulti = False
+                'A comment can occur in the middle of a word without breaking space, _
+                 if that's the case, save off the current text before culling comments
+                If Word <> vbNullString Then GoTo EndWordEarly
+                Let TextPos = TextPos + 1: GoTo NextChar
+            
+            Case SYNTAX_COMMENT_OPEN
+                Let IsComment = True: Let IsCommentMulti = True
+                If Word <> vbNullString Then GoTo EndWordEarly
+                Let TextPos = TextPos + 1: GoTo NextChar
+                
+            Case SYNTAX_COMMENT_CLOSE
+                Let IsComment = True: Let IsCommentMulti = False
+                If Word <> vbNullString Then GoTo EndWordEarly
+                Let TextPos = TextPos + 1: GoTo NextChar
+                
+        End Select
         'Is this a quote? (in which case, ignore wordbreaks until quote end)
         If Char = SYNTAX_QUOTE Then Let IsQuote = True: GoTo NextChar
         'End the word on a space instead of at the end of the line
@@ -298,7 +343,8 @@ EndWordEarly:
             Case Left$(Word, 1) = SYNTAX_MACRO:     Let .Kind = OZ80_WORDKIND.MACRO
             Case Left$(Word, 1) = SYNTAX_FUNCT:     Let .Kind = OZ80_WORDKIND.FUNCT
             Case IsKeyword(Word):                   Let .Kind = OZ80_WORDKIND.KEYWORD
-            Case IsNumber(Word):                    Let .Kind = OZ80_WORDKIND.NUMBER
+            Case IsOperator(Word):                  Let .Kind = OZ80_WORDKIND.OPERATOR
+            Case IsNumber(Word):                    Let .Kind = OZ80_WORDKIND.Number
             Case Else:                              Let .Kind = OZ80_WORDKIND.ASM
         End Select
         
@@ -328,6 +374,9 @@ Private Sub ContextRoot()
         'If the word appears to be an assembly instruction:
         Case OZ80_WORDKIND.ASM
             Call ContextAssembly
+        
+        Case Else
+            Let index = index + 1
     End Select
 End Sub
 
@@ -340,40 +389,40 @@ Private Sub ContextAssembly()
     'Check the mneomic, this is divided into two main lists of those that have _
      parameters and those that do not
     Select Case Word
-        Case "adc":     Call OZ80_TokenStream.AddToken(TOKEN_Z80, TOKEN_Z80_ADC)
-        Case "add":     Call OZ80_TokenStream.AddToken(TOKEN_Z80, TOKEN_Z80_ADD)
-        Case "and":     Call OZ80_TokenStream.AddToken(TOKEN_Z80, TOKEN_Z80_AND)
-        Case "bit":     Call OZ80_TokenStream.AddToken(TOKEN_Z80, TOKEN_Z80_BIT)
-        Case "call":    Call OZ80_TokenStream.AddToken(TOKEN_Z80, TOKEN_Z80_CALL)
-        Case "cp":      Call OZ80_TokenStream.AddToken(TOKEN_Z80, TOKEN_Z80_CP)
-        Case "dec":     Call OZ80_TokenStream.AddToken(TOKEN_Z80, TOKEN_Z80_DEC)
-        Case "djnz":    Call OZ80_TokenStream.AddToken(TOKEN_Z80, TOKEN_Z80_DJNZ)
-        Case "ex":      Call OZ80_TokenStream.AddToken(TOKEN_Z80, TOKEN_Z80_EX)
-        Case "im":      Call OZ80_TokenStream.AddToken(TOKEN_Z80, TOKEN_Z80_IM)
-        Case "in":      Call OZ80_TokenStream.AddToken(TOKEN_Z80, TOKEN_Z80_IN)
-        Case "inc":     Call OZ80_TokenStream.AddToken(TOKEN_Z80, TOKEN_Z80_INC)
-        Case "jp":      Call OZ80_TokenStream.AddToken(TOKEN_Z80, TOKEN_Z80_JP)
-        Case "jr":      Call OZ80_TokenStream.AddToken(TOKEN_Z80, TOKEN_Z80_JR)
-        Case "ld":      Call OZ80_TokenStream.AddToken(TOKEN_Z80, TOKEN_Z80_LD)
-        Case "or":      Call OZ80_TokenStream.AddToken(TOKEN_Z80, TOKEN_Z80_OR)
-        Case "out":     Call OZ80_TokenStream.AddToken(TOKEN_Z80, TOKEN_Z80_OUT)
-        Case "pop":     Call OZ80_TokenStream.AddToken(TOKEN_Z80, TOKEN_Z80_POP)
-        Case "push":    Call OZ80_TokenStream.AddToken(TOKEN_Z80, TOKEN_Z80_PUSH)
-        Case "res":     Call OZ80_TokenStream.AddToken(TOKEN_Z80, TOKEN_Z80_RES)
-        Case "ret":     Call OZ80_TokenStream.AddToken(TOKEN_Z80, TOKEN_Z80_RET)
-        Case "rl":      Call OZ80_TokenStream.AddToken(TOKEN_Z80, TOKEN_Z80_RL)
-        Case "rlc":     Call OZ80_TokenStream.AddToken(TOKEN_Z80, TOKEN_Z80_RLC)
-        Case "rr":      Call OZ80_TokenStream.AddToken(TOKEN_Z80, TOKEN_Z80_RR)
-        Case "rrc":     Call OZ80_TokenStream.AddToken(TOKEN_Z80, TOKEN_Z80_RRC)
-        Case "rst":     Call OZ80_TokenStream.AddToken(TOKEN_Z80, TOKEN_Z80_RST)
-        Case "sbc":     Call OZ80_TokenStream.AddToken(TOKEN_Z80, TOKEN_Z80_SBC)
-        Case "set":     Call OZ80_TokenStream.AddToken(TOKEN_Z80, TOKEN_Z80_SET)
-        Case "sla":     Call OZ80_TokenStream.AddToken(TOKEN_Z80, TOKEN_Z80_SLA)
-        Case "sra":     Call OZ80_TokenStream.AddToken(TOKEN_Z80, TOKEN_Z80_SRA)
-        Case "sll":     Call OZ80_TokenStream.AddToken(TOKEN_Z80, TOKEN_Z80_SLL)
-        Case "srl":     Call OZ80_TokenStream.AddToken(TOKEN_Z80, TOKEN_Z80_SRL)
-        Case "sub":     Call OZ80_TokenStream.AddToken(TOKEN_Z80, TOKEN_Z80_SUB)
-        Case "xor":     Call OZ80_TokenStream.AddToken(TOKEN_Z80, TOKEN_Z80_XOR)
+        Case "adc":     Call TokenStream.AddToken(TOKEN_Z80, TOKEN_Z80_ADC)
+        Case "add":     Call TokenStream.AddToken(TOKEN_Z80, TOKEN_Z80_ADD)
+        Case "and":     Call TokenStream.AddToken(TOKEN_Z80, TOKEN_Z80_AND)
+        Case "bit":     Call TokenStream.AddToken(TOKEN_Z80, TOKEN_Z80_BIT)
+        Case "call":    Call TokenStream.AddToken(TOKEN_Z80, TOKEN_Z80_CALL)
+        Case "cp":      Call TokenStream.AddToken(TOKEN_Z80, TOKEN_Z80_CP)
+        Case "dec":     Call TokenStream.AddToken(TOKEN_Z80, TOKEN_Z80_DEC)
+        Case "djnz":    Call TokenStream.AddToken(TOKEN_Z80, TOKEN_Z80_DJNZ)
+        Case "ex":      Call TokenStream.AddToken(TOKEN_Z80, TOKEN_Z80_EX)
+        Case "im":      Call TokenStream.AddToken(TOKEN_Z80, TOKEN_Z80_IM)
+        Case "in":      Call TokenStream.AddToken(TOKEN_Z80, TOKEN_Z80_IN)
+        Case "inc":     Call TokenStream.AddToken(TOKEN_Z80, TOKEN_Z80_INC)
+        Case "jp":      Call TokenStream.AddToken(TOKEN_Z80, TOKEN_Z80_JP)
+        Case "jr":      Call TokenStream.AddToken(TOKEN_Z80, TOKEN_Z80_JR)
+        Case "ld":      Call TokenStream.AddToken(TOKEN_Z80, TOKEN_Z80_LD)
+        Case "or":      Call TokenStream.AddToken(TOKEN_Z80, TOKEN_Z80_OR)
+        Case "out":     Call TokenStream.AddToken(TOKEN_Z80, TOKEN_Z80_OUT)
+        Case "pop":     Call TokenStream.AddToken(TOKEN_Z80, TOKEN_Z80_POP)
+        Case "push":    Call TokenStream.AddToken(TOKEN_Z80, TOKEN_Z80_PUSH)
+        Case "res":     Call TokenStream.AddToken(TOKEN_Z80, TOKEN_Z80_RES)
+        Case "ret":     Call TokenStream.AddToken(TOKEN_Z80, TOKEN_Z80_RET)
+        Case "rl":      Call TokenStream.AddToken(TOKEN_Z80, TOKEN_Z80_RL)
+        Case "rlc":     Call TokenStream.AddToken(TOKEN_Z80, TOKEN_Z80_RLC)
+        Case "rr":      Call TokenStream.AddToken(TOKEN_Z80, TOKEN_Z80_RR)
+        Case "rrc":     Call TokenStream.AddToken(TOKEN_Z80, TOKEN_Z80_RRC)
+        Case "rst":     Call TokenStream.AddToken(TOKEN_Z80, TOKEN_Z80_RST)
+        Case "sbc":     Call TokenStream.AddToken(TOKEN_Z80, TOKEN_Z80_SBC)
+        Case "set":     Call TokenStream.AddToken(TOKEN_Z80, TOKEN_Z80_SET)
+        Case "sla":     Call TokenStream.AddToken(TOKEN_Z80, TOKEN_Z80_SLA)
+        Case "sra":     Call TokenStream.AddToken(TOKEN_Z80, TOKEN_Z80_SRA)
+        Case "sll":     Call TokenStream.AddToken(TOKEN_Z80, TOKEN_Z80_SLL)
+        Case "srl":     Call TokenStream.AddToken(TOKEN_Z80, TOKEN_Z80_SRL)
+        Case "sub":     Call TokenStream.AddToken(TOKEN_Z80, TOKEN_Z80_SUB)
+        Case "xor":     Call TokenStream.AddToken(TOKEN_Z80, TOKEN_Z80_XOR)
         Case Else
             'If none of the above, skip ahead to instructions without parameters
             GoTo NoParam
@@ -390,40 +439,40 @@ Private Sub ContextAssembly()
 
 NoParam:
     Select Case Word
-        Case "ccf":     Call OZ80_TokenStream.AddToken(TOKEN_Z80, TOKEN_Z80_CCF)
-        Case "cpd":     Call OZ80_TokenStream.AddToken(TOKEN_Z80, TOKEN_Z80_CPD)
-        Case "cpdr":    Call OZ80_TokenStream.AddToken(TOKEN_Z80, TOKEN_Z80_CPDR)
-        Case "cpi":     Call OZ80_TokenStream.AddToken(TOKEN_Z80, TOKEN_Z80_CPI)
-        Case "cpir":    Call OZ80_TokenStream.AddToken(TOKEN_Z80, TOKEN_Z80_CPIR)
-        Case "cpl":     Call OZ80_TokenStream.AddToken(TOKEN_Z80, TOKEN_Z80_CPL)
-        Case "daa":     Call OZ80_TokenStream.AddToken(TOKEN_Z80, TOKEN_Z80_DAA)
-        Case "di":      Call OZ80_TokenStream.AddToken(TOKEN_Z80, TOKEN_Z80_DI)
-        Case "ei":      Call OZ80_TokenStream.AddToken(TOKEN_Z80, TOKEN_Z80_EI)
-        Case "exx":     Call OZ80_TokenStream.AddToken(TOKEN_Z80, TOKEN_Z80_EXX)
-        Case "halt":    Call OZ80_TokenStream.AddToken(TOKEN_Z80, TOKEN_Z80_HALT)
-        Case "ind":     Call OZ80_TokenStream.AddToken(TOKEN_Z80, TOKEN_Z80_IND)
-        Case "indr":    Call OZ80_TokenStream.AddToken(TOKEN_Z80, TOKEN_Z80_INDR)
-        Case "ini":     Call OZ80_TokenStream.AddToken(TOKEN_Z80, TOKEN_Z80_INI)
-        Case "inir":    Call OZ80_TokenStream.AddToken(TOKEN_Z80, TOKEN_Z80_INIR)
-        Case "ldd":     Call OZ80_TokenStream.AddToken(TOKEN_Z80, TOKEN_Z80_LDD)
-        Case "lddr":    Call OZ80_TokenStream.AddToken(TOKEN_Z80, TOKEN_Z80_LDDR)
-        Case "ldi":     Call OZ80_TokenStream.AddToken(TOKEN_Z80, TOKEN_Z80_LDI)
-        Case "ldir":    Call OZ80_TokenStream.AddToken(TOKEN_Z80, TOKEN_Z80_LDIR)
-        Case "neg":     Call OZ80_TokenStream.AddToken(TOKEN_Z80, TOKEN_Z80_NEG)
-        Case "nop":     Call OZ80_TokenStream.AddToken(TOKEN_Z80, TOKEN_Z80_NOP)
-        Case "outd":    Call OZ80_TokenStream.AddToken(TOKEN_Z80, TOKEN_Z80_OUTD)
-        Case "outdr":   Call OZ80_TokenStream.AddToken(TOKEN_Z80, TOKEN_Z80_OUTDR)
-        Case "outi":    Call OZ80_TokenStream.AddToken(TOKEN_Z80, TOKEN_Z80_OUTI)
-        Case "outir":   Call OZ80_TokenStream.AddToken(TOKEN_Z80, TOKEN_Z80_OUTIR)
-        Case "reti":    Call OZ80_TokenStream.AddToken(TOKEN_Z80, TOKEN_Z80_RETI)
-        Case "retn":    Call OZ80_TokenStream.AddToken(TOKEN_Z80, TOKEN_Z80_RETN)
-        Case "rla":     Call OZ80_TokenStream.AddToken(TOKEN_Z80, TOKEN_Z80_RLA)
-        Case "rlca":    Call OZ80_TokenStream.AddToken(TOKEN_Z80, TOKEN_Z80_RLCA)
-        Case "rld":     Call OZ80_TokenStream.AddToken(TOKEN_Z80, TOKEN_Z80_RLD)
-        Case "rra":     Call OZ80_TokenStream.AddToken(TOKEN_Z80, TOKEN_Z80_RRA)
-        Case "rrca":    Call OZ80_TokenStream.AddToken(TOKEN_Z80, TOKEN_Z80_RRCA)
-        Case "rrd":     Call OZ80_TokenStream.AddToken(TOKEN_Z80, TOKEN_Z80_RRD)
-        Case "scf":     Call OZ80_TokenStream.AddToken(TOKEN_Z80, TOKEN_Z80_SCF)
+        Case "ccf":     Call TokenStream.AddToken(TOKEN_Z80, TOKEN_Z80_CCF)
+        Case "cpd":     Call TokenStream.AddToken(TOKEN_Z80, TOKEN_Z80_CPD)
+        Case "cpdr":    Call TokenStream.AddToken(TOKEN_Z80, TOKEN_Z80_CPDR)
+        Case "cpi":     Call TokenStream.AddToken(TOKEN_Z80, TOKEN_Z80_CPI)
+        Case "cpir":    Call TokenStream.AddToken(TOKEN_Z80, TOKEN_Z80_CPIR)
+        Case "cpl":     Call TokenStream.AddToken(TOKEN_Z80, TOKEN_Z80_CPL)
+        Case "daa":     Call TokenStream.AddToken(TOKEN_Z80, TOKEN_Z80_DAA)
+        Case "di":      Call TokenStream.AddToken(TOKEN_Z80, TOKEN_Z80_DI)
+        Case "ei":      Call TokenStream.AddToken(TOKEN_Z80, TOKEN_Z80_EI)
+        Case "exx":     Call TokenStream.AddToken(TOKEN_Z80, TOKEN_Z80_EXX)
+        Case "halt":    Call TokenStream.AddToken(TOKEN_Z80, TOKEN_Z80_HALT)
+        Case "ind":     Call TokenStream.AddToken(TOKEN_Z80, TOKEN_Z80_IND)
+        Case "indr":    Call TokenStream.AddToken(TOKEN_Z80, TOKEN_Z80_INDR)
+        Case "ini":     Call TokenStream.AddToken(TOKEN_Z80, TOKEN_Z80_INI)
+        Case "inir":    Call TokenStream.AddToken(TOKEN_Z80, TOKEN_Z80_INIR)
+        Case "ldd":     Call TokenStream.AddToken(TOKEN_Z80, TOKEN_Z80_LDD)
+        Case "lddr":    Call TokenStream.AddToken(TOKEN_Z80, TOKEN_Z80_LDDR)
+        Case "ldi":     Call TokenStream.AddToken(TOKEN_Z80, TOKEN_Z80_LDI)
+        Case "ldir":    Call TokenStream.AddToken(TOKEN_Z80, TOKEN_Z80_LDIR)
+        Case "neg":     Call TokenStream.AddToken(TOKEN_Z80, TOKEN_Z80_NEG)
+        Case "nop":     Call TokenStream.AddToken(TOKEN_Z80, TOKEN_Z80_NOP)
+        Case "outd":    Call TokenStream.AddToken(TOKEN_Z80, TOKEN_Z80_OUTD)
+        Case "outdr":   Call TokenStream.AddToken(TOKEN_Z80, TOKEN_Z80_OUTDR)
+        Case "outi":    Call TokenStream.AddToken(TOKEN_Z80, TOKEN_Z80_OUTI)
+        Case "outir":   Call TokenStream.AddToken(TOKEN_Z80, TOKEN_Z80_OUTIR)
+        Case "reti":    Call TokenStream.AddToken(TOKEN_Z80, TOKEN_Z80_RETI)
+        Case "retn":    Call TokenStream.AddToken(TOKEN_Z80, TOKEN_Z80_RETN)
+        Case "rla":     Call TokenStream.AddToken(TOKEN_Z80, TOKEN_Z80_RLA)
+        Case "rlca":    Call TokenStream.AddToken(TOKEN_Z80, TOKEN_Z80_RLCA)
+        Case "rld":     Call TokenStream.AddToken(TOKEN_Z80, TOKEN_Z80_RLD)
+        Case "rra":     Call TokenStream.AddToken(TOKEN_Z80, TOKEN_Z80_RRA)
+        Case "rrca":    Call TokenStream.AddToken(TOKEN_Z80, TOKEN_Z80_RRCA)
+        Case "rrd":     Call TokenStream.AddToken(TOKEN_Z80, TOKEN_Z80_RRD)
+        Case "scf":     Call TokenStream.AddToken(TOKEN_Z80, TOKEN_Z80_SCF)
         Case Else
             'If none of these, the developer may have made a typo or put an assembly _
              instruction where they shouldn't have
@@ -436,15 +485,20 @@ End Sub
 
 'ContextExpression _
  ======================================================================================
+'An expression is anything that results in a value, i.e. a number, a label/property, _
+ a calculation, a function call &c.
 Private Sub ContextExpression()
-    'An expression is anything that results in a value, i.e. a number, _
-     a label/property, a calculation, a function call &c.
-
-    'Check what type the parser assigned to the word
+NextExpr:
+    'Check what type the parser assigned to the current word
     Select Case Words(index).Kind
-        Case OZ80_WORDKIND.NUMBER
-            
-            
+        'Process a number
+        Case OZ80_WORDKIND.Number
+            Call ContextNumber
+        
+        'Process parenthesis (a nested expression)
+        Case OZ80_WORDKIND.PAREN
+            'TODO: check if open parenthesis, otherwise fold
+        
         'When a list marker "," is found, the expression is over -- but the comma may _
          be unexpected by the parent context (if not a list)
         Case OZ80_WORDKIND.LIST
@@ -453,28 +507,76 @@ Private Sub ContextExpression()
         Case Else
             'Not an expression!
             'TODO: Error out
+            
     End Select
+    
+    'Now check for an operator that could extend the expression
+    If Words(index).Kind = OZ80_WORDKIND.OPERATOR Then
+        'Add the operator to the token stream,
+        Call TokenStream.AddToken(TOKEN_OPERATOR, OperatorTokens.Item(Words(index).Word))
+        'Move to the next word,
+        Let index = index + 1
+        'And get the next expression
+        GoTo NextExpr
+    End If
 End Sub
-
-''ContextLabel _
-' ======================================================================================
-'Private Function ContextLabel() As OZ80_CONTEXT
-'    'Label names must begin with ":", contain A-Z, 0-9, underscore and dash with the _
-'     restriction that the first letter must be A-Z or an underscore
-'End Function
 
 'ContextList _
  ======================================================================================
+'A list is a common construct and consists of one or more expressions separated _
+ by commas. The parameters to any instruction/directive is a list
 Private Sub ContextList()
-    'A list is a common construct and consists of one or more expressions separated _
-     by commas. The parameters to any instruction/directive is a list
+    'TODO: Add a list token and remember its position so we can update the item count
+    Call TokenStream.AddToken(TOKEN_LIST, 0)
+    
+NextItem:
     Call ContextExpression
+    'The above call will move to the next word in the list, check if it's a comma _
+     to continue the list, or something else marking the end of the list
+    If Words(index).Kind = OZ80_WORDKIND.LIST Then
+        'Add a token to mark the end of a list item
+        Call TokenStream.AddToken(TOKEN_LIST_NEXT)
+        'TODO: Update the item count in the list
+        GoTo NextItem
+    End If
+    'When the list ends, we fold back to the parent context to deal with it
 End Sub
 
 'ContextNumber : Parse numbers (decimal, hexadecimal, binary) _
  ======================================================================================
 Private Sub ContextNumber()
-    '
+    Dim Word As String
+    Let Word = Words(index).Word
+    
+    On Error Resume Next
+    Dim Number As Long
+    
+    'When the source file was exploded into words the number was already validated, _
+     we can be assured that it's parsable as a number, but it could be out of bounds
+    
+    'TODO: Check bounds
+    'TODO: Can we handle 32-bit numbers properly?
+    
+    If Left$(Word, 1) = SYNTAX_NUMBER_HEX Then
+        'Convert the string from hexadecimal
+        Let Number = CLng("&H" & Mid$(Word, 2) & "&")
+            
+    ElseIf Left$(Word, 1) = SYNTAX_NUMBER_BIN Then
+        'Convert the string from binary
+        Dim i As Long
+        For i = 1 To Len(Word)
+            'TODO: optimise this, starting with a 2^X lookup table _
+                -- or easier, have a lookup table of all 8-bit binary numbers
+            Let Number = Number + (Mid$(Word, Len(Word) - i + 1, 1) * (2 ^ (i - 1)))
+        Next i
+        
+    Else
+        Let Number = CLng(Word)
+    End If
+    
+    Call TokenStream.AddToken(TOKEN_NUMBER, Number)
+    Let index = index + 1
+    On Error GoTo 0
 End Sub
 
 '/// VALIDATION PROCEDURES ////////////////////////////////////////////////////////////
@@ -503,15 +605,25 @@ End Function
 'IsNumber _
  ======================================================================================
 Private Function IsNumber(ByVal Word As String) As Boolean
-    If Left$(Word, 1) = SYNTAX_NUMBER_HEX Then Let IsNumber = True: Exit Function
-    If Left$(Word, 1) = SYNTAX_NUMBER_BIN Then Let IsNumber = True: Exit Function
+    'A hexadecimal number?
+    If Left$(Word, 1) = SYNTAX_NUMBER_HEX Then
+        'Ensure that the number consists of 0-9, A-F only
+        Let IsNumber = Not (Word Like "$*[!A-F0-9]*")
+        Exit Function
+    End If
+    'A binary number?
+    If Left$(Word, 1) = SYNTAX_NUMBER_BIN Then
+        Let IsNumber = Not (Word Like "%*[!0-1]*")
+        Exit Function
+    End If
+    'Decimal number:
     Let IsNumber = Not (Word Like "*[!0-9]*")
 End Function
 
 'IsOperator _
  ======================================================================================
 Private Function IsOperator(ByVal Word As String) As Boolean
-    Let IsOperator = (InStr(OPERATORS, Word) > 0)
+    Let IsOperator = (InStr(Operators, Word) > 0)
 End Function
 
 'IsRegister _

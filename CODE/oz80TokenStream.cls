@@ -48,10 +48,13 @@ Public Enum OZ80_TOKEN
     'Specifies a Z80 register
     TOKEN_REGISTER = &H2
     
+    'Specifies an operator
+    TOKEN_OPERATOR = &H3
+    
     'A list is a series of 1 or more expressions separated by commas,
      'i.e.parameter lists
-    TOKEN_LIST = &H3                    'The data field with give the list length
-    TOKEN_LIST_NEXT = &H4               'Sandwiched between list items, i.e. ","
+    TOKEN_LIST = &H4                    'The data field with give the list length
+    TOKEN_LIST_NEXT = &H5               'Sandwiched between list items, i.e. ","
     
     'Debug tokens:
     'These allow us to keep track of where the token originated in the source file(s)
@@ -141,16 +144,16 @@ Public Enum OZ80_TOKEN_DATA
     '----------------------------------------------------------------------------------
     'When the token is OZ80_TOKEN_REGISTER then the following specifies which register
     
-    TOKEN_REGISTER_A = &HF00000         'Accumulator
-    TOKEN_REGISTER_B = &HF00001
-    TOKEN_REGISTER_C = &HF00002
-    TOKEN_REGISTER_D = &HF00004
-    TOKEN_REGISTER_E = &HF00008
-    TOKEN_REGISTER_F = &HF00010         'Flags register
-    TOKEN_REGISTER_H = &HF00020
-    TOKEN_REGISTER_I = &HF00040         'Interrupt - not to be confused with IX & IY
-    TOKEN_REGISTER_L = &HF00080
-    TOKEN_REGISTER_R = &HF00100         'Refresh register (pseudo-random)
+    TOKEN_REGISTER_A = &H100000         'Accumulator
+    TOKEN_REGISTER_B = &H100001
+    TOKEN_REGISTER_C = &H100002
+    TOKEN_REGISTER_D = &H100004
+    TOKEN_REGISTER_E = &H100008
+    TOKEN_REGISTER_F = &H100010         'Flags register
+    TOKEN_REGISTER_H = &H100020
+    TOKEN_REGISTER_I = &H100040         'Interrupt - not to be confused with IX & IY
+    TOKEN_REGISTER_L = &H100080
+    TOKEN_REGISTER_R = &H100100         'Refresh register (pseudo-random)
     
     TOKEN_REGISTER_AF = TOKEN_REGISTER_A Or TOKEN_REGISTER_F
     TOKEN_REGISTER_BC = TOKEN_REGISTER_B Or TOKEN_REGISTER_C
@@ -158,15 +161,27 @@ Public Enum OZ80_TOKEN_DATA
     TOKEN_REGISTER_HL = TOKEN_REGISTER_H Or TOKEN_REGISTER_L
     
     'Undocumented Z80 instructions can access the 8-bit halves of IX & IY
-    TOKEN_REGISTER_IXL = &HF00200
-    TOKEN_REGISTER_IXH = &HF00201
+    TOKEN_REGISTER_IXL = &H100200
+    TOKEN_REGISTER_IXH = &H100201
     TOKEN_REGISTER_IX = TOKEN_REGISTER_IXL Or TOKEN_REGISTER_IXH
-    TOKEN_REGISTER_IYL = &HF00202
-    TOKEN_REGISTER_IYH = &HF00204
+    TOKEN_REGISTER_IYL = &H100202
+    TOKEN_REGISTER_IYH = &H100204
     TOKEN_REGISTER_IY = TOKEN_REGISTER_IYL Or TOKEN_REGISTER_IYH
     
-    TOKEN_REGISTER_SP = &HF00300        'Stack pointer
-    TOKEN_REGISTER_PC = &HF00301        'Program counter
+    TOKEN_REGISTER_SP = &H100300        'Stack pointer
+    TOKEN_REGISTER_PC = &H100301        'Program counter
+    
+    'Operators:
+    '----------------------------------------------------------------------------------
+    'When then token is OZ80_OPERATOR then the following specifies which opeartor
+    
+    TOKEN_OPERATOR_ADD = &HF00000       'Add "+"
+    TOKEN_OPERATOR_SUB = &HF00001       'Subtract "-"
+    TOKEN_OPERATOR_MUL = &HF00002       'Multiply "*"
+    TOKEN_OPERATOR_DIV = &HF00002       'Divide "/"
+    TOKEN_OPERATOR_POW = &HF00003       'Power "^"
+    TOKEN_OPERATOR_MOD = &HF00004       'Modulus "\"
+    TOKEN_OPERATOR_REP = &HF00010       'Repeat "x"
 End Enum
 
 Private Type Token

@@ -430,6 +430,21 @@ It's important to note that 16-bit numbers are stored in little-endian format, t
 the low-order byte is first and the hi-order byte second, therefore `$1234` would be
 outputted as `$34, $12`. This is the format understood by the Master System.
 
+#.#.	Binary Strings
+---------------------------------------------------------------------------------------
+Format:
+	$"<data>"
+	%"<data>"
+
+To ease the work in providing longer sections of data, you can specify the bytes in a
+more compact manner using binary string, in either hexadecimal digits or binary digits
+(if that's more representative of your data)
+
+	$"0102030405060708090A0B0C"	//hexadecimal digits
+	%"000001010011100101110111"	//binary digits
+
+The bytes will be inserted into the output without any re-ordering.
+
 #.#.	Filling Space
 ---------------------------------------------------------------------------------------
 Format:

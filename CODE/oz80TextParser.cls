@@ -270,6 +270,7 @@ ReadChar:
     If IsComment = False And IsQuote = False Then
         'Check two characters for the comment styles (`//`, `/*` & `*/`)
         Select Case EscSeq
+            'Single line comment:
             Case SYNTAX_COMMENT
                 Let IsComment = True: Let IsCommentMulti = False
                 'A comment can occur in the middle of a word without breaking space, _
@@ -277,11 +278,13 @@ ReadChar:
                 If Word <> vbNullString Then GoTo EndWordEarly
                 Let TextPos = TextPos + 1: GoTo NextChar
             
+            'Start of a multi-line comment:
             Case SYNTAX_COMMENT_OPEN
                 Let IsComment = True: Let IsCommentMulti = True
                 If Word <> vbNullString Then GoTo EndWordEarly
                 Let TextPos = TextPos + 1: GoTo NextChar
-                
+            
+            'End of multi-line comment:
             Case SYNTAX_COMMENT_CLOSE
                 Let IsComment = True: Let IsCommentMulti = False
                 If Word <> vbNullString Then GoTo EndWordEarly
@@ -329,9 +332,10 @@ EndWordEarly:
     Else
         ReDim Words(0 To UBound(Words) + 1) As OZ80_WORD
     End If
+    
     With Words(UBound(Words))
         Let .Word = Word
-        
+
         Select Case True
             Case Word = SYNTAX_PAREN_OPEN Or Word = SYNTAX_PAREN_CLOSE
                 Let .Kind = OZ80_WORDKIND.PAREN
@@ -347,7 +351,7 @@ EndWordEarly:
             Case IsNumber(Word):                    Let .Kind = OZ80_WORDKIND.Number
             Case Else:                              Let .Kind = OZ80_WORDKIND.ASM
         End Select
-        
+
         Debug.Print Word
     End With
     

@@ -16,8 +16,9 @@ Licenced under a Creative Commons 3.0 Attribution Licence
 	4.1.		Setting the Assembly Point
 	5.		Labels
 	5.1.		Procedures
-	5.2.		Sub-Labels
-	5.3.		Anonymous Labels
+	5.2.		Params
+	5.3.		Sub-Labels
+	5.4.		Anonymous Labels
 	6.		Variables
 	
 	
@@ -47,9 +48,9 @@ overcome without a new, clean language design.
 1.	Comments
 =======================================================================================
 Format:
-	//single-line
-	/* multi-
-	line */
+	`single-line
+	``multi-
+	line``
 
 The first thing available to you to make writing Z80 assembly easier is the ability
 to add descriptive comments to your source.
@@ -58,18 +59,18 @@ The purpose of comments is to describe why things happen the way they do in the 
 (such as an algorithm) as the purpose of a series of instructions cannot always be
 gleaned just by looking at them alone.
 
-A single-line comment begins with a semi-colon. All text from that point to the end
+A single-line comment begins with a back-tick. All text from that point to the end
 of the line is ignored.
 
-	ld	de, 3			//sprite table is 3 bytes per sprite
+	ld	de, 3			`sprite table is 3 bytes per sprite
 
-A multi-line comment begins with "/*" and continues until the closing sequence "*/"
-is encountered. All text in between is ignored.
+A multi-line comment begins with double back-tick ("``") and continues until the next
+double back-tick is encountered. All text in between is ignored.
 	
-	/* in the solidity data, bit 7 determines that the tile should appear in front
-	   of sprites. rotate the byte three times to position bit 7 at bit 4.
-	   this byte will form the high-byte of the 16-bit value for the name table
-	   entry (bit 4 will therefore become bit 12) */
+	``in the solidity data, bit 7 determines that the tile should appear in
+	  front of sprites. rotate the byte three times to position bit 7 at bit 4.
+	  this byte will form the high-byte of the 16-bit value for the name table
+	  entry (bit 4 will therefore become bit 12)``
 	rrca
 	rrca
 	rrca
@@ -315,10 +316,43 @@ the assembler will calculate the label's address in memory for you.
 The curly braces form a "block", a special encapsulation that define the beginning
 and end of the code that makes up the procedure.
 
-5.2.	Sub-Labels
+5.2.	Params
 ---------------------------------------------------------------------------------------
-Within procedure blocks (explained above), labels that begin with a dot are attached
-as properties of the procedure, e.g.
+Format:
+	PROC :myProcedure
+		[PARAMS <register>|$<address>|#<variable>[, ...]]
+		[RETURN <register>|$<address>|#<variable>[, ...]] {
+	}
+
+Most of the time your procedures will require certain registers or memory addresses
+to have been set before calling them. As a pure documentation / memory aid you can
+provide a parameter list for procedures. The assembler does not yet use this
+information in any way, but could in the future to check for clobbering (unintended
+register changes between procedures).
+
+In addition to listing the parameters you may also list the return registers / values
+to help any user understand how to use a procedure at a quick glance without having
+to decipher the code.
+
+Here's a diverse sample:
+
+	PROC :decodeTheThing
+		PARAMS	a;index,	//which thing to use
+			hl;address,	//data starts here
+			bc;length	//data is this long
+		RETURN	de;result	//decoding result
+			#RAM.thing	//the decoded data
+	{
+		<code>
+	}
+
+Here the procedure is noted to use registers A, HL & BC as inputs and sets DE and
+the memory address referred to by #RAM.thing on return.
+
+5.3.	Sub-Labels
+---------------------------------------------------------------------------------------
+Within procedure blocks, labels that begin with a dot are attached as properties of
+the procedure, e.g.
 
 	PROC :myProcedure {
 		ld b, 10
@@ -337,7 +371,7 @@ referred to within the procedure as `.loop`. This prevents common labels within
 procedures (such as "loop") from clashing with other procedures' internal labelling.
 Outside of "myProcedure", it is referred to via the full label name.
 
-5.3.	Anonymous Labels
+5.4.	Anonymous Labels
 ---------------------------------------------------------------------------------------
 Format:
 	-	<code>			//negative label
@@ -411,6 +445,7 @@ the `.slot` property does likewise for the slot number - 0, 1 or 2
 TODO:
 	.size
 ...
+
 
 #.	Data
 =======================================================================================
@@ -552,6 +587,24 @@ These sub-properties would be accessed with `#path.start.x`, for example.
 
 ...
 
+#.#.	Bit Flags
+---------------------------------------------------------------------------------------
+Format:
+	DEF #<variableName> [<expr>] AS BITS {
+		.<bitName>
+		.			//unused bit
+	}
+	
+Manipulating individual bits is a common task in assembly.
+
+	DEF #elements $C000 AS BITS {
+		.earth
+		.wind
+		.fire
+		.water
+	}
+...
+
 #.#.	Structures
 ---------------------------------------------------------------------------------------
 Format:
@@ -641,7 +694,14 @@ Will write out the ASCII bytes for the given string of text between quotes.
 
 #.#.	Escape Sequences
 ---------------------------------------------------------------------------------------
-...
+Within strings, tabs and line-breaks are ignored so that you may space large portions
+of text over multiple lines in your source code. To insert a tab or line-break into
+the output you must use the following escape sequences:
+
+	\t	Inserts a tab
+	\n	Inserts newline
+	\"	Inserts a quote (instead of ending the string)
+	\0	Inserts a null (an ASCII code of 0)
 
 #.#.	ASCII Maps
 ---------------------------------------------------------------------------------------

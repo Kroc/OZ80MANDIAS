@@ -127,7 +127,7 @@ require 8-bit numbers and some 16-bit numbers.
 Any decimal number above 255 is implicitly a 16-bit number, therefore the following
 would not work:
 
-	//can't load 16-bit number into 8-bit register!
+	`can't load 16-bit number into 8-bit register!
 	ld a, 4096
 
 It's fine to use an 8-bit number on 16-bit instructions though, i.e.
@@ -155,7 +155,7 @@ first (for better readability), e.g.
 
 The second convention allows you to abbreviate 16-bit words like so:
 
-	ld hl, %1%1			//%00000001%00000001 = 257
+	ld hl, %1%1			`%00000001%00000001 = 257
 
 3.1.	Number Suffixes:
 ---------------------------------------------------------------------------------------
@@ -259,8 +259,8 @@ If you need to place a piece of code or data starting in a particular location w
 a bank the `AT` statement specifies an offset address from the beginning of the bank
 to the desired starting point. In other assemblers this is usually known as `ORG`.
 
-	BANK 5				//bank 5 begins at $10000
-	AT $2000			//begin assembling at $12000
+	BANK 5				`bank 5 begins at $10000
+	AT $2000			`begin assembling at $12000
 
 TODO: SKIP
 ...
@@ -337,11 +337,11 @@ to decipher the code.
 Here's a diverse sample:
 
 	PROC :decodeTheThing
-		PARAMS	a;index,	//which thing to use
-			hl;address,	//data starts here
-			bc;length	//data is this long
-		RETURN	de;result	//decoding result
-			#RAM.thing	//the decoded data
+		PARAMS	a;index,	`which thing to use
+			hl;address,	`data starts here
+			bc;length	`data is this long
+		RETURN	de;result	`decoding result
+			#RAM.thing	`the decoded data
 	{
 		<code>
 	}
@@ -374,10 +374,10 @@ Outside of "myProcedure", it is referred to via the full label name.
 5.4.	Anonymous Labels
 ---------------------------------------------------------------------------------------
 Format:
-	-	<code>			//negative label
-	+	<code>			//forward label
-	=	<code>			//bi-directional label
-		jp : | djnz :		//refers to the PROC's label
+	-	<code>			`negative label
+	+	<code>			`forward label
+	=	<code>			`bi-directional label
+		jp : | djnz :		`refers to the PROC's label
 ...
 
 
@@ -411,8 +411,8 @@ If the value expression is omitted, a variable defaults to 0, e.g.
 
 But a variable is re-defined without a value, it defaults to its previous value, e.g.
 
-	DEF #ONE	1		//set to 1
-	DEF #ONE			//value is still 1, not zero
+	DEF #ONE	1		`set to 1
+	DEF #ONE			`value is still 1, not zero
 
 The practical application of this behaviour will be demonstrated later when it comes
 to using properties and defining RAM addresses.
@@ -430,8 +430,8 @@ Instead of specifying these bytes in a fixed fashion, you can use the flexibilit
 variables with the `hi` & `lo` properties, e.g.
 
 	DEF #foo	$1234
-	ld h, #foo.lo			//"$34"
-	ld l, #foo.hi			//"$12"
+	ld h, #foo.lo			`"$34"
+	ld l, #foo.hi			`"$12"
 
 Notice that HL is loaded in low, high order due to the Z80 being little-endian.
 
@@ -475,8 +475,8 @@ To ease the work in providing longer sections of data, you can specify the bytes
 more compact manner using binary string, in either hexadecimal digits or binary digits
 (if that's more representative of your data)
 
-	$"0102030405060708090A0B0C"	//hexadecimal digits
-	%"000001010011100101110111"	//binary digits
+	$"0102030405060708090A0B0C"	`hexadecimal digits
+	%"000001010011100101110111"	`binary digits
 
 The bytes will be inserted into the output without any re-ordering.
 
@@ -544,11 +544,11 @@ First, a variable is defined, #enemy, with a value of 0 -- the starting offset p
 Additional properties are defined, each with a given size. These properties hold the
 value of their offset, for example.
 
-	ld ix, :alien			//the location of an enemy instance
-	ld a, (ix+#enemy.id)		//gives 4
-	ld bc, (ix+#enemy.x)		//gives 0
-	ld de, (ix+#enemy.y)		//gives 2
-	ld l, (ix+#enemy.speed)		//gives 5
+	ld ix, :alien			`the location of an enemy instance
+	ld a, (ix+#enemy.id)		`gives 4
+	ld bc, (ix+#enemy.x)		`gives 0
+	ld de, (ix+#enemy.y)		`gives 2
+	ld l, (ix+#enemy.speed)		`gives 5
 
 As you can see, using an object provides the flexibility to rearrange the object's
 properties, insert new ones in the middle or remove properties from any point without
@@ -568,8 +568,8 @@ to give multiples of bytes or words; for example:
 All variables and properties have a sub-property `.size` which gives the size of the
 variable or property in bytes. E.g.
 
-	PRINT #thing.moreStuff.size	//outputs 32 (16 words)
-	PRINT #thing.size		//outputs 40 (8 + 32)
+	PRINT #thing.moreStuff.size	`outputs 32 (16 words)
+	PRINT #thing.size		`outputs 40 (8 + 32)
 
 Objects can also contain other objects, allowing finer grained structure.
 
@@ -592,7 +592,7 @@ These sub-properties would be accessed with `#path.start.x`, for example.
 Format:
 	DEF #<variableName> [<expr>] AS BITS {
 		.<bitName>
-		.			//unused bit
+		.			`unused bit
 	}
 	
 Manipulating individual bits is a common task in assembly.
@@ -677,9 +677,7 @@ TODO:
 A final special operator `x` is supported. This repeats the preceding value by the
 value on the right hand side. For example, the following:
 
-```
-DATA $80 x 6
-```
+	DATA $80 x 6
 
 Would insert 6 bytes of $80
 
@@ -802,7 +800,7 @@ TODO: RAM can be easier defined using the object syntax
 	
 	[...]
 	
-	//the offset will continue where it left off:
+	`the offset will continue where it left off:
 	OBJECT #RAM {
 		.someThing	AS WORD
 	}

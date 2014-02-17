@@ -15,12 +15,8 @@ Public Sub Main()
     Dim Assembler As oz80Assembler
     Set Assembler = New oz80Assembler
     
-    Dim Start As Single
-    Let Start = Timer
-    
-    Call Assembler.Assemble(App.Path & "\S1.sms.asm")
-    
-    MsgBox Format(Timer - Start, "0.00")
+'    Call Assembler.Assemble(App.Path & "\S1.sms.asm")
+    Call Assembler.Assemble(App.Path & "\sonic1-sms.oz80")
     
     Set Assembler = Nothing
 End Sub

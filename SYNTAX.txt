@@ -79,7 +79,7 @@ double back-tick is encountered. All text in between is ignored.
 2.	Register Hints
 =======================================================================================
 Format:
-	<register>__<hintName>
+	<register>;<hintName>
 
 The Z80 registers are your temporary working space for manipulating information with
 the CPU, as such register contents change constantly, for differing purposes.

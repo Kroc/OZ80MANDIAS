@@ -59,7 +59,7 @@ Public Enum OZ80_TOKEN
     'A list is a series of 1 or more expressions separated by commas,
      'i.e.parameter lists
     TOKEN_LIST = &H5
-    TOKEN_LIST_NEXT = &H6               'Sandwiched between list items, i.e. ","
+    TOKEN_NEXT = &H6                    'Sandwiched between list items, i.e. ","
     
     'Debug tokens:
     'These allow us to keep track of where the token originated in the source file(s)
@@ -69,10 +69,10 @@ Public Enum OZ80_TOKEN
     TOKEN_COL = &HF2                    'specify a change in column number
 End Enum
 
-'Z80 Assembly Mnemonics:
-'--------------------------------------------------------------------------------------
+'Z80 Assembly Mnemonics: _
+ --------------------------------------------------------------------------------------
 Public Enum OZ80_TOKEN_Z80
-    'These are just the mnemonic tokens -- the assembly routine itself checks the
+    'These are just the mnemonic tokens -- the assembler itself checks the
      'parameters and determines which opcode should be used
     TOKEN_Z80_ADC = &H1                 'Add with Carry
     TOKEN_Z80_ADD = &H2                 'Add
@@ -144,8 +144,8 @@ Public Enum OZ80_TOKEN_Z80
     TOKEN_Z80_XOR = &H44                'Bitwise XOR
 End Enum
 
-'Z80 Registers:
-'--------------------------------------------------------------------------------------
+'Z80 Registers: _
+ --------------------------------------------------------------------------------------
 Public Enum OZ80_TOKEN_REGISTER
     TOKEN_REGISTER_A = 1                'Accumulator
     TOKEN_REGISTER_B = 2
@@ -162,35 +162,29 @@ Public Enum OZ80_TOKEN_REGISTER
     TOKEN_REGISTER_BC = 12
     TOKEN_REGISTER_DE = 13
     TOKEN_REGISTER_HL = 14
-
+    TOKEN_REGISTER_IX = 17
+    TOKEN_REGISTER_IY = 20
+    
     'Undocumented Z80 instructions can access the 8-bit halves of IX & IY
     TOKEN_REGISTER_IXL = 15
     TOKEN_REGISTER_IXH = 16
-    TOKEN_REGISTER_IX = 17
     TOKEN_REGISTER_IYL = 18
     TOKEN_REGISTER_IYH = 19
-    TOKEN_REGISTER_IY = 20
 
     TOKEN_REGISTER_SP = 21              'Stack pointer
     TOKEN_REGISTER_PC = 22              'Program counter
 End Enum
 
-'The data field of a token can be any 32-bit number and not just limited to the defs _
- below. These are provided for tokens that have well defined data values
-Public Enum OZ80_TOKEN_DATA
-    'When the token is OZ80_TOKEN_REGISTER then the following specifies which register
-
-    'Operators:
-    '----------------------------------------------------------------------------------
-    'When then token is OZ80_OPERATOR then the following specifies which opeartor
-
-    TOKEN_OPERATOR_ADD = &HF00000       'Add "+"
-    TOKEN_OPERATOR_SUB = &HF00001       'Subtract "-"
-    TOKEN_OPERATOR_MUL = &HF00002       'Multiply "*"
-    TOKEN_OPERATOR_DIV = &HF00002       'Divide "/"
-    TOKEN_OPERATOR_POW = &HF00003       'Power "^"
-    TOKEN_OPERATOR_MOD = &HF00004       'Modulus "\"
-    TOKEN_OPERATOR_REP = &HF00010       'Repeat "x"
+'Operators: _
+ --------------------------------------------------------------------------------------
+Public Enum OZ80_TOKEN_OPERATOR
+    TOKEN_OPERATOR_ADD = 1              'Add "+"
+    TOKEN_OPERATOR_SUB = 2              'Subtract "-"
+    TOKEN_OPERATOR_MUL = 3              'Multiply "*"
+    TOKEN_OPERATOR_DIV = 4              'Divide "/"
+    TOKEN_OPERATOR_POW = 5              'Power "^"
+    TOKEN_OPERATOR_MOD = 6              'Modulus "\"
+    TOKEN_OPERATOR_REP = 7              'Repeat "x"
 End Enum
 
 '/// EVENTS ///////////////////////////////////////////////////////////////////////////
@@ -221,14 +215,26 @@ Public Sub AddToken_Z80(ByRef Token As OZ80_TOKEN_Z80)
     Call Add(Token)                     'And add the Z80 instruction token
 End Sub
 
+'AddToken_Register : Add a Z80 register to the stream _
+ ======================================================================================
 Public Sub AddToken_Register(ByRef Token As OZ80_TOKEN_REGISTER)
     Call Add(OZ80_TOKEN.TOKEN_REGISTER) 'Add a byte to say this is a Z80 register
     Call Add(Token)                     'And add the register token
 End Sub
 
+'AddToken_Operator : Add an operator to the stream _
+ ======================================================================================
+Public Sub AddToken_Operator(ByRef Token As OZ80_TOKEN_OPERATOR)
+    Call Add(OZ80_TOKEN.TOKEN_OPERATOR) 'Add a byte to say this is an OZ80 operator
+    Call Add(Token)                     'And add the operator token
+End Sub
+
 '/// PRIVATE PROCEDURES ///////////////////////////////////////////////////////////////
 
+'AddToken_Operator : Add an operator to the stream _
+ ======================================================================================
 Private Sub Add(ByRef Value As Long)
+    'The param MUST be 0-255, but is given as long for speed reasons
     Let Data(DataCursor) = Value
     Let DataCursor = DataCursor + 1
 End Sub

@@ -35,26 +35,31 @@ Private Declare Sub kernel32_RtlMoveMemory Lib "kernel32" Alias "RtlMoveMemory" 
 
 '/// DEFS /////////////////////////////////////////////////////////////////////////////
 
+Private Data() As Byte                  'The token stream will live here
+Private DataLimit As Long               'The length of the above array
+Private DataLength As Long              'The current amount of space used in the array
+Private DataCursor As Long              'Where the current insertion point is
+
 Public Enum OZ80_TOKEN
     'This token specifies that the data field is a Z80 mnemonic (`OZ80_MNEMONICS`).
      'Note that this is only a mnemonic token, not the Z80 opcode (handled by the
      'assembler) or parameters (handled by the next tokens in the stream)
-    TOKEN_Z80 = &H0
+    TOKEN_Z80 = &H1
     
     'The parser automatically converts hexadecimal/binary numbers, so we only store
      'a 32-bit long (data field) in the token stream
-    TOKEN_NUMBER = &H1
+    TOKEN_NUMBER = &H2
     
     'Specifies a Z80 register
-    TOKEN_REGISTER = &H2
+    TOKEN_REGISTER = &H3
     
     'Specifies an operator
-    TOKEN_OPERATOR = &H3
+    TOKEN_OPERATOR = &H4
     
     'A list is a series of 1 or more expressions separated by commas,
      'i.e.parameter lists
-    TOKEN_LIST = &H4                    'The data field with give the list length
-    TOKEN_LIST_NEXT = &H5               'Sandwiched between list items, i.e. ","
+    TOKEN_LIST = &H5
+    TOKEN_LIST_NEXT = &H6               'Sandwiched between list items, i.e. ","
     
     'Debug tokens:
     'These allow us to keep track of where the token originated in the source file(s)
@@ -64,11 +69,9 @@ Public Enum OZ80_TOKEN
     TOKEN_COL = &HF2                    'specify a change in column number
 End Enum
 
-'The data field of a token can be any 32-bit number and not just limited to the defs _
- below. These are provided for tokens that have well defined data values
-Public Enum OZ80_TOKEN_DATA
-    'Z80 Assembly Mnemonics:
-    '----------------------------------------------------------------------------------
+'Z80 Assembly Mnemonics:
+'--------------------------------------------------------------------------------------
+Public Enum OZ80_TOKEN_Z80
     'These are just the mnemonic tokens -- the assembly routine itself checks the
      'parameters and determines which opcode should be used
     TOKEN_Z80_ADC = &H1                 'Add with Carry
@@ -139,42 +142,48 @@ Public Enum OZ80_TOKEN_DATA
     TOKEN_Z80_SRL = &H42                'Shift Right Logical
     TOKEN_Z80_SUB = &H43                'Subtract
     TOKEN_Z80_XOR = &H44                'Bitwise XOR
-    
-    'Z80 Registers:
-    '----------------------------------------------------------------------------------
-    'When the token is OZ80_TOKEN_REGISTER then the following specifies which register
-    
-    TOKEN_REGISTER_A = &H100000         'Accumulator
-    TOKEN_REGISTER_B = &H100001
-    TOKEN_REGISTER_C = &H100002
-    TOKEN_REGISTER_D = &H100004
-    TOKEN_REGISTER_E = &H100008
-    TOKEN_REGISTER_F = &H100010         'Flags register
-    TOKEN_REGISTER_H = &H100020
-    TOKEN_REGISTER_I = &H100040         'Interrupt - not to be confused with IX & IY
-    TOKEN_REGISTER_L = &H100080
-    TOKEN_REGISTER_R = &H100100         'Refresh register (pseudo-random)
-    
-    TOKEN_REGISTER_AF = TOKEN_REGISTER_A Or TOKEN_REGISTER_F
-    TOKEN_REGISTER_BC = TOKEN_REGISTER_B Or TOKEN_REGISTER_C
-    TOKEN_REGISTER_DE = TOKEN_REGISTER_D Or TOKEN_REGISTER_E
-    TOKEN_REGISTER_HL = TOKEN_REGISTER_H Or TOKEN_REGISTER_L
-    
+End Enum
+
+'Z80 Registers:
+'--------------------------------------------------------------------------------------
+Public Enum OZ80_TOKEN_REGISTER
+    TOKEN_REGISTER_A = 1                'Accumulator
+    TOKEN_REGISTER_B = 2
+    TOKEN_REGISTER_C = 3
+    TOKEN_REGISTER_D = 4
+    TOKEN_REGISTER_E = 5
+    TOKEN_REGISTER_F = 6                'Flags register
+    TOKEN_REGISTER_H = 7
+    TOKEN_REGISTER_I = 8                'Interrupt - not to be confused with IX & IY
+    TOKEN_REGISTER_L = 9
+    TOKEN_REGISTER_R = 10               'Refresh register (pseudo-random)
+
+    TOKEN_REGISTER_AF = 11
+    TOKEN_REGISTER_BC = 12
+    TOKEN_REGISTER_DE = 13
+    TOKEN_REGISTER_HL = 14
+
     'Undocumented Z80 instructions can access the 8-bit halves of IX & IY
-    TOKEN_REGISTER_IXL = &H100200
-    TOKEN_REGISTER_IXH = &H100201
-    TOKEN_REGISTER_IX = TOKEN_REGISTER_IXL Or TOKEN_REGISTER_IXH
-    TOKEN_REGISTER_IYL = &H100202
-    TOKEN_REGISTER_IYH = &H100204
-    TOKEN_REGISTER_IY = TOKEN_REGISTER_IYL Or TOKEN_REGISTER_IYH
-    
-    TOKEN_REGISTER_SP = &H100300        'Stack pointer
-    TOKEN_REGISTER_PC = &H100301        'Program counter
-    
+    TOKEN_REGISTER_IXL = 15
+    TOKEN_REGISTER_IXH = 16
+    TOKEN_REGISTER_IX = 17
+    TOKEN_REGISTER_IYL = 18
+    TOKEN_REGISTER_IYH = 19
+    TOKEN_REGISTER_IY = 20
+
+    TOKEN_REGISTER_SP = 21              'Stack pointer
+    TOKEN_REGISTER_PC = 22              'Program counter
+End Enum
+
+'The data field of a token can be any 32-bit number and not just limited to the defs _
+ below. These are provided for tokens that have well defined data values
+Public Enum OZ80_TOKEN_DATA
+    'When the token is OZ80_TOKEN_REGISTER then the following specifies which register
+
     'Operators:
     '----------------------------------------------------------------------------------
     'When then token is OZ80_OPERATOR then the following specifies which opeartor
-    
+
     TOKEN_OPERATOR_ADD = &HF00000       'Add "+"
     TOKEN_OPERATOR_SUB = &HF00001       'Subtract "-"
     TOKEN_OPERATOR_MUL = &HF00002       'Multiply "*"
@@ -184,69 +193,42 @@ Public Enum OZ80_TOKEN_DATA
     TOKEN_OPERATOR_REP = &HF00010       'Repeat "x"
 End Enum
 
-Private Type Token
-    'An `OZ80_TOKEN` value, though not specified as such otherwise it'll use 4 bytes
-    Kind As Byte
-    Data As OZ80_TOKEN_DATA
-End Type
-
-Private Tokens() As Token
-
 '/// EVENTS ///////////////////////////////////////////////////////////////////////////
 
 'CLASS Initialize _
  ======================================================================================
 Private Sub Class_Initialize()
-    '
+    'Prepare a large buffer (512K) to accept the token stream _
+     (using `ReDim` for every token added is *incredibly* slow)
+    'If the data overflows this buffer, we'll increase it by _
+     another chunk there and then
+    Let DataLimit = 524287
+    ReDim Data(0 To DataLimit) As Byte
 End Sub
 
 'CLASS Terminate _
  ======================================================================================
 Private Sub Class_Terminate()
-    Erase Tokens
+    Erase Data
 End Sub
 
 '/// PUBLIC INTERFACE /////////////////////////////////////////////////////////////////
 
-'AddToken : Add a token to the assembler's internal tokenised code representation _
+'AddToken_Z80 : Add a Z80 instruction to the stream _
  ======================================================================================
-Public Sub AddToken( _
-    ByVal Kind As OZ80_TOKEN, _
-    Optional ByVal Data As OZ80_TOKEN_DATA = 0 _
-)
-    'Add an element to the Tokens array
-    Static Dimmed As Boolean
-    If Dimmed = False Then
-        ReDim Tokens(0) As Token
-        Let Dimmed = True
-    Else
-        ReDim Preserve Tokens(UBound(Tokens) + 1) As Token
-    End If
-    
-    With Tokens(UBound(Tokens))
-        Let .Kind = Kind
-        Let .Data = Data
-    End With
+Public Sub AddToken_Z80(ByRef Token As OZ80_TOKEN_Z80)
+    Call Add(OZ80_TOKEN.TOKEN_Z80)      'Add a byte to say this is a Z80 instructions
+    Call Add(Token)                     'And add the Z80 instruction token
 End Sub
 
-'ArrayDimmed : Is an array dimmed? _
- ======================================================================================
-'Taken from: https://groups.google.com/forum/?_escaped_fragment_=msg/microsoft.public.vb.general.discussion/3CBPw3nMX2s/zCcaO-hiCI0J#!msg/microsoft.public.vb.general.discussion/3CBPw3nMX2s/zCcaO-hiCI0J
-Private Function ArrayDimmed(varArray As Variant) As Boolean
-    Dim pSA As Long
-    'Make sure an array was passed in:
-    If IsArray(varArray) Then
-        'Get the pointer out of the Variant:
-        Call kernel32_RtlMoveMemory( _
-            ptrDestination:=pSA, ptrSource:=ByVal VarPtr(varArray) + 8, Length:=4 _
-        )
-        If pSA Then
-            'Try to get the descriptor:
-            Call kernel32_RtlMoveMemory( _
-                ptrDestination:=pSA, ptrSource:=ByVal pSA, Length:=4 _
-            )
-            'Array is initialized only if we got the SAFEARRAY descriptor:
-            Let ArrayDimmed = (pSA <> 0)
-        End If
-    End If
-End Function
+Public Sub AddToken_Register(ByRef Token As OZ80_TOKEN_REGISTER)
+    Call Add(OZ80_TOKEN.TOKEN_REGISTER) 'Add a byte to say this is a Z80 register
+    Call Add(Token)                     'And add the register token
+End Sub
+
+'/// PRIVATE PROCEDURES ///////////////////////////////////////////////////////////////
+
+Private Sub Add(ByRef Value As Long)
+    Let Data(DataCursor) = Value
+    Let DataCursor = DataCursor + 1
+End Sub

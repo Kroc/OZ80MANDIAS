@@ -27,9 +27,6 @@ Option Compare Text
 
 '/// CONSTANTS ////////////////////////////////////////////////////////////////////////
 
-Private RegisterTokens As Scripting.Dictionary
-Private OperatorTokens As Scripting.Dictionary
-
 Private Const SYNTAX_ALPHA = "ABCDEFGHIJKLMNOPQRSTUVQXYZ_"
 Private Const SYNTAX_NUMERIC = "0123456789"
 
@@ -79,65 +76,30 @@ End Enum
 '/// VARIABLES ////////////////////////////////////////////////////////////////////////
 
 Private Words() As String
+Private WordCount As Long
 Private index As Long                   'index number of current word being tokenised
 
 'A tokenStream object is passed to us by the `Parse` method. _
  This is where we will feed the result of our text parsing
 Private TokenStream As oz80TokenStream
 
+'A look up table of ASCII codes from upper-case to lower-case
+Private LowCase(0 To 255) As Long
+
 '/// EVENTS ///////////////////////////////////////////////////////////////////////////
 
 'CLASS Initialize _
  ======================================================================================
 Private Sub Class_Initialize()
-    'Initialise the array of register mappings from text to data values
-    Set RegisterTokens = New Scripting.Dictionary
-    With RegisterTokens
-        Call .Add("A", TOKEN_REGISTER_A)
-        Call .Add("B", TOKEN_REGISTER_B)
-        Call .Add("C", TOKEN_REGISTER_C)
-        Call .Add("D", TOKEN_REGISTER_D)
-        Call .Add("E", TOKEN_REGISTER_E)
-        Call .Add("H", TOKEN_REGISTER_H)
-        Call .Add("I", TOKEN_REGISTER_I)
-        Call .Add("L", TOKEN_REGISTER_L)
-        Call .Add("R", TOKEN_REGISTER_R)
-        Call .Add("AF", TOKEN_REGISTER_AF)
-        Call .Add("BC", TOKEN_REGISTER_BC)
-        Call .Add("DE", TOKEN_REGISTER_DE)
-        Call .Add("HL", TOKEN_REGISTER_HL)
-        Call .Add("IXL", TOKEN_REGISTER_IXL)
-        Call .Add("IXH", TOKEN_REGISTER_IXH)
-        Call .Add("IX", TOKEN_REGISTER_IX)
-        Call .Add("IYL", TOKEN_REGISTER_IYL)
-        Call .Add("IYH", TOKEN_REGISTER_IYH)
-        Call .Add("IY", TOKEN_REGISTER_IY)
-        Call .Add("SP", TOKEN_REGISTER_SP)
-        Call .Add("PC", TOKEN_REGISTER_PC)
-        'and the shadow registers -- you can't actually manipulate these directly _
-         on a z80, this is just a way of labelling for your convenience
-        Call .Add("A'", TOKEN_REGISTER_A)
-        Call .Add("B'", TOKEN_REGISTER_B)
-        Call .Add("C'", TOKEN_REGISTER_C)
-        Call .Add("D'", TOKEN_REGISTER_D)
-        Call .Add("E'", TOKEN_REGISTER_E)
-        Call .Add("H'", TOKEN_REGISTER_H)
-        Call .Add("AF'", TOKEN_REGISTER_AF)
-        Call .Add("BC'", TOKEN_REGISTER_BC)
-        Call .Add("DE'", TOKEN_REGISTER_DE)
-        Call .Add("HL'", TOKEN_REGISTER_HL)
-    End With
-    
-    'Initialise the array of operator mappings from text to data values
-    Set OperatorTokens = New Scripting.Dictionary
-    With OperatorTokens
-        Call .Add(SYNTAX_OPERATOR_ADD, OZ80_TOKEN_DATA.TOKEN_OPERATOR_ADD)
-        Call .Add(SYNTAX_OPERATOR_SUB, OZ80_TOKEN_DATA.TOKEN_OPERATOR_SUB)
-        Call .Add(SYNTAX_OPERATOR_MUL, OZ80_TOKEN_DATA.TOKEN_OPERATOR_MUL)
-        Call .Add(SYNTAX_OPERATOR_DIV, OZ80_TOKEN_DATA.TOKEN_OPERATOR_DIV)
-        Call .Add(SYNTAX_OPERATOR_POW, OZ80_TOKEN_DATA.TOKEN_OPERATOR_POW)
-        Call .Add(SYNTAX_OPERATOR_MOD, OZ80_TOKEN_DATA.TOKEN_OPERATOR_MOD)
-    End With
+    'Initialise the lookup table of upper-case to lower-case values
+    Dim i As Long
+    For i = 0 To 255
+        If i >= 65 And i <= 90 Then
+            Let LowCase(i) = i And 32
+        Else
+            Let LowCase(i) = i
+        End If
+    Next i
 End Sub
 
 'CLASS Terminate _
@@ -145,8 +107,6 @@ End Sub
 Private Sub Class_Terminate()
     'Clean up the arrays
     Erase Words
-    Set RegisterTokens = Nothing
-    Set OperatorTokens = Nothing
     'Dereference the tokenStream object we were given by the assembler
     Set TokenStream = Nothing
 End Sub
@@ -162,19 +122,8 @@ Public Function Parse( _
     'Remember the token stream we need to feed into
     Set TokenStream = DestTokenStream
     
-    Dim Start As Single
-    Let Start = Timer
-    
     'Split the source file into separate words for our "Look-Ahead Left Right" parser
     ExplodeFile (FilePath)
-    
-    Debug.Print Format$(Timer - Start, "0.00")
-    
-    'Now parse the words, validate and tokenise them
-'    Let index = 0
-'    Do While index < UBound(Words)
-'        Call ContextRoot
-'    Loop
 End Function
 
 '/// PRIVATE PROCEDURES ///////////////////////////////////////////////////////////////
@@ -182,6 +131,9 @@ End Function
 'ExplodeFile : Break a file into all its individual words for tokenising _
  ======================================================================================
 Private Function ExplodeFile(ByVal FilePath As String) As OZ80_ERROR
+    Dim Start As Single
+    Let Start = Timer
+    
     Dim IsQuote As Boolean
     Dim IsComment As Boolean
     Dim IsCommentMulti As Boolean
@@ -206,6 +158,9 @@ Private Function ExplodeFile(ByVal FilePath As String) As OZ80_ERROR
     Let AscOpDiv = AscW(SYNTAX_OPERATOR_DIV)
     Let AscOpPow = AscW(SYNTAX_OPERATOR_POW)
     Let AscOpMod = AscW(SYNTAX_OPERATOR_MOD)
+    Dim AscNumHex As Long, AscNumBin As Long
+    Let AscNumHex = AscW(SYNTAX_NUMBER_HEX)
+    Let AscNumBin = AscW(SYNTAX_NUMBER_BIN)
     
     'Read the whole file into a single string _
      ----------------------------------------------------------------------------------
@@ -228,11 +183,22 @@ Private Function ExplodeFile(ByVal FilePath As String) As OZ80_ERROR
     Erase Words
     Dim WordLimit As Long: Let WordLimit = 100000
     ReDim Words(0 To WordLimit) As String
+    Let WordCount = 0
+    
+    'The first letter of a word will be remembered for guiding tokenisation
+    Dim First As String
+    Dim AscFirst As Long
+    
+    '2nd, 3rd and 4th letters are used in validating registers
+    Dim LetterIndex As Long
+    Dim Asc2 As Long, Asc3 As Long, Asc4 As Long
     
     '----------------------------------------------------------------------------------
 ReadWord:
     Dim Word As String
     Let Word = vbNullString
+    Let LetterIndex = 0
+    Let Asc2 = 0: Let Asc3 = 0: Let Asc4 = 0
     
 ReadChar:
     'If the file ends, treat it as a remaining end of line
@@ -248,9 +214,14 @@ ReadChar:
     
     'skip through comments...
     '----------------------------------------------------------------------------------
-    If IsComment = True Then
+    If IsComment Then
         'For single-line comments:
         If IsCommentMulti = False Then
+            'Is this a multi-line comment? (two backticks)
+            If LenB(Word) Then
+                If AscChar = AscComment Then Let IsCommentMulti = True
+                GoTo ReadWord
+            End If
             'The end of a line ends a single-line comment:
             If AscChar = 10 Or AscChar = 13 Then
                 Let IsComment = False: GoTo ReadWord
@@ -278,13 +249,15 @@ ReadChar:
             If AscChar = 9 Then GoTo ReadChar
             If AscChar = 10 Then GoTo ReadChar
             If AscChar = 13 Then GoTo ReadChar
+            'Remember the first letter of the word for guiding tokenisation
+            Let First = Char
         Else
-            'A word is underway, check for end of line (note the `Else`, we don't want _
-             to test line endings twice when the Word is currently empty)
+            'A word is underway, check for end of line (note the `Else`, we don't _
+             want to test line endings twice when the Word is currently empty)
             If AscChar = 10 Or AscChar = 13 Then
                 'The end of a line ends a single-line comment:
                 If IsCommentMulti = False Then
-                    If IsComment = True Then Let IsComment = False: GoTo ReadWord
+                    If IsComment Then Let IsComment = False: GoTo ReadWord
                 End If
                 'End of the line ends the word
                 GoTo EndWord2
@@ -301,18 +274,11 @@ ReadChar:
         'Check for comment marker
         If AscChar = AscComment Then
             Let IsComment = True
-            If LenB(Word) Then
-                'Is this a multi-line comment? (two backticks)
-                If AscW(Word) = AscComment Then
-                    Let IsCommentMulti = True
-                    GoTo ReadWord
-                End If
-                'If a comment begins at the end of a word without any space to _
-                 separate, we need to first keep the word before switching to _
-                 comment parsing
-                GoTo WordBreak
-            End If
-            GoTo NextChar
+            'If a comment begins at the end of a word without any space to separate, _
+             we need to first keep the word before switching to comment parsing
+            If LenB(Word) = 0 Then GoTo NextChar
+            GoTo WordBreak
+            
         End If
     
         'Symbols that can break a word in the middle without spaces to separate
@@ -328,7 +294,13 @@ ReadChar:
         If AscChar = AscOpDiv Then GoTo WordBreak
         If AscChar = AscOpPow Then GoTo WordBreak
         If AscChar = AscOpMod Then GoTo WordBreak
-    
+        
+        Let LetterIndex = LetterIndex + 1
+        'Capture letters 2,3 & 4 (for high-speed register validation)
+        If LetterIndex = 2 Then Let Asc2 = LowCase(AscW(Char))
+        If LetterIndex = 3 Then Let Asc3 = LowCase(AscW(Char))
+        If LetterIndex = 4 Then Let Asc4 = LowCase(AscW(Char))
+        
     'Look for the end of a quote
     '----------------------------------------------------------------------------------
     Else
@@ -357,293 +329,340 @@ WordBreak:
 EndWord:
     If LenB(Word) = 0 Then GoTo EndOfFile
 EndWord2:
-    Dim WordIndex As Long
-    If WordIndex > WordLimit Then
+    'Tokenise the word:
+    '----------------------------------------------------------------------------------
+    'This section is written for pure speed, not for prettiness or flexibility
+    Dim Register As Long
+    
+    'Get the ASCII code of the first letter - we do this here as it wastes time to _
+     do it when we set `First` as that may happen multiple times when skipping _
+     whitespace before the beginning of a word
+    Let AscFirst = LowCase(AscW(First))
+    
+    'Check the first letter of the word to find the right kind of token:
+    
+    'Comma (very common!)
+    If AscFirst = AscList Then
+        'TODO
+    
+    'Hexadecimal number?
+    ElseIf AscFirst = AscNumHex Then
+        'TODO
+        
+    ElseIf AscFirst = 97 Then '"a"
+        'Z80 instructions
+        If StrComp(Word, "adc") = 0 Then Call TokenStream.AddToken_Z80(TOKEN_Z80_ADC): GoTo AddWord
+        If StrComp(Word, "add") = 0 Then Call TokenStream.AddToken_Z80(TOKEN_Z80_ADD): GoTo AddWord
+        If StrComp(Word, "and") = 0 Then Call TokenStream.AddToken_Z80(TOKEN_Z80_AND): GoTo AddWord
+        'TODO: Keywords
+        If StrComp(Word, "as") = 0 Then GoTo AddWord
+        'Is it a register?
+        Let Register = ValidateRegisterAsc(AscFirst, Asc2, Asc3, Asc4)
+        '(a falsey comparison is fastest)
+        If Register = 0 Then
+            'ERROR
+        Else
+            Call TokenStream.AddToken_Register(Register)
+        End If
+        
+    ElseIf AscFirst = 98 Then '"b"
+        'Z80 instructions
+        If StrComp(Word, "bit") = 0 Then Call TokenStream.AddToken_Z80(TOKEN_Z80_BIT): GoTo AddWord
+        'TODO: Keywords
+        If StrComp(Word, "byte") = 0 Then GoTo AddWord
+        'Is it a register?
+        Let Register = ValidateRegisterAsc(AscFirst, Asc2, Asc3, Asc4)
+        '(a falsey comparison is fastest)
+        If Register = 0 Then
+            'ERROR
+        Else
+            Call TokenStream.AddToken_Register(Register)
+        End If
+        
+    ElseIf AscFirst = 99 Then '"c"
+        'Z80 instructions
+        If StrComp(Word, "call") = 0 Then Call TokenStream.AddToken_Z80(TOKEN_Z80_CALL): GoTo AddWord
+        If StrComp(Word, "ccf") = 0 Then Call TokenStream.AddToken_Z80(TOKEN_Z80_CCF): GoTo AddWord
+        If StrComp(Word, "cp") = 0 Then Call TokenStream.AddToken_Z80(TOKEN_Z80_CP): GoTo AddWord
+        If StrComp(Word, "cpd") = 0 Then Call TokenStream.AddToken_Z80(TOKEN_Z80_CPD): GoTo AddWord
+        If StrComp(Word, "cpdr") = 0 Then Call TokenStream.AddToken_Z80(TOKEN_Z80_CPDR): GoTo AddWord
+        If StrComp(Word, "cpi") = 0 Then Call TokenStream.AddToken_Z80(TOKEN_Z80_CPI): GoTo AddWord
+        If StrComp(Word, "cpir") = 0 Then Call TokenStream.AddToken_Z80(TOKEN_Z80_CPIR): GoTo AddWord
+        If StrComp(Word, "cpl") = 0 Then Call TokenStream.AddToken_Z80(TOKEN_Z80_CPL): GoTo AddWord
+        'Is it a register?
+        Let Register = ValidateRegisterAsc(AscFirst, Asc2, Asc3, Asc4)
+        '(a falsey comparison is fastest)
+        If Register = 0 Then
+            'ERROR
+        Else
+            Call TokenStream.AddToken_Register(Register)
+        End If
+        
+    ElseIf AscFirst = 100 Then '"d"
+        'Z80 instructions
+        If StrComp(Word, "daa") = 0 Then Call TokenStream.AddToken_Z80(TOKEN_Z80_DAA): GoTo AddWord
+        If StrComp(Word, "dec") = 0 Then Call TokenStream.AddToken_Z80(TOKEN_Z80_DEC): GoTo AddWord
+        If StrComp(Word, "di") = 0 Then Call TokenStream.AddToken_Z80(TOKEN_Z80_DI): GoTo AddWord
+        If StrComp(Word, "djnz") = 0 Then Call TokenStream.AddToken_Z80(TOKEN_Z80_DJNZ): GoTo AddWord
+        'Is it a register?
+        Let Register = ValidateRegisterAsc(AscFirst, Asc2, Asc3, Asc4)
+        '(a falsey comparison is fastest)
+        If Register = 0 Then
+            'ERROR
+        Else
+            Call TokenStream.AddToken_Register(Register)
+        End If
+        
+    ElseIf AscFirst = 101 Then '"e"
+        'Z80 instructions
+        If StrComp(Word, "ei") = 0 Then Call TokenStream.AddToken_Z80(TOKEN_Z80_EI): GoTo AddWord
+        If StrComp(Word, "ex") = 0 Then Call TokenStream.AddToken_Z80(TOKEN_Z80_EX): GoTo AddWord
+        If StrComp(Word, "exx") = 0 Then Call TokenStream.AddToken_Z80(TOKEN_Z80_EXX): GoTo AddWord
+        'Is it a register?
+        Let Register = ValidateRegisterAsc(AscFirst, Asc2, Asc3, Asc4)
+        '(a falsey comparison is fastest)
+        If Register = 0 Then
+            'ERROR
+        Else
+            Call TokenStream.AddToken_Register(Register)
+        End If
+    
+    ElseIf AscFirst = 104 Then '"h"
+        'Z80 instructions
+        If StrComp(Word, "halt") = 0 Then Call TokenStream.AddToken_Z80(TOKEN_Z80_HALT): GoTo AddWord
+        'Is it a register?
+        Let Register = ValidateRegisterAsc(AscFirst, Asc2, Asc3, Asc4)
+        '(a falsey comparison is fastest)
+        If Register = 0 Then
+            'ERROR
+        Else
+            Call TokenStream.AddToken_Register(Register)
+        End If
+        
+    ElseIf AscFirst = 105 Then '"i"
+        'Z80 instructions
+        If StrComp(Word, "im") = 0 Then Call TokenStream.AddToken_Z80(TOKEN_Z80_IM): GoTo AddWord
+        If StrComp(Word, "in") = 0 Then Call TokenStream.AddToken_Z80(TOKEN_Z80_IN): GoTo AddWord
+        If StrComp(Word, "inc") = 0 Then Call TokenStream.AddToken_Z80(TOKEN_Z80_INC): GoTo AddWord
+        If StrComp(Word, "ind") = 0 Then Call TokenStream.AddToken_Z80(TOKEN_Z80_IND): GoTo AddWord
+        If StrComp(Word, "indr") = 0 Then Call TokenStream.AddToken_Z80(TOKEN_Z80_INDR): GoTo AddWord
+        If StrComp(Word, "ini") = 0 Then Call TokenStream.AddToken_Z80(TOKEN_Z80_INI): GoTo AddWord
+        If StrComp(Word, "inir") = 0 Then Call TokenStream.AddToken_Z80(TOKEN_Z80_INIR): GoTo AddWord
+        'Is it a register?
+        Let Register = ValidateRegisterAsc(AscFirst, Asc2, Asc3, Asc4)
+        '(a falsey comparison is fastest)
+        If Register = 0 Then
+            'ERROR
+        Else
+            Call TokenStream.AddToken_Register(Register)
+        End If
+        
+    ElseIf AscFirst = 106 Then '"j"
+        'Z80 instructions
+        If StrComp(Word, "jp") = 0 Then Call TokenStream.AddToken_Z80(TOKEN_Z80_JP): GoTo AddWord
+        If StrComp(Word, "jr") = 0 Then Call TokenStream.AddToken_Z80(TOKEN_Z80_JR): GoTo AddWord
+        
+    ElseIf AscFirst = 108 Then '"l"
+        'Z80 instructions
+        If StrComp(Word, "ld") = 0 Then Call TokenStream.AddToken_Z80(TOKEN_Z80_LD): GoTo AddWord
+        If StrComp(Word, "ldd") = 0 Then Call TokenStream.AddToken_Z80(TOKEN_Z80_LDD): GoTo AddWord
+        If StrComp(Word, "lddr") = 0 Then Call TokenStream.AddToken_Z80(TOKEN_Z80_LDDR): GoTo AddWord
+        If StrComp(Word, "ldi") = 0 Then Call TokenStream.AddToken_Z80(TOKEN_Z80_LDI): GoTo AddWord
+        If StrComp(Word, "ldir") = 0 Then Call TokenStream.AddToken_Z80(TOKEN_Z80_LDIR): GoTo AddWord
+        'Is it a register?
+        Let Register = ValidateRegisterAsc(AscFirst, Asc2, Asc3, Asc4)
+        '(a falsey comparison is fastest)
+        If Register = 0 Then
+            'ERROR
+        Else
+            Call TokenStream.AddToken_Register(Register)
+        End If
+    
+    ElseIf AscFirst = 110 Then '"n"
+        'Z80 instructions
+        If StrComp(Word, "neg") = 0 Then Call TokenStream.AddToken_Z80(TOKEN_Z80_NEG): GoTo AddWord
+        If StrComp(Word, "nop") = 0 Then Call TokenStream.AddToken_Z80(TOKEN_Z80_NOP): GoTo AddWord
+    
+    ElseIf AscFirst = 111 Then '"o"
+        'Z80 instructions
+        If StrComp(Word, "or") = 0 Then Call TokenStream.AddToken_Z80(TOKEN_Z80_OR): GoTo AddWord
+        If StrComp(Word, "out") = 0 Then Call TokenStream.AddToken_Z80(TOKEN_Z80_OUT): GoTo AddWord
+        If StrComp(Word, "outd") = 0 Then Call TokenStream.AddToken_Z80(TOKEN_Z80_OUTD): GoTo AddWord
+        If StrComp(Word, "outdr") = 0 Then Call TokenStream.AddToken_Z80(TOKEN_Z80_OUTDR): GoTo AddWord
+        If StrComp(Word, "outi") = 0 Then Call TokenStream.AddToken_Z80(TOKEN_Z80_OUTI): GoTo AddWord
+        If StrComp(Word, "outir") = 0 Then Call TokenStream.AddToken_Z80(TOKEN_Z80_OUTIR): GoTo AddWord
+        
+    ElseIf AscFirst = 112 Then '"p"
+        'Z80 instructions
+        If StrComp(Word, "pop") = 0 Then Call TokenStream.AddToken_Z80(TOKEN_Z80_POP): GoTo AddWord
+        If StrComp(Word, "push") = 0 Then Call TokenStream.AddToken_Z80(TOKEN_Z80_PUSH): GoTo AddWord
+        'Is it a register?
+        Let Register = ValidateRegisterAsc(AscFirst, Asc2, Asc3, Asc4)
+        '(a falsey comparison is fastest)
+        If Register = 0 Then
+            'ERROR
+        Else
+            Call TokenStream.AddToken_Register(Register)
+        End If
+        
+    ElseIf AscFirst = 114 Then '"r"
+        'Z80 instructions
+        If StrComp(Word, "res") = 0 Then Call TokenStream.AddToken_Z80(TOKEN_Z80_RES): GoTo AddWord
+        If StrComp(Word, "ret") = 0 Then Call TokenStream.AddToken_Z80(TOKEN_Z80_RET): GoTo AddWord
+        If StrComp(Word, "reti") = 0 Then Call TokenStream.AddToken_Z80(TOKEN_Z80_RETI): GoTo AddWord
+        If StrComp(Word, "retn") = 0 Then Call TokenStream.AddToken_Z80(TOKEN_Z80_RETN): GoTo AddWord
+        If StrComp(Word, "rla") = 0 Then Call TokenStream.AddToken_Z80(TOKEN_Z80_RLA): GoTo AddWord
+        If StrComp(Word, "rl") = 0 Then Call TokenStream.AddToken_Z80(TOKEN_Z80_RL): GoTo AddWord
+        If StrComp(Word, "rlca") = 0 Then Call TokenStream.AddToken_Z80(TOKEN_Z80_RLCA): GoTo AddWord
+        If StrComp(Word, "rlc") = 0 Then Call TokenStream.AddToken_Z80(TOKEN_Z80_RLC): GoTo AddWord
+        If StrComp(Word, "rld") = 0 Then Call TokenStream.AddToken_Z80(TOKEN_Z80_RLD): GoTo AddWord
+        If StrComp(Word, "rra") = 0 Then Call TokenStream.AddToken_Z80(TOKEN_Z80_RRA): GoTo AddWord
+        If StrComp(Word, "rr") = 0 Then Call TokenStream.AddToken_Z80(TOKEN_Z80_RR): GoTo AddWord
+        If StrComp(Word, "rrca") = 0 Then Call TokenStream.AddToken_Z80(TOKEN_Z80_RRCA): GoTo AddWord
+        If StrComp(Word, "rrc") = 0 Then Call TokenStream.AddToken_Z80(TOKEN_Z80_RRC): GoTo AddWord
+        If StrComp(Word, "rrd") = 0 Then Call TokenStream.AddToken_Z80(TOKEN_Z80_RRD): GoTo AddWord
+        If StrComp(Word, "rst") = 0 Then Call TokenStream.AddToken_Z80(TOKEN_Z80_RST): GoTo AddWord
+        'Is it a register?
+        Let Register = ValidateRegisterAsc(AscFirst, Asc2, Asc3, Asc4)
+        '(a falsey comparison is fastest)
+        If Register = 0 Then
+            'ERROR
+        Else
+            Call TokenStream.AddToken_Register(Register)
+        End If
+        
+    ElseIf AscFirst = 115 Then '"s"
+        'Z80 instructions
+        If StrComp(Word, "sbc") = 0 Then Call TokenStream.AddToken_Z80(TOKEN_Z80_SBC): GoTo AddWord
+        If StrComp(Word, "scf") = 0 Then Call TokenStream.AddToken_Z80(TOKEN_Z80_SCF): GoTo AddWord
+        If StrComp(Word, "set") = 0 Then Call TokenStream.AddToken_Z80(TOKEN_Z80_SET): GoTo AddWord
+        If StrComp(Word, "sla") = 0 Then Call TokenStream.AddToken_Z80(TOKEN_Z80_SLA): GoTo AddWord
+        If StrComp(Word, "sra") = 0 Then Call TokenStream.AddToken_Z80(TOKEN_Z80_SRA): GoTo AddWord
+        If StrComp(Word, "sll") = 0 Then Call TokenStream.AddToken_Z80(TOKEN_Z80_SLL): GoTo AddWord
+        If StrComp(Word, "srl") = 0 Then Call TokenStream.AddToken_Z80(TOKEN_Z80_SRL): GoTo AddWord
+        If StrComp(Word, "sub") = 0 Then Call TokenStream.AddToken_Z80(TOKEN_Z80_SUB): GoTo AddWord
+        'Is it a register?
+        Let Register = ValidateRegisterAsc(AscFirst, Asc2, Asc3, Asc4)
+        '(a falsey comparison is fastest)
+        If Register = 0 Then
+            'ERROR
+        Else
+            Call TokenStream.AddToken_Register(Register)
+        End If
+        
+    ElseIf AscFirst = 120 Then '"x"
+        'Z80 instructions
+        If StrComp(Word, "xor") = 0 Then Call TokenStream.AddToken_Z80(TOKEN_Z80_XOR): GoTo AddWord
+    
+    'Block (open)
+    ElseIf AscFirst = AscBlockOpen Then
+        'TODO
+        GoTo AddWord
+    
+    'Block (close)
+    ElseIf AscFirst = AscBlockClose Then
+        'TODO
+    
+    'Parenthesis (open)
+    ElseIf AscFirst = AscParenOpen Then
+        'TODO
+    
+    'Parenthesis (close)
+    ElseIf AscFirst = AscParenClose Then
+        'TODO
+    
+    'A decimal number?
+    ElseIf AscFirst >= 48 And AscFirst <= 57 Then
+        'TODO:
+        
+    'Binary number?
+    ElseIf AscFirst = AscNumBin Then
+        'TODO
+        
+    'String (quote)
+    ElseIf AscFirst = AscQuote Then
+        'TODO
+        
+    End If
+    
+    'Add the word to the array
+    '----------------------------------------------------------------------------------
+AddWord:
+    If WordCount > WordLimit Then
         Let WordLimit = WordLimit + 50000
         ReDim Preserve Words(0 To WordLimit) As String
     End If
-    Let Words(WordIndex) = Word
-    Let WordIndex = WordIndex + 1
     
+    Let Words(WordCount) = Word
+    Let WordCount = WordCount + 1
+    
+'    Debug.Print Word
     GoTo ReadWord
     
+    '----------------------------------------------------------------------------------
 EndOfFile:
+    'Trim the buffer of words to the right size
+    If WordLimit > WordCount Then
+        ReDim Preserve Words(0 To WordCount) As String
+    End If
+    
     Let Text = vbNullString
-    Debug.Print "- Words: " & Format$(WordIndex, "#,#")
+    Debug.Print "- Words: " & Format$(WordCount, "#,#")
+    Debug.Print "- Time: " & Format$(Timer - Start, "0.000") & "s"
 End Function
-
-'/// CONTEXT PROCEDURES ///////////////////////////////////////////////////////////////
-'After the file is exploded into separate words, we walk through the word list _
- validating the "context", that is, parameters should follow keywords &c. _
- This process is recursive in nature because blocks can be nested, so the code is _
- divided into separate contexts that only concern themselves with the requirements _
- of their context and what should follow next
-
-''ContextRoot : The context at the start of a line (and not within a block) _
-' ======================================================================================
-'Private Sub ContextRoot()
-'    'Lines can begin with Z80 code, labels & keywords
-'
-'    'Check the current word type
-'    Select Case Words(index).Kind
-'        'If the word appears to be an assembly instruction:
-'        Case OZ80_WORDKIND.ASM
-'            Call ContextAssembly
-'
-'        Case Else
-'            Let index = index + 1
-'    End Select
-'End Sub
-'
-''ContextAssembly : Parse Z80 assembly source _
-' ======================================================================================
-'Private Sub ContextAssembly()
-'    Dim Word As String
-'    Let Word = Words(index).Word
-'
-'    'Check the mneomic, this is divided into two main lists of those that have _
-'     parameters and those that do not
-'    Select Case Word
-'        Case "adc":     'Call TokenStream.AddToken(TOKEN_Z80, TOKEN_Z80_ADC)
-'        Case "add":     'Call TokenStream.AddToken(TOKEN_Z80, TOKEN_Z80_ADD)
-'        Case "and":     'Call TokenStream.AddToken(TOKEN_Z80, TOKEN_Z80_AND)
-'        Case "bit":     'Call TokenStream.AddToken(TOKEN_Z80, TOKEN_Z80_BIT)
-'        Case "call":    'Call TokenStream.AddToken(TOKEN_Z80, TOKEN_Z80_CALL)
-'        Case "cp":      'Call TokenStream.AddToken(TOKEN_Z80, TOKEN_Z80_CP)
-'        Case "dec":     'Call TokenStream.AddToken(TOKEN_Z80, TOKEN_Z80_DEC)
-'        Case "djnz":    'Call TokenStream.AddToken(TOKEN_Z80, TOKEN_Z80_DJNZ)
-'        Case "ex":      'Call TokenStream.AddToken(TOKEN_Z80, TOKEN_Z80_EX)
-'        Case "im":      'Call TokenStream.AddToken(TOKEN_Z80, TOKEN_Z80_IM)
-'        Case "in":      'Call TokenStream.AddToken(TOKEN_Z80, TOKEN_Z80_IN)
-'        Case "inc":     'Call TokenStream.AddToken(TOKEN_Z80, TOKEN_Z80_INC)
-'        Case "jp":      'Call TokenStream.AddToken(TOKEN_Z80, TOKEN_Z80_JP)
-'        Case "jr":      'Call TokenStream.AddToken(TOKEN_Z80, TOKEN_Z80_JR)
-'        Case "ld":      'Call TokenStream.AddToken(TOKEN_Z80, TOKEN_Z80_LD)
-'        Case "or":      'Call TokenStream.AddToken(TOKEN_Z80, TOKEN_Z80_OR)
-'        Case "out":     'Call TokenStream.AddToken(TOKEN_Z80, TOKEN_Z80_OUT)
-'        Case "pop":     'Call TokenStream.AddToken(TOKEN_Z80, TOKEN_Z80_POP)
-'        Case "push":    'Call TokenStream.AddToken(TOKEN_Z80, TOKEN_Z80_PUSH)
-'        Case "res":     'Call TokenStream.AddToken(TOKEN_Z80, TOKEN_Z80_RES)
-'        Case "ret":     'Call TokenStream.AddToken(TOKEN_Z80, TOKEN_Z80_RET)
-'        Case "rl":      'Call TokenStream.AddToken(TOKEN_Z80, TOKEN_Z80_RL)
-'        Case "rlc":     'Call TokenStream.AddToken(TOKEN_Z80, TOKEN_Z80_RLC)
-'        Case "rr":      'Call TokenStream.AddToken(TOKEN_Z80, TOKEN_Z80_RR)
-'        Case "rrc":     'Call TokenStream.AddToken(TOKEN_Z80, TOKEN_Z80_RRC)
-'        Case "rst":     'Call TokenStream.AddToken(TOKEN_Z80, TOKEN_Z80_RST)
-'        Case "sbc":     'Call TokenStream.AddToken(TOKEN_Z80, TOKEN_Z80_SBC)
-'        Case "set":     'Call TokenStream.AddToken(TOKEN_Z80, TOKEN_Z80_SET)
-'        Case "sla":     'Call TokenStream.AddToken(TOKEN_Z80, TOKEN_Z80_SLA)
-'        Case "sra":     'Call TokenStream.AddToken(TOKEN_Z80, TOKEN_Z80_SRA)
-'        Case "sll":     'Call TokenStream.AddToken(TOKEN_Z80, TOKEN_Z80_SLL)
-'        Case "srl":     'Call TokenStream.AddToken(TOKEN_Z80, TOKEN_Z80_SRL)
-'        Case "sub":     'Call TokenStream.AddToken(TOKEN_Z80, TOKEN_Z80_SUB)
-'        Case "xor":     'Call TokenStream.AddToken(TOKEN_Z80, TOKEN_Z80_XOR)
-'        Case Else
-'            'If none of the above, skip ahead to instructions without parameters
-'            GoTo NoParam
-'    End Select
-'    'The mneomic has been tokenised, move to the next word
-'    Let index = index + 1
-'
-'    'Get the parameter list: _
-'     The parser is not concerned with the number of parameters and if they are the _
-'     right type, the assembler will handle that
-'    Call ContextList
-'
-'    Exit Sub
-'
-'NoParam:
-'    Select Case Word
-'        Case "ccf":     'Call TokenStream.AddToken(TOKEN_Z80, TOKEN_Z80_CCF)
-'        Case "cpd":     'Call TokenStream.AddToken(TOKEN_Z80, TOKEN_Z80_CPD)
-'        Case "cpdr":    'Call TokenStream.AddToken(TOKEN_Z80, TOKEN_Z80_CPDR)
-'        Case "cpi":     'Call TokenStream.AddToken(TOKEN_Z80, TOKEN_Z80_CPI)
-'        Case "cpir":    'Call TokenStream.AddToken(TOKEN_Z80, TOKEN_Z80_CPIR)
-'        Case "cpl":     'Call TokenStream.AddToken(TOKEN_Z80, TOKEN_Z80_CPL)
-'        Case "daa":     'Call TokenStream.AddToken(TOKEN_Z80, TOKEN_Z80_DAA)
-'        Case "di":      'Call TokenStream.AddToken(TOKEN_Z80, TOKEN_Z80_DI)
-'        Case "ei":      'Call TokenStream.AddToken(TOKEN_Z80, TOKEN_Z80_EI)
-'        Case "exx":     'Call TokenStream.AddToken(TOKEN_Z80, TOKEN_Z80_EXX)
-'        Case "halt":    'Call TokenStream.AddToken(TOKEN_Z80, TOKEN_Z80_HALT)
-'        Case "ind":     'Call TokenStream.AddToken(TOKEN_Z80, TOKEN_Z80_IND)
-'        Case "indr":    'Call TokenStream.AddToken(TOKEN_Z80, TOKEN_Z80_INDR)
-'        Case "ini":     'Call TokenStream.AddToken(TOKEN_Z80, TOKEN_Z80_INI)
-'        Case "inir":    'Call TokenStream.AddToken(TOKEN_Z80, TOKEN_Z80_INIR)
-'        Case "ldd":     'Call TokenStream.AddToken(TOKEN_Z80, TOKEN_Z80_LDD)
-'        Case "lddr":    'Call TokenStream.AddToken(TOKEN_Z80, TOKEN_Z80_LDDR)
-'        Case "ldi":     'Call TokenStream.AddToken(TOKEN_Z80, TOKEN_Z80_LDI)
-'        Case "ldir":    'Call TokenStream.AddToken(TOKEN_Z80, TOKEN_Z80_LDIR)
-'        Case "neg":     'Call TokenStream.AddToken(TOKEN_Z80, TOKEN_Z80_NEG)
-'        Case "nop":     'Call TokenStream.AddToken(TOKEN_Z80, TOKEN_Z80_NOP)
-'        Case "outd":    'Call TokenStream.AddToken(TOKEN_Z80, TOKEN_Z80_OUTD)
-'        Case "outdr":   'Call TokenStream.AddToken(TOKEN_Z80, TOKEN_Z80_OUTDR)
-'        Case "outi":    'Call TokenStream.AddToken(TOKEN_Z80, TOKEN_Z80_OUTI)
-'        Case "outir":   'Call TokenStream.AddToken(TOKEN_Z80, TOKEN_Z80_OUTIR)
-'        Case "reti":    'Call TokenStream.AddToken(TOKEN_Z80, TOKEN_Z80_RETI)
-'        Case "retn":    'Call TokenStream.AddToken(TOKEN_Z80, TOKEN_Z80_RETN)
-'        Case "rla":     'Call TokenStream.AddToken(TOKEN_Z80, TOKEN_Z80_RLA)
-'        Case "rlca":    'Call TokenStream.AddToken(TOKEN_Z80, TOKEN_Z80_RLCA)
-'        Case "rld":     'Call TokenStream.AddToken(TOKEN_Z80, TOKEN_Z80_RLD)
-'        Case "rra":     'Call TokenStream.AddToken(TOKEN_Z80, TOKEN_Z80_RRA)
-'        Case "rrca":    'Call TokenStream.AddToken(TOKEN_Z80, TOKEN_Z80_RRCA)
-'        Case "rrd":     'Call TokenStream.AddToken(TOKEN_Z80, TOKEN_Z80_RRD)
-'        Case "scf":     'Call TokenStream.AddToken(TOKEN_Z80, TOKEN_Z80_SCF)
-'        Case Else
-'            'If none of these, the developer may have made a typo or put an assembly _
-'             instruction where they shouldn't have
-'            'TODO: error / fold back?
-'    End Select
-'
-'    'Since no parameter is needed, we can return to our parent context to continue
-'    Let index = index + 1
-'End Sub
-'
-''ContextExpression _
-' ======================================================================================
-''An expression is anything that results in a value, i.e. a number, a label/property, _
-' a calculation, a function call &c.
-'Private Sub ContextExpression()
-'NextExpr:
-'    'Check what type the parser assigned to the current word
-'    Select Case Words(index).Kind
-'        'Process a number
-'        Case OZ80_WORDKIND.Number
-'            Call ContextNumber
-'
-'        'Process parenthesis (a nested expression)
-'        Case OZ80_WORDKIND.PAREN
-'            'TODO: check if open parenthesis, otherwise fold
-'
-'        'When a list marker "," is found, the expression is over -- but the comma may _
-'         be unexpected by the parent context (if not a list)
-'        Case OZ80_WORDKIND.LIST
-'            Exit Sub
-'
-'        Case Else
-'            'Not an expression!
-'            'TODO: Error out
-'
-'    End Select
-'
-'    'Now check for an operator that could extend the expression
-'    If Words(index).Kind = OZ80_WORDKIND.OPERATOR Then
-'        'Add the operator to the token stream,
-''        Call TokenStream.AddToken(TOKEN_OPERATOR, OperatorTokens.Item(Words(index).Word))
-'        'Move to the next word,
-'        Let index = index + 1
-'        'And get the next expression
-'        GoTo NextExpr
-'    End If
-'End Sub
-'
-''ContextList _
-' ======================================================================================
-''A list is a common construct and consists of one or more expressions separated _
-' by commas. The parameters to any instruction/directive is a list
-'Private Sub ContextList()
-'    'TODO: Add a list token and remember its position so we can update the item count
-''    Call TokenStream.AddToken(TOKEN_LIST, 0)
-'
-'NextItem:
-'    Call ContextExpression
-'    'The above call will move to the next word in the list, check if it's a comma _
-'     to continue the list, or something else marking the end of the list
-'    If Words(index).Kind = OZ80_WORDKIND.LIST Then
-'        'Add a token to mark the end of a list item
-''        Call TokenStream.AddToken(TOKEN_LIST_NEXT)
-'        'TODO: Update the item count in the list
-'        GoTo NextItem
-'    End If
-'    'When the list ends, we fold back to the parent context to deal with it
-'End Sub
-'
-''ContextNumber : Parse numbers (decimal, hexadecimal, binary) _
-' ======================================================================================
-'Private Sub ContextNumber()
-'    Dim Word As String
-'    Let Word = Words(index).Word
-'
-'    On Error Resume Next
-'    Dim Number As Long
-'
-'    'When the source file was exploded into words the number was already validated, _
-'     we can be assured that it's parsable as a number, but it could be out of bounds
-'
-'    'TODO: Check bounds
-'    'TODO: Can we handle 32-bit numbers properly?
-'
-'    If Left$(Word, 1) = SYNTAX_NUMBER_HEX Then
-'        'Convert the string from hexadecimal
-'        Let Number = CLng("&H" & Mid$(Word, 2) & "&")
-'
-'    ElseIf Left$(Word, 1) = SYNTAX_NUMBER_BIN Then
-'        'Convert the string from binary
-'        Dim i As Long
-'        For i = 1 To Len(Word)
-'            'TODO: optimise this, starting with a 2^X lookup table _
-'                -- or easier, have a lookup table of all 8-bit binary numbers
-'            Let Number = Number + (Mid$(Word, Len(Word) - i + 1, 1) * (2 ^ (i - 1)))
-'        Next i
-'
-'    Else
-'        Let Number = CLng(Word)
-'    End If
-'
-''    Call TokenStream.AddToken(TOKEN_NUMBER, Number)
-'    Let index = index + 1
-'    On Error GoTo 0
-'End Sub
 
 '/// VALIDATION PROCEDURES ////////////////////////////////////////////////////////////
 
-''IsKeyword _
-' ======================================================================================
-'Private Function IsKeyword(ByVal Word As String)
-'    Let IsKeyword = (InStr(KEYWORDS, "|" & Word & "|") > 0)
-'End Function
-'
-''IsLabel _
-' ======================================================================================
-'Private Function IsLabel(ByVal Word As String) As Boolean
-'    If Left$(Word, 1) = SYNTAX_LABEL Then Let IsLabel = True
-'End Function
-'
-''IsNumber _
-' ======================================================================================
-'Private Function IsNumber(ByVal Word As String) As Boolean
-'    'A hexadecimal number?
-'    If Left$(Word, 1) = SYNTAX_NUMBER_HEX Then
-'        'Ensure that the number consists of 0-9, A-F only
-'        Let IsNumber = Not (Word Like "$*[!A-F0-9]*")
-'        Exit Function
-'    End If
-'    'A binary number?
-'    If Left$(Word, 1) = SYNTAX_NUMBER_BIN Then
-'        Let IsNumber = Not (Word Like "%*[!0-1]*")
-'        Exit Function
-'    End If
-'    'Decimal number:
-'    Let IsNumber = Not (Word Like "*[!0-9]*")
-'End Function
-'
-''IsOperator _
-' ======================================================================================
-'Private Function IsOperator(ByVal Word As String) As Boolean
-'    Let IsOperator = (InStr(Operators, Word) > 0)
-'End Function
-'
-''IsRegister _
-' ======================================================================================
-'Private Function IsRegister(ByVal Word As String) As Boolean
-'    'TODO
-'End Function
-'
-''IsValidName : If a string is a valid label/variable/macro/object &c. name _
-' ======================================================================================
-'Private Function IsValidName(ByVal ItemName As String) As Boolean
-'    Let IsValidName = True
-'    'Must begin with A-Z or underscore and not a number
-'    If ItemName Like "?[!_A-Z]*" Then IsValidName = False: Exit Function
-'    'Must only contain A-Z, underscore and 0-9
-'    If ItemName Like "??*[!A-Z_0-9]*" Then IsValidName = False: Exit Function
-'End Function
+Public Function ValidateRegisterAsc( _
+    ByRef Asc1 As Long, ByRef Asc2 As Long, ByRef Asc3 As Long, ByRef Asc4 As Long _
+) As OZ80_TOKEN_REGISTER
+    'Ignore anything beginning with a letter before A
+    If Asc1 < 97 Then Exit Function
+    'No register has a first letter higher than S
+    If Asc1 > 115 Then Exit Function
+    'If there's only 1 letter total, then it's obviously a 1-letter register
+    If Asc2 = 0 Then GoTo OneLetter
+    'If a semi-colon occurs at the second letter, then the register must be 1 letter
+    If Asc2 = 59 Then GoTo OneLetter
+    'Also an apostrophe (shadow register) is the same
+    If Asc2 = 39 Then GoTo OneLetter
+    
+    'If there's only 2 letters in total, it has to be a two-letter register
+    If Asc3 = 0 Then GoTo TwoLetters
+    'If a semi-colon or apostrophe occurs at the third letter, _
+     it could be a two-letter register
+    If Asc3 = 59 Then GoTo TwoLetters
+    If Asc3 = 39 Then GoTo TwoLetters
+    
+    Exit Function
+
+OneLetter:
+    If Asc1 = 97 Then Let ValidateRegisterAsc = TOKEN_REGISTER_A: Exit Function
+    If Asc1 = 98 Then Let ValidateRegisterAsc = TOKEN_REGISTER_B: Exit Function
+    If Asc1 = 99 Then Let ValidateRegisterAsc = TOKEN_REGISTER_C: Exit Function
+    If Asc1 = 100 Then Let ValidateRegisterAsc = TOKEN_REGISTER_D: Exit Function
+    If Asc1 = 101 Then Let ValidateRegisterAsc = TOKEN_REGISTER_E: Exit Function
+    If Asc1 = 104 Then Let ValidateRegisterAsc = TOKEN_REGISTER_H: Exit Function
+    If Asc1 = 105 Then Let ValidateRegisterAsc = TOKEN_REGISTER_I: Exit Function
+    If Asc1 = 108 Then Let ValidateRegisterAsc = TOKEN_REGISTER_L: Exit Function
+    If Asc1 = 114 Then Let ValidateRegisterAsc = TOKEN_REGISTER_R: Exit Function
+    Exit Function
+
+TwoLetters:
+    If Asc1 = 97 Then       '"af"
+        If Asc2 = 102 Then Let ValidateRegisterAsc = TOKEN_REGISTER_AF
+    ElseIf Asc1 = 98 Then   '"bc"
+        If Asc2 = 99 Then Let ValidateRegisterAsc = TOKEN_REGISTER_BC
+    ElseIf Asc1 = 100 Then  '"de"
+        If Asc2 = 101 Then Let ValidateRegisterAsc = TOKEN_REGISTER_DE
+    ElseIf Asc1 = 104 Then  '"hl"
+        If Asc2 = 108 Then Let ValidateRegisterAsc = TOKEN_REGISTER_HL
+    ElseIf Asc1 = 105 Then  '"ix"
+        If Asc2 = 120 Then Let ValidateRegisterAsc = TOKEN_REGISTER_IX: Exit Function
+        If Asc2 = 121 Then Let ValidateRegisterAsc = TOKEN_REGISTER_IY
+    ElseIf Asc1 = 112 Then  '"pc"
+        If Asc2 = 99 Then Let ValidateRegisterAsc = TOKEN_REGISTER_PC
+    ElseIf Asc1 = 115 Then  '"sp"
+        If Asc2 = 112 Then Let ValidateRegisterAsc = TOKEN_REGISTER_PC
+    End If
+End Function

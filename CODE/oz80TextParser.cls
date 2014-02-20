@@ -75,9 +75,7 @@ End Enum
 
 '/// VARIABLES ////////////////////////////////////////////////////////////////////////
 
-Private Words() As String
 Private WordCount As Long
-Private index As Long                   'index number of current word being tokenised
 
 'A tokenStream object is passed to us by the `Parse` method. _
  This is where we will feed the result of our text parsing
@@ -105,8 +103,6 @@ End Sub
 'CLASS Terminate _
  ======================================================================================
 Private Sub Class_Terminate()
-    'Clean up the arrays
-    Erase Words
     'Dereference the tokenStream object we were given by the assembler
     Set TokenStream = Nothing
 End Sub
@@ -122,15 +118,15 @@ Public Function Parse( _
     'Remember the token stream we need to feed into
     Set TokenStream = DestTokenStream
     
-    'Split the source file into separate words for our "Look-Ahead Left Right" parser
-    ExplodeFile (FilePath)
+    'Break the source code into words and convert them into machine tokens
+    Tokenise (FilePath)
 End Function
 
 '/// PRIVATE PROCEDURES ///////////////////////////////////////////////////////////////
 
-'ExplodeFile : Break a file into all its individual words for tokenising _
+'Tokenise : Break a file into all its individual words and convert to machine tokens _
  ======================================================================================
-Private Function ExplodeFile(ByVal FilePath As String) As OZ80_ERROR
+Private Function Tokenise(ByRef FilePath As String) As OZ80_ERROR
     'This function is tuned for speed -- it does not conform to "best practices" or _
      even structured code. Gotos are fast, deal with it
      
@@ -183,11 +179,6 @@ Private Function ExplodeFile(ByVal FilePath As String) As OZ80_ERROR
     Close #FileNumber
     
     Dim TextPos As Long
-    'Provide a reasonable sized buffer of words, doing `ReDim` for every word is _
-     *incredibly* slow
-    Erase Words
-    Dim WordLimit As Long: Let WordLimit = 100000
-    ReDim Words(0 To WordLimit) As String
     Let WordCount = 0
     
     'The first letter of a word will be remembered for guiding tokenisation
@@ -355,282 +346,255 @@ EndWord2:
     
     'Hexadecimal number?
     ElseIf AscFirst = AscNumHex Then
-        'TODO
+        'TODO: Tokenise number
         
     ElseIf AscFirst = 97 Then '--- `a` ---
         'Z80 instructions
-        If StrComp(Word, "adc") = 0 Then Call TokenStream.AddToken_Z80(TOKEN_Z80_ADC): GoTo AddWord
-        If StrComp(Word, "add") = 0 Then Call TokenStream.AddToken_Z80(TOKEN_Z80_ADD): GoTo AddWord
-        If StrComp(Word, "and") = 0 Then Call TokenStream.AddToken_Z80(TOKEN_Z80_AND): GoTo AddWord
-        'TODO: Keywords
-        If StrComp(Word, "as") = 0 Then GoTo AddWord
-        'Is it a register? (a falsey comparison is fastest)
+        If StrComp(Word, "adc") = 0 Then Call TokenStream.AddToken_Z80(TOKEN_Z80_ADC): GoTo NextWord
+        If StrComp(Word, "add") = 0 Then Call TokenStream.AddToken_Z80(TOKEN_Z80_ADD): GoTo NextWord
+        If StrComp(Word, "and") = 0 Then Call TokenStream.AddToken_Z80(TOKEN_Z80_AND): GoTo NextWord
+        'Keywords
+        If StrComp(Word, "as") = 0 Then Call TokenStream.AddToken_Keyword(TOKEN_KEYWORD_AS): GoTo NextWord
+        If StrComp(Word, "at") = 0 Then Call TokenStream.AddToken_Keyword(TOKEN_KEYWORD_AT): GoTo NextWord
+        'Is it a register?
         Let Register = ValidateRegisterAsc(AscFirst, Asc2, Asc3, Asc4)
-        If Register = 0 Then
-            'ERROR
-        Else
-            Call TokenStream.AddToken_Register(Register)
-        End If
+        If Register Then Call TokenStream.AddToken_Register(Register): GoTo NextWord
          
     ElseIf AscFirst = 98 Then '--- `b` ---
         'Z80 instructions
-        If StrComp(Word, "bit") = 0 Then Call TokenStream.AddToken_Z80(TOKEN_Z80_BIT): GoTo AddWord
-        'TODO: Keywords
-        If StrComp(Word, "byte") = 0 Then GoTo AddWord
-        'Is it a register? (a falsey comparison is fastest)
+        If StrComp(Word, "bit") = 0 Then Call TokenStream.AddToken_Z80(TOKEN_Z80_BIT): GoTo NextWord
+        'Keywords
+        If StrComp(Word, "bank") = 0 Then Call TokenStream.AddToken_Keyword(TOKEN_KEYWORD_BANK): GoTo NextWord
+        If StrComp(Word, "binary") = 0 Then Call TokenStream.AddToken_Keyword(TOKEN_KEYWORD_BINARY): GoTo NextWord
+        If StrComp(Word, "byte") = 0 Then Call TokenStream.AddToken_Keyword(TOKEN_KEYWORD_BYTE): GoTo NextWord
+        'Is it a register?
         Let Register = ValidateRegisterAsc(AscFirst, Asc2, Asc3, Asc4)
-        If Register = 0 Then
-            'ERROR
-        Else
-            Call TokenStream.AddToken_Register(Register)
-        End If
+        If Register Then Call TokenStream.AddToken_Register(Register): GoTo NextWord
         
     ElseIf AscFirst = 99 Then '--- `c` ---
         'Z80 instructions
-        If StrComp(Word, "call") = 0 Then Call TokenStream.AddToken_Z80(TOKEN_Z80_CALL): GoTo AddWord
-        If StrComp(Word, "ccf") = 0 Then Call TokenStream.AddToken_Z80(TOKEN_Z80_CCF): GoTo AddWord
-        If StrComp(Word, "cp") = 0 Then Call TokenStream.AddToken_Z80(TOKEN_Z80_CP): GoTo AddWord
-        If StrComp(Word, "cpd") = 0 Then Call TokenStream.AddToken_Z80(TOKEN_Z80_CPD): GoTo AddWord
-        If StrComp(Word, "cpdr") = 0 Then Call TokenStream.AddToken_Z80(TOKEN_Z80_CPDR): GoTo AddWord
-        If StrComp(Word, "cpi") = 0 Then Call TokenStream.AddToken_Z80(TOKEN_Z80_CPI): GoTo AddWord
-        If StrComp(Word, "cpir") = 0 Then Call TokenStream.AddToken_Z80(TOKEN_Z80_CPIR): GoTo AddWord
-        If StrComp(Word, "cpl") = 0 Then Call TokenStream.AddToken_Z80(TOKEN_Z80_CPL): GoTo AddWord
-        'Is it a register? (a falsey comparison is fastest)
+        If StrComp(Word, "call") = 0 Then Call TokenStream.AddToken_Z80(TOKEN_Z80_CALL): GoTo NextWord
+        If StrComp(Word, "ccf") = 0 Then Call TokenStream.AddToken_Z80(TOKEN_Z80_CCF): GoTo NextWord
+        If StrComp(Word, "cp") = 0 Then Call TokenStream.AddToken_Z80(TOKEN_Z80_CP): GoTo NextWord
+        If StrComp(Word, "cpd") = 0 Then Call TokenStream.AddToken_Z80(TOKEN_Z80_CPD): GoTo NextWord
+        If StrComp(Word, "cpdr") = 0 Then Call TokenStream.AddToken_Z80(TOKEN_Z80_CPDR): GoTo NextWord
+        If StrComp(Word, "cpi") = 0 Then Call TokenStream.AddToken_Z80(TOKEN_Z80_CPI): GoTo NextWord
+        If StrComp(Word, "cpir") = 0 Then Call TokenStream.AddToken_Z80(TOKEN_Z80_CPIR): GoTo NextWord
+        If StrComp(Word, "cpl") = 0 Then Call TokenStream.AddToken_Z80(TOKEN_Z80_CPL): GoTo NextWord
+        'Is it a register?
         Let Register = ValidateRegisterAsc(AscFirst, Asc2, Asc3, Asc4)
-        If Register = 0 Then
-            'ERROR
-        Else
-            Call TokenStream.AddToken_Register(Register)
-        End If
+        If Register Then Call TokenStream.AddToken_Register(Register): GoTo NextWord
         
     ElseIf AscFirst = 100 Then '--- `d` ---
         'Z80 instructions
-        If StrComp(Word, "daa") = 0 Then Call TokenStream.AddToken_Z80(TOKEN_Z80_DAA): GoTo AddWord
-        If StrComp(Word, "dec") = 0 Then Call TokenStream.AddToken_Z80(TOKEN_Z80_DEC): GoTo AddWord
-        If StrComp(Word, "di") = 0 Then Call TokenStream.AddToken_Z80(TOKEN_Z80_DI): GoTo AddWord
-        If StrComp(Word, "djnz") = 0 Then Call TokenStream.AddToken_Z80(TOKEN_Z80_DJNZ): GoTo AddWord
-        'Is it a register? (a falsey comparison is fastest)
+        If StrComp(Word, "daa") = 0 Then Call TokenStream.AddToken_Z80(TOKEN_Z80_DAA): GoTo NextWord
+        If StrComp(Word, "dec") = 0 Then Call TokenStream.AddToken_Z80(TOKEN_Z80_DEC): GoTo NextWord
+        If StrComp(Word, "di") = 0 Then Call TokenStream.AddToken_Z80(TOKEN_Z80_DI): GoTo NextWord
+        If StrComp(Word, "djnz") = 0 Then Call TokenStream.AddToken_Z80(TOKEN_Z80_DJNZ): GoTo NextWord
+        'Keywords
+        If StrComp(Word, "data") = 0 Then Call TokenStream.AddToken_Keyword(TOKEN_KEYWORD_DATA): GoTo NextWord
+        If StrComp(Word, "def") = 0 Then Call TokenStream.AddToken_Keyword(TOKEN_KEYWORD_DEF): GoTo NextWord
+        If StrComp(Word, "default") = 0 Then Call TokenStream.AddToken_Keyword(TOKEN_KEYWORD_DEFAULT): GoTo NextWord
+        'Is it a register?
         Let Register = ValidateRegisterAsc(AscFirst, Asc2, Asc3, Asc4)
-        If Register = 0 Then
-            'ERROR
-        Else
-            Call TokenStream.AddToken_Register(Register)
-        End If
+        If Register Then Call TokenStream.AddToken_Register(Register): GoTo NextWord
         
     ElseIf AscFirst = 101 Then '--- `e` ---
         'Z80 instructions
-        If StrComp(Word, "ei") = 0 Then Call TokenStream.AddToken_Z80(TOKEN_Z80_EI): GoTo AddWord
-        If StrComp(Word, "ex") = 0 Then Call TokenStream.AddToken_Z80(TOKEN_Z80_EX): GoTo AddWord
-        If StrComp(Word, "exx") = 0 Then Call TokenStream.AddToken_Z80(TOKEN_Z80_EXX): GoTo AddWord
-        'Is it a register? (a falsey comparison is fastest)
+        If StrComp(Word, "ei") = 0 Then Call TokenStream.AddToken_Z80(TOKEN_Z80_EI): GoTo NextWord
+        If StrComp(Word, "ex") = 0 Then Call TokenStream.AddToken_Z80(TOKEN_Z80_EX): GoTo NextWord
+        If StrComp(Word, "exx") = 0 Then Call TokenStream.AddToken_Z80(TOKEN_Z80_EXX): GoTo NextWord
+        'Is it a register?
         Let Register = ValidateRegisterAsc(AscFirst, Asc2, Asc3, Asc4)
-        If Register = 0 Then
-            'ERROR
-        Else
-            Call TokenStream.AddToken_Register(Register)
-        End If
+        If Register Then Call TokenStream.AddToken_Register(Register): GoTo NextWord
+    
+    ElseIf AscFirst = 102 Then '--- `f` ---
+        'Keywords
+        If StrComp(Word, "fill") = 0 Then Call TokenStream.AddToken_Keyword(TOKEN_KEYWORD_FILL): GoTo NextWord
     
     ElseIf AscFirst = 104 Then '--- `h` ---
         'Z80 instructions
-        If StrComp(Word, "halt") = 0 Then Call TokenStream.AddToken_Z80(TOKEN_Z80_HALT): GoTo AddWord
-        'Is it a register? (a falsey comparison is fastest)
+        If StrComp(Word, "halt") = 0 Then Call TokenStream.AddToken_Z80(TOKEN_Z80_HALT): GoTo NextWord
+        'Is it a register?
         Let Register = ValidateRegisterAsc(AscFirst, Asc2, Asc3, Asc4)
-        If Register = 0 Then
-            'ERROR
-        Else
-            Call TokenStream.AddToken_Register(Register)
-        End If
+        If Register Then Call TokenStream.AddToken_Register(Register): GoTo NextWord
         
     ElseIf AscFirst = 105 Then '--- `i` ---
         'Z80 instructions
-        If StrComp(Word, "im") = 0 Then Call TokenStream.AddToken_Z80(TOKEN_Z80_IM): GoTo AddWord
-        If StrComp(Word, "in") = 0 Then Call TokenStream.AddToken_Z80(TOKEN_Z80_IN): GoTo AddWord
-        If StrComp(Word, "inc") = 0 Then Call TokenStream.AddToken_Z80(TOKEN_Z80_INC): GoTo AddWord
-        If StrComp(Word, "ind") = 0 Then Call TokenStream.AddToken_Z80(TOKEN_Z80_IND): GoTo AddWord
-        If StrComp(Word, "indr") = 0 Then Call TokenStream.AddToken_Z80(TOKEN_Z80_INDR): GoTo AddWord
-        If StrComp(Word, "ini") = 0 Then Call TokenStream.AddToken_Z80(TOKEN_Z80_INI): GoTo AddWord
-        If StrComp(Word, "inir") = 0 Then Call TokenStream.AddToken_Z80(TOKEN_Z80_INIR): GoTo AddWord
-        'Is it a register? (a falsey comparison is fastest)
+        If StrComp(Word, "im") = 0 Then Call TokenStream.AddToken_Z80(TOKEN_Z80_IM): GoTo NextWord
+        If StrComp(Word, "in") = 0 Then Call TokenStream.AddToken_Z80(TOKEN_Z80_IN): GoTo NextWord
+        If StrComp(Word, "inc") = 0 Then Call TokenStream.AddToken_Z80(TOKEN_Z80_INC): GoTo NextWord
+        If StrComp(Word, "ind") = 0 Then Call TokenStream.AddToken_Z80(TOKEN_Z80_IND): GoTo NextWord
+        If StrComp(Word, "indr") = 0 Then Call TokenStream.AddToken_Z80(TOKEN_Z80_INDR): GoTo NextWord
+        If StrComp(Word, "ini") = 0 Then Call TokenStream.AddToken_Z80(TOKEN_Z80_INI): GoTo NextWord
+        If StrComp(Word, "inir") = 0 Then Call TokenStream.AddToken_Z80(TOKEN_Z80_INIR): GoTo NextWord
+        'Keywords
+        If StrComp(Word, "include") = 0 Then Call TokenStream.AddToken_Keyword(TOKEN_KEYWORD_INCLUDE): GoTo NextWord
+        'Is it a register?
         Let Register = ValidateRegisterAsc(AscFirst, Asc2, Asc3, Asc4)
-        If Register = 0 Then
-            'ERROR
-        Else
-            Call TokenStream.AddToken_Register(Register)
-        End If
+        If Register Then Call TokenStream.AddToken_Register(Register): GoTo NextWord
         
     ElseIf AscFirst = 106 Then '--- `j` ---
         'Z80 instructions
-        If StrComp(Word, "jp") = 0 Then Call TokenStream.AddToken_Z80(TOKEN_Z80_JP): GoTo AddWord
-        If StrComp(Word, "jr") = 0 Then Call TokenStream.AddToken_Z80(TOKEN_Z80_JR): GoTo AddWord
+        If StrComp(Word, "jp") = 0 Then Call TokenStream.AddToken_Z80(TOKEN_Z80_JP): GoTo NextWord
+        If StrComp(Word, "jr") = 0 Then Call TokenStream.AddToken_Z80(TOKEN_Z80_JR): GoTo NextWord
     
     ElseIf AscFirst = 107 Then '--- `k` ---
         'Number suffixes K, KB & Kbit
-        'TODO: we should try validate these more (check for number in previous token? _
-               / combine the prefix with the previous number token?)
         If Asc2 = 0 Then    'Just `K`
-            Call TokenStream.AddToken_Prefix(TOKEN_PREFIX_K)
+            Call TokenStream.AddToken_Prefix(TOKEN_PREFIX_K): GoTo NextWord
         'B must be next for `KB` and `Kbit`
         ElseIf Asc2 = 98 Then
             'If only two letters, then it's `KB`
-            If Asc3 = 0 Then Call TokenStream.AddToken_Prefix(TOKEN_PREFIX_KB)
+            If Asc3 = 0 Then Call TokenStream.AddToken_Prefix(TOKEN_PREFIX_KB): GoTo NextWord
             'verify ...`it`
             If Asc3 = 105 Then
-                If Asc4 = 116 Then Call TokenStream.AddToken_Prefix(TOKEN_PREFIX_KBIT)
+                If Asc4 = 116 Then Call TokenStream.AddToken_Prefix(TOKEN_PREFIX_KBIT): GoTo NextWord
             End If
         End If
-        'ERROR
         
     ElseIf AscFirst = 108 Then '--- `l` ---
         'Z80 instructions
-        If StrComp(Word, "ld") = 0 Then Call TokenStream.AddToken_Z80(TOKEN_Z80_LD): GoTo AddWord
-        If StrComp(Word, "ldd") = 0 Then Call TokenStream.AddToken_Z80(TOKEN_Z80_LDD): GoTo AddWord
-        If StrComp(Word, "lddr") = 0 Then Call TokenStream.AddToken_Z80(TOKEN_Z80_LDDR): GoTo AddWord
-        If StrComp(Word, "ldi") = 0 Then Call TokenStream.AddToken_Z80(TOKEN_Z80_LDI): GoTo AddWord
-        If StrComp(Word, "ldir") = 0 Then Call TokenStream.AddToken_Z80(TOKEN_Z80_LDIR): GoTo AddWord
-        'Is it a register? (a falsey comparison is fastest)
+        If StrComp(Word, "ld") = 0 Then Call TokenStream.AddToken_Z80(TOKEN_Z80_LD): GoTo NextWord
+        If StrComp(Word, "ldd") = 0 Then Call TokenStream.AddToken_Z80(TOKEN_Z80_LDD): GoTo NextWord
+        If StrComp(Word, "lddr") = 0 Then Call TokenStream.AddToken_Z80(TOKEN_Z80_LDDR): GoTo NextWord
+        If StrComp(Word, "ldi") = 0 Then Call TokenStream.AddToken_Z80(TOKEN_Z80_LDI): GoTo NextWord
+        If StrComp(Word, "ldir") = 0 Then Call TokenStream.AddToken_Z80(TOKEN_Z80_LDIR): GoTo NextWord
+        'Keywords
+        If StrComp(Word, "length") = 0 Then Call TokenStream.AddToken_Keyword(TOKEN_KEYWORD_LENGTH): GoTo NextWord
+        'Is it a register?
         Let Register = ValidateRegisterAsc(AscFirst, Asc2, Asc3, Asc4)
-        If Register = 0 Then
-            'ERROR
-        Else
-            Call TokenStream.AddToken_Register(Register)
-        End If
+        If Register Then Call TokenStream.AddToken_Register(Register): GoTo NextWord
     
     ElseIf AscFirst = 110 Then '--- `n` ---
         'Z80 instructions
-        If StrComp(Word, "neg") = 0 Then Call TokenStream.AddToken_Z80(TOKEN_Z80_NEG): GoTo AddWord
-        If StrComp(Word, "nop") = 0 Then Call TokenStream.AddToken_Z80(TOKEN_Z80_NOP): GoTo AddWord
+        If StrComp(Word, "neg") = 0 Then Call TokenStream.AddToken_Z80(TOKEN_Z80_NEG): GoTo NextWord
+        If StrComp(Word, "nop") = 0 Then Call TokenStream.AddToken_Z80(TOKEN_Z80_NOP): GoTo NextWord
     
     ElseIf AscFirst = 111 Then '--- `o` ---
         'Z80 instructions
-        If StrComp(Word, "or") = 0 Then Call TokenStream.AddToken_Z80(TOKEN_Z80_OR): GoTo AddWord
-        If StrComp(Word, "out") = 0 Then Call TokenStream.AddToken_Z80(TOKEN_Z80_OUT): GoTo AddWord
-        If StrComp(Word, "outd") = 0 Then Call TokenStream.AddToken_Z80(TOKEN_Z80_OUTD): GoTo AddWord
-        If StrComp(Word, "outdr") = 0 Then Call TokenStream.AddToken_Z80(TOKEN_Z80_OUTDR): GoTo AddWord
-        If StrComp(Word, "outi") = 0 Then Call TokenStream.AddToken_Z80(TOKEN_Z80_OUTI): GoTo AddWord
-        If StrComp(Word, "outir") = 0 Then Call TokenStream.AddToken_Z80(TOKEN_Z80_OUTIR): GoTo AddWord
+        If StrComp(Word, "or") = 0 Then Call TokenStream.AddToken_Z80(TOKEN_Z80_OR): GoTo NextWord
+        If StrComp(Word, "out") = 0 Then Call TokenStream.AddToken_Z80(TOKEN_Z80_OUT): GoTo NextWord
+        If StrComp(Word, "outd") = 0 Then Call TokenStream.AddToken_Z80(TOKEN_Z80_OUTD): GoTo NextWord
+        If StrComp(Word, "outdr") = 0 Then Call TokenStream.AddToken_Z80(TOKEN_Z80_OUTDR): GoTo NextWord
+        If StrComp(Word, "outi") = 0 Then Call TokenStream.AddToken_Z80(TOKEN_Z80_OUTI): GoTo NextWord
+        If StrComp(Word, "outir") = 0 Then Call TokenStream.AddToken_Z80(TOKEN_Z80_OUTIR): GoTo NextWord
+        'Keywords
+        If StrComp(Word, "object") = 0 Then Call TokenStream.AddToken_Keyword(TOKEN_KEYWORD_OBJECT): GoTo NextWord
         
     ElseIf AscFirst = 112 Then '--- `p` ---
         'Z80 instructions
-        If StrComp(Word, "pop") = 0 Then Call TokenStream.AddToken_Z80(TOKEN_Z80_POP): GoTo AddWord
-        If StrComp(Word, "push") = 0 Then Call TokenStream.AddToken_Z80(TOKEN_Z80_PUSH): GoTo AddWord
-        'Is it a register? (a falsey comparison is fastest)
+        If StrComp(Word, "pop") = 0 Then Call TokenStream.AddToken_Z80(TOKEN_Z80_POP): GoTo NextWord
+        If StrComp(Word, "push") = 0 Then Call TokenStream.AddToken_Z80(TOKEN_Z80_PUSH): GoTo NextWord
+        'Keywords
+        If StrComp(Word, "params") = 0 Then Call TokenStream.AddToken_Keyword(TOKEN_KEYWORD_PARAMS): GoTo NextWord
+        If StrComp(Word, "proc") = 0 Then Call TokenStream.AddToken_Keyword(TOKEN_KEYWORD_PROC): GoTo NextWord
+        'Is it a register?
         Let Register = ValidateRegisterAsc(AscFirst, Asc2, Asc3, Asc4)
-        If Register = 0 Then
-            'ERROR
-        Else
-            Call TokenStream.AddToken_Register(Register)
-        End If
+        If Register Then Call TokenStream.AddToken_Register(Register): GoTo NextWord
         
     ElseIf AscFirst = 114 Then '--- `r` ---
         'Z80 instructions
-        If StrComp(Word, "res") = 0 Then Call TokenStream.AddToken_Z80(TOKEN_Z80_RES): GoTo AddWord
-        If StrComp(Word, "ret") = 0 Then Call TokenStream.AddToken_Z80(TOKEN_Z80_RET): GoTo AddWord
-        If StrComp(Word, "reti") = 0 Then Call TokenStream.AddToken_Z80(TOKEN_Z80_RETI): GoTo AddWord
-        If StrComp(Word, "retn") = 0 Then Call TokenStream.AddToken_Z80(TOKEN_Z80_RETN): GoTo AddWord
-        If StrComp(Word, "rla") = 0 Then Call TokenStream.AddToken_Z80(TOKEN_Z80_RLA): GoTo AddWord
-        If StrComp(Word, "rl") = 0 Then Call TokenStream.AddToken_Z80(TOKEN_Z80_RL): GoTo AddWord
-        If StrComp(Word, "rlca") = 0 Then Call TokenStream.AddToken_Z80(TOKEN_Z80_RLCA): GoTo AddWord
-        If StrComp(Word, "rlc") = 0 Then Call TokenStream.AddToken_Z80(TOKEN_Z80_RLC): GoTo AddWord
-        If StrComp(Word, "rld") = 0 Then Call TokenStream.AddToken_Z80(TOKEN_Z80_RLD): GoTo AddWord
-        If StrComp(Word, "rra") = 0 Then Call TokenStream.AddToken_Z80(TOKEN_Z80_RRA): GoTo AddWord
-        If StrComp(Word, "rr") = 0 Then Call TokenStream.AddToken_Z80(TOKEN_Z80_RR): GoTo AddWord
-        If StrComp(Word, "rrca") = 0 Then Call TokenStream.AddToken_Z80(TOKEN_Z80_RRCA): GoTo AddWord
-        If StrComp(Word, "rrc") = 0 Then Call TokenStream.AddToken_Z80(TOKEN_Z80_RRC): GoTo AddWord
-        If StrComp(Word, "rrd") = 0 Then Call TokenStream.AddToken_Z80(TOKEN_Z80_RRD): GoTo AddWord
-        If StrComp(Word, "rst") = 0 Then Call TokenStream.AddToken_Z80(TOKEN_Z80_RST): GoTo AddWord
-        'Is it a register? (a falsey comparison is fastest)
+        If StrComp(Word, "res") = 0 Then Call TokenStream.AddToken_Z80(TOKEN_Z80_RES): GoTo NextWord
+        If StrComp(Word, "ret") = 0 Then Call TokenStream.AddToken_Z80(TOKEN_Z80_RET): GoTo NextWord
+        If StrComp(Word, "reti") = 0 Then Call TokenStream.AddToken_Z80(TOKEN_Z80_RETI): GoTo NextWord
+        If StrComp(Word, "retn") = 0 Then Call TokenStream.AddToken_Z80(TOKEN_Z80_RETN): GoTo NextWord
+        If StrComp(Word, "rla") = 0 Then Call TokenStream.AddToken_Z80(TOKEN_Z80_RLA): GoTo NextWord
+        If StrComp(Word, "rl") = 0 Then Call TokenStream.AddToken_Z80(TOKEN_Z80_RL): GoTo NextWord
+        If StrComp(Word, "rlca") = 0 Then Call TokenStream.AddToken_Z80(TOKEN_Z80_RLCA): GoTo NextWord
+        If StrComp(Word, "rlc") = 0 Then Call TokenStream.AddToken_Z80(TOKEN_Z80_RLC): GoTo NextWord
+        If StrComp(Word, "rld") = 0 Then Call TokenStream.AddToken_Z80(TOKEN_Z80_RLD): GoTo NextWord
+        If StrComp(Word, "rra") = 0 Then Call TokenStream.AddToken_Z80(TOKEN_Z80_RRA): GoTo NextWord
+        If StrComp(Word, "rr") = 0 Then Call TokenStream.AddToken_Z80(TOKEN_Z80_RR): GoTo NextWord
+        If StrComp(Word, "rrca") = 0 Then Call TokenStream.AddToken_Z80(TOKEN_Z80_RRCA): GoTo NextWord
+        If StrComp(Word, "rrc") = 0 Then Call TokenStream.AddToken_Z80(TOKEN_Z80_RRC): GoTo NextWord
+        If StrComp(Word, "rrd") = 0 Then Call TokenStream.AddToken_Z80(TOKEN_Z80_RRD): GoTo NextWord
+        If StrComp(Word, "rst") = 0 Then Call TokenStream.AddToken_Z80(TOKEN_Z80_RST): GoTo NextWord
+        'Keywords
+        If StrComp(Word, "return") = 0 Then Call TokenStream.AddToken_Keyword(TOKEN_KEYWORD_RETURN): GoTo NextWord
+        'Is it a register?
         Let Register = ValidateRegisterAsc(AscFirst, Asc2, Asc3, Asc4)
-        If Register = 0 Then
-            'ERROR
-        Else
-            Call TokenStream.AddToken_Register(Register)
-        End If
+        If Register Then Call TokenStream.AddToken_Register(Register): GoTo NextWord
         
     ElseIf AscFirst = 115 Then '--- `s` ---
         'Z80 instructions
-        If StrComp(Word, "sbc") = 0 Then Call TokenStream.AddToken_Z80(TOKEN_Z80_SBC): GoTo AddWord
-        If StrComp(Word, "scf") = 0 Then Call TokenStream.AddToken_Z80(TOKEN_Z80_SCF): GoTo AddWord
-        If StrComp(Word, "set") = 0 Then Call TokenStream.AddToken_Z80(TOKEN_Z80_SET): GoTo AddWord
-        If StrComp(Word, "sla") = 0 Then Call TokenStream.AddToken_Z80(TOKEN_Z80_SLA): GoTo AddWord
-        If StrComp(Word, "sra") = 0 Then Call TokenStream.AddToken_Z80(TOKEN_Z80_SRA): GoTo AddWord
-        If StrComp(Word, "sll") = 0 Then Call TokenStream.AddToken_Z80(TOKEN_Z80_SLL): GoTo AddWord
-        If StrComp(Word, "srl") = 0 Then Call TokenStream.AddToken_Z80(TOKEN_Z80_SRL): GoTo AddWord
-        If StrComp(Word, "sub") = 0 Then Call TokenStream.AddToken_Z80(TOKEN_Z80_SUB): GoTo AddWord
+        If StrComp(Word, "sbc") = 0 Then Call TokenStream.AddToken_Z80(TOKEN_Z80_SBC): GoTo NextWord
+        If StrComp(Word, "scf") = 0 Then Call TokenStream.AddToken_Z80(TOKEN_Z80_SCF): GoTo NextWord
+        If StrComp(Word, "set") = 0 Then Call TokenStream.AddToken_Z80(TOKEN_Z80_SET): GoTo NextWord
+        If StrComp(Word, "sla") = 0 Then Call TokenStream.AddToken_Z80(TOKEN_Z80_SLA): GoTo NextWord
+        If StrComp(Word, "sra") = 0 Then Call TokenStream.AddToken_Z80(TOKEN_Z80_SRA): GoTo NextWord
+        If StrComp(Word, "sll") = 0 Then Call TokenStream.AddToken_Z80(TOKEN_Z80_SLL): GoTo NextWord
+        If StrComp(Word, "srl") = 0 Then Call TokenStream.AddToken_Z80(TOKEN_Z80_SRL): GoTo NextWord
+        If StrComp(Word, "sub") = 0 Then Call TokenStream.AddToken_Z80(TOKEN_Z80_SUB): GoTo NextWord
+        'Keywords
+        If StrComp(Word, "slot") = 0 Then Call TokenStream.AddToken_Keyword(TOKEN_KEYWORD_SLOT): GoTo NextWord
+        If StrComp(Word, "start") = 0 Then Call TokenStream.AddToken_Keyword(TOKEN_KEYWORD_START): GoTo NextWord
+        If StrComp(Word, "stop") = 0 Then Call TokenStream.AddToken_Keyword(TOKEN_KEYWORD_STOP): GoTo NextWord
+        If StrComp(Word, "struct") = 0 Then Call TokenStream.AddToken_Keyword(TOKEN_KEYWORD_STRUCT): GoTo NextWord
         'Is it a register? (a falsey comparison is fastest)
         Let Register = ValidateRegisterAsc(AscFirst, Asc2, Asc3, Asc4)
-        If Register = 0 Then
-            'ERROR
-        Else
-            Call TokenStream.AddToken_Register(Register)
-        End If
+        If Register Then Call TokenStream.AddToken_Register(Register): GoTo NextWord
+    
+    ElseIf AscFirst = 119 Then '--- `w` ---
+        'Keywords
+        If StrComp(Word, "word") = 0 Then Call TokenStream.AddToken_Keyword(TOKEN_KEYWORD_WORD): GoTo NextWord
         
     ElseIf AscFirst = 120 Then '--- `x` ---
         'Z80 instructions
-        If StrComp(Word, "xor") = 0 Then Call TokenStream.AddToken_Z80(TOKEN_Z80_XOR): GoTo AddWord
+        If StrComp(Word, "xor") = 0 Then Call TokenStream.AddToken_Z80(TOKEN_Z80_XOR): GoTo NextWord
         'TODO: The `x` operator
         
     'Block (open)
     ElseIf AscFirst = AscBlockOpen Then '--- `{` ---
-        'TODO
-        GoTo AddWord
+        'TODO: Tokenise
     
     'Block (close)
     ElseIf AscFirst = AscBlockClose Then  '--- `}` ---
-        'TODO
+        'TODO: Tokenise
     
     'Parenthesis (open)
     ElseIf AscFirst = AscParenOpen Then '--- `(` ---
-        'TODO
+        'TODO: Tokenise
     
     'Parenthesis (close)
     ElseIf AscFirst = AscParenClose Then '--- `)` ---
-        'TODO
+        'TODO: Tokenise
     
     'A decimal number?
     ElseIf AscFirst >= 48 And AscFirst <= 57 Then
-        'TODO:
+        'TODO: Tokenise number
         
     'Binary number?
     ElseIf AscFirst = AscNumBin Then '--- `%` ---
-        'TODO
+        'TODO: Tokenise number
         
     'String (quote)
     ElseIf AscFirst = AscQuote Then '--- `"` ---
-        'TODO
+        'TODO: TokenisE
         
     ElseIf AscFirst = AscOpAdd Then '--- `+` ---
-        Call TokenStream.AddToken_Operator(TOKEN_OPERATOR_ADD)
+        Call TokenStream.AddToken_Operator(TOKEN_OPERATOR_ADD): GoTo NextWord
     ElseIf AscFirst = AscOpSub Then '--- `-` ---
-        Call TokenStream.AddToken_Operator(TOKEN_OPERATOR_SUB)
+        Call TokenStream.AddToken_Operator(TOKEN_OPERATOR_SUB): GoTo NextWord
     ElseIf AscFirst = AscOpMul Then '--- `*` ---
-        Call TokenStream.AddToken_Operator(TOKEN_OPERATOR_MUL)
+        Call TokenStream.AddToken_Operator(TOKEN_OPERATOR_MUL): GoTo NextWord
     ElseIf AscFirst = AscOpDiv Then '--- `/` ---
-        Call TokenStream.AddToken_Operator(TOKEN_OPERATOR_DIV)
+        Call TokenStream.AddToken_Operator(TOKEN_OPERATOR_DIV): GoTo NextWord
     ElseIf AscFirst = AscOpPow Then '--- `^` ---
-        Call TokenStream.AddToken_Operator(TOKEN_OPERATOR_POW)
+        Call TokenStream.AddToken_Operator(TOKEN_OPERATOR_POW): GoTo NextWord
     ElseIf AscFirst = AscOpMod Then '--- `\` ---
-        Call TokenStream.AddToken_Operator(TOKEN_OPERATOR_MOD)
+        Call TokenStream.AddToken_Operator(TOKEN_OPERATOR_MOD): GoTo NextWord
     End If
     
-    'Add the word to the array
+    'TODO: Error here - unrecognised word
+    
     '----------------------------------------------------------------------------------
-AddWord:
-    If WordCount > WordLimit Then
-        Let WordLimit = WordLimit + 50000
-        ReDim Preserve Words(0 To WordLimit) As String
-    End If
-    
-    Let Words(WordCount) = Word
+NextWord:
     Let WordCount = WordCount + 1
-    
-'    Debug.Print Word
     GoTo ReadWord
     
     '----------------------------------------------------------------------------------
 EndOfFile:
-    'Trim the buffer of words to the right size
-    If WordLimit > WordCount Then ReDim Preserve Words(0 To WordCount) As String
-    
     Let Text = vbNullString
     Debug.Print "- Words: " & Format$(WordCount, "#,#")
     Debug.Print "- Time: " & Format$(Timer - Start, "0.000") & "s"

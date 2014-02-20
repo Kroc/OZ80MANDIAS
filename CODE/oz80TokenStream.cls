@@ -44,23 +44,26 @@ Public Enum OZ80_TOKEN
     'This token specifies that the data field is a Z80 mnemonic (`OZ80_MNEMONICS`).
      'Note that this is only a mnemonic token, not the Z80 opcode (handled by the
      'assembler) or parameters (handled by the next tokens in the stream)
-    TOKEN_Z80 = &H1
+    TOKEN_Z80 = &H10
     
     'Specifies a Z80 register
-    TOKEN_REGISTER = &H2
+    TOKEN_REGISTER = &H20
+    
+    'OZ80's keywords
+    TOKEN_KEYWORD = &H30
     
     'The parser automatically converts hexadecimal/binary numbers, so we only store
      'a 32-bit long (data field) in the token stream
-    TOKEN_NUMBER = &H3
-    TOKEN_PREFIX = &H4                  'Number prefixes ("K", "KB" & "Kbit")
+    TOKEN_NUMBER = &H40
+    TOKEN_PREFIX = &H41                 'Number prefixes ("K", "KB" & "Kbit")
     
     'Specifies an operator
-    TOKEN_OPERATOR = &H5
+    TOKEN_OPERATOR = &H50
     
     'A list is a series of 1 or more expressions separated by commas,
      'i.e.parameter lists
-    TOKEN_LIST = &H6
-    TOKEN_NEXT = &H7                    'Sandwiched between list items, i.e. ","
+    TOKEN_LIST = &H60
+    TOKEN_NEXT = &H61                   'Sandwiched between list items, i.e. ","
     
     'Debug tokens:
     'These allow us to keep track of where the token originated in the source file(s)
@@ -176,6 +179,31 @@ Public Enum OZ80_TOKEN_REGISTER
     TOKEN_REGISTER_PC = 22              'Program counter
 End Enum
 
+'Keywords: _
+ --------------------------------------------------------------------------------------
+Public Enum OZ80_TOKEN_KEYWORD
+    TOKEN_KEYWORD_AT = 1
+    TOKEN_KEYWORD_AS = 2
+    TOKEN_KEYWORD_BANK = 3
+    TOKEN_KEYWORD_BINARY = 4
+    TOKEN_KEYWORD_BYTE = 5
+    TOKEN_KEYWORD_DATA = 6
+    TOKEN_KEYWORD_DEF = 7
+    TOKEN_KEYWORD_DEFAULT = 8
+    TOKEN_KEYWORD_FILL = 9
+    TOKEN_KEYWORD_INCLUDE = 10
+    TOKEN_KEYWORD_LENGTH = 11
+    TOKEN_KEYWORD_OBJECT = 12
+    TOKEN_KEYWORD_PARAMS = 13
+    TOKEN_KEYWORD_PROC = 14
+    TOKEN_KEYWORD_RETURN = 15
+    TOKEN_KEYWORD_SLOT = 16
+    TOKEN_KEYWORD_START = 17
+    TOKEN_KEYWORD_STOP = 18
+    TOKEN_KEYWORD_STRUCT = 19
+    TOKEN_KEYWORD_WORD = 20
+End Enum
+
 'Number Prefixes: _
  --------------------------------------------------------------------------------------
 Public Enum OZ80_TOKEN_PREFIX
@@ -232,11 +260,11 @@ Public Sub AddToken_Register(ByRef Token As OZ80_TOKEN_REGISTER)
     Call Add(Token)                     'And add the register token
 End Sub
 
-'AddToken_Operator : Add an operator to the stream _
+'AddToken_Keyword : Add an OZ80 keyword to the stream _
  ======================================================================================
-Public Sub AddToken_Operator(ByRef Token As OZ80_TOKEN_OPERATOR)
-    Call Add(OZ80_TOKEN.TOKEN_OPERATOR) 'Add a byte to say this is an OZ80 operator
-    Call Add(Token)                     'And add the operator token
+Public Sub AddToken_Keyword(ByRef Token As OZ80_TOKEN_KEYWORD)
+    Call Add(OZ80_TOKEN.TOKEN_KEYWORD)  'Add a byte to say this is a keyword
+    Call Add(Token)                     'And add the keyword token
 End Sub
 
 'AddToken_Prefix : Add a number prefix to the stream _
@@ -244,6 +272,13 @@ End Sub
 Public Sub AddToken_Prefix(ByRef Token As OZ80_TOKEN_PREFIX)
     Call Add(OZ80_TOKEN.TOKEN_PREFIX)   'Add a byte to say this is a number prefix
     Call Add(Token)                     'And add the prefix token
+End Sub
+
+'AddToken_Operator : Add an operator to the stream _
+ ======================================================================================
+Public Sub AddToken_Operator(ByRef Token As OZ80_TOKEN_OPERATOR)
+    Call Add(OZ80_TOKEN.TOKEN_OPERATOR) 'Add a byte to say this is an OZ80 operator
+    Call Add(Token)                     'And add the operator token
 End Sub
 
 '/// PRIVATE PROCEDURES ///////////////////////////////////////////////////////////////

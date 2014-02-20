@@ -79,14 +79,15 @@ double back-tick is encountered. All text in between is ignored.
 2.	Register Hints
 =======================================================================================
 Format:
-	<register>;<hintName>
+	<register>;<hintName>		`or:
+	<register>'<hintName>		`for indicating shadow registers in use
 
 The Z80 registers are your temporary working space for manipulating information with
 the CPU, as such register contents change constantly, for differing purposes.
 
 Register hints provide the ability to keep track of the temporary "role" of registers.
 It allows you to explain 'what' a register currently is, without resorting to comments
-(which are bulkier and should be used to describe rather than just name things)
+(which are bulkier and should be used to describe why rather than just name things)
 
 Take for example this section of Z80 code in the middle of a routine:
 

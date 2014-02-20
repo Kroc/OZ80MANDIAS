@@ -337,8 +337,8 @@ WordBreak:
 EndWord:
     If LenB(Word) = 0 Then GoTo EndOfFile
 EndWord2:
-    'Tokenise the word:
-    '----------------------------------------------------------------------------------
+    'Tokenise the word: _
+     ----------------------------------------------------------------------------------
     'This section is written for pure speed, not for prettiness or flexibility
     Dim Register As Long
     
@@ -462,6 +462,23 @@ EndWord2:
         'Z80 instructions
         If StrComp(Word, "jp") = 0 Then Call TokenStream.AddToken_Z80(TOKEN_Z80_JP): GoTo AddWord
         If StrComp(Word, "jr") = 0 Then Call TokenStream.AddToken_Z80(TOKEN_Z80_JR): GoTo AddWord
+    
+    ElseIf AscFirst = 107 Then '--- `k` ---
+        'Number suffixes K, KB & Kbit
+        'TODO: we should try validate these more (check for number in previous token? _
+               / combine the prefix with the previous number token?)
+        If Asc2 = 0 Then    'Just `K`
+            Call TokenStream.AddToken_Prefix(TOKEN_PREFIX_K)
+        'B must be next for `KB` and `Kbit`
+        ElseIf Asc2 = 98 Then
+            'If only two letters, then it's `KB`
+            If Asc3 = 0 Then Call TokenStream.AddToken_Prefix(TOKEN_PREFIX_KB)
+            'verify ...`it`
+            If Asc3 = 105 Then
+                If Asc4 = 116 Then Call TokenStream.AddToken_Prefix(TOKEN_PREFIX_KBIT)
+            End If
+        End If
+        'ERROR
         
     ElseIf AscFirst = 108 Then '--- `l` ---
         'Z80 instructions

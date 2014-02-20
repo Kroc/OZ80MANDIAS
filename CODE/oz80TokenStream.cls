@@ -46,20 +46,21 @@ Public Enum OZ80_TOKEN
      'assembler) or parameters (handled by the next tokens in the stream)
     TOKEN_Z80 = &H1
     
+    'Specifies a Z80 register
+    TOKEN_REGISTER = &H2
+    
     'The parser automatically converts hexadecimal/binary numbers, so we only store
      'a 32-bit long (data field) in the token stream
-    TOKEN_NUMBER = &H2
-    
-    'Specifies a Z80 register
-    TOKEN_REGISTER = &H3
+    TOKEN_NUMBER = &H3
+    TOKEN_PREFIX = &H4                  'Number prefixes ("K", "KB" & "Kbit")
     
     'Specifies an operator
-    TOKEN_OPERATOR = &H4
+    TOKEN_OPERATOR = &H5
     
     'A list is a series of 1 or more expressions separated by commas,
      'i.e.parameter lists
-    TOKEN_LIST = &H5
-    TOKEN_NEXT = &H6                    'Sandwiched between list items, i.e. ","
+    TOKEN_LIST = &H6
+    TOKEN_NEXT = &H7                    'Sandwiched between list items, i.e. ","
     
     'Debug tokens:
     'These allow us to keep track of where the token originated in the source file(s)
@@ -175,6 +176,14 @@ Public Enum OZ80_TOKEN_REGISTER
     TOKEN_REGISTER_PC = 22              'Program counter
 End Enum
 
+'Number Prefixes: _
+ --------------------------------------------------------------------------------------
+Public Enum OZ80_TOKEN_PREFIX
+    TOKEN_PREFIX_K = 1                  'x1000
+    TOKEN_PREFIX_KB = 2                 'x1024
+    TOKEN_PREFIX_KBIT = 3               'x128 (1024 bits)
+End Enum
+
 'Operators: _
  --------------------------------------------------------------------------------------
 Public Enum OZ80_TOKEN_OPERATOR
@@ -186,6 +195,7 @@ Public Enum OZ80_TOKEN_OPERATOR
     TOKEN_OPERATOR_MOD = 6              'Modulus "\"
     TOKEN_OPERATOR_REP = 7              'Repeat "x"
 End Enum
+
 
 '/// EVENTS ///////////////////////////////////////////////////////////////////////////
 
@@ -227,6 +237,13 @@ End Sub
 Public Sub AddToken_Operator(ByRef Token As OZ80_TOKEN_OPERATOR)
     Call Add(OZ80_TOKEN.TOKEN_OPERATOR) 'Add a byte to say this is an OZ80 operator
     Call Add(Token)                     'And add the operator token
+End Sub
+
+'AddToken_Prefix : Add a number prefix to the stream _
+ ======================================================================================
+Public Sub AddToken_Prefix(ByRef Token As OZ80_TOKEN_PREFIX)
+    Call Add(OZ80_TOKEN.TOKEN_PREFIX)   'Add a byte to say this is a number prefix
+    Call Add(Token)                     'And add the prefix token
 End Sub
 
 '/// PRIVATE PROCEDURES ///////////////////////////////////////////////////////////////

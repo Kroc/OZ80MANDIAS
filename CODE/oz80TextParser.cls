@@ -33,6 +33,7 @@ Private Const SYNTAX_NUMERIC = "0123456789"
 Private Const SYNTAX_COMMENT = 96       '`
 Private Const SYNTAX_QUOTE = 34         '"
 Private Const SYNTAX_LABEL = 58         ':
+Private Const SYNTAX_PROPERTY = 46      '.
 Private Const SYNTAX_VARIABLE = 35      '#
 Private Const SYNTAX_MACRO = 64         '@
 Private Const SYNTAX_FUNCT = 63         '?
@@ -288,24 +289,34 @@ WordBreak:
     End If
     Let Word = Word & ChrW$(AscChar)
     
-    '----------------------------------------------------------------------------------
 EndWord:
     If LenB(Word) = 0 Then GoTo EndOfFile
 EndWord2:
     'Tokenise the word: _
      ----------------------------------------------------------------------------------
-    'This section is written for pure speed, not for prettiness or flexibility
-    Dim Register As Long
-    
     'Check the first letter of the word to find the right kind of token:
     
     'Comma (very common!)
     If Asc1 = SYNTAX_LIST Then
         'TODO
+        GoTo NextWord
     
     'Hexadecimal number?
     ElseIf Asc1 = SYNTAX_NUMBER_HEX Then
         'TODO: Tokenise number
+        GoTo NextWord
+    
+    ElseIf Asc1 = SYNTAX_LABEL Then
+        'TODO: Tokenise
+        GoTo NextWord
+    
+    ElseIf Asc1 = SYNTAX_PROPERTY Then
+        'TODO: Tokenise
+        GoTo NextWord
+    
+    ElseIf Asc1 = SYNTAX_VARIABLE Then
+        'TODO: Tokenise
+        GoTo NextWord
         
     ElseIf Asc1 = 97 Then '--- `a` ---
         'Z80 instructions
@@ -315,9 +326,6 @@ EndWord2:
         'Keywords
         If StrComp(Word, "as") = 0 Then Call TokenStream.AddToken_Keyword(TOKEN_KEYWORD_AS): GoTo NextWord
         If StrComp(Word, "at") = 0 Then Call TokenStream.AddToken_Keyword(TOKEN_KEYWORD_AT): GoTo NextWord
-        'Is it a register?
-        Let Register = ValidateRegisterAsc(Asc1, Asc2, Asc3, Asc4)
-        If Register Then Call TokenStream.AddToken_Register(Register): GoTo NextWord
          
     ElseIf Asc1 = 98 Then '--- `b` ---
         'Z80 instructions
@@ -326,9 +334,6 @@ EndWord2:
         If StrComp(Word, "bank") = 0 Then Call TokenStream.AddToken_Keyword(TOKEN_KEYWORD_BANK): GoTo NextWord
         If StrComp(Word, "binary") = 0 Then Call TokenStream.AddToken_Keyword(TOKEN_KEYWORD_BINARY): GoTo NextWord
         If StrComp(Word, "byte") = 0 Then Call TokenStream.AddToken_Keyword(TOKEN_KEYWORD_BYTE): GoTo NextWord
-        'Is it a register?
-        Let Register = ValidateRegisterAsc(Asc1, Asc2, Asc3, Asc4)
-        If Register Then Call TokenStream.AddToken_Register(Register): GoTo NextWord
         
     ElseIf Asc1 = 99 Then '--- `c` ---
         'Z80 instructions
@@ -340,9 +345,6 @@ EndWord2:
         If StrComp(Word, "cpi") = 0 Then Call TokenStream.AddToken_Z80(TOKEN_Z80_CPI): GoTo NextWord
         If StrComp(Word, "cpir") = 0 Then Call TokenStream.AddToken_Z80(TOKEN_Z80_CPIR): GoTo NextWord
         If StrComp(Word, "cpl") = 0 Then Call TokenStream.AddToken_Z80(TOKEN_Z80_CPL): GoTo NextWord
-        'Is it a register?
-        Let Register = ValidateRegisterAsc(Asc1, Asc2, Asc3, Asc4)
-        If Register Then Call TokenStream.AddToken_Register(Register): GoTo NextWord
         
     ElseIf Asc1 = 100 Then '--- `d` ---
         'Z80 instructions
@@ -351,32 +353,26 @@ EndWord2:
         If StrComp(Word, "di") = 0 Then Call TokenStream.AddToken_Z80(TOKEN_Z80_DI): GoTo NextWord
         If StrComp(Word, "djnz") = 0 Then Call TokenStream.AddToken_Z80(TOKEN_Z80_DJNZ): GoTo NextWord
         'Keywords
+        If Word = "DATA" Then Stop
         If StrComp(Word, "data") = 0 Then Call TokenStream.AddToken_Keyword(TOKEN_KEYWORD_DATA): GoTo NextWord
         If StrComp(Word, "def") = 0 Then Call TokenStream.AddToken_Keyword(TOKEN_KEYWORD_DEF): GoTo NextWord
         If StrComp(Word, "default") = 0 Then Call TokenStream.AddToken_Keyword(TOKEN_KEYWORD_DEFAULT): GoTo NextWord
-        'Is it a register?
-        Let Register = ValidateRegisterAsc(Asc1, Asc2, Asc3, Asc4)
-        If Register Then Call TokenStream.AddToken_Register(Register): GoTo NextWord
         
     ElseIf Asc1 = 101 Then '--- `e` ---
         'Z80 instructions
         If StrComp(Word, "ei") = 0 Then Call TokenStream.AddToken_Z80(TOKEN_Z80_EI): GoTo NextWord
         If StrComp(Word, "ex") = 0 Then Call TokenStream.AddToken_Z80(TOKEN_Z80_EX): GoTo NextWord
         If StrComp(Word, "exx") = 0 Then Call TokenStream.AddToken_Z80(TOKEN_Z80_EXX): GoTo NextWord
-        'Is it a register?
-        Let Register = ValidateRegisterAsc(Asc1, Asc2, Asc3, Asc4)
-        If Register Then Call TokenStream.AddToken_Register(Register): GoTo NextWord
     
     ElseIf Asc1 = 102 Then '--- `f` ---
         'Keywords
         If StrComp(Word, "fill") = 0 Then Call TokenStream.AddToken_Keyword(TOKEN_KEYWORD_FILL): GoTo NextWord
-    
+        'You can't refer to the `f` register directly (only `af`)
+        GoTo WordError
+        
     ElseIf Asc1 = 104 Then '--- `h` ---
         'Z80 instructions
         If StrComp(Word, "halt") = 0 Then Call TokenStream.AddToken_Z80(TOKEN_Z80_HALT): GoTo NextWord
-        'Is it a register?
-        Let Register = ValidateRegisterAsc(Asc1, Asc2, Asc3, Asc4)
-        If Register Then Call TokenStream.AddToken_Register(Register): GoTo NextWord
         
     ElseIf Asc1 = 105 Then '--- `i` ---
         'Z80 instructions
@@ -389,15 +385,14 @@ EndWord2:
         If StrComp(Word, "inir") = 0 Then Call TokenStream.AddToken_Z80(TOKEN_Z80_INIR): GoTo NextWord
         'Keywords
         If StrComp(Word, "include") = 0 Then Call TokenStream.AddToken_Keyword(TOKEN_KEYWORD_INCLUDE): GoTo NextWord
-        'Is it a register?
-        Let Register = ValidateRegisterAsc(Asc1, Asc2, Asc3, Asc4)
-        If Register Then Call TokenStream.AddToken_Register(Register): GoTo NextWord
         
     ElseIf Asc1 = 106 Then '--- `j` ---
         'Z80 instructions
         If StrComp(Word, "jp") = 0 Then Call TokenStream.AddToken_Z80(TOKEN_Z80_JP): GoTo NextWord
         If StrComp(Word, "jr") = 0 Then Call TokenStream.AddToken_Z80(TOKEN_Z80_JR): GoTo NextWord
-    
+        'There are no `j` registers
+        GoTo WordError
+        
     ElseIf Asc1 = 107 Then '--- `k` ---
         'Number suffixes K, KB & Kbit
         If Asc2 = 0 Then    'Just `K`
@@ -411,6 +406,8 @@ EndWord2:
                 If Asc4 = 116 Then Call TokenStream.AddToken_Prefix(TOKEN_PREFIX_KBIT): GoTo NextWord
             End If
         End If
+        'There are no `k` registers
+        GoTo WordError
         
     ElseIf Asc1 = 108 Then '--- `l` ---
         'Z80 instructions
@@ -421,15 +418,14 @@ EndWord2:
         If StrComp(Word, "ldir") = 0 Then Call TokenStream.AddToken_Z80(TOKEN_Z80_LDIR): GoTo NextWord
         'Keywords
         If StrComp(Word, "length") = 0 Then Call TokenStream.AddToken_Keyword(TOKEN_KEYWORD_LENGTH): GoTo NextWord
-        'Is it a register?
-        Let Register = ValidateRegisterAsc(Asc1, Asc2, Asc3, Asc4)
-        If Register Then Call TokenStream.AddToken_Register(Register): GoTo NextWord
     
     ElseIf Asc1 = 110 Then '--- `n` ---
         'Z80 instructions
         If StrComp(Word, "neg") = 0 Then Call TokenStream.AddToken_Z80(TOKEN_Z80_NEG): GoTo NextWord
         If StrComp(Word, "nop") = 0 Then Call TokenStream.AddToken_Z80(TOKEN_Z80_NOP): GoTo NextWord
-    
+        'There are no `n` registers
+        GoTo WordError
+        
     ElseIf Asc1 = 111 Then '--- `o` ---
         'Z80 instructions
         If StrComp(Word, "or") = 0 Then Call TokenStream.AddToken_Z80(TOKEN_Z80_OR): GoTo NextWord
@@ -440,6 +436,8 @@ EndWord2:
         If StrComp(Word, "outir") = 0 Then Call TokenStream.AddToken_Z80(TOKEN_Z80_OUTIR): GoTo NextWord
         'Keywords
         If StrComp(Word, "object") = 0 Then Call TokenStream.AddToken_Keyword(TOKEN_KEYWORD_OBJECT): GoTo NextWord
+        'There are no `o` registers
+        GoTo WordError
         
     ElseIf Asc1 = 112 Then '--- `p` ---
         'Z80 instructions
@@ -448,9 +446,6 @@ EndWord2:
         'Keywords
         If StrComp(Word, "params") = 0 Then Call TokenStream.AddToken_Keyword(TOKEN_KEYWORD_PARAMS): GoTo NextWord
         If StrComp(Word, "proc") = 0 Then Call TokenStream.AddToken_Keyword(TOKEN_KEYWORD_PROC): GoTo NextWord
-        'Is it a register?
-        Let Register = ValidateRegisterAsc(Asc1, Asc2, Asc3, Asc4)
-        If Register Then Call TokenStream.AddToken_Register(Register): GoTo NextWord
         
     ElseIf Asc1 = 114 Then '--- `r` ---
         'Z80 instructions
@@ -471,9 +466,6 @@ EndWord2:
         If StrComp(Word, "rst") = 0 Then Call TokenStream.AddToken_Z80(TOKEN_Z80_RST): GoTo NextWord
         'Keywords
         If StrComp(Word, "return") = 0 Then Call TokenStream.AddToken_Keyword(TOKEN_KEYWORD_RETURN): GoTo NextWord
-        'Is it a register?
-        Let Register = ValidateRegisterAsc(Asc1, Asc2, Asc3, Asc4)
-        If Register Then Call TokenStream.AddToken_Register(Register): GoTo NextWord
         
     ElseIf Asc1 = 115 Then '--- `s` ---
         'Z80 instructions
@@ -490,46 +482,54 @@ EndWord2:
         If StrComp(Word, "start") = 0 Then Call TokenStream.AddToken_Keyword(TOKEN_KEYWORD_START): GoTo NextWord
         If StrComp(Word, "stop") = 0 Then Call TokenStream.AddToken_Keyword(TOKEN_KEYWORD_STOP): GoTo NextWord
         If StrComp(Word, "struct") = 0 Then Call TokenStream.AddToken_Keyword(TOKEN_KEYWORD_STRUCT): GoTo NextWord
-        'Is it a register? (a falsey comparison is fastest)
-        Let Register = ValidateRegisterAsc(Asc1, Asc2, Asc3, Asc4)
-        If Register Then Call TokenStream.AddToken_Register(Register): GoTo NextWord
-    
+        
     ElseIf Asc1 = 119 Then '--- `w` ---
         'Keywords
         If StrComp(Word, "word") = 0 Then Call TokenStream.AddToken_Keyword(TOKEN_KEYWORD_WORD): GoTo NextWord
+        'There are no `w` registers
+        GoTo WordError
         
     ElseIf Asc1 = 120 Then '--- `x` ---
         'Z80 instructions
         If StrComp(Word, "xor") = 0 Then Call TokenStream.AddToken_Z80(TOKEN_Z80_XOR): GoTo NextWord
         'TODO: The `x` operator
+        'There are no `x` registers
+        GoTo WordError
         
     'Block (open)
     ElseIf Asc1 = SYNTAX_BLOCK_OPEN Then '--- `{` ---
         'TODO: Tokenise
+        GoTo NextWord
     
     'Block (close)
     ElseIf Asc1 = SYNTAX_BLOCK_CLOSE Then  '--- `}` ---
         'TODO: Tokenise
+        GoTo NextWord
     
     'Parenthesis (open)
     ElseIf Asc1 = SYNTAX_PAREN_OPEN Then '--- `(` ---
         'TODO: Tokenise
+        GoTo NextWord
     
     'Parenthesis (close)
     ElseIf Asc1 = SYNTAX_PAREN_CLOSE Then '--- `)` ---
         'TODO: Tokenise
+        GoTo NextWord
     
     'A decimal number?
     ElseIf Asc1 >= 48 And Asc1 <= 57 Then
         'TODO: Tokenise number
+        GoTo NextWord
         
     'Binary number?
     ElseIf Asc1 = SYNTAX_NUMBER_BIN Then '--- `%` ---
         'TODO: Tokenise number
+        GoTo NextWord
         
     'String (quote)
     ElseIf Asc1 = SYNTAX_QUOTE Then '--- `"` ---
-        'TODO: TokenisE
+        'TODO: Tokenise
+        GoTo NextWord
         
     ElseIf Asc1 = SYNTAX_OPERATOR_ADD Then '--- `+` ---
         Call TokenStream.AddToken_Operator(TOKEN_OPERATOR_ADD): GoTo NextWord
@@ -545,29 +545,12 @@ EndWord2:
         Call TokenStream.AddToken_Operator(TOKEN_OPERATOR_MOD): GoTo NextWord
     End If
     
-    'TODO: Error here - unrecognised word
-    
-    '----------------------------------------------------------------------------------
-NextWord:
-    Let WordCount = WordCount + 1
-    GoTo ReadWord
-    
-    '----------------------------------------------------------------------------------
-EndOfFile:
-    Erase Data
-    Debug.Print "- Words: " & Format$(WordCount, "#,#")
-    Debug.Print "- Time: " & Format$(Timer - Start, "0.000") & "s"
-End Function
-
-'/// VALIDATION PROCEDURES ////////////////////////////////////////////////////////////
-
-Public Function ValidateRegisterAsc( _
-    ByRef Asc1 As Long, ByRef Asc2 As Long, ByRef Asc3 As Long, ByRef Asc4 As Long _
-) As OZ80_TOKEN_REGISTER
+    'Z80 Registers: _
+     ----------------------------------------------------------------------------------
     'Ignore anything beginning with a letter before A
-    If Asc1 < 97 Then Exit Function
+    If Asc1 < 97 Then GoTo WordError
     'No register has a first letter higher than S
-    If Asc1 > 115 Then Exit Function
+    If Asc1 > 115 Then GoTo WordError
     'If there's only 1 letter total, then it's obviously a 1-letter register
     If Asc2 = 0 Then GoTo OneLetter
     'If a semi-colon occurs at the second letter, then the register must be 1 letter
@@ -582,35 +565,51 @@ Public Function ValidateRegisterAsc( _
     If Asc3 = 59 Then GoTo TwoLetters
     If Asc3 = 39 Then GoTo TwoLetters
     
-    Exit Function
+    GoTo WordError
 
 OneLetter:
-    If Asc1 = 97 Then Let ValidateRegisterAsc = TOKEN_REGISTER_A: Exit Function
-    If Asc1 = 98 Then Let ValidateRegisterAsc = TOKEN_REGISTER_B: Exit Function
-    If Asc1 = 99 Then Let ValidateRegisterAsc = TOKEN_REGISTER_C: Exit Function
-    If Asc1 = 100 Then Let ValidateRegisterAsc = TOKEN_REGISTER_D: Exit Function
-    If Asc1 = 101 Then Let ValidateRegisterAsc = TOKEN_REGISTER_E: Exit Function
-    If Asc1 = 104 Then Let ValidateRegisterAsc = TOKEN_REGISTER_H: Exit Function
-    If Asc1 = 105 Then Let ValidateRegisterAsc = TOKEN_REGISTER_I: Exit Function
-    If Asc1 = 108 Then Let ValidateRegisterAsc = TOKEN_REGISTER_L: Exit Function
-    If Asc1 = 114 Then Let ValidateRegisterAsc = TOKEN_REGISTER_R: Exit Function
-    Exit Function
+    If Asc1 = 97 Then Call TokenStream.AddToken_Register(TOKEN_REGISTER_A): GoTo NextWord
+    If Asc1 = 98 Then Call TokenStream.AddToken_Register(TOKEN_REGISTER_B): GoTo NextWord
+    If Asc1 = 99 Then Call TokenStream.AddToken_Register(TOKEN_REGISTER_C): GoTo NextWord
+    If Asc1 = 100 Then Call TokenStream.AddToken_Register(TOKEN_REGISTER_D): GoTo NextWord
+    If Asc1 = 101 Then Call TokenStream.AddToken_Register(TOKEN_REGISTER_E): GoTo NextWord
+    If Asc1 = 104 Then Call TokenStream.AddToken_Register(TOKEN_REGISTER_H): GoTo NextWord
+    If Asc1 = 105 Then Call TokenStream.AddToken_Register(TOKEN_REGISTER_I): GoTo NextWord
+    If Asc1 = 108 Then Call TokenStream.AddToken_Register(TOKEN_REGISTER_L): GoTo NextWord
+    If Asc1 = 114 Then Call TokenStream.AddToken_Register(TOKEN_REGISTER_R): GoTo NextWord
+    GoTo WordError
 
 TwoLetters:
     If Asc1 = 97 Then       '"af"
-        If Asc2 = 102 Then Let ValidateRegisterAsc = TOKEN_REGISTER_AF
+        If Asc2 = 102 Then Call TokenStream.AddToken_Register(TOKEN_REGISTER_AF): GoTo NextWord
     ElseIf Asc1 = 98 Then   '"bc"
-        If Asc2 = 99 Then Let ValidateRegisterAsc = TOKEN_REGISTER_BC
+        If Asc2 = 99 Then Call TokenStream.AddToken_Register(TOKEN_REGISTER_BC): GoTo NextWord
     ElseIf Asc1 = 100 Then  '"de"
-        If Asc2 = 101 Then Let ValidateRegisterAsc = TOKEN_REGISTER_DE
+        If Asc2 = 101 Then Call TokenStream.AddToken_Register(TOKEN_REGISTER_DE): GoTo NextWord
     ElseIf Asc1 = 104 Then  '"hl"
-        If Asc2 = 108 Then Let ValidateRegisterAsc = TOKEN_REGISTER_HL
+        If Asc2 = 108 Then Call TokenStream.AddToken_Register(TOKEN_REGISTER_HL): GoTo NextWord
     ElseIf Asc1 = 105 Then  '"ix"
-        If Asc2 = 120 Then Let ValidateRegisterAsc = TOKEN_REGISTER_IX: Exit Function
-        If Asc2 = 121 Then Let ValidateRegisterAsc = TOKEN_REGISTER_IY
+        If Asc2 = 120 Then Call TokenStream.AddToken_Register(TOKEN_REGISTER_IX): GoTo NextWord
+        If Asc2 = 121 Then Call TokenStream.AddToken_Register(TOKEN_REGISTER_IY): GoTo NextWord
     ElseIf Asc1 = 112 Then  '"pc"
-        If Asc2 = 99 Then Let ValidateRegisterAsc = TOKEN_REGISTER_PC
+        If Asc2 = 99 Then Call TokenStream.AddToken_Register(TOKEN_REGISTER_PC): GoTo NextWord
     ElseIf Asc1 = 115 Then  '"sp"
-        If Asc2 = 112 Then Let ValidateRegisterAsc = TOKEN_REGISTER_PC
+        If Asc2 = 112 Then Call TokenStream.AddToken_Register(TOKEN_REGISTER_SP): GoTo NextWord
     End If
+    
+    '----------------------------------------------------------------------------------
+WordError:
+    'TODO: Error here - unrecognised word
+'    Debug.Print "! Unrecognised word: " & Word
+
+    '----------------------------------------------------------------------------------
+NextWord:
+    Let WordCount = WordCount + 1
+    GoTo ReadWord
+    
+    '----------------------------------------------------------------------------------
+EndOfFile:
+    Erase Data
+    Debug.Print "- Words: " & Format$(WordCount, "#,#")
+    Debug.Print "- Time: " & Format$(Timer - Start, "0.000") & "s"
 End Function

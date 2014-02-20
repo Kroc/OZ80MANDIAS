@@ -19,7 +19,7 @@ Option Explicit
 '======================================================================================
 'CLASS :: oz80Assembler
 
-Private TokenStream As oz80TokenStream
+Private Tokeniser As oz80Tokeniser
 
 '/// PUBLIC INTERFACE /////////////////////////////////////////////////////////////////
 
@@ -29,24 +29,21 @@ Public Sub Assemble(ByVal FilePath As String)
     Debug.Print
     Debug.Print "OZ80MANDIAS v" & App.Major & "." & App.Minor & "," & App.Revision
     
+    Dim StartTime As Single
+    Let StartTime = Timer
+    
     'Stage 1: Parse Source _
      ----------------------------------------------------------------------------------
-    'Create a tokenStream object to hold the machine representation of the text files; _
+    'Create a tokeniser object to hold the machine representation of the text files; _
      the assembler doesn't work with the original text directly
-    Set TokenStream = New oz80TokenStream
+    Set Tokeniser = New oz80Tokeniser
+    Call Tokeniser.Tokenise(FilePath)
     
-    'Create a textParser that will explode the source file into separate words and _
-     convert them into tokens which will be fed into the tokenStream we created
-    Dim TextParser As oz80TextParser
-    Set TextParser = New oz80TextParser
-    Call TextParser.Parse(FilePath, TokenStream)
-    Set TextParser = Nothing
-    
-    'Stage 2: Variable Sweep _
+    'Stage 2: Validate & Optimise Token Stream _
      ----------------------------------------------------------------------------------
-    'Now we have the tokenStream, walk through it and populate information on the _
-     variables defined. This is so that we will be able to refer to variables forward _
-     of references that appear earlier in the source
+    'The token stream is only a word-for-word machine representation of the source _
+     code, we need to check the grammer for validity and whilst there we will do some _
+     optimisations on the stream (e.g. collapsing lists into byte streams)
 End Sub
 
 '/// EVENTS ///////////////////////////////////////////////////////////////////////////
@@ -55,5 +52,5 @@ End Sub
  ======================================================================================
 Private Sub Class_Terminate()
     'Clean up
-    Set TokenStream = Nothing
+    Set Tokeniser = Nothing
 End Sub

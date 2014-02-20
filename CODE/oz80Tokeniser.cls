@@ -27,6 +27,8 @@ Option Explicit
 
 'These define the various punctiation marks (in ASCII codes) for the language syntax
 Private Const SYNTAX_COMMENT = 96       '`
+Private Const SYNTAX_HINT1 = 59         ';
+Private Const SYNTAX_HINT2 = 59         ''
 Private Const SYNTAX_QUOTE = 34         '"
 Private Const SYNTAX_LABEL = 58         ':
 Private Const SYNTAX_PROPERTY = 46      '.
@@ -47,6 +49,39 @@ Private Const SYNTAX_OPERATOR_MUL = 42  '*
 Private Const SYNTAX_OPERATOR_DIV = 47  '/
 Private Const SYNTAX_OPERATOR_POW = 94  '^
 Private Const SYNTAX_OPERATOR_MOD = 92  '\
+
+'This makes life a whole lot easier
+Private Const A = 97
+Private Const B = 98
+Private Const C = 99
+Private Const D = 100
+Private Const E = 101
+Private Const F = 102
+Private Const G = 103
+Private Const H = 104
+Private Const I = 105
+Private Const J = 106
+Private Const K = 107
+Private Const L = 108
+Private Const M = 109
+Private Const N = 110
+Private Const O = 111
+Private Const P = 112
+Private Const Q = 113
+Private Const R = 114
+Private Const S = 115
+Private Const T = 116
+Private Const U = 117
+Private Const V = 118
+Private Const W = 119
+Private Const X = 120
+Private Const Y = 121
+Private Const Z = 122
+
+Private Const aSPC = 32
+Private Const aTAB = 9
+Private Const aCR = 10
+Private Const aLF = 13
 
 '--------------------------------------------------------------------------------------
 Public Enum OZ80_TOKEN
@@ -256,14 +291,14 @@ Private Sub Class_Initialize()
     ReDim Tokens(0 To TokensLimit) As Byte
     
     'Initialise the lookup table of upper-case to lower-case values
-    Dim i As Long
-    For i = 0 To 255
-        If i >= 65 And i <= 90 Then
-            Let LowCase(i) = i And 32
+    Dim I As Long
+    For I = 0 To 255
+        If I >= 65 And I <= 90 Then
+            Let LowCase(I) = I And 32
         Else
-            Let LowCase(i) = i
+            Let LowCase(I) = I
         End If
-    Next i
+    Next I
 End Sub
 
 'CLASS Terminate _
@@ -405,16 +440,16 @@ ReadChar:
     ElseIf IsQuote = False Then
         'Special handling for the beginning of a word
         If LenB(Word) = 0 Then
-            If AscChar = 32 Then GoTo ReadChar
-            If AscChar = 9 Then GoTo ReadChar
-            If AscChar = 10 Then GoTo ReadChar
-            If AscChar = 13 Then GoTo ReadChar
+            If AscChar = aSPC Then GoTo ReadChar
+            If AscChar = aTAB Then GoTo ReadChar
+            If AscChar = aCR Then GoTo ReadChar
+            If AscChar = aLF Then GoTo ReadChar
             'Remember the first letter of the word for guiding tokenisation
             Let Asc1 = LowCase(AscChar)
         Else
             'A word is underway, check for end of line (note the `Else`, we don't _
              want to test line endings twice when the Word is currently empty)
-            If AscChar = 10 Or AscChar = 13 Then
+            If AscChar = aCR Or AscChar = aLF Then
                 'The end of a line ends a single-line comment:
                 If IsCommentMulti = False Then
                     If IsComment Then Let IsComment = False: GoTo ReadWord
@@ -424,8 +459,8 @@ ReadChar:
             End If
             
             'End the word on a space instead of at the end of the line
-            If AscChar = 32 Then GoTo EndWord
-            If AscChar = 9 Then GoTo EndWord
+            If AscChar = aSPC Then GoTo EndWord
+            If AscChar = aTAB Then GoTo EndWord
         End If
         
         'Is this a quote? (in which case, ignore wordbreaks until quote end)
@@ -516,7 +551,7 @@ EndWord2:
         'TODO: Tokenise
         GoTo NextWord
         
-    ElseIf Asc1 = 97 Then '--- `a` ---
+    ElseIf Asc1 = A Then '--- `a` ---
         'Z80 instructions
         If StrComp(Word, "adc") = 0 Then Call AddToken_Z80(TOKEN_Z80_ADC): GoTo NextWord
         If StrComp(Word, "add") = 0 Then Call AddToken_Z80(TOKEN_Z80_ADD): GoTo NextWord
@@ -525,7 +560,7 @@ EndWord2:
         If StrComp(Word, "as") = 0 Then Call AddToken_Keyword(TOKEN_KEYWORD_AS): GoTo NextWord
         If StrComp(Word, "at") = 0 Then Call AddToken_Keyword(TOKEN_KEYWORD_AT): GoTo NextWord
          
-    ElseIf Asc1 = 98 Then '--- `b` ---
+    ElseIf Asc1 = B Then '--- `b` ---
         'Z80 instructions
         If StrComp(Word, "bit") = 0 Then Call AddToken_Z80(TOKEN_Z80_BIT): GoTo NextWord
         'Keywords
@@ -533,7 +568,7 @@ EndWord2:
         If StrComp(Word, "binary") = 0 Then Call AddToken_Keyword(TOKEN_KEYWORD_BINARY): GoTo NextWord
         If StrComp(Word, "byte") = 0 Then Call AddToken_Keyword(TOKEN_KEYWORD_BYTE): GoTo NextWord
         
-    ElseIf Asc1 = 99 Then '--- `c` ---
+    ElseIf Asc1 = C Then '--- `c` ---
         'Z80 instructions
         If StrComp(Word, "call") = 0 Then Call AddToken_Z80(TOKEN_Z80_CALL): GoTo NextWord
         If StrComp(Word, "ccf") = 0 Then Call AddToken_Z80(TOKEN_Z80_CCF): GoTo NextWord
@@ -544,7 +579,7 @@ EndWord2:
         If StrComp(Word, "cpir") = 0 Then Call AddToken_Z80(TOKEN_Z80_CPIR): GoTo NextWord
         If StrComp(Word, "cpl") = 0 Then Call AddToken_Z80(TOKEN_Z80_CPL): GoTo NextWord
         
-    ElseIf Asc1 = 100 Then '--- `d` ---
+    ElseIf Asc1 = D Then '--- `d` ---
         'Z80 instructions
         If StrComp(Word, "daa") = 0 Then Call AddToken_Z80(TOKEN_Z80_DAA): GoTo NextWord
         If StrComp(Word, "dec") = 0 Then Call AddToken_Z80(TOKEN_Z80_DEC): GoTo NextWord
@@ -556,23 +591,23 @@ EndWord2:
         If StrComp(Word, "def") = 0 Then Call AddToken_Keyword(TOKEN_KEYWORD_DEF): GoTo NextWord
         If StrComp(Word, "default") = 0 Then Call AddToken_Keyword(TOKEN_KEYWORD_DEFAULT): GoTo NextWord
         
-    ElseIf Asc1 = 101 Then '--- `e` ---
+    ElseIf Asc1 = E Then '--- `e` ---
         'Z80 instructions
         If StrComp(Word, "ei") = 0 Then Call AddToken_Z80(TOKEN_Z80_EI): GoTo NextWord
         If StrComp(Word, "ex") = 0 Then Call AddToken_Z80(TOKEN_Z80_EX): GoTo NextWord
         If StrComp(Word, "exx") = 0 Then Call AddToken_Z80(TOKEN_Z80_EXX): GoTo NextWord
     
-    ElseIf Asc1 = 102 Then '--- `f` ---
+    ElseIf Asc1 = F Then '--- `f` ---
         'Keywords
         If StrComp(Word, "fill") = 0 Then Call AddToken_Keyword(TOKEN_KEYWORD_FILL): GoTo NextWord
         'You can't refer to the `f` register directly (only `af`)
         GoTo WordError
         
-    ElseIf Asc1 = 104 Then '--- `h` ---
+    ElseIf Asc1 = H Then '--- `h` ---
         'Z80 instructions
         If StrComp(Word, "halt") = 0 Then Call AddToken_Z80(TOKEN_Z80_HALT): GoTo NextWord
         
-    ElseIf Asc1 = 105 Then '--- `i` ---
+    ElseIf Asc1 = I Then '--- `i` ---
         'Z80 instructions
         If StrComp(Word, "im") = 0 Then Call AddToken_Z80(TOKEN_Z80_IM): GoTo NextWord
         If StrComp(Word, "in") = 0 Then Call AddToken_Z80(TOKEN_Z80_IN): GoTo NextWord
@@ -584,30 +619,28 @@ EndWord2:
         'Keywords
         If StrComp(Word, "include") = 0 Then Call AddToken_Keyword(TOKEN_KEYWORD_INCLUDE): GoTo NextWord
         
-    ElseIf Asc1 = 106 Then '--- `j` ---
+    ElseIf Asc1 = J Then '--- `j` ---
         'Z80 instructions
         If StrComp(Word, "jp") = 0 Then Call AddToken_Z80(TOKEN_Z80_JP): GoTo NextWord
         If StrComp(Word, "jr") = 0 Then Call AddToken_Z80(TOKEN_Z80_JR): GoTo NextWord
         'There are no `j` registers
         GoTo WordError
         
-    ElseIf Asc1 = 107 Then '--- `k` ---
+    ElseIf Asc1 = K Then '--- `k` ---
         'Number suffixes K, KB & Kbit
         If Asc2 = 0 Then    'Just `K`
             Call AddToken_Prefix(TOKEN_PREFIX_K): GoTo NextWord
         'B must be next for `KB` and `Kbit`
-        ElseIf Asc2 = 98 Then
+        ElseIf Asc2 = B Then
             'If only two letters, then it's `KB`
             If Asc3 = 0 Then Call AddToken_Prefix(TOKEN_PREFIX_KB): GoTo NextWord
-            'verify ...`it`
-            If Asc3 = 105 Then
-                If Asc4 = 116 Then Call AddToken_Prefix(TOKEN_PREFIX_KBIT): GoTo NextWord
-            End If
+            'verify ...`Kbit`, we don't have Asc5 so avoid things like `Kbitty`
+            If StrComp(Word, "kbit") = 0 Then Call AddToken_Prefix(TOKEN_PREFIX_KBIT): GoTo NextWord
         End If
         'There are no `k` registers
         GoTo WordError
         
-    ElseIf Asc1 = 108 Then '--- `l` ---
+    ElseIf Asc1 = L Then '--- `l` ---
         'Z80 instructions
         If StrComp(Word, "ld") = 0 Then Call AddToken_Z80(TOKEN_Z80_LD): GoTo NextWord
         If StrComp(Word, "ldd") = 0 Then Call AddToken_Z80(TOKEN_Z80_LDD): GoTo NextWord
@@ -617,14 +650,14 @@ EndWord2:
         'Keywords
         If StrComp(Word, "length") = 0 Then Call AddToken_Keyword(TOKEN_KEYWORD_LENGTH): GoTo NextWord
     
-    ElseIf Asc1 = 110 Then '--- `n` ---
+    ElseIf Asc1 = N Then '--- `n` ---
         'Z80 instructions
         If StrComp(Word, "neg") = 0 Then Call AddToken_Z80(TOKEN_Z80_NEG): GoTo NextWord
         If StrComp(Word, "nop") = 0 Then Call AddToken_Z80(TOKEN_Z80_NOP): GoTo NextWord
         'There are no `n` registers
         GoTo WordError
         
-    ElseIf Asc1 = 111 Then '--- `o` ---
+    ElseIf Asc1 = O Then '--- `o` ---
         'Z80 instructions
         If StrComp(Word, "or") = 0 Then Call AddToken_Z80(TOKEN_Z80_OR): GoTo NextWord
         If StrComp(Word, "out") = 0 Then Call AddToken_Z80(TOKEN_Z80_OUT): GoTo NextWord
@@ -637,7 +670,7 @@ EndWord2:
         'There are no `o` registers
         GoTo WordError
         
-    ElseIf Asc1 = 112 Then '--- `p` ---
+    ElseIf Asc1 = P Then '--- `p` ---
         'Z80 instructions
         If StrComp(Word, "pop") = 0 Then Call AddToken_Z80(TOKEN_Z80_POP): GoTo NextWord
         If StrComp(Word, "push") = 0 Then Call AddToken_Z80(TOKEN_Z80_PUSH): GoTo NextWord
@@ -645,7 +678,7 @@ EndWord2:
         If StrComp(Word, "params") = 0 Then Call AddToken_Keyword(TOKEN_KEYWORD_PARAMS): GoTo NextWord
         If StrComp(Word, "proc") = 0 Then Call AddToken_Keyword(TOKEN_KEYWORD_PROC): GoTo NextWord
         
-    ElseIf Asc1 = 114 Then '--- `r` ---
+    ElseIf Asc1 = R Then '--- `r` ---
         'Z80 instructions
         If StrComp(Word, "res") = 0 Then Call AddToken_Z80(TOKEN_Z80_RES): GoTo NextWord
         If StrComp(Word, "ret") = 0 Then Call AddToken_Z80(TOKEN_Z80_RET): GoTo NextWord
@@ -665,7 +698,7 @@ EndWord2:
         'Keywords
         If StrComp(Word, "return") = 0 Then Call AddToken_Keyword(TOKEN_KEYWORD_RETURN): GoTo NextWord
         
-    ElseIf Asc1 = 115 Then '--- `s` ---
+    ElseIf Asc1 = S Then '--- `s` ---
         'Z80 instructions
         If StrComp(Word, "sbc") = 0 Then Call AddToken_Z80(TOKEN_Z80_SBC): GoTo NextWord
         If StrComp(Word, "scf") = 0 Then Call AddToken_Z80(TOKEN_Z80_SCF): GoTo NextWord
@@ -681,13 +714,13 @@ EndWord2:
         If StrComp(Word, "stop") = 0 Then Call AddToken_Keyword(TOKEN_KEYWORD_STOP): GoTo NextWord
         If StrComp(Word, "struct") = 0 Then Call AddToken_Keyword(TOKEN_KEYWORD_STRUCT): GoTo NextWord
         
-    ElseIf Asc1 = 119 Then '--- `w` ---
+    ElseIf Asc1 = W Then '--- `w` ---
         'Keywords
         If StrComp(Word, "word") = 0 Then Call AddToken_Keyword(TOKEN_KEYWORD_WORD): GoTo NextWord
         'There are no `w` registers
         GoTo WordError
         
-    ElseIf Asc1 = 120 Then '--- `x` ---
+    ElseIf Asc1 = X Then '--- `x` ---
         'Z80 instructions
         If StrComp(Word, "xor") = 0 Then Call AddToken_Z80(TOKEN_Z80_XOR): GoTo NextWord
         'TODO: The `x` operator
@@ -746,53 +779,53 @@ EndWord2:
     'Z80 Registers: _
      ----------------------------------------------------------------------------------
     'Ignore anything beginning with a letter before A
-    If Asc1 < 97 Then GoTo WordError
+    If Asc1 < A Then GoTo WordError
     'No register has a first letter higher than S
-    If Asc1 > 115 Then GoTo WordError
+    If Asc1 > S Then GoTo WordError
     'If there's only 1 letter total, then it's obviously a 1-letter register
     If Asc2 = 0 Then GoTo OneLetter
     'If a semi-colon occurs at the second letter, then the register must be 1 letter
-    If Asc2 = 59 Then GoTo OneLetter
+    If Asc2 = SYNTAX_HINT1 Then GoTo OneLetter
     'Also an apostrophe (shadow register) is the same
-    If Asc2 = 39 Then GoTo OneLetter
+    If Asc2 = SYNTAX_HINT2 Then GoTo OneLetter
     
     'If there's only 2 letters in total, it has to be a two-letter register
     If Asc3 = 0 Then GoTo TwoLetters
     'If a semi-colon or apostrophe occurs at the third letter, _
      it could be a two-letter register
-    If Asc3 = 59 Then GoTo TwoLetters
-    If Asc3 = 39 Then GoTo TwoLetters
+    If Asc3 = SYNTAX_HINT1 Then GoTo TwoLetters
+    If Asc3 = SYNTAX_HINT2 Then GoTo TwoLetters
     
     GoTo WordError
 
 OneLetter:
-    If Asc1 = 97 Then Call AddToken_Register(TOKEN_REGISTER_A): GoTo NextWord
-    If Asc1 = 98 Then Call AddToken_Register(TOKEN_REGISTER_B): GoTo NextWord
-    If Asc1 = 99 Then Call AddToken_Register(TOKEN_REGISTER_C): GoTo NextWord
-    If Asc1 = 100 Then Call AddToken_Register(TOKEN_REGISTER_D): GoTo NextWord
-    If Asc1 = 101 Then Call AddToken_Register(TOKEN_REGISTER_E): GoTo NextWord
-    If Asc1 = 104 Then Call AddToken_Register(TOKEN_REGISTER_H): GoTo NextWord
-    If Asc1 = 105 Then Call AddToken_Register(TOKEN_REGISTER_I): GoTo NextWord
-    If Asc1 = 108 Then Call AddToken_Register(TOKEN_REGISTER_L): GoTo NextWord
-    If Asc1 = 114 Then Call AddToken_Register(TOKEN_REGISTER_R): GoTo NextWord
+    If Asc1 = A Then Call AddToken_Register(TOKEN_REGISTER_A): GoTo NextWord
+    If Asc1 = B Then Call AddToken_Register(TOKEN_REGISTER_B): GoTo NextWord
+    If Asc1 = C Then Call AddToken_Register(TOKEN_REGISTER_C): GoTo NextWord
+    If Asc1 = D Then Call AddToken_Register(TOKEN_REGISTER_D): GoTo NextWord
+    If Asc1 = E Then Call AddToken_Register(TOKEN_REGISTER_E): GoTo NextWord
+    If Asc1 = H Then Call AddToken_Register(TOKEN_REGISTER_H): GoTo NextWord
+    If Asc1 = I Then Call AddToken_Register(TOKEN_REGISTER_I): GoTo NextWord
+    If Asc1 = L Then Call AddToken_Register(TOKEN_REGISTER_L): GoTo NextWord
+    If Asc1 = R Then Call AddToken_Register(TOKEN_REGISTER_R): GoTo NextWord
     GoTo WordError
 
 TwoLetters:
-    If Asc1 = 97 Then       '"af"
-        If Asc2 = 102 Then Call AddToken_Register(TOKEN_REGISTER_AF): GoTo NextWord
-    ElseIf Asc1 = 98 Then   '"bc"
-        If Asc2 = 99 Then Call AddToken_Register(TOKEN_REGISTER_BC): GoTo NextWord
-    ElseIf Asc1 = 100 Then  '"de"
-        If Asc2 = 101 Then Call AddToken_Register(TOKEN_REGISTER_DE): GoTo NextWord
-    ElseIf Asc1 = 104 Then  '"hl"
-        If Asc2 = 108 Then Call AddToken_Register(TOKEN_REGISTER_HL): GoTo NextWord
-    ElseIf Asc1 = 105 Then  '"ix"
-        If Asc2 = 120 Then Call AddToken_Register(TOKEN_REGISTER_IX): GoTo NextWord
-        If Asc2 = 121 Then Call AddToken_Register(TOKEN_REGISTER_IY): GoTo NextWord
-    ElseIf Asc1 = 112 Then  '"pc"
-        If Asc2 = 99 Then Call AddToken_Register(TOKEN_REGISTER_PC): GoTo NextWord
-    ElseIf Asc1 = 115 Then  '"sp"
-        If Asc2 = 112 Then Call AddToken_Register(TOKEN_REGISTER_SP): GoTo NextWord
+    If Asc1 = A Then       '"af"
+        If Asc2 = F Then Call AddToken_Register(TOKEN_REGISTER_AF): GoTo NextWord
+    ElseIf Asc1 = B Then   '"bc"
+        If Asc2 = C Then Call AddToken_Register(TOKEN_REGISTER_BC): GoTo NextWord
+    ElseIf Asc1 = D Then  '"de"
+        If Asc2 = E Then Call AddToken_Register(TOKEN_REGISTER_DE): GoTo NextWord
+    ElseIf Asc1 = H Then  '"hl"
+        If Asc2 = L Then Call AddToken_Register(TOKEN_REGISTER_HL): GoTo NextWord
+    ElseIf Asc1 = I Then  '"ix"/"iy"
+        If Asc2 = X Then Call AddToken_Register(TOKEN_REGISTER_IX): GoTo NextWord
+        If Asc2 = Y Then Call AddToken_Register(TOKEN_REGISTER_IY): GoTo NextWord
+    ElseIf Asc1 = P Then  '"pc"
+        If Asc2 = C Then Call AddToken_Register(TOKEN_REGISTER_PC): GoTo NextWord
+    ElseIf Asc1 = S Then  '"sp"
+        If Asc2 = P Then Call AddToken_Register(TOKEN_REGISTER_SP): GoTo NextWord
     End If
     
     '----------------------------------------------------------------------------------

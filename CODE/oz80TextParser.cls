@@ -30,39 +30,26 @@ Option Compare Text
 Private Const SYNTAX_ALPHA = "ABCDEFGHIJKLMNOPQRSTUVQXYZ_"
 Private Const SYNTAX_NUMERIC = "0123456789"
 
-Private Const SYNTAX_COMMENT = "`"
-Private Const SYNTAX_QUOTE = """"
-Private Const SYNTAX_LABEL = ":"
-Private Const SYNTAX_VARIABLE = "#"
-Private Const SYNTAX_MACRO = "@"
-Private Const SYNTAX_FUNCT = "?"
-Private Const SYNTAX_NUMBER_HEX = "$"
-Private Const SYNTAX_NUMBER_BIN = "%"
-Private Const SYNTAX_LIST = ","
-Private Const SYNTAX_PAREN_OPEN = "("
-Private Const SYNTAX_PAREN_CLOSE = ")"
-Private Const SYNTAX_BLOCK_OPEN = "{"
-Private Const SYNTAX_BLOCK_CLOSE = "}"
+Private Const SYNTAX_COMMENT = 96       '`
+Private Const SYNTAX_QUOTE = 34         '"
+Private Const SYNTAX_LABEL = 58         ':
+Private Const SYNTAX_VARIABLE = 35      '#
+Private Const SYNTAX_MACRO = 64         '@
+Private Const SYNTAX_FUNCT = 63         '?
+Private Const SYNTAX_NUMBER_HEX = 36    '$
+Private Const SYNTAX_NUMBER_BIN = 37    '%
+Private Const SYNTAX_LIST = 44          ',
+Private Const SYNTAX_PAREN_OPEN = 40    '(
+Private Const SYNTAX_PAREN_CLOSE = 41   ')
+Private Const SYNTAX_BLOCK_OPEN = 123   '{
+Private Const SYNTAX_BLOCK_CLOSE = 125  '}
 
-Private Const SYNTAX_OPERATOR_ADD = "+"
-Private Const SYNTAX_OPERATOR_SUB = "-"
-Private Const SYNTAX_OPERATOR_MUL = "*"
-Private Const SYNTAX_OPERATOR_DIV = "/"
-Private Const SYNTAX_OPERATOR_POW = "^"
-Private Const SYNTAX_OPERATOR_MOD = "\"
-
-Private Const Operators = _
-    SYNTAX_OPERATOR_ADD & SYNTAX_OPERATOR_SUB & SYNTAX_OPERATOR_MUL & _
-    SYNTAX_OPERATOR_DIV & SYNTAX_OPERATOR_POW & SYNTAX_OPERATOR_MOD
-
-'These characters can break a word without spaces to separate, _
- they also form a word on their own
-Private Const SYNTAX_WORDBREAKS = _
-    SYNTAX_LIST & SYNTAX_PAREN_OPEN & SYNTAX_PAREN_CLOSE & _
-    SYNTAX_BLOCK_OPEN & SYNTAX_BLOCK_CLOSE & Operators
-
-Private Const KEYWORD_DEF = "DEF"
-Private Const KEYWORDS = "|" & KEYWORD_DEF & "|"
+Private Const SYNTAX_OPERATOR_ADD = 43  '+
+Private Const SYNTAX_OPERATOR_SUB = 45  '-
+Private Const SYNTAX_OPERATOR_MUL = 42  '*
+Private Const SYNTAX_OPERATOR_DIV = 47  '/
+Private Const SYNTAX_OPERATOR_POW = 94  '^
+Private Const SYNTAX_OPERATOR_MOD = 92  '\
 
 '--------------------------------------------------------------------------------------
 
@@ -103,6 +90,8 @@ End Sub
 'CLASS Terminate _
  ======================================================================================
 Private Sub Class_Terminate()
+    'Clean up the look up table
+    Erase LowCase
     'Dereference the tokenStream object we were given by the assembler
     Set TokenStream = Nothing
 End Sub
@@ -136,30 +125,6 @@ Private Function Tokenise(ByRef FilePath As String) As OZ80_ERROR
     Dim IsQuote As Boolean
     Dim IsComment As Boolean
     Dim IsCommentMulti As Boolean
-    
-    Dim AscQuote As Long
-    Let AscQuote = AscW(SYNTAX_QUOTE)
-    Dim AscComment As Long
-    Let AscComment = AscW(SYNTAX_COMMENT)
-    Dim AscList As Long
-    Let AscList = AscW(SYNTAX_LIST)
-    Dim AscParenOpen As Long, AscParenClose As Long
-    Let AscParenOpen = AscW(SYNTAX_PAREN_OPEN)
-    Let AscParenClose = AscW(SYNTAX_PAREN_CLOSE)
-    Dim AscBlockOpen As Long, AscBlockClose As Long
-    Let AscBlockOpen = AscW(SYNTAX_BLOCK_OPEN)
-    Let AscBlockClose = AscW(SYNTAX_BLOCK_CLOSE)
-    Dim AscOpAdd As Long, AscOpSub As Long, AscOpMul As Long, _
-        AscOpDiv As Long, AscOpPow As Long, AscOpMod As Long
-    Let AscOpAdd = AscW(SYNTAX_OPERATOR_ADD)
-    Let AscOpSub = AscW(SYNTAX_OPERATOR_SUB)
-    Let AscOpMul = AscW(SYNTAX_OPERATOR_MUL)
-    Let AscOpDiv = AscW(SYNTAX_OPERATOR_DIV)
-    Let AscOpPow = AscW(SYNTAX_OPERATOR_POW)
-    Let AscOpMod = AscW(SYNTAX_OPERATOR_MOD)
-    Dim AscNumHex As Long, AscNumBin As Long
-    Let AscNumHex = AscW(SYNTAX_NUMBER_HEX)
-    Let AscNumBin = AscW(SYNTAX_NUMBER_BIN)
     
     'Read the whole file into a single string _
      ----------------------------------------------------------------------------------
@@ -216,7 +181,7 @@ ReadChar:
         If IsCommentMulti = False Then
             'Is this a multi-line comment? (two backticks)
             If LenB(Word) Then
-                If AscChar = AscComment Then Let IsCommentMulti = True
+                If AscChar = SYNTAX_COMMENT Then Let IsCommentMulti = True
                 GoTo ReadWord
             End If
             'The end of a line ends a single-line comment:
@@ -225,11 +190,11 @@ ReadChar:
             End If
         
         'For multi-line comments, check for backtick:
-        ElseIf AscChar = AscComment Then
+        ElseIf AscChar = SYNTAX_COMMENT Then
             'Check for a second back-tick following
             Let TextPos = TextPos + 1
             Let Char = Mid$(Text, TextPos, 1)
-            If AscW(Char) = AscComment Then
+            If AscW(Char) = SYNTAX_COMMENT Then
                 Let IsComment = False: Let IsCommentMulti = False
                 GoTo ReadWord
             End If
@@ -266,10 +231,10 @@ ReadChar:
         If AscChar = 9 Then GoTo EndWord
         
         'Is this a quote? (in which case, ignore wordbreaks until quote end)
-        If AscChar = AscQuote Then Let IsQuote = True: GoTo NextChar
+        If AscChar = SYNTAX_QUOTE Then Let IsQuote = True: GoTo NextChar
         
         'Check for comment marker
-        If AscChar = AscComment Then
+        If AscChar = SYNTAX_COMMENT Then
             Let IsComment = True
             'If a comment begins at the end of a word without any space to separate, _
              we need to first keep the word before switching to comment parsing
@@ -279,18 +244,18 @@ ReadChar:
         End If
     
         'Symbols that can break a word in the middle without spaces to separate
-        If AscChar = AscList Then GoTo WordBreak
-        If AscChar = AscParenOpen Then GoTo WordBreak
-        If AscChar = AscParenClose Then GoTo WordBreak
-        If AscChar = AscBlockOpen Then GoTo WordBreak
-        If AscChar = AscBlockClose Then GoTo WordBreak
+        If AscChar = SYNTAX_LIST Then GoTo WordBreak
+        If AscChar = SYNTAX_PAREN_OPEN Then GoTo WordBreak
+        If AscChar = SYNTAX_PAREN_CLOSE Then GoTo WordBreak
+        If AscChar = SYNTAX_BLOCK_OPEN Then GoTo WordBreak
+        If AscChar = SYNTAX_BLOCK_CLOSE Then GoTo WordBreak
         
-        If AscChar = AscOpAdd Then GoTo WordBreak
-        If AscChar = AscOpSub Then GoTo WordBreak
-        If AscChar = AscOpMul Then GoTo WordBreak
-        If AscChar = AscOpDiv Then GoTo WordBreak
-        If AscChar = AscOpPow Then GoTo WordBreak
-        If AscChar = AscOpMod Then GoTo WordBreak
+        If AscChar = SYNTAX_OPERATOR_ADD Then GoTo WordBreak
+        If AscChar = SYNTAX_OPERATOR_SUB Then GoTo WordBreak
+        If AscChar = SYNTAX_OPERATOR_MUL Then GoTo WordBreak
+        If AscChar = SYNTAX_OPERATOR_DIV Then GoTo WordBreak
+        If AscChar = SYNTAX_OPERATOR_POW Then GoTo WordBreak
+        If AscChar = SYNTAX_OPERATOR_MOD Then GoTo WordBreak
         
         'Capture letters 2,3 & 4 (for high-speed register validation)
         If LetterIndex < 5 Then
@@ -304,7 +269,7 @@ ReadChar:
     '----------------------------------------------------------------------------------
     Else
         'TODO: handle escape chars, skip tabs and line breaks
-        If AscChar = AscQuote Then Let IsQuote = False: GoTo EndWord
+        If AscChar = SYNTAX_QUOTE Then Let IsQuote = False: GoTo EndWord
         
     End If
     
@@ -341,11 +306,11 @@ EndWord2:
     'Check the first letter of the word to find the right kind of token:
     
     'Comma (very common!)
-    If AscFirst = AscList Then
+    If AscFirst = SYNTAX_LIST Then
         'TODO
     
     'Hexadecimal number?
-    ElseIf AscFirst = AscNumHex Then
+    ElseIf AscFirst = SYNTAX_NUMBER_HEX Then
         'TODO: Tokenise number
         
     ElseIf AscFirst = 97 Then '--- `a` ---
@@ -545,19 +510,19 @@ EndWord2:
         'TODO: The `x` operator
         
     'Block (open)
-    ElseIf AscFirst = AscBlockOpen Then '--- `{` ---
+    ElseIf AscFirst = SYNTAX_BLOCK_OPEN Then '--- `{` ---
         'TODO: Tokenise
     
     'Block (close)
-    ElseIf AscFirst = AscBlockClose Then  '--- `}` ---
+    ElseIf AscFirst = SYNTAX_BLOCK_CLOSE Then  '--- `}` ---
         'TODO: Tokenise
     
     'Parenthesis (open)
-    ElseIf AscFirst = AscParenOpen Then '--- `(` ---
+    ElseIf AscFirst = SYNTAX_PAREN_OPEN Then '--- `(` ---
         'TODO: Tokenise
     
     'Parenthesis (close)
-    ElseIf AscFirst = AscParenClose Then '--- `)` ---
+    ElseIf AscFirst = SYNTAX_PAREN_CLOSE Then '--- `)` ---
         'TODO: Tokenise
     
     'A decimal number?
@@ -565,24 +530,24 @@ EndWord2:
         'TODO: Tokenise number
         
     'Binary number?
-    ElseIf AscFirst = AscNumBin Then '--- `%` ---
+    ElseIf AscFirst = SYNTAX_NUMBER_BIN Then '--- `%` ---
         'TODO: Tokenise number
         
     'String (quote)
-    ElseIf AscFirst = AscQuote Then '--- `"` ---
+    ElseIf AscFirst = SYNTAX_QUOTE Then '--- `"` ---
         'TODO: TokenisE
         
-    ElseIf AscFirst = AscOpAdd Then '--- `+` ---
+    ElseIf AscFirst = SYNTAX_OPERATOR_ADD Then '--- `+` ---
         Call TokenStream.AddToken_Operator(TOKEN_OPERATOR_ADD): GoTo NextWord
-    ElseIf AscFirst = AscOpSub Then '--- `-` ---
+    ElseIf AscFirst = SYNTAX_OPERATOR_SUB Then '--- `-` ---
         Call TokenStream.AddToken_Operator(TOKEN_OPERATOR_SUB): GoTo NextWord
-    ElseIf AscFirst = AscOpMul Then '--- `*` ---
+    ElseIf AscFirst = SYNTAX_OPERATOR_MUL Then '--- `*` ---
         Call TokenStream.AddToken_Operator(TOKEN_OPERATOR_MUL): GoTo NextWord
-    ElseIf AscFirst = AscOpDiv Then '--- `/` ---
+    ElseIf AscFirst = SYNTAX_OPERATOR_DIV Then '--- `/` ---
         Call TokenStream.AddToken_Operator(TOKEN_OPERATOR_DIV): GoTo NextWord
-    ElseIf AscFirst = AscOpPow Then '--- `^` ---
+    ElseIf AscFirst = SYNTAX_OPERATOR_POW Then '--- `^` ---
         Call TokenStream.AddToken_Operator(TOKEN_OPERATOR_POW): GoTo NextWord
-    ElseIf AscFirst = AscOpMod Then '--- `\` ---
+    ElseIf AscFirst = SYNTAX_OPERATOR_MOD Then '--- `\` ---
         Call TokenStream.AddToken_Operator(TOKEN_OPERATOR_MOD): GoTo NextWord
     End If
     

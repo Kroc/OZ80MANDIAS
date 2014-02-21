@@ -12,6 +12,7 @@ Attribute VB_Creatable = True
 Attribute VB_PredeclaredId = False
 Attribute VB_Exposed = False
 Option Explicit
+Option Compare Text
 '======================================================================================
 'OZ80MANDIAS: a Z80 assembler; Copyright (C) Kroc Camen, 2013-14
 'Licenced under a Creative Commons 3.0 Attribution Licence
@@ -95,47 +96,6 @@ Private Const aLF = 13
 
 '--------------------------------------------------------------------------------------
 Public Enum OZ80_TOKEN
-    'This token specifies that the data field is a Z80 mnemonic (`OZ80_MNEMONICS`).
-     'Note that this is only a mnemonic token, not the Z80 opcode (handled by the
-     'assembler) or parameters (handled by the next tokens in the stream)
-    TOKEN_Z80 = &H10
-    
-    'Specifies a Z80 register
-    TOKEN_REGISTER = &H20
-    
-    'OZ80's keywords
-    TOKEN_KEYWORD = &H30
-    
-    'The parser automatically converts hexadecimal/binary numbers, so we only store
-     'a 32-bit long (data field) in the token stream
-    TOKEN_NUMBER = &H40
-    TOKEN_PREFIX = &H41                 'Number prefixes ("K", "KB" & "Kbit")
-    
-    'Specifies an operator
-    TOKEN_OPERATOR = &H50
-    
-    'Grouping: (i.e. parenthesis, braces)
-    TOKEN_PARENOPEN = &H60
-    TOKEN_PARENCLOSE = &H61
-    TOKEN_BLOCKOPEN = &H62
-    TOKEN_BLOCKCLOSE = &H63
-    
-    'A list is a series of 1 or more expressions separated by commas,
-     'i.e.parameter lists
-    TOKEN_LIST = &H70
-    TOKEN_NEXT = &H71                   'Sandwiched between list items, i.e. ","
-    
-    'Debug tokens:
-    'These allow us to keep track of where the token originated in the source file(s)
-     'so that errors in parsing the tokens can print out friendly error messages
-    TOKEN_FILE = &HF0                   'specify a change in file name
-    TOKEN_LINE = &HF1                   'specify a change in line number
-    TOKEN_COL = &HF2                    'specify a change in column number
-End Enum
-
-'Z80 Assembly Mnemonics: _
- --------------------------------------------------------------------------------------
-Public Enum OZ80_TOKEN_Z80
     'These are just the mnemonic tokens -- the assembler itself checks the
      'parameters and determines which opcode should be used
     TOKEN_Z80_ADC = &H1                 'Add with Carry
@@ -206,91 +166,86 @@ Public Enum OZ80_TOKEN_Z80
     TOKEN_Z80_SRL = &H42                'Shift Right Logical
     TOKEN_Z80_SUB = &H43                'Subtract
     TOKEN_Z80_XOR = &H44                'Bitwise XOR
-End Enum
+    
+    'Specifies a Z80 register
+    TOKEN_REGISTER_A = &H50             'Accumulator
+    TOKEN_REGISTER_B = &H51
+    TOKEN_REGISTER_C = &H52
+    TOKEN_REGISTER_D = &H53
+    TOKEN_REGISTER_E = &H54
+    TOKEN_REGISTER_F = &H55             'Flags register
+    TOKEN_REGISTER_H = &H56
+    TOKEN_REGISTER_I = &H57             'Interrupt - not to be confused with IX & IY
+    TOKEN_REGISTER_L = &H58
+    TOKEN_REGISTER_R = &H59             'Refresh register (pseudo-random)
 
-'Z80 Registers: _
- --------------------------------------------------------------------------------------
-Public Enum OZ80_TOKEN_REGISTER
-    TOKEN_REGISTER_A = 1                'Accumulator
-    TOKEN_REGISTER_B = 2
-    TOKEN_REGISTER_C = 3
-    TOKEN_REGISTER_D = 4
-    TOKEN_REGISTER_E = 5
-    TOKEN_REGISTER_F = 6                'Flags register
-    TOKEN_REGISTER_H = 7
-    TOKEN_REGISTER_I = 8                'Interrupt - not to be confused with IX & IY
-    TOKEN_REGISTER_L = 9
-    TOKEN_REGISTER_R = 10               'Refresh register (pseudo-random)
-
-    TOKEN_REGISTER_AF = 11
-    TOKEN_REGISTER_BC = 12
-    TOKEN_REGISTER_DE = 13
-    TOKEN_REGISTER_HL = 14
-    TOKEN_REGISTER_IX = 17
-    TOKEN_REGISTER_IY = 20
+    TOKEN_REGISTER_AF = &H5A
+    TOKEN_REGISTER_BC = &H5B
+    TOKEN_REGISTER_DE = &H5C
+    TOKEN_REGISTER_HL = &H5D
+    TOKEN_REGISTER_IX = &H5E
+    TOKEN_REGISTER_IY = &H5F
+    
+    TOKEN_REGISTER_SP = &H60            'Stack pointer
+    TOKEN_REGISTER_PC = &H61            'Program counter
     
     'Undocumented Z80 instructions can access the 8-bit halves of IX & IY
-    TOKEN_REGISTER_IXL = 15
-    TOKEN_REGISTER_IXH = 16
-    TOKEN_REGISTER_IYL = 18
-    TOKEN_REGISTER_IYH = 19
-
-    TOKEN_REGISTER_SP = 21              'Stack pointer
-    TOKEN_REGISTER_PC = 22              'Program counter
-End Enum
-
-'Keywords: _
- --------------------------------------------------------------------------------------
-Public Enum OZ80_TOKEN_KEYWORD
-    TOKEN_KEYWORD_AT = 1
-    TOKEN_KEYWORD_AS = 2
-    TOKEN_KEYWORD_BANK = 3
-    TOKEN_KEYWORD_BINARY = 4
-    TOKEN_KEYWORD_BYTE = 5
-    TOKEN_KEYWORD_DATA = 6
-    TOKEN_KEYWORD_DEF = 7
-    TOKEN_KEYWORD_DEFAULT = 8
-    TOKEN_KEYWORD_FILL = 9
-    TOKEN_KEYWORD_INCLUDE = 10
-    TOKEN_KEYWORD_LENGTH = 11
-    TOKEN_KEYWORD_OBJECT = 12
-    TOKEN_KEYWORD_PARAMS = 13
-    TOKEN_KEYWORD_PROC = 14
-    TOKEN_KEYWORD_RETURN = 15
-    TOKEN_KEYWORD_SLOT = 16
-    TOKEN_KEYWORD_START = 17
-    TOKEN_KEYWORD_STOP = 18
-    TOKEN_KEYWORD_STRUCT = 19
-    TOKEN_KEYWORD_WORD = 20
-End Enum
-
-'Number Prefixes: _
- --------------------------------------------------------------------------------------
-Public Enum OZ80_TOKEN_PREFIX
-    TOKEN_PREFIX_K = 1                  'x1000
-    TOKEN_PREFIX_KB = 2                 'x1024
-    TOKEN_PREFIX_KBIT = 3               'x128 (1024 bits)
-End Enum
-
-'Operators: _
- --------------------------------------------------------------------------------------
-Public Enum OZ80_TOKEN_OPERATOR
-    TOKEN_OPERATOR_ADD = 1              'Add "+"
-    TOKEN_OPERATOR_SUB = 2              'Subtract "-"
-    TOKEN_OPERATOR_MUL = 3              'Multiply "*"
-    TOKEN_OPERATOR_DIV = 4              'Divide "/"
-    TOKEN_OPERATOR_POW = 5              'Power "^"
-    TOKEN_OPERATOR_MOD = 6              'Modulus "\"
-    TOKEN_OPERATOR_REP = 7              'Repeat "x"
-End Enum
-
-'Grouping: (i.e. parenthesis, braces) _
- --------------------------------------------------------------------------------------
-Public Enum OZ80_TOKEN_GROUP
-    TOKEN_GROUP_PARENOPEN = OZ80_TOKEN.TOKEN_PARENOPEN
-    TOKEN_GROUP_PARENCLOSE = OZ80_TOKEN.TOKEN_PARENCLOSE
-    TOKEN_GROUP_BLOCKOPEN = OZ80_TOKEN.TOKEN_BLOCKOPEN
-    TOKEN_GROUP_BLOCKCLOSE = OZ80_TOKEN.TOKEN_BLOCKCLOSE
+    TOKEN_REGISTER_IXL = &H62
+    TOKEN_REGISTER_IXH = &H63
+    TOKEN_REGISTER_IYL = &H64
+    TOKEN_REGISTER_IYH = &H65
+    
+    'OZ80's keywords
+    TOKEN_KEYWORD_AT = &H70
+    TOKEN_KEYWORD_AS = &H71
+    TOKEN_KEYWORD_BANK = &H72
+    TOKEN_KEYWORD_BINARY = &H73
+    TOKEN_KEYWORD_BYTE = &H74
+    TOKEN_KEYWORD_DATA = &H75
+    TOKEN_KEYWORD_DEF = &H76
+    TOKEN_KEYWORD_DEFAULT = &H77
+    TOKEN_KEYWORD_FILL = &H78
+    TOKEN_KEYWORD_INCLUDE = &H79
+    TOKEN_KEYWORD_LENGTH = &H7A
+    TOKEN_KEYWORD_OBJECT = &H7B
+    TOKEN_KEYWORD_PARAMS = &H7C
+    TOKEN_KEYWORD_PROC = &H7D
+    TOKEN_KEYWORD_RETURN = &H7E
+    TOKEN_KEYWORD_SLOT = &H7F
+    TOKEN_KEYWORD_START = &H80
+    TOKEN_KEYWORD_STOP = &H81
+    TOKEN_KEYWORD_STRUCT = &H82
+    TOKEN_KEYWORD_WORD = &H83
+    
+    'The parser automatically converts hexadecimal/binary numbers, so we only store
+     'a 32-bit long (data field) in the token stream
+    TOKEN_NUMBER = &H90
+    'Number prefixes ("K", "KB" & "Kbit")
+    TOKEN_PREFIX_K = &H91               'x1000
+    TOKEN_PREFIX_KB = &H92              'x1024
+    TOKEN_PREFIX_KBIT = &H93            'x128 (1024 bits)
+    
+    'Specifies an operator
+    TOKEN_OPERATOR_ADD = &HA0           'Add "+"
+    TOKEN_OPERATOR_SUB = &HA1           'Subtract "-"
+    TOKEN_OPERATOR_MUL = &HA2           'Multiply "*"
+    TOKEN_OPERATOR_DIV = &HA3           'Divide "/"
+    TOKEN_OPERATOR_POW = &HA4           'Power "^"
+    TOKEN_OPERATOR_MOD = &HA5           'Modulus "\"
+    TOKEN_OPERATOR_REP = &HA6           'Repeat "x"
+    
+    'Grouping: (i.e. parenthesis, braces)
+    TOKEN_PARENOPEN = &HB0
+    TOKEN_PARENCLOSE = &HB1
+    TOKEN_BLOCKOPEN = &HB2
+    TOKEN_BLOCKCLOSE = &HB3
+    
+    'A list is a series of 1 or more expressions separated by commas,
+     'i.e.parameter lists
+    TOKEN_LIST = &HC0
+    TOKEN_NEXT = &HC1                   'Sandwiched between list items, i.e. ","
+    
+    TOKEN_QUOTE = &HD0
 End Enum
 
 '/// DEFS /////////////////////////////////////////////////////////////////////////////
@@ -337,48 +292,6 @@ Private Sub Class_Terminate()
 End Sub
 
 '/// PUBLIC INTERFACE /////////////////////////////////////////////////////////////////
-
-'AddToken_Z80 : Add a Z80 instruction to the stream _
- ======================================================================================
-Public Sub AddToken_Z80(ByRef Token As OZ80_TOKEN_Z80)
-    Call Add(OZ80_TOKEN.TOKEN_Z80)      'Add a byte to say this is a Z80 instructions
-    Call Add(Token)                     'And add the Z80 instruction token
-End Sub
-
-'AddToken_Register : Add a Z80 register to the stream _
- ======================================================================================
-Public Sub AddToken_Register(ByRef Token As OZ80_TOKEN_REGISTER)
-    Call Add(OZ80_TOKEN.TOKEN_REGISTER) 'Add a byte to say this is a Z80 register
-    Call Add(Token)                     'And add the register token
-End Sub
-
-'AddToken_Keyword : Add an OZ80 keyword to the stream _
- ======================================================================================
-Public Sub AddToken_Keyword(ByRef Token As OZ80_TOKEN_KEYWORD)
-    Call Add(OZ80_TOKEN.TOKEN_KEYWORD)  'Add a byte to say this is a keyword
-    Call Add(Token)                     'And add the keyword token
-End Sub
-
-'AddToken_Prefix : Add a number prefix to the stream _
- ======================================================================================
-Public Sub AddToken_Prefix(ByRef Token As OZ80_TOKEN_PREFIX)
-    Call Add(OZ80_TOKEN.TOKEN_PREFIX)   'Add a byte to say this is a number prefix
-    Call Add(Token)                     'And add the prefix token
-End Sub
-
-'AddToken_Operator : Add an operator to the stream _
- ======================================================================================
-Public Sub AddToken_Operator(ByRef Token As OZ80_TOKEN_OPERATOR)
-    Call Add(OZ80_TOKEN.TOKEN_OPERATOR) 'Add a byte to say this is an OZ80 operator
-    Call Add(Token)                     'And add the operator token
-End Sub
-
-'AddToken_Group : Grouping, i.e. parenthesis, braces _
- ======================================================================================
-Public Sub AddToken_Group(ByRef Token As OZ80_TOKEN_GROUP)
-    'These tokens don't require any data, just a single token is needed
-    Call Add(Token)
-End Sub
 
 'Tokenise : Break a file into all its individual words and convert to machine tokens _
  ======================================================================================
@@ -558,7 +471,7 @@ WordBreak:
     'If the word is longer than one character, then save the current character _
      for use in the next word. i.e. when a comma is reached, process the text _
      before the comma as a word, and take the comma as the next word
-    If LenB(Word) Then GoTo EndWord2
+    If LenB(Word) Then Let TextPos = TextPos - 1: GoTo EndWord2
     Let Word = Word & ChrW$(AscChar)
     
 EndWord:
@@ -571,13 +484,15 @@ EndWord2:
     Dim WordLen As Long
     Let WordLen = (WordEnd - WordBegin) + 1
     
+    Let Asc1 = LowCase(Data(WordBegin))
+    
     'Tokenise the word: _
      ----------------------------------------------------------------------------------
     'Check the first letter of the word to find the right kind of token:
     
     'Comma (very common!)
     If Asc1 = SYNTAX_LIST Then
-        'TODO
+        Call Add(OZ80_TOKEN.TOKEN_LIST)
         GoTo NextWord
     
     'Hexadecimal number?
@@ -603,187 +518,187 @@ EndWord2:
         
     ElseIf Asc1 = A Then '--- `a` ---
         'Z80 instructions
-        If StrComp(Word, "adc") = 0 Then Call AddToken_Z80(TOKEN_Z80_ADC): GoTo NextWord
-        If StrComp(Word, "add") = 0 Then Call AddToken_Z80(TOKEN_Z80_ADD): GoTo NextWord
-        If StrComp(Word, "and") = 0 Then Call AddToken_Z80(TOKEN_Z80_AND): GoTo NextWord
+        If StrComp(Word, "adc") = 0 Then Call Add(TOKEN_Z80_ADC): GoTo NextWord
+        If StrComp(Word, "add") = 0 Then Call Add(TOKEN_Z80_ADD): GoTo NextWord
+        If StrComp(Word, "and") = 0 Then Call Add(TOKEN_Z80_AND): GoTo NextWord
         'Keywords
-        If StrComp(Word, "as") = 0 Then Call AddToken_Keyword(TOKEN_KEYWORD_AS): GoTo NextWord
-        If StrComp(Word, "at") = 0 Then Call AddToken_Keyword(TOKEN_KEYWORD_AT): GoTo NextWord
+        If StrComp(Word, "as") = 0 Then Call Add(TOKEN_KEYWORD_AS): GoTo NextWord
+        If StrComp(Word, "at") = 0 Then Call Add(TOKEN_KEYWORD_AT): GoTo NextWord
          
     ElseIf Asc1 = B Then '--- `b` ---
         'Z80 instructions
-        If StrComp(Word, "bit") = 0 Then Call AddToken_Z80(TOKEN_Z80_BIT): GoTo NextWord
+        If StrComp(Word, "bit") = 0 Then Call Add(TOKEN_Z80_BIT): GoTo NextWord
         'Keywords
-        If StrComp(Word, "bank") = 0 Then Call AddToken_Keyword(TOKEN_KEYWORD_BANK): GoTo NextWord
-        If StrComp(Word, "binary") = 0 Then Call AddToken_Keyword(TOKEN_KEYWORD_BINARY): GoTo NextWord
-        If StrComp(Word, "byte") = 0 Then Call AddToken_Keyword(TOKEN_KEYWORD_BYTE): GoTo NextWord
+        If StrComp(Word, "bank") = 0 Then Call Add(TOKEN_KEYWORD_BANK): GoTo NextWord
+        If StrComp(Word, "binary") = 0 Then Call Add(TOKEN_KEYWORD_BINARY): GoTo NextWord
+        If StrComp(Word, "byte") = 0 Then Call Add(TOKEN_KEYWORD_BYTE): GoTo NextWord
         
     ElseIf Asc1 = C Then '--- `c` ---
         'Z80 instructions
-        If StrComp(Word, "call") = 0 Then Call AddToken_Z80(TOKEN_Z80_CALL): GoTo NextWord
-        If StrComp(Word, "ccf") = 0 Then Call AddToken_Z80(TOKEN_Z80_CCF): GoTo NextWord
-        If StrComp(Word, "cp") = 0 Then Call AddToken_Z80(TOKEN_Z80_CP): GoTo NextWord
-        If StrComp(Word, "cpd") = 0 Then Call AddToken_Z80(TOKEN_Z80_CPD): GoTo NextWord
-        If StrComp(Word, "cpdr") = 0 Then Call AddToken_Z80(TOKEN_Z80_CPDR): GoTo NextWord
-        If StrComp(Word, "cpi") = 0 Then Call AddToken_Z80(TOKEN_Z80_CPI): GoTo NextWord
-        If StrComp(Word, "cpir") = 0 Then Call AddToken_Z80(TOKEN_Z80_CPIR): GoTo NextWord
-        If StrComp(Word, "cpl") = 0 Then Call AddToken_Z80(TOKEN_Z80_CPL): GoTo NextWord
+        If StrComp(Word, "call") = 0 Then Call Add(TOKEN_Z80_CALL): GoTo NextWord
+        If StrComp(Word, "ccf") = 0 Then Call Add(TOKEN_Z80_CCF): GoTo NextWord
+        If StrComp(Word, "cp") = 0 Then Call Add(TOKEN_Z80_CP): GoTo NextWord
+        If StrComp(Word, "cpd") = 0 Then Call Add(TOKEN_Z80_CPD): GoTo NextWord
+        If StrComp(Word, "cpdr") = 0 Then Call Add(TOKEN_Z80_CPDR): GoTo NextWord
+        If StrComp(Word, "cpi") = 0 Then Call Add(TOKEN_Z80_CPI): GoTo NextWord
+        If StrComp(Word, "cpir") = 0 Then Call Add(TOKEN_Z80_CPIR): GoTo NextWord
+        If StrComp(Word, "cpl") = 0 Then Call Add(TOKEN_Z80_CPL): GoTo NextWord
         
     ElseIf Asc1 = D Then '--- `d` ---
         'Z80 instructions
-        If StrComp(Word, "daa") = 0 Then Call AddToken_Z80(TOKEN_Z80_DAA): GoTo NextWord
-        If StrComp(Word, "dec") = 0 Then Call AddToken_Z80(TOKEN_Z80_DEC): GoTo NextWord
-        If StrComp(Word, "di") = 0 Then Call AddToken_Z80(TOKEN_Z80_DI): GoTo NextWord
-        If StrComp(Word, "djnz") = 0 Then Call AddToken_Z80(TOKEN_Z80_DJNZ): GoTo NextWord
+        If StrComp(Word, "daa") = 0 Then Call Add(TOKEN_Z80_DAA): GoTo NextWord
+        If StrComp(Word, "dec") = 0 Then Call Add(TOKEN_Z80_DEC): GoTo NextWord
+        If StrComp(Word, "di") = 0 Then Call Add(TOKEN_Z80_DI): GoTo NextWord
+        If StrComp(Word, "djnz") = 0 Then Call Add(TOKEN_Z80_DJNZ): GoTo NextWord
         'Keywords
-        If StrComp(Word, "data") = 0 Then Call AddToken_Keyword(TOKEN_KEYWORD_DATA): GoTo NextWord
-        If StrComp(Word, "def") = 0 Then Call AddToken_Keyword(TOKEN_KEYWORD_DEF): GoTo NextWord
-        If StrComp(Word, "default") = 0 Then Call AddToken_Keyword(TOKEN_KEYWORD_DEFAULT): GoTo NextWord
+        If StrComp(Word, "data") = 0 Then Call Add(TOKEN_KEYWORD_DATA): GoTo NextWord
+        If StrComp(Word, "def") = 0 Then Call Add(TOKEN_KEYWORD_DEF): GoTo NextWord
+        If StrComp(Word, "default") = 0 Then Call Add(TOKEN_KEYWORD_DEFAULT): GoTo NextWord
         
     ElseIf Asc1 = E Then '--- `e` ---
         'Z80 instructions
-        If StrComp(Word, "ei") = 0 Then Call AddToken_Z80(TOKEN_Z80_EI): GoTo NextWord
-        If StrComp(Word, "ex") = 0 Then Call AddToken_Z80(TOKEN_Z80_EX): GoTo NextWord
-        If StrComp(Word, "exx") = 0 Then Call AddToken_Z80(TOKEN_Z80_EXX): GoTo NextWord
+        If StrComp(Word, "ei") = 0 Then Call Add(TOKEN_Z80_EI): GoTo NextWord
+        If StrComp(Word, "ex") = 0 Then Call Add(TOKEN_Z80_EX): GoTo NextWord
+        If StrComp(Word, "exx") = 0 Then Call Add(TOKEN_Z80_EXX): GoTo NextWord
     
     ElseIf Asc1 = F Then '--- `f` ---
         'Keywords
-        If StrComp(Word, "fill") = 0 Then Call AddToken_Keyword(TOKEN_KEYWORD_FILL): GoTo NextWord
+        If StrComp(Word, "fill") = 0 Then Call Add(TOKEN_KEYWORD_FILL): GoTo NextWord
         'You can't refer to the `f` register directly (only `af`)
         GoTo WordError
         
     ElseIf Asc1 = H Then '--- `h` ---
         'Z80 instructions
-        If StrComp(Word, "halt") = 0 Then Call AddToken_Z80(TOKEN_Z80_HALT): GoTo NextWord
+        If StrComp(Word, "halt") = 0 Then Call Add(TOKEN_Z80_HALT): GoTo NextWord
         
     ElseIf Asc1 = i Then '--- `i` ---
         'Z80 instructions
-        If StrComp(Word, "im") = 0 Then Call AddToken_Z80(TOKEN_Z80_IM): GoTo NextWord
-        If StrComp(Word, "in") = 0 Then Call AddToken_Z80(TOKEN_Z80_IN): GoTo NextWord
-        If StrComp(Word, "inc") = 0 Then Call AddToken_Z80(TOKEN_Z80_INC): GoTo NextWord
-        If StrComp(Word, "ind") = 0 Then Call AddToken_Z80(TOKEN_Z80_IND): GoTo NextWord
-        If StrComp(Word, "indr") = 0 Then Call AddToken_Z80(TOKEN_Z80_INDR): GoTo NextWord
-        If StrComp(Word, "ini") = 0 Then Call AddToken_Z80(TOKEN_Z80_INI): GoTo NextWord
-        If StrComp(Word, "inir") = 0 Then Call AddToken_Z80(TOKEN_Z80_INIR): GoTo NextWord
+        If StrComp(Word, "im") = 0 Then Call Add(TOKEN_Z80_IM): GoTo NextWord
+        If StrComp(Word, "in") = 0 Then Call Add(TOKEN_Z80_IN): GoTo NextWord
+        If StrComp(Word, "inc") = 0 Then Call Add(TOKEN_Z80_INC): GoTo NextWord
+        If StrComp(Word, "ind") = 0 Then Call Add(TOKEN_Z80_IND): GoTo NextWord
+        If StrComp(Word, "indr") = 0 Then Call Add(TOKEN_Z80_INDR): GoTo NextWord
+        If StrComp(Word, "ini") = 0 Then Call Add(TOKEN_Z80_INI): GoTo NextWord
+        If StrComp(Word, "inir") = 0 Then Call Add(TOKEN_Z80_INIR): GoTo NextWord
         'Keywords
-        If StrComp(Word, "include") = 0 Then Call AddToken_Keyword(TOKEN_KEYWORD_INCLUDE): GoTo NextWord
+        If StrComp(Word, "include") = 0 Then Call Add(TOKEN_KEYWORD_INCLUDE): GoTo NextWord
         
     ElseIf Asc1 = J Then '--- `j` ---
         'Z80 instructions
-        If StrComp(Word, "jp") = 0 Then Call AddToken_Z80(TOKEN_Z80_JP): GoTo NextWord
-        If StrComp(Word, "jr") = 0 Then Call AddToken_Z80(TOKEN_Z80_JR): GoTo NextWord
+        If StrComp(Word, "jp") = 0 Then Call Add(TOKEN_Z80_JP): GoTo NextWord
+        If StrComp(Word, "jr") = 0 Then Call Add(TOKEN_Z80_JR): GoTo NextWord
         'There are no `j` registers
         GoTo WordError
         
     ElseIf Asc1 = K Then '--- `k` ---
         'Number suffixes K, KB & Kbit
         If Asc2 = 0 Then    'Just `K`
-            Call AddToken_Prefix(TOKEN_PREFIX_K): GoTo NextWord
+            Call Add(TOKEN_PREFIX_K): GoTo NextWord
         'B must be next for `KB` and `Kbit`
         ElseIf Asc2 = B Then
             'If only two letters, then it's `KB`
-            If Asc3 = 0 Then Call AddToken_Prefix(TOKEN_PREFIX_KB): GoTo NextWord
+            If Asc3 = 0 Then Call Add(TOKEN_PREFIX_KB): GoTo NextWord
             'verify ...`Kbit`, we don't have Asc5 so avoid things like `Kbitty`
-            If StrComp(Word, "kbit") = 0 Then Call AddToken_Prefix(TOKEN_PREFIX_KBIT): GoTo NextWord
+            If StrComp(Word, "kbit") = 0 Then Call Add(TOKEN_PREFIX_KBIT): GoTo NextWord
         End If
         'There are no `k` registers
         GoTo WordError
         
     ElseIf Asc1 = L Then '--- `l` ---
         'Z80 instructions
-        If StrComp(Word, "ld") = 0 Then Call AddToken_Z80(TOKEN_Z80_LD): GoTo NextWord
-        If StrComp(Word, "ldd") = 0 Then Call AddToken_Z80(TOKEN_Z80_LDD): GoTo NextWord
-        If StrComp(Word, "lddr") = 0 Then Call AddToken_Z80(TOKEN_Z80_LDDR): GoTo NextWord
-        If StrComp(Word, "ldi") = 0 Then Call AddToken_Z80(TOKEN_Z80_LDI): GoTo NextWord
-        If StrComp(Word, "ldir") = 0 Then Call AddToken_Z80(TOKEN_Z80_LDIR): GoTo NextWord
+        If StrComp(Word, "ld") = 0 Then Call Add(TOKEN_Z80_LD): GoTo NextWord
+        If StrComp(Word, "ldd") = 0 Then Call Add(TOKEN_Z80_LDD): GoTo NextWord
+        If StrComp(Word, "lddr") = 0 Then Call Add(TOKEN_Z80_LDDR): GoTo NextWord
+        If StrComp(Word, "ldi") = 0 Then Call Add(TOKEN_Z80_LDI): GoTo NextWord
+        If StrComp(Word, "ldir") = 0 Then Call Add(TOKEN_Z80_LDIR): GoTo NextWord
         'Keywords
-        If StrComp(Word, "length") = 0 Then Call AddToken_Keyword(TOKEN_KEYWORD_LENGTH): GoTo NextWord
+        If StrComp(Word, "length") = 0 Then Call Add(TOKEN_KEYWORD_LENGTH): GoTo NextWord
     
     ElseIf Asc1 = N Then '--- `n` ---
         'Z80 instructions
-        If StrComp(Word, "neg") = 0 Then Call AddToken_Z80(TOKEN_Z80_NEG): GoTo NextWord
-        If StrComp(Word, "nop") = 0 Then Call AddToken_Z80(TOKEN_Z80_NOP): GoTo NextWord
+        If StrComp(Word, "neg") = 0 Then Call Add(TOKEN_Z80_NEG): GoTo NextWord
+        If StrComp(Word, "nop") = 0 Then Call Add(TOKEN_Z80_NOP): GoTo NextWord
         'There are no `n` registers
         GoTo WordError
         
     ElseIf Asc1 = O Then '--- `o` ---
         'Z80 instructions
-        If StrComp(Word, "or") = 0 Then Call AddToken_Z80(TOKEN_Z80_OR): GoTo NextWord
-        If StrComp(Word, "out") = 0 Then Call AddToken_Z80(TOKEN_Z80_OUT): GoTo NextWord
-        If StrComp(Word, "outd") = 0 Then Call AddToken_Z80(TOKEN_Z80_OUTD): GoTo NextWord
-        If StrComp(Word, "outdr") = 0 Then Call AddToken_Z80(TOKEN_Z80_OUTDR): GoTo NextWord
-        If StrComp(Word, "outi") = 0 Then Call AddToken_Z80(TOKEN_Z80_OUTI): GoTo NextWord
-        If StrComp(Word, "outir") = 0 Then Call AddToken_Z80(TOKEN_Z80_OUTIR): GoTo NextWord
+        If StrComp(Word, "or") = 0 Then Call Add(TOKEN_Z80_OR): GoTo NextWord
+        If StrComp(Word, "out") = 0 Then Call Add(TOKEN_Z80_OUT): GoTo NextWord
+        If StrComp(Word, "outd") = 0 Then Call Add(TOKEN_Z80_OUTD): GoTo NextWord
+        If StrComp(Word, "outdr") = 0 Then Call Add(TOKEN_Z80_OUTDR): GoTo NextWord
+        If StrComp(Word, "outi") = 0 Then Call Add(TOKEN_Z80_OUTI): GoTo NextWord
+        If StrComp(Word, "outir") = 0 Then Call Add(TOKEN_Z80_OUTIR): GoTo NextWord
         'Keywords
-        If StrComp(Word, "object") = 0 Then Call AddToken_Keyword(TOKEN_KEYWORD_OBJECT): GoTo NextWord
+        If StrComp(Word, "object") = 0 Then Call Add(TOKEN_KEYWORD_OBJECT): GoTo NextWord
         'There are no `o` registers
         GoTo WordError
         
     ElseIf Asc1 = P Then '--- `p` ---
         'Z80 instructions
-        If StrComp(Word, "pop") = 0 Then Call AddToken_Z80(TOKEN_Z80_POP): GoTo NextWord
-        If StrComp(Word, "push") = 0 Then Call AddToken_Z80(TOKEN_Z80_PUSH): GoTo NextWord
+        If StrComp(Word, "pop") = 0 Then Call Add(TOKEN_Z80_POP): GoTo NextWord
+        If StrComp(Word, "push") = 0 Then Call Add(TOKEN_Z80_PUSH): GoTo NextWord
         'Keywords
-        If StrComp(Word, "params") = 0 Then Call AddToken_Keyword(TOKEN_KEYWORD_PARAMS): GoTo NextWord
-        If StrComp(Word, "proc") = 0 Then Call AddToken_Keyword(TOKEN_KEYWORD_PROC): GoTo NextWord
+        If StrComp(Word, "params") = 0 Then Call Add(TOKEN_KEYWORD_PARAMS): GoTo NextWord
+        If StrComp(Word, "proc") = 0 Then Call Add(TOKEN_KEYWORD_PROC): GoTo NextWord
         
     ElseIf Asc1 = R Then '--- `r` ---
         'Z80 instructions
-        If StrComp(Word, "res") = 0 Then Call AddToken_Z80(TOKEN_Z80_RES): GoTo NextWord
-        If StrComp(Word, "ret") = 0 Then Call AddToken_Z80(TOKEN_Z80_RET): GoTo NextWord
-        If StrComp(Word, "reti") = 0 Then Call AddToken_Z80(TOKEN_Z80_RETI): GoTo NextWord
-        If StrComp(Word, "retn") = 0 Then Call AddToken_Z80(TOKEN_Z80_RETN): GoTo NextWord
-        If StrComp(Word, "rla") = 0 Then Call AddToken_Z80(TOKEN_Z80_RLA): GoTo NextWord
-        If StrComp(Word, "rl") = 0 Then Call AddToken_Z80(TOKEN_Z80_RL): GoTo NextWord
-        If StrComp(Word, "rlca") = 0 Then Call AddToken_Z80(TOKEN_Z80_RLCA): GoTo NextWord
-        If StrComp(Word, "rlc") = 0 Then Call AddToken_Z80(TOKEN_Z80_RLC): GoTo NextWord
-        If StrComp(Word, "rld") = 0 Then Call AddToken_Z80(TOKEN_Z80_RLD): GoTo NextWord
-        If StrComp(Word, "rra") = 0 Then Call AddToken_Z80(TOKEN_Z80_RRA): GoTo NextWord
-        If StrComp(Word, "rr") = 0 Then Call AddToken_Z80(TOKEN_Z80_RR): GoTo NextWord
-        If StrComp(Word, "rrca") = 0 Then Call AddToken_Z80(TOKEN_Z80_RRCA): GoTo NextWord
-        If StrComp(Word, "rrc") = 0 Then Call AddToken_Z80(TOKEN_Z80_RRC): GoTo NextWord
-        If StrComp(Word, "rrd") = 0 Then Call AddToken_Z80(TOKEN_Z80_RRD): GoTo NextWord
-        If StrComp(Word, "rst") = 0 Then Call AddToken_Z80(TOKEN_Z80_RST): GoTo NextWord
+        If StrComp(Word, "res") = 0 Then Call Add(TOKEN_Z80_RES): GoTo NextWord
+        If StrComp(Word, "ret") = 0 Then Call Add(TOKEN_Z80_RET): GoTo NextWord
+        If StrComp(Word, "reti") = 0 Then Call Add(TOKEN_Z80_RETI): GoTo NextWord
+        If StrComp(Word, "retn") = 0 Then Call Add(TOKEN_Z80_RETN): GoTo NextWord
+        If StrComp(Word, "rla") = 0 Then Call Add(TOKEN_Z80_RLA): GoTo NextWord
+        If StrComp(Word, "rl") = 0 Then Call Add(TOKEN_Z80_RL): GoTo NextWord
+        If StrComp(Word, "rlca") = 0 Then Call Add(TOKEN_Z80_RLCA): GoTo NextWord
+        If StrComp(Word, "rlc") = 0 Then Call Add(TOKEN_Z80_RLC): GoTo NextWord
+        If StrComp(Word, "rld") = 0 Then Call Add(TOKEN_Z80_RLD): GoTo NextWord
+        If StrComp(Word, "rra") = 0 Then Call Add(TOKEN_Z80_RRA): GoTo NextWord
+        If StrComp(Word, "rr") = 0 Then Call Add(TOKEN_Z80_RR): GoTo NextWord
+        If StrComp(Word, "rrca") = 0 Then Call Add(TOKEN_Z80_RRCA): GoTo NextWord
+        If StrComp(Word, "rrc") = 0 Then Call Add(TOKEN_Z80_RRC): GoTo NextWord
+        If StrComp(Word, "rrd") = 0 Then Call Add(TOKEN_Z80_RRD): GoTo NextWord
+        If StrComp(Word, "rst") = 0 Then Call Add(TOKEN_Z80_RST): GoTo NextWord
         'Keywords
-        If StrComp(Word, "return") = 0 Then Call AddToken_Keyword(TOKEN_KEYWORD_RETURN): GoTo NextWord
+        If StrComp(Word, "return") = 0 Then Call Add(TOKEN_KEYWORD_RETURN): GoTo NextWord
         
     ElseIf Asc1 = S Then '--- `s` ---
         'Z80 instructions
-        If StrComp(Word, "sbc") = 0 Then Call AddToken_Z80(TOKEN_Z80_SBC): GoTo NextWord
-        If StrComp(Word, "scf") = 0 Then Call AddToken_Z80(TOKEN_Z80_SCF): GoTo NextWord
-        If StrComp(Word, "set") = 0 Then Call AddToken_Z80(TOKEN_Z80_SET): GoTo NextWord
-        If StrComp(Word, "sla") = 0 Then Call AddToken_Z80(TOKEN_Z80_SLA): GoTo NextWord
-        If StrComp(Word, "sra") = 0 Then Call AddToken_Z80(TOKEN_Z80_SRA): GoTo NextWord
-        If StrComp(Word, "sll") = 0 Then Call AddToken_Z80(TOKEN_Z80_SLL): GoTo NextWord
-        If StrComp(Word, "srl") = 0 Then Call AddToken_Z80(TOKEN_Z80_SRL): GoTo NextWord
-        If StrComp(Word, "sub") = 0 Then Call AddToken_Z80(TOKEN_Z80_SUB): GoTo NextWord
+        If StrComp(Word, "sbc") = 0 Then Call Add(TOKEN_Z80_SBC): GoTo NextWord
+        If StrComp(Word, "scf") = 0 Then Call Add(TOKEN_Z80_SCF): GoTo NextWord
+        If StrComp(Word, "set") = 0 Then Call Add(TOKEN_Z80_SET): GoTo NextWord
+        If StrComp(Word, "sla") = 0 Then Call Add(TOKEN_Z80_SLA): GoTo NextWord
+        If StrComp(Word, "sra") = 0 Then Call Add(TOKEN_Z80_SRA): GoTo NextWord
+        If StrComp(Word, "sll") = 0 Then Call Add(TOKEN_Z80_SLL): GoTo NextWord
+        If StrComp(Word, "srl") = 0 Then Call Add(TOKEN_Z80_SRL): GoTo NextWord
+        If StrComp(Word, "sub") = 0 Then Call Add(TOKEN_Z80_SUB): GoTo NextWord
         'Keywords
-        If StrComp(Word, "slot") = 0 Then Call AddToken_Keyword(TOKEN_KEYWORD_SLOT): GoTo NextWord
-        If StrComp(Word, "start") = 0 Then Call AddToken_Keyword(TOKEN_KEYWORD_START): GoTo NextWord
-        If StrComp(Word, "stop") = 0 Then Call AddToken_Keyword(TOKEN_KEYWORD_STOP): GoTo NextWord
-        If StrComp(Word, "struct") = 0 Then Call AddToken_Keyword(TOKEN_KEYWORD_STRUCT): GoTo NextWord
+        If StrComp(Word, "slot") = 0 Then Call Add(TOKEN_KEYWORD_SLOT): GoTo NextWord
+        If StrComp(Word, "start") = 0 Then Call Add(TOKEN_KEYWORD_START): GoTo NextWord
+        If StrComp(Word, "stop") = 0 Then Call Add(TOKEN_KEYWORD_STOP): GoTo NextWord
+        If StrComp(Word, "struct") = 0 Then Call Add(TOKEN_KEYWORD_STRUCT): GoTo NextWord
         
     ElseIf Asc1 = W Then '--- `w` ---
         'Keywords
-        If StrComp(Word, "word") = 0 Then Call AddToken_Keyword(TOKEN_KEYWORD_WORD): GoTo NextWord
+        If StrComp(Word, "word") = 0 Then Call Add(TOKEN_KEYWORD_WORD): GoTo NextWord
         'There are no `w` registers
         GoTo WordError
         
     ElseIf Asc1 = X Then '--- `x` ---
         'Z80 instructions
-        If StrComp(Word, "xor") = 0 Then Call AddToken_Z80(TOKEN_Z80_XOR): GoTo NextWord
+        If StrComp(Word, "xor") = 0 Then Call Add(TOKEN_Z80_XOR): GoTo NextWord
         'TODO: The `x` operator
         'There are no `x` registers
         GoTo WordError
         
     ElseIf Asc1 = SYNTAX_BLOCK_OPEN Then '--- `{` ---
-        Call AddToken_Group(TOKEN_GROUP_BLOCKOPEN): GoTo NextWord
+        Call Add(TOKEN_BLOCKOPEN): GoTo NextWord
     ElseIf Asc1 = SYNTAX_BLOCK_CLOSE Then  '--- `}` ---
-        Call AddToken_Group(TOKEN_GROUP_BLOCKCLOSE): GoTo NextWord
+        Call Add(TOKEN_BLOCKCLOSE): GoTo NextWord
     ElseIf Asc1 = SYNTAX_PAREN_OPEN Then '--- `(` ---
-        Call AddToken_Group(TOKEN_GROUP_PARENOPEN): GoTo NextWord
+        Call Add(TOKEN_PARENOPEN): GoTo NextWord
     ElseIf Asc1 = SYNTAX_PAREN_CLOSE Then '--- `)` ---
-        Call AddToken_Group(TOKEN_GROUP_PARENCLOSE): GoTo NextWord
+        Call Add(TOKEN_PARENCLOSE): GoTo NextWord
     
     'A decimal number?
     ElseIf Asc1 >= 48 And Asc1 <= 57 Then
@@ -797,32 +712,27 @@ EndWord2:
         
     'String (quote)
     ElseIf Asc1 = SYNTAX_QUOTE Then '--- `"` ---
-'        'Copy the bytes from the quote directly into the token stream
-'        Call kernel32_RtlMoveMemory( _
-'            Tokens(TokensCursor), Data(WordBegin + 1), WordLen - 1 _
-'        )
-'
-'        Dim ii As Long
-'        For ii = TokensCursor To TokensCursor + WordLen - 1
-'            Debug.Print Chr$(Tokens(i));
-'        Next
-'        Debug.Print
-'
-'        Let TokensCursor = TokensCursor + WordLen
+        'Add quote token, the quote text follows
+        Call Add(TOKEN_QUOTE)
+        'Copy the bytes from the quote directly into the token stream
+        Call kernel32_RtlMoveMemory( _
+            Tokens(TokensCursor), Data(WordBegin + 1), WordLen - 2 _
+        )
+        Let TokensCursor = TokensCursor + WordLen - 2
         GoTo NextWord
         
     ElseIf Asc1 = SYNTAX_OPERATOR_ADD Then '--- `+` ---
-        Call AddToken_Operator(TOKEN_OPERATOR_ADD): GoTo NextWord
+        Call Add(TOKEN_OPERATOR_ADD): GoTo NextWord
     ElseIf Asc1 = SYNTAX_OPERATOR_SUB Then '--- `-` ---
-        Call AddToken_Operator(TOKEN_OPERATOR_SUB): GoTo NextWord
+        Call Add(TOKEN_OPERATOR_SUB): GoTo NextWord
     ElseIf Asc1 = SYNTAX_OPERATOR_MUL Then '--- `*` ---
-        Call AddToken_Operator(TOKEN_OPERATOR_MUL): GoTo NextWord
+        Call Add(TOKEN_OPERATOR_MUL): GoTo NextWord
     ElseIf Asc1 = SYNTAX_OPERATOR_DIV Then '--- `/` ---
-        Call AddToken_Operator(TOKEN_OPERATOR_DIV): GoTo NextWord
+        Call Add(TOKEN_OPERATOR_DIV): GoTo NextWord
     ElseIf Asc1 = SYNTAX_OPERATOR_POW Then '--- `^` ---
-        Call AddToken_Operator(TOKEN_OPERATOR_POW): GoTo NextWord
+        Call Add(TOKEN_OPERATOR_POW): GoTo NextWord
     ElseIf Asc1 = SYNTAX_OPERATOR_MOD Then '--- `\` ---
-        Call AddToken_Operator(TOKEN_OPERATOR_MOD): GoTo NextWord
+        Call Add(TOKEN_OPERATOR_MOD): GoTo NextWord
     End If
     
     'Z80 Registers: _
@@ -848,33 +758,33 @@ EndWord2:
     GoTo WordError
 
 OneLetter:
-    If Asc1 = A Then Call AddToken_Register(TOKEN_REGISTER_A): GoTo NextWord
-    If Asc1 = B Then Call AddToken_Register(TOKEN_REGISTER_B): GoTo NextWord
-    If Asc1 = C Then Call AddToken_Register(TOKEN_REGISTER_C): GoTo NextWord
-    If Asc1 = D Then Call AddToken_Register(TOKEN_REGISTER_D): GoTo NextWord
-    If Asc1 = E Then Call AddToken_Register(TOKEN_REGISTER_E): GoTo NextWord
-    If Asc1 = H Then Call AddToken_Register(TOKEN_REGISTER_H): GoTo NextWord
-    If Asc1 = i Then Call AddToken_Register(TOKEN_REGISTER_I): GoTo NextWord
-    If Asc1 = L Then Call AddToken_Register(TOKEN_REGISTER_L): GoTo NextWord
-    If Asc1 = R Then Call AddToken_Register(TOKEN_REGISTER_R): GoTo NextWord
+    If Asc1 = A Then Call Add(TOKEN_REGISTER_A): GoTo NextWord
+    If Asc1 = B Then Call Add(TOKEN_REGISTER_B): GoTo NextWord
+    If Asc1 = C Then Call Add(TOKEN_REGISTER_C): GoTo NextWord
+    If Asc1 = D Then Call Add(TOKEN_REGISTER_D): GoTo NextWord
+    If Asc1 = E Then Call Add(TOKEN_REGISTER_E): GoTo NextWord
+    If Asc1 = H Then Call Add(TOKEN_REGISTER_H): GoTo NextWord
+    If Asc1 = i Then Call Add(TOKEN_REGISTER_I): GoTo NextWord
+    If Asc1 = L Then Call Add(TOKEN_REGISTER_L): GoTo NextWord
+    If Asc1 = R Then Call Add(TOKEN_REGISTER_R): GoTo NextWord
     GoTo WordError
 
 TwoLetters:
     If Asc1 = A Then       '"af"
-        If Asc2 = F Then Call AddToken_Register(TOKEN_REGISTER_AF): GoTo NextWord
+        If Asc2 = F Then Call Add(TOKEN_REGISTER_AF): GoTo NextWord
     ElseIf Asc1 = B Then   '"bc"
-        If Asc2 = C Then Call AddToken_Register(TOKEN_REGISTER_BC): GoTo NextWord
+        If Asc2 = C Then Call Add(TOKEN_REGISTER_BC): GoTo NextWord
     ElseIf Asc1 = D Then  '"de"
-        If Asc2 = E Then Call AddToken_Register(TOKEN_REGISTER_DE): GoTo NextWord
+        If Asc2 = E Then Call Add(TOKEN_REGISTER_DE): GoTo NextWord
     ElseIf Asc1 = H Then  '"hl"
-        If Asc2 = L Then Call AddToken_Register(TOKEN_REGISTER_HL): GoTo NextWord
+        If Asc2 = L Then Call Add(TOKEN_REGISTER_HL): GoTo NextWord
     ElseIf Asc1 = i Then  '"ix"/"iy"
-        If Asc2 = X Then Call AddToken_Register(TOKEN_REGISTER_IX): GoTo NextWord
-        If Asc2 = Y Then Call AddToken_Register(TOKEN_REGISTER_IY): GoTo NextWord
+        If Asc2 = X Then Call Add(TOKEN_REGISTER_IX): GoTo NextWord
+        If Asc2 = Y Then Call Add(TOKEN_REGISTER_IY): GoTo NextWord
     ElseIf Asc1 = P Then  '"pc"
-        If Asc2 = C Then Call AddToken_Register(TOKEN_REGISTER_PC): GoTo NextWord
+        If Asc2 = C Then Call Add(TOKEN_REGISTER_PC): GoTo NextWord
     ElseIf Asc1 = S Then  '"sp"
-        If Asc2 = P Then Call AddToken_Register(TOKEN_REGISTER_SP): GoTo NextWord
+        If Asc2 = P Then Call Add(TOKEN_REGISTER_SP): GoTo NextWord
     End If
     
     '----------------------------------------------------------------------------------
@@ -898,7 +808,7 @@ End Sub
 
 'Add : Add a token (any) to the stream _
  ======================================================================================
-Private Sub Add(ByRef Token As Long)
+Private Sub Add(ByRef Token As OZ80_TOKEN)
     'The param MUST be 0-255, but is given as long for speed reasons; _
      the rest of this class will ensure that this is never out of bounds
     Let Tokens(TokensCursor) = Token

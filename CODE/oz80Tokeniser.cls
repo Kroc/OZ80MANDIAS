@@ -104,10 +104,16 @@ Public Enum OZ80_TOKEN
     'Specifies an operator
     TOKEN_OPERATOR = &H50
     
+    'Grouping: (i.e. parenthesis, braces)
+    TOKEN_PARENOPEN = &H60
+    TOKEN_PARENCLOSE = &H61
+    TOKEN_BLOCKOPEN = &H62
+    TOKEN_BLOCKCLOSE = &H63
+    
     'A list is a series of 1 or more expressions separated by commas,
      'i.e.parameter lists
-    TOKEN_LIST = &H60
-    TOKEN_NEXT = &H61                   'Sandwiched between list items, i.e. ","
+    TOKEN_LIST = &H70
+    TOKEN_NEXT = &H71                   'Sandwiched between list items, i.e. ","
     
     'Debug tokens:
     'These allow us to keep track of where the token originated in the source file(s)
@@ -268,12 +274,22 @@ Public Enum OZ80_TOKEN_OPERATOR
     TOKEN_OPERATOR_REP = 7              'Repeat "x"
 End Enum
 
+'Grouping: (i.e. parenthesis, braces) _
+ --------------------------------------------------------------------------------------
+Public Enum OZ80_TOKEN_GROUP
+    TOKEN_GROUP_PARENOPEN = OZ80_TOKEN.TOKEN_PARENOPEN
+    TOKEN_GROUP_PARENCLOSE = OZ80_TOKEN.TOKEN_PARENCLOSE
+    TOKEN_GROUP_BLOCKOPEN = OZ80_TOKEN.TOKEN_BLOCKOPEN
+    TOKEN_GROUP_BLOCKCLOSE = OZ80_TOKEN.TOKEN_BLOCKCLOSE
+End Enum
+
 '/// DEFS /////////////////////////////////////////////////////////////////////////////
 
 Private Tokens() As Byte                'The token stream will live here
 Private TokensLimit As Long             'The length of the above array
 Private TokensLength As Long            'The current amount of space used in the array
 Private TokensCursor As Long            'Where the current insertion point is
+Private TokensCount As Long             'The number of tokens, exluding the data parts
 
 'A look up table of ASCII codes from upper-case to lower-case
 Private LowCase(0 To 255) As Long
@@ -347,6 +363,13 @@ Public Sub AddToken_Operator(ByRef Token As OZ80_TOKEN_OPERATOR)
     Call Add(Token)                     'And add the operator token
 End Sub
 
+'AddToken_Group : Grouping, i.e. parenthesis, braces _
+ ======================================================================================
+Public Sub AddToken_Group(ByRef Token As OZ80_TOKEN_GROUP)
+    'These tokens don't require any data, just a single token is needed
+    Call Add(Token)
+End Sub
+
 'Tokenise : Break a file into all its individual words and convert to machine tokens _
  ======================================================================================
 Public Sub Tokenise(ByRef FilePath As String)
@@ -367,7 +390,7 @@ Public Sub Tokenise(ByRef FilePath As String)
     Dim FileNumber As String
     Let FileNumber = FreeFile
     
-    Debug.Print "Exploding file: " & FilePath
+    Debug.Print "Parsing file: " & FilePath
     Open FilePath For Input Access Read Lock Write As #FileNumber
     'Read the file as a binary string with one-byte per character (ASCII). _
      We first normalise to Unicode to deal with locale specifics and then downsample _
@@ -383,13 +406,15 @@ Public Sub Tokenise(ByRef FilePath As String)
     Close #FileNumber
     
     Dim TextPos As Long
-    Dim WordCount As Long
+    Let TextPos = -1
     
     'The first letter of a word will be remembered for guiding tokenisation. _
      The 2nd, 3rd and 4th letters are used in validating registers and number prefixes
     Dim LetterIndex As Long
     Dim Asc1 As Long, Asc2 As Long, Asc3 As Long, Asc4 As Long
     
+    Dim WordCount As Long
+
     '----------------------------------------------------------------------------------
 ReadWord:
     'The word as we build it
@@ -397,7 +422,9 @@ ReadWord:
     'Reset the counter and captures for the 2nd, 3rd and 4th characters of the word
     Let LetterIndex = 0
     Let Asc2 = 0: Let Asc3 = 0: Let Asc4 = 0
-    
+
+SkipChar:
+    Let TextPos = TextPos + 1
 ReadChar:
     'If the file ends, treat it as a remaining end of line
     If TextPos >= TextLen Then GoTo EndWord
@@ -405,9 +432,8 @@ ReadChar:
     'Read a character:
     Dim AscChar As Long
     Let AscChar = Data(TextPos)
-    Let TextPos = TextPos + 1
     
-    'skip through comments...
+    'Comments:
     '----------------------------------------------------------------------------------
     If IsComment Then
         'For single-line comments:
@@ -418,34 +444,38 @@ ReadChar:
                 GoTo ReadWord
             End If
             'The end of a line ends a single-line comment:
-            If AscChar = 10 Or AscChar = 13 Then
+            If AscChar = aCR Or AscChar = aLF Then
                 Let IsComment = False: GoTo ReadWord
             End If
         
         'For multi-line comments, check for backtick:
         ElseIf AscChar = SYNTAX_COMMENT Then
             'Check for a second back-tick following
-            Let AscChar = Data(TextPos)
             Let TextPos = TextPos + 1
+            Let AscChar = Data(TextPos)
             If AscChar = SYNTAX_COMMENT Then
                 Let IsComment = False: Let IsCommentMulti = False
                 GoTo ReadWord
             End If
         End If
         'Skip to the next character
-        GoTo ReadChar
+        GoTo SkipChar
     
+    'Parsable Text:
     '----------------------------------------------------------------------------------
     '(false checks are slightly faster)
     ElseIf IsQuote = False Then
         'Special handling for the beginning of a word
         If LenB(Word) = 0 Then
-            If AscChar = aSPC Then GoTo ReadChar
-            If AscChar = aTAB Then GoTo ReadChar
-            If AscChar = aCR Then GoTo ReadChar
-            If AscChar = aLF Then GoTo ReadChar
+            If AscChar = aSPC Then GoTo SkipChar
+            If AscChar = aTAB Then GoTo SkipChar
+            If AscChar = aCR Then GoTo SkipChar
+            If AscChar = aLF Then GoTo SkipChar
             'Remember the first letter of the word for guiding tokenisation
             Let Asc1 = LowCase(AscChar)
+            
+            Dim WordBegin As Long
+            Let WordBegin = TextPos
         Else
             'A word is underway, check for end of line (note the `Else`, we don't _
              want to test line endings twice when the Word is currently empty)
@@ -463,7 +493,8 @@ ReadChar:
             If AscChar = aTAB Then GoTo EndWord
         End If
         
-        'Is this a quote? (in which case, ignore wordbreaks until quote end)
+        'Is this a quote? (in which case, ignore wordbreaks until quote end). _
+         the opening quote is included so that we can recognise it for tokenising
         If AscChar = SYNTAX_QUOTE Then Let IsQuote = True: GoTo NextChar
         
         'Check for comment marker
@@ -498,11 +529,12 @@ ReadChar:
             If LetterIndex = 4 Then Let Asc4 = LowCase(AscChar)
         End If
         
-    'Look for the end of a quote
+    'Quotes:
     '----------------------------------------------------------------------------------
     Else
-        'TODO: handle escape chars, skip tabs and line breaks
-        If AscChar = SYNTAX_QUOTE Then Let IsQuote = False: GoTo EndWord
+        'TODO: skip tabs and line breaks
+        'Skip over the closing quote so that it doesn't get tokenised
+        If AscChar = SYNTAX_QUOTE Then Let IsQuote = False: GoTo EndWord2
         
     End If
     
@@ -510,16 +542,13 @@ ReadChar:
     
 NextChar:
     Let Word = Word & ChrW$(AscChar)
-    GoTo ReadChar
+    GoTo SkipChar
 
 WordBreak:
     'If the word is longer than one character, then save the current character _
      for use in the next word. i.e. when a comma is reached, process the text _
      before the comma as a word, and take the comma as the next word
-    If LenB(Word) Then
-        Let TextPos = TextPos - 1
-        GoTo EndWord2
-    End If
+    If LenB(Word) Then GoTo EndWord2
     Let Word = Word & ChrW$(AscChar)
     
 EndWord:
@@ -544,6 +573,10 @@ EndWord2:
         GoTo NextWord
     
     ElseIf Asc1 = SYNTAX_PROPERTY Then
+        'At this stage the grammer is not validated, so we have no idea which label _
+         this property attaches to. We store the name in an array and add the index _
+         to the token stream -- the assembler will handle the context for same-name _
+         properties
         'TODO: Tokenise
         GoTo NextWord
     
@@ -727,25 +760,14 @@ EndWord2:
         'There are no `x` registers
         GoTo WordError
         
-    'Block (open)
     ElseIf Asc1 = SYNTAX_BLOCK_OPEN Then '--- `{` ---
-        'TODO: Tokenise
-        GoTo NextWord
-    
-    'Block (close)
+        Call AddToken_Group(TOKEN_GROUP_BLOCKOPEN): GoTo NextWord
     ElseIf Asc1 = SYNTAX_BLOCK_CLOSE Then  '--- `}` ---
-        'TODO: Tokenise
-        GoTo NextWord
-    
-    'Parenthesis (open)
+        Call AddToken_Group(TOKEN_GROUP_BLOCKCLOSE): GoTo NextWord
     ElseIf Asc1 = SYNTAX_PAREN_OPEN Then '--- `(` ---
-        'TODO: Tokenise
-        GoTo NextWord
-    
-    'Parenthesis (close)
+        Call AddToken_Group(TOKEN_GROUP_PARENOPEN): GoTo NextWord
     ElseIf Asc1 = SYNTAX_PAREN_CLOSE Then '--- `)` ---
-        'TODO: Tokenise
-        GoTo NextWord
+        Call AddToken_Group(TOKEN_GROUP_PARENCLOSE): GoTo NextWord
     
     'A decimal number?
     ElseIf Asc1 >= 48 And Asc1 <= 57 Then
@@ -849,9 +871,9 @@ End Sub
 
 'Add : Add a token (any) to the stream _
  ======================================================================================
-Private Sub Add(ByRef Value As Long)
+Private Sub Add(ByRef Token As Long)
     'The param MUST be 0-255, but is given as long for speed reasons; _
      the rest of this class will ensure that this is never out of bounds
-    Let Tokens(TokensCursor) = Value
+    Let Tokens(TokensCursor) = Token
     Let TokensCursor = TokensCursor + 1
 End Sub

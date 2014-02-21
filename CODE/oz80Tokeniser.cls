@@ -344,8 +344,9 @@ Public Sub Tokenise(ByRef FilePath As String)
 
     '----------------------------------------------------------------------------------
 ReadWord:
-    'The word as we build it
-    Dim Word As String: Let Word = vbNullString
+    Dim WordBegin As Long               'The index in the text where the word begins
+    Dim IsWord As Long                  'If the word has begun (first letter)
+    Let IsWord = 0
 SkipChar:
     Let TextPos = TextPos + 1
 ReadChar:
@@ -362,7 +363,7 @@ ReadChar:
         'For single-line comments:
         If IsCommentMulti = False Then
             'Is this a multi-line comment? (two backticks)
-            If LenB(Word) Then
+            If IsWord Then
                 If AscChar = SYNTAX_COMMENT Then Let IsCommentMulti = True
                 GoTo ReadWord
             End If
@@ -389,7 +390,7 @@ ReadChar:
     '(false checks are slightly faster)
     ElseIf IsQuote = False Then
         'Special handling for the beginning of a word
-        If LenB(Word) = 0 Then
+        If IsWord = 0 Then
             If AscChar = aSPC Then GoTo SkipChar
             If AscChar = aTAB Then GoTo SkipChar
             If AscChar = aCR Then GoTo SkipChar
@@ -420,7 +421,7 @@ ReadChar:
             Let IsComment = True
             'If a comment begins at the end of a word without any space to separate, _
              we need to first keep the word before switching to comment parsing
-            If LenB(Word) = 0 Then GoTo NextChar
+            If IsWord = 0 Then GoTo NextChar
             GoTo WordBreak
             
         End If
@@ -451,21 +452,18 @@ ReadChar:
     '----------------------------------------------------------------------------------
     
 NextChar:
-    Dim WordBegin As Long
-    If LenB(Word) = 0 Then Let WordBegin = TextPos
-    Let Word = Word & ChrW$(AscChar)
+    If IsWord = 0 Then Let WordBegin = TextPos: Let IsWord = 1
     GoTo SkipChar
 
 WordBreak:
     'If the word is longer than one character, then save the current character _
      for use in the next word. i.e. when a comma is reached, process the text _
      before the comma as a word, and take the comma as the next word
-    If LenB(Word) Then Let TextPos = TextPos - 1: GoTo EndWord2
-    Let WordBegin = TextPos
-    Let Word = Word & ChrW$(AscChar)
+    If IsWord Then Let TextPos = TextPos - 1: GoTo EndWord2
+    Let WordBegin = TextPos: Let IsWord = 1
     
 EndWord:
-    If LenB(Word) = 0 Then GoTo EndOfFile
+    If IsWord = 0 Then GoTo EndOfFile
 EndWord2:
     'Remember the end point and length of the word, _
      we can use this to compare bytes (faster than string comparisons)
@@ -518,75 +516,75 @@ EndWord2:
         
     ElseIf Asc1 = A Then '--- `a` ---
         'Z80 instructions
-        If StrComp(Word, "adc") = 0 Then Call Add(TOKEN_Z80_ADC): GoTo NextWord
-        If StrComp(Word, "add") = 0 Then Call Add(TOKEN_Z80_ADD): GoTo NextWord
-        If StrComp(Word, "and") = 0 Then Call Add(TOKEN_Z80_AND): GoTo NextWord
+        If CompStr(Data, WordBegin, WordLen, "adc") = 0 Then Call Add(TOKEN_Z80_ADC): GoTo NextWord
+        If CompStr(Data, WordBegin, WordLen, "add") = 0 Then Call Add(TOKEN_Z80_ADD): GoTo NextWord
+        If CompStr(Data, WordBegin, WordLen, "and") = 0 Then Call Add(TOKEN_Z80_AND): GoTo NextWord
         'Keywords
-        If StrComp(Word, "as") = 0 Then Call Add(TOKEN_KEYWORD_AS): GoTo NextWord
-        If StrComp(Word, "at") = 0 Then Call Add(TOKEN_KEYWORD_AT): GoTo NextWord
+        If CompStr(Data, WordBegin, WordLen, "as") = 0 Then Call Add(TOKEN_KEYWORD_AS): GoTo NextWord
+        If CompStr(Data, WordBegin, WordLen, "at") = 0 Then Call Add(TOKEN_KEYWORD_AT): GoTo NextWord
          
     ElseIf Asc1 = B Then '--- `b` ---
         'Z80 instructions
-        If StrComp(Word, "bit") = 0 Then Call Add(TOKEN_Z80_BIT): GoTo NextWord
+        If CompStr(Data, WordBegin, WordLen, "bit") = 0 Then Call Add(TOKEN_Z80_BIT): GoTo NextWord
         'Keywords
-        If StrComp(Word, "bank") = 0 Then Call Add(TOKEN_KEYWORD_BANK): GoTo NextWord
-        If StrComp(Word, "binary") = 0 Then Call Add(TOKEN_KEYWORD_BINARY): GoTo NextWord
-        If StrComp(Word, "byte") = 0 Then Call Add(TOKEN_KEYWORD_BYTE): GoTo NextWord
+        If CompStr(Data, WordBegin, WordLen, "bank") = 0 Then Call Add(TOKEN_KEYWORD_BANK): GoTo NextWord
+        If CompStr(Data, WordBegin, WordLen, "binary") = 0 Then Call Add(TOKEN_KEYWORD_BINARY): GoTo NextWord
+        If CompStr(Data, WordBegin, WordLen, "byte") = 0 Then Call Add(TOKEN_KEYWORD_BYTE): GoTo NextWord
         
     ElseIf Asc1 = C Then '--- `c` ---
         'Z80 instructions
-        If StrComp(Word, "call") = 0 Then Call Add(TOKEN_Z80_CALL): GoTo NextWord
-        If StrComp(Word, "ccf") = 0 Then Call Add(TOKEN_Z80_CCF): GoTo NextWord
-        If StrComp(Word, "cp") = 0 Then Call Add(TOKEN_Z80_CP): GoTo NextWord
-        If StrComp(Word, "cpd") = 0 Then Call Add(TOKEN_Z80_CPD): GoTo NextWord
-        If StrComp(Word, "cpdr") = 0 Then Call Add(TOKEN_Z80_CPDR): GoTo NextWord
-        If StrComp(Word, "cpi") = 0 Then Call Add(TOKEN_Z80_CPI): GoTo NextWord
-        If StrComp(Word, "cpir") = 0 Then Call Add(TOKEN_Z80_CPIR): GoTo NextWord
-        If StrComp(Word, "cpl") = 0 Then Call Add(TOKEN_Z80_CPL): GoTo NextWord
+        If CompStr(Data, WordBegin, WordLen, "call") = 0 Then Call Add(TOKEN_Z80_CALL): GoTo NextWord
+        If CompStr(Data, WordBegin, WordLen, "ccf") = 0 Then Call Add(TOKEN_Z80_CCF): GoTo NextWord
+        If CompStr(Data, WordBegin, WordLen, "cp") = 0 Then Call Add(TOKEN_Z80_CP): GoTo NextWord
+        If CompStr(Data, WordBegin, WordLen, "cpd") = 0 Then Call Add(TOKEN_Z80_CPD): GoTo NextWord
+        If CompStr(Data, WordBegin, WordLen, "cpdr") = 0 Then Call Add(TOKEN_Z80_CPDR): GoTo NextWord
+        If CompStr(Data, WordBegin, WordLen, "cpi") = 0 Then Call Add(TOKEN_Z80_CPI): GoTo NextWord
+        If CompStr(Data, WordBegin, WordLen, "cpir") = 0 Then Call Add(TOKEN_Z80_CPIR): GoTo NextWord
+        If CompStr(Data, WordBegin, WordLen, "cpl") = 0 Then Call Add(TOKEN_Z80_CPL): GoTo NextWord
         
     ElseIf Asc1 = D Then '--- `d` ---
         'Z80 instructions
-        If StrComp(Word, "daa") = 0 Then Call Add(TOKEN_Z80_DAA): GoTo NextWord
-        If StrComp(Word, "dec") = 0 Then Call Add(TOKEN_Z80_DEC): GoTo NextWord
-        If StrComp(Word, "di") = 0 Then Call Add(TOKEN_Z80_DI): GoTo NextWord
-        If StrComp(Word, "djnz") = 0 Then Call Add(TOKEN_Z80_DJNZ): GoTo NextWord
+        If CompStr(Data, WordBegin, WordLen, "daa") = 0 Then Call Add(TOKEN_Z80_DAA): GoTo NextWord
+        If CompStr(Data, WordBegin, WordLen, "dec") = 0 Then Call Add(TOKEN_Z80_DEC): GoTo NextWord
+        If CompStr(Data, WordBegin, WordLen, "di") = 0 Then Call Add(TOKEN_Z80_DI): GoTo NextWord
+        If CompStr(Data, WordBegin, WordLen, "djnz") = 0 Then Call Add(TOKEN_Z80_DJNZ): GoTo NextWord
         'Keywords
-        If StrComp(Word, "data") = 0 Then Call Add(TOKEN_KEYWORD_DATA): GoTo NextWord
-        If StrComp(Word, "def") = 0 Then Call Add(TOKEN_KEYWORD_DEF): GoTo NextWord
-        If StrComp(Word, "default") = 0 Then Call Add(TOKEN_KEYWORD_DEFAULT): GoTo NextWord
+        If CompStr(Data, WordBegin, WordLen, "data") = 0 Then Call Add(TOKEN_KEYWORD_DATA): GoTo NextWord
+        If CompStr(Data, WordBegin, WordLen, "def") = 0 Then Call Add(TOKEN_KEYWORD_DEF): GoTo NextWord
+        If CompStr(Data, WordBegin, WordLen, "default") = 0 Then Call Add(TOKEN_KEYWORD_DEFAULT): GoTo NextWord
         
     ElseIf Asc1 = E Then '--- `e` ---
         'Z80 instructions
-        If StrComp(Word, "ei") = 0 Then Call Add(TOKEN_Z80_EI): GoTo NextWord
-        If StrComp(Word, "ex") = 0 Then Call Add(TOKEN_Z80_EX): GoTo NextWord
-        If StrComp(Word, "exx") = 0 Then Call Add(TOKEN_Z80_EXX): GoTo NextWord
+        If CompStr(Data, WordBegin, WordLen, "ei") = 0 Then Call Add(TOKEN_Z80_EI): GoTo NextWord
+        If CompStr(Data, WordBegin, WordLen, "ex") = 0 Then Call Add(TOKEN_Z80_EX): GoTo NextWord
+        If CompStr(Data, WordBegin, WordLen, "exx") = 0 Then Call Add(TOKEN_Z80_EXX): GoTo NextWord
     
     ElseIf Asc1 = F Then '--- `f` ---
         'Keywords
-        If StrComp(Word, "fill") = 0 Then Call Add(TOKEN_KEYWORD_FILL): GoTo NextWord
+        If CompStr(Data, WordBegin, WordLen, "fill") = 0 Then Call Add(TOKEN_KEYWORD_FILL): GoTo NextWord
         'You can't refer to the `f` register directly (only `af`)
         GoTo WordError
         
     ElseIf Asc1 = H Then '--- `h` ---
         'Z80 instructions
-        If StrComp(Word, "halt") = 0 Then Call Add(TOKEN_Z80_HALT): GoTo NextWord
+        If CompStr(Data, WordBegin, WordLen, "halt") = 0 Then Call Add(TOKEN_Z80_HALT): GoTo NextWord
         
     ElseIf Asc1 = i Then '--- `i` ---
         'Z80 instructions
-        If StrComp(Word, "im") = 0 Then Call Add(TOKEN_Z80_IM): GoTo NextWord
-        If StrComp(Word, "in") = 0 Then Call Add(TOKEN_Z80_IN): GoTo NextWord
-        If StrComp(Word, "inc") = 0 Then Call Add(TOKEN_Z80_INC): GoTo NextWord
-        If StrComp(Word, "ind") = 0 Then Call Add(TOKEN_Z80_IND): GoTo NextWord
-        If StrComp(Word, "indr") = 0 Then Call Add(TOKEN_Z80_INDR): GoTo NextWord
-        If StrComp(Word, "ini") = 0 Then Call Add(TOKEN_Z80_INI): GoTo NextWord
-        If StrComp(Word, "inir") = 0 Then Call Add(TOKEN_Z80_INIR): GoTo NextWord
+        If CompStr(Data, WordBegin, WordLen, "im") = 0 Then Call Add(TOKEN_Z80_IM): GoTo NextWord
+        If CompStr(Data, WordBegin, WordLen, "in") = 0 Then Call Add(TOKEN_Z80_IN): GoTo NextWord
+        If CompStr(Data, WordBegin, WordLen, "inc") = 0 Then Call Add(TOKEN_Z80_INC): GoTo NextWord
+        If CompStr(Data, WordBegin, WordLen, "ind") = 0 Then Call Add(TOKEN_Z80_IND): GoTo NextWord
+        If CompStr(Data, WordBegin, WordLen, "indr") = 0 Then Call Add(TOKEN_Z80_INDR): GoTo NextWord
+        If CompStr(Data, WordBegin, WordLen, "ini") = 0 Then Call Add(TOKEN_Z80_INI): GoTo NextWord
+        If CompStr(Data, WordBegin, WordLen, "inir") = 0 Then Call Add(TOKEN_Z80_INIR): GoTo NextWord
         'Keywords
-        If StrComp(Word, "include") = 0 Then Call Add(TOKEN_KEYWORD_INCLUDE): GoTo NextWord
+        If CompStr(Data, WordBegin, WordLen, "include") = 0 Then Call Add(TOKEN_KEYWORD_INCLUDE): GoTo NextWord
         
     ElseIf Asc1 = J Then '--- `j` ---
         'Z80 instructions
-        If StrComp(Word, "jp") = 0 Then Call Add(TOKEN_Z80_JP): GoTo NextWord
-        If StrComp(Word, "jr") = 0 Then Call Add(TOKEN_Z80_JR): GoTo NextWord
+        If CompStr(Data, WordBegin, WordLen, "jp") = 0 Then Call Add(TOKEN_Z80_JP): GoTo NextWord
+        If CompStr(Data, WordBegin, WordLen, "jr") = 0 Then Call Add(TOKEN_Z80_JR): GoTo NextWord
         'There are no `j` registers
         GoTo WordError
         
@@ -599,94 +597,94 @@ EndWord2:
             'If only two letters, then it's `KB`
             If Asc3 = 0 Then Call Add(TOKEN_PREFIX_KB): GoTo NextWord
             'verify ...`Kbit`, we don't have Asc5 so avoid things like `Kbitty`
-            If StrComp(Word, "kbit") = 0 Then Call Add(TOKEN_PREFIX_KBIT): GoTo NextWord
+            If CompStr(Data, WordBegin, WordLen, "kbit") = 0 Then Call Add(TOKEN_PREFIX_KBIT): GoTo NextWord
         End If
         'There are no `k` registers
         GoTo WordError
         
     ElseIf Asc1 = L Then '--- `l` ---
         'Z80 instructions
-        If StrComp(Word, "ld") = 0 Then Call Add(TOKEN_Z80_LD): GoTo NextWord
-        If StrComp(Word, "ldd") = 0 Then Call Add(TOKEN_Z80_LDD): GoTo NextWord
-        If StrComp(Word, "lddr") = 0 Then Call Add(TOKEN_Z80_LDDR): GoTo NextWord
-        If StrComp(Word, "ldi") = 0 Then Call Add(TOKEN_Z80_LDI): GoTo NextWord
-        If StrComp(Word, "ldir") = 0 Then Call Add(TOKEN_Z80_LDIR): GoTo NextWord
+        If CompStr(Data, WordBegin, WordLen, "ld") = 0 Then Call Add(TOKEN_Z80_LD): GoTo NextWord
+        If CompStr(Data, WordBegin, WordLen, "ldd") = 0 Then Call Add(TOKEN_Z80_LDD): GoTo NextWord
+        If CompStr(Data, WordBegin, WordLen, "lddr") = 0 Then Call Add(TOKEN_Z80_LDDR): GoTo NextWord
+        If CompStr(Data, WordBegin, WordLen, "ldi") = 0 Then Call Add(TOKEN_Z80_LDI): GoTo NextWord
+        If CompStr(Data, WordBegin, WordLen, "ldir") = 0 Then Call Add(TOKEN_Z80_LDIR): GoTo NextWord
         'Keywords
-        If StrComp(Word, "length") = 0 Then Call Add(TOKEN_KEYWORD_LENGTH): GoTo NextWord
+        If CompStr(Data, WordBegin, WordLen, "length") = 0 Then Call Add(TOKEN_KEYWORD_LENGTH): GoTo NextWord
     
     ElseIf Asc1 = N Then '--- `n` ---
         'Z80 instructions
-        If StrComp(Word, "neg") = 0 Then Call Add(TOKEN_Z80_NEG): GoTo NextWord
-        If StrComp(Word, "nop") = 0 Then Call Add(TOKEN_Z80_NOP): GoTo NextWord
+        If CompStr(Data, WordBegin, WordLen, "neg") = 0 Then Call Add(TOKEN_Z80_NEG): GoTo NextWord
+        If CompStr(Data, WordBegin, WordLen, "nop") = 0 Then Call Add(TOKEN_Z80_NOP): GoTo NextWord
         'There are no `n` registers
         GoTo WordError
         
     ElseIf Asc1 = O Then '--- `o` ---
         'Z80 instructions
-        If StrComp(Word, "or") = 0 Then Call Add(TOKEN_Z80_OR): GoTo NextWord
-        If StrComp(Word, "out") = 0 Then Call Add(TOKEN_Z80_OUT): GoTo NextWord
-        If StrComp(Word, "outd") = 0 Then Call Add(TOKEN_Z80_OUTD): GoTo NextWord
-        If StrComp(Word, "outdr") = 0 Then Call Add(TOKEN_Z80_OUTDR): GoTo NextWord
-        If StrComp(Word, "outi") = 0 Then Call Add(TOKEN_Z80_OUTI): GoTo NextWord
-        If StrComp(Word, "outir") = 0 Then Call Add(TOKEN_Z80_OUTIR): GoTo NextWord
+        If CompStr(Data, WordBegin, WordLen, "or") = 0 Then Call Add(TOKEN_Z80_OR): GoTo NextWord
+        If CompStr(Data, WordBegin, WordLen, "out") = 0 Then Call Add(TOKEN_Z80_OUT): GoTo NextWord
+        If CompStr(Data, WordBegin, WordLen, "outd") = 0 Then Call Add(TOKEN_Z80_OUTD): GoTo NextWord
+        If CompStr(Data, WordBegin, WordLen, "outdr") = 0 Then Call Add(TOKEN_Z80_OUTDR): GoTo NextWord
+        If CompStr(Data, WordBegin, WordLen, "outi") = 0 Then Call Add(TOKEN_Z80_OUTI): GoTo NextWord
+        If CompStr(Data, WordBegin, WordLen, "outir") = 0 Then Call Add(TOKEN_Z80_OUTIR): GoTo NextWord
         'Keywords
-        If StrComp(Word, "object") = 0 Then Call Add(TOKEN_KEYWORD_OBJECT): GoTo NextWord
+        If CompStr(Data, WordBegin, WordLen, "object") = 0 Then Call Add(TOKEN_KEYWORD_OBJECT): GoTo NextWord
         'There are no `o` registers
         GoTo WordError
         
     ElseIf Asc1 = P Then '--- `p` ---
         'Z80 instructions
-        If StrComp(Word, "pop") = 0 Then Call Add(TOKEN_Z80_POP): GoTo NextWord
-        If StrComp(Word, "push") = 0 Then Call Add(TOKEN_Z80_PUSH): GoTo NextWord
+        If CompStr(Data, WordBegin, WordLen, "pop") = 0 Then Call Add(TOKEN_Z80_POP): GoTo NextWord
+        If CompStr(Data, WordBegin, WordLen, "push") = 0 Then Call Add(TOKEN_Z80_PUSH): GoTo NextWord
         'Keywords
-        If StrComp(Word, "params") = 0 Then Call Add(TOKEN_KEYWORD_PARAMS): GoTo NextWord
-        If StrComp(Word, "proc") = 0 Then Call Add(TOKEN_KEYWORD_PROC): GoTo NextWord
+        If CompStr(Data, WordBegin, WordLen, "params") = 0 Then Call Add(TOKEN_KEYWORD_PARAMS): GoTo NextWord
+        If CompStr(Data, WordBegin, WordLen, "proc") = 0 Then Call Add(TOKEN_KEYWORD_PROC): GoTo NextWord
         
     ElseIf Asc1 = R Then '--- `r` ---
         'Z80 instructions
-        If StrComp(Word, "res") = 0 Then Call Add(TOKEN_Z80_RES): GoTo NextWord
-        If StrComp(Word, "ret") = 0 Then Call Add(TOKEN_Z80_RET): GoTo NextWord
-        If StrComp(Word, "reti") = 0 Then Call Add(TOKEN_Z80_RETI): GoTo NextWord
-        If StrComp(Word, "retn") = 0 Then Call Add(TOKEN_Z80_RETN): GoTo NextWord
-        If StrComp(Word, "rla") = 0 Then Call Add(TOKEN_Z80_RLA): GoTo NextWord
-        If StrComp(Word, "rl") = 0 Then Call Add(TOKEN_Z80_RL): GoTo NextWord
-        If StrComp(Word, "rlca") = 0 Then Call Add(TOKEN_Z80_RLCA): GoTo NextWord
-        If StrComp(Word, "rlc") = 0 Then Call Add(TOKEN_Z80_RLC): GoTo NextWord
-        If StrComp(Word, "rld") = 0 Then Call Add(TOKEN_Z80_RLD): GoTo NextWord
-        If StrComp(Word, "rra") = 0 Then Call Add(TOKEN_Z80_RRA): GoTo NextWord
-        If StrComp(Word, "rr") = 0 Then Call Add(TOKEN_Z80_RR): GoTo NextWord
-        If StrComp(Word, "rrca") = 0 Then Call Add(TOKEN_Z80_RRCA): GoTo NextWord
-        If StrComp(Word, "rrc") = 0 Then Call Add(TOKEN_Z80_RRC): GoTo NextWord
-        If StrComp(Word, "rrd") = 0 Then Call Add(TOKEN_Z80_RRD): GoTo NextWord
-        If StrComp(Word, "rst") = 0 Then Call Add(TOKEN_Z80_RST): GoTo NextWord
+        If CompStr(Data, WordBegin, WordLen, "res") = 0 Then Call Add(TOKEN_Z80_RES): GoTo NextWord
+        If CompStr(Data, WordBegin, WordLen, "ret") = 0 Then Call Add(TOKEN_Z80_RET): GoTo NextWord
+        If CompStr(Data, WordBegin, WordLen, "reti") = 0 Then Call Add(TOKEN_Z80_RETI): GoTo NextWord
+        If CompStr(Data, WordBegin, WordLen, "retn") = 0 Then Call Add(TOKEN_Z80_RETN): GoTo NextWord
+        If CompStr(Data, WordBegin, WordLen, "rla") = 0 Then Call Add(TOKEN_Z80_RLA): GoTo NextWord
+        If CompStr(Data, WordBegin, WordLen, "rl") = 0 Then Call Add(TOKEN_Z80_RL): GoTo NextWord
+        If CompStr(Data, WordBegin, WordLen, "rlca") = 0 Then Call Add(TOKEN_Z80_RLCA): GoTo NextWord
+        If CompStr(Data, WordBegin, WordLen, "rlc") = 0 Then Call Add(TOKEN_Z80_RLC): GoTo NextWord
+        If CompStr(Data, WordBegin, WordLen, "rld") = 0 Then Call Add(TOKEN_Z80_RLD): GoTo NextWord
+        If CompStr(Data, WordBegin, WordLen, "rra") = 0 Then Call Add(TOKEN_Z80_RRA): GoTo NextWord
+        If CompStr(Data, WordBegin, WordLen, "rr") = 0 Then Call Add(TOKEN_Z80_RR): GoTo NextWord
+        If CompStr(Data, WordBegin, WordLen, "rrca") = 0 Then Call Add(TOKEN_Z80_RRCA): GoTo NextWord
+        If CompStr(Data, WordBegin, WordLen, "rrc") = 0 Then Call Add(TOKEN_Z80_RRC): GoTo NextWord
+        If CompStr(Data, WordBegin, WordLen, "rrd") = 0 Then Call Add(TOKEN_Z80_RRD): GoTo NextWord
+        If CompStr(Data, WordBegin, WordLen, "rst") = 0 Then Call Add(TOKEN_Z80_RST): GoTo NextWord
         'Keywords
-        If StrComp(Word, "return") = 0 Then Call Add(TOKEN_KEYWORD_RETURN): GoTo NextWord
+        If CompStr(Data, WordBegin, WordLen, "return") = 0 Then Call Add(TOKEN_KEYWORD_RETURN): GoTo NextWord
         
     ElseIf Asc1 = S Then '--- `s` ---
         'Z80 instructions
-        If StrComp(Word, "sbc") = 0 Then Call Add(TOKEN_Z80_SBC): GoTo NextWord
-        If StrComp(Word, "scf") = 0 Then Call Add(TOKEN_Z80_SCF): GoTo NextWord
-        If StrComp(Word, "set") = 0 Then Call Add(TOKEN_Z80_SET): GoTo NextWord
-        If StrComp(Word, "sla") = 0 Then Call Add(TOKEN_Z80_SLA): GoTo NextWord
-        If StrComp(Word, "sra") = 0 Then Call Add(TOKEN_Z80_SRA): GoTo NextWord
-        If StrComp(Word, "sll") = 0 Then Call Add(TOKEN_Z80_SLL): GoTo NextWord
-        If StrComp(Word, "srl") = 0 Then Call Add(TOKEN_Z80_SRL): GoTo NextWord
-        If StrComp(Word, "sub") = 0 Then Call Add(TOKEN_Z80_SUB): GoTo NextWord
+        If CompStr(Data, WordBegin, WordLen, "sbc") = 0 Then Call Add(TOKEN_Z80_SBC): GoTo NextWord
+        If CompStr(Data, WordBegin, WordLen, "scf") = 0 Then Call Add(TOKEN_Z80_SCF): GoTo NextWord
+        If CompStr(Data, WordBegin, WordLen, "set") = 0 Then Call Add(TOKEN_Z80_SET): GoTo NextWord
+        If CompStr(Data, WordBegin, WordLen, "sla") = 0 Then Call Add(TOKEN_Z80_SLA): GoTo NextWord
+        If CompStr(Data, WordBegin, WordLen, "sra") = 0 Then Call Add(TOKEN_Z80_SRA): GoTo NextWord
+        If CompStr(Data, WordBegin, WordLen, "sll") = 0 Then Call Add(TOKEN_Z80_SLL): GoTo NextWord
+        If CompStr(Data, WordBegin, WordLen, "srl") = 0 Then Call Add(TOKEN_Z80_SRL): GoTo NextWord
+        If CompStr(Data, WordBegin, WordLen, "sub") = 0 Then Call Add(TOKEN_Z80_SUB): GoTo NextWord
         'Keywords
-        If StrComp(Word, "slot") = 0 Then Call Add(TOKEN_KEYWORD_SLOT): GoTo NextWord
-        If StrComp(Word, "start") = 0 Then Call Add(TOKEN_KEYWORD_START): GoTo NextWord
-        If StrComp(Word, "stop") = 0 Then Call Add(TOKEN_KEYWORD_STOP): GoTo NextWord
-        If StrComp(Word, "struct") = 0 Then Call Add(TOKEN_KEYWORD_STRUCT): GoTo NextWord
+        If CompStr(Data, WordBegin, WordLen, "slot") = 0 Then Call Add(TOKEN_KEYWORD_SLOT): GoTo NextWord
+        If CompStr(Data, WordBegin, WordLen, "start") = 0 Then Call Add(TOKEN_KEYWORD_START): GoTo NextWord
+        If CompStr(Data, WordBegin, WordLen, "stop") = 0 Then Call Add(TOKEN_KEYWORD_STOP): GoTo NextWord
+        If CompStr(Data, WordBegin, WordLen, "struct") = 0 Then Call Add(TOKEN_KEYWORD_STRUCT): GoTo NextWord
         
     ElseIf Asc1 = W Then '--- `w` ---
         'Keywords
-        If StrComp(Word, "word") = 0 Then Call Add(TOKEN_KEYWORD_WORD): GoTo NextWord
+        If CompStr(Data, WordBegin, WordLen, "word") = 0 Then Call Add(TOKEN_KEYWORD_WORD): GoTo NextWord
         'There are no `w` registers
         GoTo WordError
         
     ElseIf Asc1 = X Then '--- `x` ---
         'Z80 instructions
-        If StrComp(Word, "xor") = 0 Then Call Add(TOKEN_Z80_XOR): GoTo NextWord
+        If CompStr(Data, WordBegin, WordLen, "xor") = 0 Then Call Add(TOKEN_Z80_XOR): GoTo NextWord
         'TODO: The `x` operator
         'There are no `x` registers
         GoTo WordError
@@ -714,12 +712,12 @@ EndWord2:
         Dim Number As Long
         'TODO: validate the number size
         'TODO: Do manual Clng using the byte array
-        Let Number = CLng(Word)
-        'Copy the long directly into the token stream
-        Call kernel32_RtlMoveMemory( _
-            Tokens(TokensCursor), Number, 4 _
-        )
-        Let TokensCursor = TokensCursor + 4
+'        Let Number = CLng(Word)
+'        'Copy the long directly into the token stream
+'        Call kernel32_RtlMoveMemory( _
+'            Tokens(TokensCursor), Number, 4 _
+'        )
+'        Let TokensCursor = TokensCursor + 4
         GoTo NextWord
         
     'Binary number?
@@ -832,3 +830,32 @@ Private Sub Add(ByRef Token As OZ80_TOKEN)
     Let TokenCounts(Token) = TokenCounts(Token) + 1
     Let TokensCursor = TokensCursor + 1
 End Sub
+
+'CompStr : Compare a word from the byte array to a string _
+ ======================================================================================
+Private Function CompStr( _
+    ByRef Data() As Byte, ByRef Begin As Long, ByRef Length As Long, _
+    ByRef Text As String _
+) As Boolean
+    'WARNING: `Text` is assumed to be lower case!
+    'This function is designed as a quick'n'dirty replacement for `StrComp`, _
+     but using the byte array as the source so we no longer have to concatenate _
+     strings in the parsing routine
+    
+    'If the lengths don't match then they can't be the same
+    If Length <> Len(Text) Then Exit Function
+    
+    'Convert the string into a byte array. I tried doing this with a SAFEARRAY1D but _
+     it was still crashing most of the time :( This could be a whole lot faster if _
+     we could cast the string to a byte array without actually having to make a _
+     duplicate of the string
+    Dim TextArr() As Byte
+    Let TextArr = Text
+            
+    Dim ii As Long
+    For ii = 0 To Length - 1
+        If LowCase(Data(Begin + ii)) <> TextArr(ii * 2) Then Exit Function
+    Next ii
+    
+    Let CompStr = True
+End Function

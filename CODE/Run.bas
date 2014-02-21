@@ -21,7 +21,7 @@ Public Sub Main()
 '    Call Assembler.Assemble(App.Path & "\S1.sms.asm")
     Call Assembler.Assemble(App.Path & "\sonic1-sms.oz80")
     
-    If InIDE = False Then MsgBox Timer - StartTime
+    If InIDE = False Then MsgBox Format$(Timer - StartTime, "0.000")
     
     Set Assembler = Nothing
 End Sub

@@ -44,13 +44,9 @@ Public Sub Assemble(ByVal FilePath As String)
     'The token stream is only a word-for-word machine representation of the source _
      code, we need to check the grammer for validity and whilst there we will do some _
      optimisations on the stream (e.g. collapsing lists into byte streams)
-End Sub
-
-'/// EVENTS ///////////////////////////////////////////////////////////////////////////
-
-'CLASS Terminate _
- ======================================================================================
-Private Sub Class_Terminate()
+     
+     
     'Clean up
     Set Tokeniser = Nothing
 End Sub
+

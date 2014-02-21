@@ -23,6 +23,16 @@ Option Explicit
  does away for the need to refer to the source text files again. This class handles _
  parsing the source code text into tokens; the assembler only works with tokens
 
+'/// API //////////////////////////////////////////////////////////////////////////////
+
+'Copy raw memory from one place to another _
+ <msdn.microsoft.com/en-us/library/windows/desktop/aa366535%28v=vs.85%29.aspx>
+Private Declare Sub kernel32_RtlMoveMemory Lib "kernel32" Alias "RtlMoveMemory" ( _
+    ByRef ptrDestination As Any, _
+    ByRef ptrSource As Any, _
+    ByVal Length As Long _
+)
+
 '/// CONSTANTS ////////////////////////////////////////////////////////////////////////
 
 'These define the various punctiation marks (in ASCII codes) for the language syntax
@@ -59,7 +69,7 @@ Private Const E = 101
 Private Const F = 102
 Private Const G = 103
 Private Const H = 104
-Private Const I = 105
+Private Const i = 105
 Private Const J = 106
 Private Const K = 107
 Private Const L = 108
@@ -307,14 +317,14 @@ Private Sub Class_Initialize()
     ReDim Tokens(0 To TokensLimit) As Byte
     
     'Initialise the lookup table of upper-case to lower-case values
-    Dim I As Long
-    For I = 0 To 255
-        If I >= 65 And I <= 90 Then
-            Let LowCase(I) = I And 32
+    Dim ii As Long
+    For ii = 0 To 255
+        If ii >= 65 And ii <= 90 Then
+            Let LowCase(ii) = ii Or 32
         Else
-            Let LowCase(I) = I
+            Let LowCase(ii) = ii
         End If
-    Next I
+    Next ii
 End Sub
 
 'CLASS Terminate _
@@ -554,6 +564,13 @@ WordBreak:
 EndWord:
     If LenB(Word) = 0 Then GoTo EndOfFile
 EndWord2:
+    'Remember the end point and length of the word, _
+     we can use this to compare bytes (faster than string comparisons)
+    Dim WordEnd As Long
+    Let WordEnd = TextPos
+    Dim WordLen As Long
+    Let WordLen = (WordEnd - WordBegin) + 1
+    
     'Tokenise the word: _
      ----------------------------------------------------------------------------------
     'Check the first letter of the word to find the right kind of token:
@@ -619,7 +636,6 @@ EndWord2:
         If StrComp(Word, "di") = 0 Then Call AddToken_Z80(TOKEN_Z80_DI): GoTo NextWord
         If StrComp(Word, "djnz") = 0 Then Call AddToken_Z80(TOKEN_Z80_DJNZ): GoTo NextWord
         'Keywords
-        If Word = "DATA" Then Stop
         If StrComp(Word, "data") = 0 Then Call AddToken_Keyword(TOKEN_KEYWORD_DATA): GoTo NextWord
         If StrComp(Word, "def") = 0 Then Call AddToken_Keyword(TOKEN_KEYWORD_DEF): GoTo NextWord
         If StrComp(Word, "default") = 0 Then Call AddToken_Keyword(TOKEN_KEYWORD_DEFAULT): GoTo NextWord
@@ -640,7 +656,7 @@ EndWord2:
         'Z80 instructions
         If StrComp(Word, "halt") = 0 Then Call AddToken_Z80(TOKEN_Z80_HALT): GoTo NextWord
         
-    ElseIf Asc1 = I Then '--- `i` ---
+    ElseIf Asc1 = i Then '--- `i` ---
         'Z80 instructions
         If StrComp(Word, "im") = 0 Then Call AddToken_Z80(TOKEN_Z80_IM): GoTo NextWord
         If StrComp(Word, "in") = 0 Then Call AddToken_Z80(TOKEN_Z80_IN): GoTo NextWord
@@ -781,7 +797,18 @@ EndWord2:
         
     'String (quote)
     ElseIf Asc1 = SYNTAX_QUOTE Then '--- `"` ---
-        'TODO: Tokenise
+'        'Copy the bytes from the quote directly into the token stream
+'        Call kernel32_RtlMoveMemory( _
+'            Tokens(TokensCursor), Data(WordBegin + 1), WordLen - 1 _
+'        )
+'
+'        Dim ii As Long
+'        For ii = TokensCursor To TokensCursor + WordLen - 1
+'            Debug.Print Chr$(Tokens(i));
+'        Next
+'        Debug.Print
+'
+'        Let TokensCursor = TokensCursor + WordLen
         GoTo NextWord
         
     ElseIf Asc1 = SYNTAX_OPERATOR_ADD Then '--- `+` ---
@@ -827,7 +854,7 @@ OneLetter:
     If Asc1 = D Then Call AddToken_Register(TOKEN_REGISTER_D): GoTo NextWord
     If Asc1 = E Then Call AddToken_Register(TOKEN_REGISTER_E): GoTo NextWord
     If Asc1 = H Then Call AddToken_Register(TOKEN_REGISTER_H): GoTo NextWord
-    If Asc1 = I Then Call AddToken_Register(TOKEN_REGISTER_I): GoTo NextWord
+    If Asc1 = i Then Call AddToken_Register(TOKEN_REGISTER_I): GoTo NextWord
     If Asc1 = L Then Call AddToken_Register(TOKEN_REGISTER_L): GoTo NextWord
     If Asc1 = R Then Call AddToken_Register(TOKEN_REGISTER_R): GoTo NextWord
     GoTo WordError
@@ -841,7 +868,7 @@ TwoLetters:
         If Asc2 = E Then Call AddToken_Register(TOKEN_REGISTER_DE): GoTo NextWord
     ElseIf Asc1 = H Then  '"hl"
         If Asc2 = L Then Call AddToken_Register(TOKEN_REGISTER_HL): GoTo NextWord
-    ElseIf Asc1 = I Then  '"ix"/"iy"
+    ElseIf Asc1 = i Then  '"ix"/"iy"
         If Asc2 = X Then Call AddToken_Register(TOKEN_REGISTER_IX): GoTo NextWord
         If Asc2 = Y Then Call AddToken_Register(TOKEN_REGISTER_IY): GoTo NextWord
     ElseIf Asc1 = P Then  '"pc"

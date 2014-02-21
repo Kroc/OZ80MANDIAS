@@ -256,6 +256,9 @@ Private TokensLength As Long            'The current amount of space used in the
 Private TokensCursor As Long            'Where the current insertion point is
 Private TokensCount As Long             'The number of tokens, exluding the data parts
 
+'So we can look at which tokens are most common, for optimising
+Dim TokenCounts(0 To 255) As Long
+
 'A look up table of ASCII codes from upper-case to lower-case
 Private LowCase(0 To 255) As Long
 
@@ -289,6 +292,7 @@ Private Sub Class_Terminate()
     Erase LowCase
     'Empty the token stream
     Erase Tokens
+    Erase TokenCounts
 End Sub
 
 '/// PUBLIC INTERFACE /////////////////////////////////////////////////////////////////
@@ -342,10 +346,6 @@ Public Sub Tokenise(ByRef FilePath As String)
 ReadWord:
     'The word as we build it
     Dim Word As String: Let Word = vbNullString
-    'Reset the counter and captures for the 2nd, 3rd and 4th characters of the word
-    Let LetterIndex = 0
-    Let Asc2 = 0: Let Asc3 = 0: Let Asc4 = 0
-
 SkipChar:
     Let TextPos = TextPos + 1
 ReadChar:
@@ -394,11 +394,6 @@ ReadChar:
             If AscChar = aTAB Then GoTo SkipChar
             If AscChar = aCR Then GoTo SkipChar
             If AscChar = aLF Then GoTo SkipChar
-            'Remember the first letter of the word for guiding tokenisation
-            Let Asc1 = LowCase(AscChar)
-            
-            Dim WordBegin As Long
-            Let WordBegin = TextPos
         Else
             'A word is underway, check for end of line (note the `Else`, we don't _
              want to test line endings twice when the Word is currently empty)
@@ -444,14 +439,6 @@ ReadChar:
         If AscChar = SYNTAX_OPERATOR_POW Then GoTo WordBreak
         If AscChar = SYNTAX_OPERATOR_MOD Then GoTo WordBreak
         
-        'Capture letters 2,3 & 4 (for high-speed register validation)
-        If LetterIndex < 5 Then
-            Let LetterIndex = LetterIndex + 1
-            If LetterIndex = 2 Then Let Asc2 = LowCase(AscChar)
-            If LetterIndex = 3 Then Let Asc3 = LowCase(AscChar)
-            If LetterIndex = 4 Then Let Asc4 = LowCase(AscChar)
-        End If
-        
     'Quotes:
     '----------------------------------------------------------------------------------
     Else
@@ -464,6 +451,8 @@ ReadChar:
     '----------------------------------------------------------------------------------
     
 NextChar:
+    Dim WordBegin As Long
+    If LenB(Word) = 0 Then Let WordBegin = TextPos
     Let Word = Word & ChrW$(AscChar)
     GoTo SkipChar
 
@@ -472,6 +461,7 @@ WordBreak:
      for use in the next word. i.e. when a comma is reached, process the text _
      before the comma as a word, and take the comma as the next word
     If LenB(Word) Then Let TextPos = TextPos - 1: GoTo EndWord2
+    Let WordBegin = TextPos
     Let Word = Word & ChrW$(AscChar)
     
 EndWord:
@@ -480,14 +470,24 @@ EndWord2:
     'Remember the end point and length of the word, _
      we can use this to compare bytes (faster than string comparisons)
     Dim WordEnd As Long
-    Let WordEnd = TextPos
+    Let WordEnd = TextPos - 1
     Dim WordLen As Long
-    Let WordLen = (WordEnd - WordBegin) + 1
-    
-    Let Asc1 = LowCase(Data(WordBegin))
+    Let WordLen = (WordEnd - WordBegin) 'Note that this is 0-based, so 0 = 1 char
     
     'Tokenise the word: _
      ----------------------------------------------------------------------------------
+    'Extract the 1st, 2nd, 3rd & 4th letters of the word as these make up most _
+     comparisons and can be done quickly without string comparisons
+    Let Asc1 = LowCase(Data(WordBegin))
+    Let Asc2 = 0: Let Asc3 = 0: Let Asc4 = 0
+    If WordLen > 3 Then
+        Let Asc4 = LowCase(Data(WordBegin + 3))
+    ElseIf WordLen > 2 Then
+        Let Asc3 = LowCase(Data(WordBegin + 2))
+    ElseIf WordLen > 1 Then
+        Let Asc2 = LowCase(Data(WordBegin + 1))
+    End If
+    
     'Check the first letter of the word to find the right kind of token:
     
     'Comma (very common!)
@@ -702,7 +702,24 @@ EndWord2:
     
     'A decimal number?
     ElseIf Asc1 >= 48 And Asc1 <= 57 Then
-        'TODO: Tokenise number
+        'Validate the number
+        Dim ii As Long
+        For ii = WordBegin To WordBegin + (WordLen - 1)
+            If Data(ii) < 48 Or Data(ii) > 57 Then
+                'TODO: Error, invalid number
+                Stop
+            End If
+        Next ii
+        'Tokenise number
+        Dim Number As Long
+        'TODO: validate the number size
+        'TODO: Do manual Clng using the byte array
+        Let Number = CLng(Word)
+        'Copy the long directly into the token stream
+        Call kernel32_RtlMoveMemory( _
+            Tokens(TokensCursor), Number, 4 _
+        )
+        Let TokensCursor = TokensCursor + 4
         GoTo NextWord
         
     'Binary number?
@@ -716,9 +733,9 @@ EndWord2:
         Call Add(TOKEN_QUOTE)
         'Copy the bytes from the quote directly into the token stream
         Call kernel32_RtlMoveMemory( _
-            Tokens(TokensCursor), Data(WordBegin + 1), WordLen - 2 _
+            Tokens(TokensCursor), Data(WordBegin + 1), WordLen - 1 _
         )
-        Let TokensCursor = TokensCursor + WordLen - 2
+        Let TokensCursor = TokensCursor + WordLen - 1
         GoTo NextWord
         
     ElseIf Asc1 = SYNTAX_OPERATOR_ADD Then '--- `+` ---
@@ -812,5 +829,6 @@ Private Sub Add(ByRef Token As OZ80_TOKEN)
     'The param MUST be 0-255, but is given as long for speed reasons; _
      the rest of this class will ensure that this is never out of bounds
     Let Tokens(TokensCursor) = Token
+    Let TokenCounts(Token) = TokenCounts(Token) + 1
     Let TokensCursor = TokensCursor + 1
 End Sub

@@ -34,65 +34,105 @@ Private Declare Sub kernel32_RtlMoveMemory Lib "kernel32" Alias "RtlMoveMemory" 
     ByVal Length As Long _
 )
 
+'<msdn.microsoft.com/en-us/library/windows/desktop/ms724408%28v=vs.85%29.aspx>
+Private Declare Function kernel32_GetTickCount Lib "kernel32" Alias "GetTickCount" ( _
+) As Long
+
+'API support for CompStr function _
+ --------------------------------------------------------------------------------------
+'<www.vbforums.com/showthread.php?729385-VB6-clsStrToIntArray-cls-Cast-String-To-Integer-Array>
+Private Type SAFEARRAY1D    'Represents a safe array. (One Dimensional)
+    cDims      As Integer   'The count of dimensions.
+    fFeatures  As Integer   'Flags used by the SafeArray.
+    cbElements As Long      'The size of an array element.
+    cLocks     As Long      'The number of times the array has been locked without a corresponding unlock.
+    pvData     As Long      'Pointer to the data.
+    cElements  As Long      'The number of elements in the dimension.
+    lLbound    As Long      'The lower bound of the dimension.
+End Type                    'http://msdn.microsoft.com/en-us/library/ms221482(v=vs.85).aspx
+
+'- An array that is allocated on the stack
+Private Const FADF_AUTO      As Integer = &H1
+'- An array that may not be resized or reallocated
+Private Const FADF_FIXEDSIZE As Integer = &H10
+
+Private Declare Function msvbvm60_VarPtr Lib "msvbvm60.dll" Alias "VarPtr" ( _
+    ByRef ArrayVar() As Any _
+) As Long
+Private Declare Sub msvbvm60_PutMem4 Lib "msvbvm60.dll" Alias "PutMem4" ( _
+    ByVal Addr As Long, _
+    ByVal NewVal As Long _
+)
+
+Private CompStrPtr  As Long
+Private CompStrSA1D As SAFEARRAY1D
+
+Dim CompStrArr() As Integer
+
 '/// CONSTANTS ////////////////////////////////////////////////////////////////////////
 
 'These define the various punctiation marks (in ASCII codes) for the language syntax
-Private Const SYNTAX_COMMENT = 96       '`
-Private Const SYNTAX_HINT1 = 59         ';
-Private Const SYNTAX_HINT2 = 59         ''
-Private Const SYNTAX_QUOTE = 34         '"
-Private Const SYNTAX_LABEL = 58         ':
-Private Const SYNTAX_PROPERTY = 46      '.
-Private Const SYNTAX_VARIABLE = 35      '#
-Private Const SYNTAX_MACRO = 64         '@
-Private Const SYNTAX_FUNCT = 63         '?
-Private Const SYNTAX_NUMBER_HEX = 36    '$
-Private Const SYNTAX_NUMBER_BIN = 37    '%
-Private Const SYNTAX_LIST = 44          ',
-Private Const SYNTAX_PAREN_OPEN = 40    '(
-Private Const SYNTAX_PAREN_CLOSE = 41   ')
-Private Const SYNTAX_BLOCK_OPEN = 123   '{
-Private Const SYNTAX_BLOCK_CLOSE = 125  '}
-
-Private Const SYNTAX_OPERATOR_ADD = 43  '+
-Private Const SYNTAX_OPERATOR_SUB = 45  '-
-Private Const SYNTAX_OPERATOR_MUL = 42  '*
-Private Const SYNTAX_OPERATOR_DIV = 47  '/
-Private Const SYNTAX_OPERATOR_POW = 94  '^
-Private Const SYNTAX_OPERATOR_MOD = 92  '\
+Private Enum SYNTAX
+    SYNTAX_COMMENT = 96       '`
+    SYNTAX_HINT1 = 59         ';
+    SYNTAX_HINT2 = 59         ''
+    SYNTAX_QUOTE = 34         '"
+    SYNTAX_LABEL = 58         ':
+    SYNTAX_PROPERTY = 46      '.
+    SYNTAX_VARIABLE = 35      '#
+    SYNTAX_MACRO = 64         '@
+    SYNTAX_FUNCT = 63         '?
+    SYNTAX_NUMBER_HEX = 36    '$
+    SYNTAX_NUMBER_BIN = 37    '%
+    SYNTAX_NEXT = 44          ',
+    SYNTAX_PAREN_OPEN = 40    '(
+    SYNTAX_PAREN_CLOSE = 41   ')
+    SYNTAX_BLOCK_OPEN = 123   '{
+    SYNTAX_BLOCK_CLOSE = 125  '}
+    SYNTAX_OPERATOR_ADD = 43  '+
+    SYNTAX_OPERATOR_SUB = 45  '-
+    SYNTAX_OPERATOR_MUL = 42  '*
+    SYNTAX_OPERATOR_DIV = 47  '/
+    SYNTAX_OPERATOR_POW = 94  '^
+    SYNTAX_OPERATOR_MOD = 92  '\
+End Enum
 
 'This makes life a whole lot easier
-Private Const A = 97
-Private Const B = 98
-Private Const C = 99
-Private Const D = 100
-Private Const E = 101
-Private Const F = 102
-Private Const G = 103
-Private Const H = 104
-Private Const i = 105
-Private Const J = 106
-Private Const K = 107
-Private Const L = 108
-Private Const M = 109
-Private Const N = 110
-Private Const O = 111
-Private Const P = 112
-Private Const Q = 113
-Private Const R = 114
-Private Const S = 115
-Private Const T = 116
-Private Const U = 117
-Private Const V = 118
-Private Const W = 119
-Private Const X = 120
-Private Const Y = 121
-Private Const Z = 122
+Private Enum ASCII
+    UNDRSCR = 95
+    
+    A = 97
+    B = 98
+    C = 99
+    D = 100
+    E = 101
+    F = 102
+    G = 103
+    H = 104
+    i = 105
+    J = 106
+    K = 107
+    L = 108
+    M = 109
+    N = 110
+    O = 111
+    P = 112
+    Q = 113
+    R = 114
+    S = 115
+    T = 116
+    U = 117
+    V = 118
+    W = 119
+    X = 120
+    Y = 121
+    Z = 122
 
-Private Const aSPC = 32
-Private Const aTAB = 9
-Private Const aCR = 10
-Private Const aLF = 13
+    aSPC = 32
+    aTAB = 9
+    aCR = 10
+    aLF = 13
+End Enum
 
 '--------------------------------------------------------------------------------------
 Public Enum OZ80_TOKEN
@@ -257,10 +297,13 @@ Private TokensCursor As Long            'Where the current insertion point is
 Private TokensCount As Long             'The number of tokens, exluding the data parts
 
 'So we can look at which tokens are most common, for optimising
-Dim TokenCounts(0 To 255) As Long
+Private TokenCounts(0 To 255) As Long
 
 'A look up table of ASCII codes from upper-case to lower-case
 Private LowCase(0 To 255) As Long
+
+'The buffer used to parse the source text file
+Private Text() As Byte
 
 '/// EVENTS ///////////////////////////////////////////////////////////////////////////
 
@@ -283,6 +326,17 @@ Private Sub Class_Initialize()
             Let LowCase(ii) = ii
         End If
     Next ii
+    
+    With CompStrSA1D
+        .cDims = 1
+        .fFeatures = FADF_AUTO Or FADF_FIXEDSIZE
+        .cbElements = 2&
+        .cLocks = 1&
+        .lLbound = 0&
+    End With
+    
+    Let CompStrPtr = msvbvm60_VarPtr(CompStrArr())
+    Call msvbvm60_PutMem4(CompStrPtr, VarPtr(CompStrSA1D))
 End Sub
 
 'CLASS Terminate _
@@ -290,9 +344,13 @@ End Sub
 Private Sub Class_Terminate()
     'Clean up the look up table
     Erase LowCase
+    'The `Tokenise` method will clean this up, but just be doubly sure
+    Erase Text
     'Empty the token stream
     Erase Tokens
     Erase TokenCounts
+    
+    Call msvbvm60_PutMem4(CompStrPtr, 0&)
 End Sub
 
 '/// PUBLIC INTERFACE /////////////////////////////////////////////////////////////////
@@ -300,11 +358,13 @@ End Sub
 'Tokenise : Break a file into all its individual words and convert to machine tokens _
  ======================================================================================
 Public Sub Tokenise(ByRef FilePath As String)
-    'This function is tuned for speed -- it does not conform to "best practices" or _
-     even structured code. Gotos are fast, deal with it
-     
-    Dim Start As Single
-    Let Start = Timer
+    'This function is tuned for speed -- it does not conform to "best practices", _
+     or even structured code; GOTOs are fast, deal with it
+    
+    Dim Start As Long
+    Let Start = kernel32_GetTickCount()
+    
+    Dim ii As Long
     
     Dim IsQuote As Boolean
     Dim IsComment As Boolean
@@ -312,8 +372,6 @@ Public Sub Tokenise(ByRef FilePath As String)
     
     'Read the whole file into a single string _
      ----------------------------------------------------------------------------------
-    Dim Text As String
-    Dim Data() As Byte
     Dim FileNumber As String
     Let FileNumber = FreeFile
     
@@ -322,25 +380,18 @@ Public Sub Tokenise(ByRef FilePath As String)
     'Read the file as a binary string with one-byte per character (ASCII). _
      We first normalise to Unicode to deal with locale specifics and then downsample _
      into ASCII to save memory and make stepping through easier
-    Let Data = StrConv( _
+    Let Text = StrConv( _
         StrConv(InputB(LOF(FileNumber), FileNumber), vbUnicode), _
         vbFromUnicode _
     )
     
     'Cache this for speed
-    Dim TextLen As Long: Let TextLen = UBound(Data)
+    Dim TextLen As Long: Let TextLen = UBound(Text)
     Debug.Print "- Length: " & Format$(TextLen, "#,#") & " bytes"
     Close #FileNumber
     
     Dim TextPos As Long
     Let TextPos = -1
-    
-    'The first letter of a word will be remembered for guiding tokenisation. _
-     The 2nd, 3rd and 4th letters are used in validating registers and number prefixes
-    Dim LetterIndex As Long
-    Dim Asc1 As Long, Asc2 As Long, Asc3 As Long, Asc4 As Long
-    
-    Dim WordCount As Long
 
     '----------------------------------------------------------------------------------
 ReadWord:
@@ -355,7 +406,7 @@ ReadChar:
     
     'Read a character:
     Dim AscChar As Long
-    Let AscChar = Data(TextPos)
+    Let AscChar = Text(TextPos)
     
     'Comments:
     '----------------------------------------------------------------------------------
@@ -376,7 +427,7 @@ ReadChar:
         ElseIf AscChar = SYNTAX_COMMENT Then
             'Check for a second back-tick following
             Let TextPos = TextPos + 1
-            Let AscChar = Data(TextPos)
+            Let AscChar = Text(TextPos)
             If AscChar = SYNTAX_COMMENT Then
                 Let IsComment = False: Let IsCommentMulti = False
                 GoTo ReadWord
@@ -427,7 +478,7 @@ ReadChar:
         End If
     
         'Symbols that can break a word in the middle without spaces to separate
-        If AscChar = SYNTAX_LIST Then GoTo WordBreak
+        If AscChar = SYNTAX_NEXT Then GoTo WordBreak
         If AscChar = SYNTAX_PAREN_OPEN Then GoTo WordBreak
         If AscChar = SYNTAX_PAREN_CLOSE Then GoTo WordBreak
         If AscChar = SYNTAX_BLOCK_OPEN Then GoTo WordBreak
@@ -476,119 +527,150 @@ EndWord2:
      ----------------------------------------------------------------------------------
     'Extract the 1st, 2nd, 3rd & 4th letters of the word as these make up most _
      comparisons and can be done quickly without string comparisons
-    Let Asc1 = LowCase(Data(WordBegin))
+    Dim Asc1 As Long, Asc2 As Long, Asc3 As Long, Asc4 As Long
+    Let Asc1 = LowCase(Text(WordBegin))
     Let Asc2 = 0: Let Asc3 = 0: Let Asc4 = 0
     If WordLen > 3 Then
-        Let Asc4 = LowCase(Data(WordBegin + 3))
+        Let Asc4 = LowCase(Text(WordBegin + 3))
     ElseIf WordLen > 2 Then
-        Let Asc3 = LowCase(Data(WordBegin + 2))
+        Let Asc3 = LowCase(Text(WordBegin + 2))
     ElseIf WordLen > 1 Then
-        Let Asc2 = LowCase(Data(WordBegin + 1))
+        Let Asc2 = LowCase(Text(WordBegin + 1))
     End If
     
     'Check the first letter of the word to find the right kind of token:
     
     'Comma (very common!)
-    If Asc1 = SYNTAX_LIST Then
-        Call Add(OZ80_TOKEN.TOKEN_LIST)
+    If Asc1 = SYNTAX_NEXT Then '............................................... `,` ...
+        Call Add(OZ80_TOKEN.TOKEN_NEXT)
         GoTo NextWord
     
     'Hexadecimal number?
-    ElseIf Asc1 = SYNTAX_NUMBER_HEX Then
+    ElseIf Asc1 = SYNTAX_NUMBER_HEX Then '..................................... `$` ...
         'TODO: Tokenise number
         GoTo NextWord
     
-    ElseIf Asc1 = SYNTAX_LABEL Then
-        'TODO: Tokenise
-        GoTo NextWord
+    ElseIf Asc1 = SYNTAX_LABEL Then '.......................................... `:` ...
+        'A label can be `:` only, without a name (when used within a PROC)
+        If Asc2 = 0 Then
+            'TODO: Tokenise this
+            GoTo NextWord
+        
+        'A label cannot begin with a number but must otherwise be A-Z, 0-9 and "_"
+        ElseIf IsValidName(WordBegin + 1, WordLen - 1) = False Then
+            'TODO: Error - not a valid label name
+        Else
+            'TODO: Tokenise
+            GoTo NextWord
+        End If
     
-    ElseIf Asc1 = SYNTAX_PROPERTY Then
+    ElseIf Asc1 = SYNTAX_PROPERTY Then '....................................... `.` ...
         'At this stage the grammer is not validated, so we have no idea which label _
          this property attaches to. We store the name in an array and add the index _
          to the token stream -- the assembler will handle the context for same-name _
          properties
-        'TODO: Tokenise
-        GoTo NextWord
-    
-    ElseIf Asc1 = SYNTAX_VARIABLE Then
-        'TODO: Tokenise
-        GoTo NextWord
         
-    ElseIf Asc1 = A Then '--- `a` ---
+        'A property can be `.` only, without a name (when used within a PROC)
+        If Asc2 = 0 Then
+            'TODO: Tokenise this
+            GoTo NextWord
+        
+        'A property cannot begin with a number but must otherwise be A-Z, 0-9 and "_"
+        ElseIf IsValidName(WordBegin + 1, WordLen - 1) = False Then
+            'TODO: Error - not a valid property name
+        Else
+            'TODO: Tokenise
+            GoTo NextWord
+        End If
+    
+    ElseIf Asc1 = SYNTAX_VARIABLE Then '....................................... `#` ...
+        'A variable name cannot be just '#'
+        If Asc2 = 0 Then
+            'TODO: Error - invalid variable name
+        
+        'A variable cannot begin with a number but must otherwise be A-Z, 0-9 and "_"
+        ElseIf IsValidName(WordBegin + 1, WordLen - 1) = False Then
+            'TODO: Error - not a valid variable name
+        Else
+            'TODO: Tokenise
+            GoTo NextWord
+        End If
+        
+    ElseIf Asc1 = A Then '..................................................... `a` ...
         'Z80 instructions
-        If CompStr(Data, WordBegin, WordLen, "adc") = 0 Then Call Add(TOKEN_Z80_ADC): GoTo NextWord
-        If CompStr(Data, WordBegin, WordLen, "add") = 0 Then Call Add(TOKEN_Z80_ADD): GoTo NextWord
-        If CompStr(Data, WordBegin, WordLen, "and") = 0 Then Call Add(TOKEN_Z80_AND): GoTo NextWord
+        If CompStr(WordBegin, WordLen, "adc") = 0 Then Call Add(TOKEN_Z80_ADC): GoTo NextWord
+        If CompStr(WordBegin, WordLen, "add") = 0 Then Call Add(TOKEN_Z80_ADD): GoTo NextWord
+        If CompStr(WordBegin, WordLen, "and") = 0 Then Call Add(TOKEN_Z80_AND): GoTo NextWord
         'Keywords
-        If CompStr(Data, WordBegin, WordLen, "as") = 0 Then Call Add(TOKEN_KEYWORD_AS): GoTo NextWord
-        If CompStr(Data, WordBegin, WordLen, "at") = 0 Then Call Add(TOKEN_KEYWORD_AT): GoTo NextWord
+        If CompStr(WordBegin, WordLen, "as") = 0 Then Call Add(TOKEN_KEYWORD_AS): GoTo NextWord
+        If CompStr(WordBegin, WordLen, "at") = 0 Then Call Add(TOKEN_KEYWORD_AT): GoTo NextWord
          
-    ElseIf Asc1 = B Then '--- `b` ---
+    ElseIf Asc1 = B Then '..................................................... `b` ...
         'Z80 instructions
-        If CompStr(Data, WordBegin, WordLen, "bit") = 0 Then Call Add(TOKEN_Z80_BIT): GoTo NextWord
+        If CompStr(WordBegin, WordLen, "bit") = 0 Then Call Add(TOKEN_Z80_BIT): GoTo NextWord
         'Keywords
-        If CompStr(Data, WordBegin, WordLen, "bank") = 0 Then Call Add(TOKEN_KEYWORD_BANK): GoTo NextWord
-        If CompStr(Data, WordBegin, WordLen, "binary") = 0 Then Call Add(TOKEN_KEYWORD_BINARY): GoTo NextWord
-        If CompStr(Data, WordBegin, WordLen, "byte") = 0 Then Call Add(TOKEN_KEYWORD_BYTE): GoTo NextWord
+        If CompStr(WordBegin, WordLen, "bank") = 0 Then Call Add(TOKEN_KEYWORD_BANK): GoTo NextWord
+        If CompStr(WordBegin, WordLen, "binary") = 0 Then Call Add(TOKEN_KEYWORD_BINARY): GoTo NextWord
+        If CompStr(WordBegin, WordLen, "byte") = 0 Then Call Add(TOKEN_KEYWORD_BYTE): GoTo NextWord
         
-    ElseIf Asc1 = C Then '--- `c` ---
+    ElseIf Asc1 = C Then '..................................................... `c` ...
         'Z80 instructions
-        If CompStr(Data, WordBegin, WordLen, "call") = 0 Then Call Add(TOKEN_Z80_CALL): GoTo NextWord
-        If CompStr(Data, WordBegin, WordLen, "ccf") = 0 Then Call Add(TOKEN_Z80_CCF): GoTo NextWord
-        If CompStr(Data, WordBegin, WordLen, "cp") = 0 Then Call Add(TOKEN_Z80_CP): GoTo NextWord
-        If CompStr(Data, WordBegin, WordLen, "cpd") = 0 Then Call Add(TOKEN_Z80_CPD): GoTo NextWord
-        If CompStr(Data, WordBegin, WordLen, "cpdr") = 0 Then Call Add(TOKEN_Z80_CPDR): GoTo NextWord
-        If CompStr(Data, WordBegin, WordLen, "cpi") = 0 Then Call Add(TOKEN_Z80_CPI): GoTo NextWord
-        If CompStr(Data, WordBegin, WordLen, "cpir") = 0 Then Call Add(TOKEN_Z80_CPIR): GoTo NextWord
-        If CompStr(Data, WordBegin, WordLen, "cpl") = 0 Then Call Add(TOKEN_Z80_CPL): GoTo NextWord
+        If CompStr(WordBegin, WordLen, "call") = 0 Then Call Add(TOKEN_Z80_CALL): GoTo NextWord
+        If CompStr(WordBegin, WordLen, "ccf") = 0 Then Call Add(TOKEN_Z80_CCF): GoTo NextWord
+        If CompStr(WordBegin, WordLen, "cp") = 0 Then Call Add(TOKEN_Z80_CP): GoTo NextWord
+        If CompStr(WordBegin, WordLen, "cpd") = 0 Then Call Add(TOKEN_Z80_CPD): GoTo NextWord
+        If CompStr(WordBegin, WordLen, "cpdr") = 0 Then Call Add(TOKEN_Z80_CPDR): GoTo NextWord
+        If CompStr(WordBegin, WordLen, "cpi") = 0 Then Call Add(TOKEN_Z80_CPI): GoTo NextWord
+        If CompStr(WordBegin, WordLen, "cpir") = 0 Then Call Add(TOKEN_Z80_CPIR): GoTo NextWord
+        If CompStr(WordBegin, WordLen, "cpl") = 0 Then Call Add(TOKEN_Z80_CPL): GoTo NextWord
         
-    ElseIf Asc1 = D Then '--- `d` ---
+    ElseIf Asc1 = D Then '..................................................... `d` ...
         'Z80 instructions
-        If CompStr(Data, WordBegin, WordLen, "daa") = 0 Then Call Add(TOKEN_Z80_DAA): GoTo NextWord
-        If CompStr(Data, WordBegin, WordLen, "dec") = 0 Then Call Add(TOKEN_Z80_DEC): GoTo NextWord
-        If CompStr(Data, WordBegin, WordLen, "di") = 0 Then Call Add(TOKEN_Z80_DI): GoTo NextWord
-        If CompStr(Data, WordBegin, WordLen, "djnz") = 0 Then Call Add(TOKEN_Z80_DJNZ): GoTo NextWord
+        If CompStr(WordBegin, WordLen, "daa") = 0 Then Call Add(TOKEN_Z80_DAA): GoTo NextWord
+        If CompStr(WordBegin, WordLen, "dec") = 0 Then Call Add(TOKEN_Z80_DEC): GoTo NextWord
+        If CompStr(WordBegin, WordLen, "di") = 0 Then Call Add(TOKEN_Z80_DI): GoTo NextWord
+        If CompStr(WordBegin, WordLen, "djnz") = 0 Then Call Add(TOKEN_Z80_DJNZ): GoTo NextWord
         'Keywords
-        If CompStr(Data, WordBegin, WordLen, "data") = 0 Then Call Add(TOKEN_KEYWORD_DATA): GoTo NextWord
-        If CompStr(Data, WordBegin, WordLen, "def") = 0 Then Call Add(TOKEN_KEYWORD_DEF): GoTo NextWord
-        If CompStr(Data, WordBegin, WordLen, "default") = 0 Then Call Add(TOKEN_KEYWORD_DEFAULT): GoTo NextWord
+        If CompStr(WordBegin, WordLen, "data") = 0 Then Call Add(TOKEN_KEYWORD_DATA): GoTo NextWord
+        If CompStr(WordBegin, WordLen, "def") = 0 Then Call Add(TOKEN_KEYWORD_DEF): GoTo NextWord
+        If CompStr(WordBegin, WordLen, "default") = 0 Then Call Add(TOKEN_KEYWORD_DEFAULT): GoTo NextWord
         
-    ElseIf Asc1 = E Then '--- `e` ---
+    ElseIf Asc1 = E Then '..................................................... `e` ...
         'Z80 instructions
-        If CompStr(Data, WordBegin, WordLen, "ei") = 0 Then Call Add(TOKEN_Z80_EI): GoTo NextWord
-        If CompStr(Data, WordBegin, WordLen, "ex") = 0 Then Call Add(TOKEN_Z80_EX): GoTo NextWord
-        If CompStr(Data, WordBegin, WordLen, "exx") = 0 Then Call Add(TOKEN_Z80_EXX): GoTo NextWord
+        If CompStr(WordBegin, WordLen, "ei") = 0 Then Call Add(TOKEN_Z80_EI): GoTo NextWord
+        If CompStr(WordBegin, WordLen, "ex") = 0 Then Call Add(TOKEN_Z80_EX): GoTo NextWord
+        If CompStr(WordBegin, WordLen, "exx") = 0 Then Call Add(TOKEN_Z80_EXX): GoTo NextWord
     
-    ElseIf Asc1 = F Then '--- `f` ---
+    ElseIf Asc1 = F Then '..................................................... `f` ...
         'Keywords
-        If CompStr(Data, WordBegin, WordLen, "fill") = 0 Then Call Add(TOKEN_KEYWORD_FILL): GoTo NextWord
+        If CompStr(WordBegin, WordLen, "fill") = 0 Then Call Add(TOKEN_KEYWORD_FILL): GoTo NextWord
         'You can't refer to the `f` register directly (only `af`)
         GoTo WordError
         
-    ElseIf Asc1 = H Then '--- `h` ---
+    ElseIf Asc1 = H Then '..................................................... `h` ...
         'Z80 instructions
-        If CompStr(Data, WordBegin, WordLen, "halt") = 0 Then Call Add(TOKEN_Z80_HALT): GoTo NextWord
+        If CompStr(WordBegin, WordLen, "halt") = 0 Then Call Add(TOKEN_Z80_HALT): GoTo NextWord
         
-    ElseIf Asc1 = i Then '--- `i` ---
+    ElseIf Asc1 = i Then '..................................................... `i` ...
         'Z80 instructions
-        If CompStr(Data, WordBegin, WordLen, "im") = 0 Then Call Add(TOKEN_Z80_IM): GoTo NextWord
-        If CompStr(Data, WordBegin, WordLen, "in") = 0 Then Call Add(TOKEN_Z80_IN): GoTo NextWord
-        If CompStr(Data, WordBegin, WordLen, "inc") = 0 Then Call Add(TOKEN_Z80_INC): GoTo NextWord
-        If CompStr(Data, WordBegin, WordLen, "ind") = 0 Then Call Add(TOKEN_Z80_IND): GoTo NextWord
-        If CompStr(Data, WordBegin, WordLen, "indr") = 0 Then Call Add(TOKEN_Z80_INDR): GoTo NextWord
-        If CompStr(Data, WordBegin, WordLen, "ini") = 0 Then Call Add(TOKEN_Z80_INI): GoTo NextWord
-        If CompStr(Data, WordBegin, WordLen, "inir") = 0 Then Call Add(TOKEN_Z80_INIR): GoTo NextWord
+        If CompStr(WordBegin, WordLen, "im") = 0 Then Call Add(TOKEN_Z80_IM): GoTo NextWord
+        If CompStr(WordBegin, WordLen, "in") = 0 Then Call Add(TOKEN_Z80_IN): GoTo NextWord
+        If CompStr(WordBegin, WordLen, "inc") = 0 Then Call Add(TOKEN_Z80_INC): GoTo NextWord
+        If CompStr(WordBegin, WordLen, "ind") = 0 Then Call Add(TOKEN_Z80_IND): GoTo NextWord
+        If CompStr(WordBegin, WordLen, "indr") = 0 Then Call Add(TOKEN_Z80_INDR): GoTo NextWord
+        If CompStr(WordBegin, WordLen, "ini") = 0 Then Call Add(TOKEN_Z80_INI): GoTo NextWord
+        If CompStr(WordBegin, WordLen, "inir") = 0 Then Call Add(TOKEN_Z80_INIR): GoTo NextWord
         'Keywords
-        If CompStr(Data, WordBegin, WordLen, "include") = 0 Then Call Add(TOKEN_KEYWORD_INCLUDE): GoTo NextWord
+        If CompStr(WordBegin, WordLen, "include") = 0 Then Call Add(TOKEN_KEYWORD_INCLUDE): GoTo NextWord
         
-    ElseIf Asc1 = J Then '--- `j` ---
+    ElseIf Asc1 = J Then '..................................................... `j` ...
         'Z80 instructions
-        If CompStr(Data, WordBegin, WordLen, "jp") = 0 Then Call Add(TOKEN_Z80_JP): GoTo NextWord
-        If CompStr(Data, WordBegin, WordLen, "jr") = 0 Then Call Add(TOKEN_Z80_JR): GoTo NextWord
+        If CompStr(WordBegin, WordLen, "jp") = 0 Then Call Add(TOKEN_Z80_JP): GoTo NextWord
+        If CompStr(WordBegin, WordLen, "jr") = 0 Then Call Add(TOKEN_Z80_JR): GoTo NextWord
         'There are no `j` registers
         GoTo WordError
         
-    ElseIf Asc1 = K Then '--- `k` ---
+    ElseIf Asc1 = K Then '..................................................... `k` ...
         'Number suffixes K, KB & Kbit
         If Asc2 = 0 Then    'Just `K`
             Call Add(TOKEN_PREFIX_K): GoTo NextWord
@@ -597,156 +679,161 @@ EndWord2:
             'If only two letters, then it's `KB`
             If Asc3 = 0 Then Call Add(TOKEN_PREFIX_KB): GoTo NextWord
             'verify ...`Kbit`, we don't have Asc5 so avoid things like `Kbitty`
-            If CompStr(Data, WordBegin, WordLen, "kbit") = 0 Then Call Add(TOKEN_PREFIX_KBIT): GoTo NextWord
+            If CompStr(WordBegin, WordLen, "kbit") = 0 Then Call Add(TOKEN_PREFIX_KBIT): GoTo NextWord
         End If
         'There are no `k` registers
         GoTo WordError
         
-    ElseIf Asc1 = L Then '--- `l` ---
+    ElseIf Asc1 = L Then '..................................................... `l` ...
         'Z80 instructions
-        If CompStr(Data, WordBegin, WordLen, "ld") = 0 Then Call Add(TOKEN_Z80_LD): GoTo NextWord
-        If CompStr(Data, WordBegin, WordLen, "ldd") = 0 Then Call Add(TOKEN_Z80_LDD): GoTo NextWord
-        If CompStr(Data, WordBegin, WordLen, "lddr") = 0 Then Call Add(TOKEN_Z80_LDDR): GoTo NextWord
-        If CompStr(Data, WordBegin, WordLen, "ldi") = 0 Then Call Add(TOKEN_Z80_LDI): GoTo NextWord
-        If CompStr(Data, WordBegin, WordLen, "ldir") = 0 Then Call Add(TOKEN_Z80_LDIR): GoTo NextWord
+        If CompStr(WordBegin, WordLen, "ld") = 0 Then Call Add(TOKEN_Z80_LD): GoTo NextWord
+        If CompStr(WordBegin, WordLen, "ldd") = 0 Then Call Add(TOKEN_Z80_LDD): GoTo NextWord
+        If CompStr(WordBegin, WordLen, "lddr") = 0 Then Call Add(TOKEN_Z80_LDDR): GoTo NextWord
+        If CompStr(WordBegin, WordLen, "ldi") = 0 Then Call Add(TOKEN_Z80_LDI): GoTo NextWord
+        If CompStr(WordBegin, WordLen, "ldir") = 0 Then Call Add(TOKEN_Z80_LDIR): GoTo NextWord
         'Keywords
-        If CompStr(Data, WordBegin, WordLen, "length") = 0 Then Call Add(TOKEN_KEYWORD_LENGTH): GoTo NextWord
+        If CompStr(WordBegin, WordLen, "length") = 0 Then Call Add(TOKEN_KEYWORD_LENGTH): GoTo NextWord
     
-    ElseIf Asc1 = N Then '--- `n` ---
+    ElseIf Asc1 = N Then '..................................................... `n` ...
         'Z80 instructions
-        If CompStr(Data, WordBegin, WordLen, "neg") = 0 Then Call Add(TOKEN_Z80_NEG): GoTo NextWord
-        If CompStr(Data, WordBegin, WordLen, "nop") = 0 Then Call Add(TOKEN_Z80_NOP): GoTo NextWord
+        If CompStr(WordBegin, WordLen, "neg") = 0 Then Call Add(TOKEN_Z80_NEG): GoTo NextWord
+        If CompStr(WordBegin, WordLen, "nop") = 0 Then Call Add(TOKEN_Z80_NOP): GoTo NextWord
         'There are no `n` registers
         GoTo WordError
         
-    ElseIf Asc1 = O Then '--- `o` ---
+    ElseIf Asc1 = O Then '..................................................... `o` ...
         'Z80 instructions
-        If CompStr(Data, WordBegin, WordLen, "or") = 0 Then Call Add(TOKEN_Z80_OR): GoTo NextWord
-        If CompStr(Data, WordBegin, WordLen, "out") = 0 Then Call Add(TOKEN_Z80_OUT): GoTo NextWord
-        If CompStr(Data, WordBegin, WordLen, "outd") = 0 Then Call Add(TOKEN_Z80_OUTD): GoTo NextWord
-        If CompStr(Data, WordBegin, WordLen, "outdr") = 0 Then Call Add(TOKEN_Z80_OUTDR): GoTo NextWord
-        If CompStr(Data, WordBegin, WordLen, "outi") = 0 Then Call Add(TOKEN_Z80_OUTI): GoTo NextWord
-        If CompStr(Data, WordBegin, WordLen, "outir") = 0 Then Call Add(TOKEN_Z80_OUTIR): GoTo NextWord
+        If CompStr(WordBegin, WordLen, "or") = 0 Then Call Add(TOKEN_Z80_OR): GoTo NextWord
+        If CompStr(WordBegin, WordLen, "out") = 0 Then Call Add(TOKEN_Z80_OUT): GoTo NextWord
+        If CompStr(WordBegin, WordLen, "outd") = 0 Then Call Add(TOKEN_Z80_OUTD): GoTo NextWord
+        If CompStr(WordBegin, WordLen, "outdr") = 0 Then Call Add(TOKEN_Z80_OUTDR): GoTo NextWord
+        If CompStr(WordBegin, WordLen, "outi") = 0 Then Call Add(TOKEN_Z80_OUTI): GoTo NextWord
+        If CompStr(WordBegin, WordLen, "outir") = 0 Then Call Add(TOKEN_Z80_OUTIR): GoTo NextWord
         'Keywords
-        If CompStr(Data, WordBegin, WordLen, "object") = 0 Then Call Add(TOKEN_KEYWORD_OBJECT): GoTo NextWord
+        If CompStr(WordBegin, WordLen, "object") = 0 Then Call Add(TOKEN_KEYWORD_OBJECT): GoTo NextWord
         'There are no `o` registers
         GoTo WordError
         
-    ElseIf Asc1 = P Then '--- `p` ---
+    ElseIf Asc1 = P Then '..................................................... `p` ...
         'Z80 instructions
-        If CompStr(Data, WordBegin, WordLen, "pop") = 0 Then Call Add(TOKEN_Z80_POP): GoTo NextWord
-        If CompStr(Data, WordBegin, WordLen, "push") = 0 Then Call Add(TOKEN_Z80_PUSH): GoTo NextWord
+        If CompStr(WordBegin, WordLen, "pop") = 0 Then Call Add(TOKEN_Z80_POP): GoTo NextWord
+        If CompStr(WordBegin, WordLen, "push") = 0 Then Call Add(TOKEN_Z80_PUSH): GoTo NextWord
         'Keywords
-        If CompStr(Data, WordBegin, WordLen, "params") = 0 Then Call Add(TOKEN_KEYWORD_PARAMS): GoTo NextWord
-        If CompStr(Data, WordBegin, WordLen, "proc") = 0 Then Call Add(TOKEN_KEYWORD_PROC): GoTo NextWord
+        If CompStr(WordBegin, WordLen, "params") = 0 Then Call Add(TOKEN_KEYWORD_PARAMS): GoTo NextWord
+        If CompStr(WordBegin, WordLen, "proc") = 0 Then Call Add(TOKEN_KEYWORD_PROC): GoTo NextWord
         
-    ElseIf Asc1 = R Then '--- `r` ---
+    ElseIf Asc1 = R Then '..................................................... `r` ...
         'Z80 instructions
-        If CompStr(Data, WordBegin, WordLen, "res") = 0 Then Call Add(TOKEN_Z80_RES): GoTo NextWord
-        If CompStr(Data, WordBegin, WordLen, "ret") = 0 Then Call Add(TOKEN_Z80_RET): GoTo NextWord
-        If CompStr(Data, WordBegin, WordLen, "reti") = 0 Then Call Add(TOKEN_Z80_RETI): GoTo NextWord
-        If CompStr(Data, WordBegin, WordLen, "retn") = 0 Then Call Add(TOKEN_Z80_RETN): GoTo NextWord
-        If CompStr(Data, WordBegin, WordLen, "rla") = 0 Then Call Add(TOKEN_Z80_RLA): GoTo NextWord
-        If CompStr(Data, WordBegin, WordLen, "rl") = 0 Then Call Add(TOKEN_Z80_RL): GoTo NextWord
-        If CompStr(Data, WordBegin, WordLen, "rlca") = 0 Then Call Add(TOKEN_Z80_RLCA): GoTo NextWord
-        If CompStr(Data, WordBegin, WordLen, "rlc") = 0 Then Call Add(TOKEN_Z80_RLC): GoTo NextWord
-        If CompStr(Data, WordBegin, WordLen, "rld") = 0 Then Call Add(TOKEN_Z80_RLD): GoTo NextWord
-        If CompStr(Data, WordBegin, WordLen, "rra") = 0 Then Call Add(TOKEN_Z80_RRA): GoTo NextWord
-        If CompStr(Data, WordBegin, WordLen, "rr") = 0 Then Call Add(TOKEN_Z80_RR): GoTo NextWord
-        If CompStr(Data, WordBegin, WordLen, "rrca") = 0 Then Call Add(TOKEN_Z80_RRCA): GoTo NextWord
-        If CompStr(Data, WordBegin, WordLen, "rrc") = 0 Then Call Add(TOKEN_Z80_RRC): GoTo NextWord
-        If CompStr(Data, WordBegin, WordLen, "rrd") = 0 Then Call Add(TOKEN_Z80_RRD): GoTo NextWord
-        If CompStr(Data, WordBegin, WordLen, "rst") = 0 Then Call Add(TOKEN_Z80_RST): GoTo NextWord
+        If CompStr(WordBegin, WordLen, "res") = 0 Then Call Add(TOKEN_Z80_RES): GoTo NextWord
+        If CompStr(WordBegin, WordLen, "ret") = 0 Then Call Add(TOKEN_Z80_RET): GoTo NextWord
+        If CompStr(WordBegin, WordLen, "reti") = 0 Then Call Add(TOKEN_Z80_RETI): GoTo NextWord
+        If CompStr(WordBegin, WordLen, "retn") = 0 Then Call Add(TOKEN_Z80_RETN): GoTo NextWord
+        If CompStr(WordBegin, WordLen, "rla") = 0 Then Call Add(TOKEN_Z80_RLA): GoTo NextWord
+        If CompStr(WordBegin, WordLen, "rl") = 0 Then Call Add(TOKEN_Z80_RL): GoTo NextWord
+        If CompStr(WordBegin, WordLen, "rlca") = 0 Then Call Add(TOKEN_Z80_RLCA): GoTo NextWord
+        If CompStr(WordBegin, WordLen, "rlc") = 0 Then Call Add(TOKEN_Z80_RLC): GoTo NextWord
+        If CompStr(WordBegin, WordLen, "rld") = 0 Then Call Add(TOKEN_Z80_RLD): GoTo NextWord
+        If CompStr(WordBegin, WordLen, "rra") = 0 Then Call Add(TOKEN_Z80_RRA): GoTo NextWord
+        If CompStr(WordBegin, WordLen, "rr") = 0 Then Call Add(TOKEN_Z80_RR): GoTo NextWord
+        If CompStr(WordBegin, WordLen, "rrca") = 0 Then Call Add(TOKEN_Z80_RRCA): GoTo NextWord
+        If CompStr(WordBegin, WordLen, "rrc") = 0 Then Call Add(TOKEN_Z80_RRC): GoTo NextWord
+        If CompStr(WordBegin, WordLen, "rrd") = 0 Then Call Add(TOKEN_Z80_RRD): GoTo NextWord
+        If CompStr(WordBegin, WordLen, "rst") = 0 Then Call Add(TOKEN_Z80_RST): GoTo NextWord
         'Keywords
-        If CompStr(Data, WordBegin, WordLen, "return") = 0 Then Call Add(TOKEN_KEYWORD_RETURN): GoTo NextWord
+        If CompStr(WordBegin, WordLen, "return") = 0 Then Call Add(TOKEN_KEYWORD_RETURN): GoTo NextWord
         
-    ElseIf Asc1 = S Then '--- `s` ---
+    ElseIf Asc1 = S Then '..................................................... `s` ...
         'Z80 instructions
-        If CompStr(Data, WordBegin, WordLen, "sbc") = 0 Then Call Add(TOKEN_Z80_SBC): GoTo NextWord
-        If CompStr(Data, WordBegin, WordLen, "scf") = 0 Then Call Add(TOKEN_Z80_SCF): GoTo NextWord
-        If CompStr(Data, WordBegin, WordLen, "set") = 0 Then Call Add(TOKEN_Z80_SET): GoTo NextWord
-        If CompStr(Data, WordBegin, WordLen, "sla") = 0 Then Call Add(TOKEN_Z80_SLA): GoTo NextWord
-        If CompStr(Data, WordBegin, WordLen, "sra") = 0 Then Call Add(TOKEN_Z80_SRA): GoTo NextWord
-        If CompStr(Data, WordBegin, WordLen, "sll") = 0 Then Call Add(TOKEN_Z80_SLL): GoTo NextWord
-        If CompStr(Data, WordBegin, WordLen, "srl") = 0 Then Call Add(TOKEN_Z80_SRL): GoTo NextWord
-        If CompStr(Data, WordBegin, WordLen, "sub") = 0 Then Call Add(TOKEN_Z80_SUB): GoTo NextWord
+        If CompStr(WordBegin, WordLen, "sbc") = 0 Then Call Add(TOKEN_Z80_SBC): GoTo NextWord
+        If CompStr(WordBegin, WordLen, "scf") = 0 Then Call Add(TOKEN_Z80_SCF): GoTo NextWord
+        If CompStr(WordBegin, WordLen, "set") = 0 Then Call Add(TOKEN_Z80_SET): GoTo NextWord
+        If CompStr(WordBegin, WordLen, "sla") = 0 Then Call Add(TOKEN_Z80_SLA): GoTo NextWord
+        If CompStr(WordBegin, WordLen, "sra") = 0 Then Call Add(TOKEN_Z80_SRA): GoTo NextWord
+        If CompStr(WordBegin, WordLen, "sll") = 0 Then Call Add(TOKEN_Z80_SLL): GoTo NextWord
+        If CompStr(WordBegin, WordLen, "srl") = 0 Then Call Add(TOKEN_Z80_SRL): GoTo NextWord
+        If CompStr(WordBegin, WordLen, "sub") = 0 Then Call Add(TOKEN_Z80_SUB): GoTo NextWord
         'Keywords
-        If CompStr(Data, WordBegin, WordLen, "slot") = 0 Then Call Add(TOKEN_KEYWORD_SLOT): GoTo NextWord
-        If CompStr(Data, WordBegin, WordLen, "start") = 0 Then Call Add(TOKEN_KEYWORD_START): GoTo NextWord
-        If CompStr(Data, WordBegin, WordLen, "stop") = 0 Then Call Add(TOKEN_KEYWORD_STOP): GoTo NextWord
-        If CompStr(Data, WordBegin, WordLen, "struct") = 0 Then Call Add(TOKEN_KEYWORD_STRUCT): GoTo NextWord
+        If CompStr(WordBegin, WordLen, "slot") = 0 Then Call Add(TOKEN_KEYWORD_SLOT): GoTo NextWord
+        If CompStr(WordBegin, WordLen, "start") = 0 Then Call Add(TOKEN_KEYWORD_START): GoTo NextWord
+        If CompStr(WordBegin, WordLen, "stop") = 0 Then Call Add(TOKEN_KEYWORD_STOP): GoTo NextWord
+        If CompStr(WordBegin, WordLen, "struct") = 0 Then Call Add(TOKEN_KEYWORD_STRUCT): GoTo NextWord
         
-    ElseIf Asc1 = W Then '--- `w` ---
+    ElseIf Asc1 = W Then '..................................................... `w` ...
         'Keywords
-        If CompStr(Data, WordBegin, WordLen, "word") = 0 Then Call Add(TOKEN_KEYWORD_WORD): GoTo NextWord
+        If CompStr(WordBegin, WordLen, "word") = 0 Then Call Add(TOKEN_KEYWORD_WORD): GoTo NextWord
         'There are no `w` registers
         GoTo WordError
         
-    ElseIf Asc1 = X Then '--- `x` ---
+    ElseIf Asc1 = X Then '..................................................... `x` ...
+        'If only `x`, then it's the repeat operator
+        If WordLen = 0 Then Call Add(TOKEN_OPERATOR_REP): GoTo NextWord
         'Z80 instructions
-        If CompStr(Data, WordBegin, WordLen, "xor") = 0 Then Call Add(TOKEN_Z80_XOR): GoTo NextWord
-        'TODO: The `x` operator
+        If CompStr(WordBegin, WordLen, "xor") = 0 Then Call Add(TOKEN_Z80_XOR): GoTo NextWord
         'There are no `x` registers
         GoTo WordError
         
-    ElseIf Asc1 = SYNTAX_BLOCK_OPEN Then '--- `{` ---
+    ElseIf Asc1 = SYNTAX_BLOCK_OPEN Then '..................................... `{` ...
         Call Add(TOKEN_BLOCKOPEN): GoTo NextWord
-    ElseIf Asc1 = SYNTAX_BLOCK_CLOSE Then  '--- `}` ---
+    ElseIf Asc1 = SYNTAX_BLOCK_CLOSE Then  '................................... `}` ...
         Call Add(TOKEN_BLOCKCLOSE): GoTo NextWord
-    ElseIf Asc1 = SYNTAX_PAREN_OPEN Then '--- `(` ---
+    ElseIf Asc1 = SYNTAX_PAREN_OPEN Then '..................................... `(` ...
         Call Add(TOKEN_PARENOPEN): GoTo NextWord
-    ElseIf Asc1 = SYNTAX_PAREN_CLOSE Then '--- `)` ---
+    ElseIf Asc1 = SYNTAX_PAREN_CLOSE Then '.................................... `)` ...
         Call Add(TOKEN_PARENCLOSE): GoTo NextWord
     
     'A decimal number?
-    ElseIf Asc1 >= 48 And Asc1 <= 57 Then
+    ElseIf Asc1 >= 48 And Asc1 <= 57 Then '.................................. `0-9` ...
         'Validate the number
-        Dim ii As Long
-        For ii = WordBegin To WordBegin + (WordLen - 1)
-            If Data(ii) < 48 Or Data(ii) > 57 Then
+        Dim Number As Long, Multiplier As Long
+        Let Number = 0: Let Multiplier = 1
+        For ii = WordBegin + WordLen To WordBegin Step -1
+            If Text(ii) < 48 Or Text(ii) > 57 Then
                 'TODO: Error, invalid number
                 Stop
+            Else
+                'Convert the number from ASCII codes into a value
+                'TODO: Handle an overflow!!!
+                'TODO: Optimise this into LUTs
+                Let Number = Number + (Text(ii) - 48) * Multiplier
+                Let Multiplier = Multiplier * 10
             End If
         Next ii
-        'Tokenise number
-        Dim Number As Long
-        'TODO: validate the number size
-        'TODO: Do manual Clng using the byte array
-'        Let Number = CLng(Word)
-'        'Copy the long directly into the token stream
-'        Call kernel32_RtlMoveMemory( _
-'            Tokens(TokensCursor), Number, 4 _
-'        )
-'        Let TokensCursor = TokensCursor + 4
+        'Add the token to signal a number
+        Call Add(TOKEN_NUMBER)
+        'Copy the long directly into the token stream
+        Call kernel32_RtlMoveMemory( _
+            Tokens(TokensCursor), Number, 4 _
+        )
+        Let TokensCursor = TokensCursor + 4
         GoTo NextWord
         
     'Binary number?
-    ElseIf Asc1 = SYNTAX_NUMBER_BIN Then '--- `%` ---
+    ElseIf Asc1 = SYNTAX_NUMBER_BIN Then '..................................... `%` ...
         'TODO: Tokenise number
         GoTo NextWord
         
     'String (quote)
-    ElseIf Asc1 = SYNTAX_QUOTE Then '--- `"` ---
+    ElseIf Asc1 = SYNTAX_QUOTE Then '.......................................... `"` ...
         'Add quote token, the quote text follows
         Call Add(TOKEN_QUOTE)
         'Copy the bytes from the quote directly into the token stream
         Call kernel32_RtlMoveMemory( _
-            Tokens(TokensCursor), Data(WordBegin + 1), WordLen - 1 _
+            Tokens(TokensCursor), Text(WordBegin + 1), WordLen - 1 _
         )
-        Let TokensCursor = TokensCursor + WordLen - 1
+        Let TokensCursor = TokensCursor + WordLen
         GoTo NextWord
         
-    ElseIf Asc1 = SYNTAX_OPERATOR_ADD Then '--- `+` ---
+    ElseIf Asc1 = SYNTAX_OPERATOR_ADD Then '................................... `+` ...
         Call Add(TOKEN_OPERATOR_ADD): GoTo NextWord
-    ElseIf Asc1 = SYNTAX_OPERATOR_SUB Then '--- `-` ---
+    ElseIf Asc1 = SYNTAX_OPERATOR_SUB Then '................................... `-` ...
         Call Add(TOKEN_OPERATOR_SUB): GoTo NextWord
-    ElseIf Asc1 = SYNTAX_OPERATOR_MUL Then '--- `*` ---
+    ElseIf Asc1 = SYNTAX_OPERATOR_MUL Then '................................... `*` ...
         Call Add(TOKEN_OPERATOR_MUL): GoTo NextWord
-    ElseIf Asc1 = SYNTAX_OPERATOR_DIV Then '--- `/` ---
+    ElseIf Asc1 = SYNTAX_OPERATOR_DIV Then '................................... `/` ...
         Call Add(TOKEN_OPERATOR_DIV): GoTo NextWord
-    ElseIf Asc1 = SYNTAX_OPERATOR_POW Then '--- `^` ---
+    ElseIf Asc1 = SYNTAX_OPERATOR_POW Then '................................... `^` ...
         Call Add(TOKEN_OPERATOR_POW): GoTo NextWord
-    ElseIf Asc1 = SYNTAX_OPERATOR_MOD Then '--- `\` ---
+    ElseIf Asc1 = SYNTAX_OPERATOR_MOD Then '................................... `\` ...
         Call Add(TOKEN_OPERATOR_MOD): GoTo NextWord
     End If
     
@@ -809,14 +896,21 @@ WordError:
 
     '----------------------------------------------------------------------------------
 NextWord:
+    Dim WordCount As Long
     Let WordCount = WordCount + 1
     GoTo ReadWord
     
     '----------------------------------------------------------------------------------
 EndOfFile:
-    Erase Data
+    Erase Text
+    '    Debug.Print "- Tokens: "
+    '    Debug.Print "  NEXT: " & Format$(TokenCounts(OZ80_TOKEN.TOKEN_NEXT), "#,#")
+    '    Debug.Print "  (): " & Format$(TokenCounts(OZ80_TOKEN.TOKEN_PARENOPEN) + TokenCounts(OZ80_TOKEN.TOKEN_PARENCLOSE), "#,#")
+    '    Debug.Print "  NUMBER: " & Format$(TokenCounts(OZ80_TOKEN.TOKEN_NUMBER), "#,#")
+    '    Debug.Print "  {}: " & Format$(TokenCounts(OZ80_TOKEN.TOKEN_BLOCKOPEN) + TokenCounts(OZ80_TOKEN.TOKEN_BLOCKCLOSE), "#,#")
+
     Debug.Print "- Words: " & Format$(WordCount, "#,#")
-    Debug.Print "- Time: " & Format$(Timer - Start, "0.000") & "s"
+    Debug.Print "- Time: " & Format$((kernel32_GetTickCount() - Start) / 1000, "0.000") & "s"
 End Sub
 
 '/// PRIVATE PROCEDURES ///////////////////////////////////////////////////////////////
@@ -834,28 +928,46 @@ End Sub
 'CompStr : Compare a word from the byte array to a string _
  ======================================================================================
 Private Function CompStr( _
-    ByRef Data() As Byte, ByRef Begin As Long, ByRef Length As Long, _
-    ByRef Text As String _
+    ByRef Begin As Long, ByRef Length As Long, _
+    ByRef CompText As String _
 ) As Boolean
     'WARNING: `Text` is assumed to be lower case!
+    
     'This function is designed as a quick'n'dirty replacement for `StrComp`, _
      but using the byte array as the source so we no longer have to concatenate _
      strings in the parsing routine
     
     'If the lengths don't match then they can't be the same
-    If Length <> Len(Text) Then Exit Function
+    If Length <> Len(CompText) Then Exit Function
+
+    With CompStrSA1D
+       .pvData = StrPtr(CompText)
+       .cElements = Len(CompText)
+    End With
     
-    'Convert the string into a byte array. I tried doing this with a SAFEARRAY1D but _
-     it was still crashing most of the time :( This could be a whole lot faster if _
-     we could cast the string to a byte array without actually having to make a _
-     duplicate of the string
-    Dim TextArr() As Byte
-    Let TextArr = Text
-            
     Dim ii As Long
     For ii = 0 To Length - 1
-        If LowCase(Data(Begin + ii)) <> TextArr(ii * 2) Then Exit Function
+        If LowCase(Text(Begin + ii)) <> CompStrArr(ii) Then Exit Function
     Next ii
     
     Let CompStr = True
+End Function
+
+'IsValidName : Check validity for variables, labels & properties _
+ ======================================================================================
+Public Function IsValidName(ByRef Begin As Long, ByRef Length As Long) As Boolean
+    Dim ii As Long
+    For ii = Begin To Begin + Length
+        'Is letter not a number?
+        If Text(ii) < 48 Or Text(ii) > 57 Then
+            'Is letter outside of A-Z?
+            If Text(ii) < A Or Text(ii) > Z Then
+                'Finally, not an underscore?
+                If Text(ii) <> UNDRSCR Then Exit Function
+            End If
+        Else
+            If ii = Begin Then Exit Function
+        End If
+    Next ii
+    Let IsValidName = True
 End Function

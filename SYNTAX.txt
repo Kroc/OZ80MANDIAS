@@ -30,7 +30,7 @@ i.	Goals:
 	The purpose of this new assembler language is to be readable, obvious, more
 	self-documenting and less ambiguous than other syntaxes
 	
-:: Flexible, Portable
+:: Flexible Source Code
 	Features are provided so that, when used properly, source code can be re-used,
 	re-ordered, modified, expanded and contracted with hopefully a minimum amount
 	of adjustment. In this regard, it goes further than any previous assembler
@@ -453,7 +453,9 @@ TODO:
 #.#.	Data statements
 ---------------------------------------------------------------------------------------
 Format:
-	DATA <expr>[, <expr> ...]
+	DATA <expr>[, <expr> ...]	//selects 8 or 16-bit automatically per value
+	BYTE <expr>[, <expr> ...]	//8 bit values only
+	WORD <expr>[, <expr> ...]	//16 bit values
 
 The data statement assembles numbers and text into the output file. It is used for
 storing non-code data in the output ROM such as graphics, text and sound.
@@ -691,16 +693,11 @@ Textual data can be represented easily:
 
 Will write out the ASCII bytes for the given string of text between quotes.
 
-#.#.	Escape Sequences
----------------------------------------------------------------------------------------
 Within strings, tabs and line-breaks are ignored so that you may space large portions
-of text over multiple lines in your source code. To insert a tab or line-break into
-the output you must use the following escape sequences:
+of text over multiple lines in your source code. To insert a tab, line-break or any
+value into the output you can break the quote and insert the value:
 
-	\t	Inserts a tab
-	\n	Inserts newline
-	\"	Inserts a quote (instead of ending the string)
-	\0	Inserts a null (an ASCII code of 0)
+	DATA "The quick brown fox", 13, "Jumps over the lazy dog"
 
 #.#.	ASCII Maps
 ---------------------------------------------------------------------------------------
@@ -726,10 +723,6 @@ TODO: "EXIT IF"
 #.#.	Logical Operators
 ---------------------------------------------------------------------------------------
 TODO: =, NOT, <, <=, >, >=, AND, OR (`&`/`|`/`!` are purely bitwise operators)
-
-#.#.	Loops
----------------------------------------------------------------------------------------
-'TODO: Could use recursive macros and do away with any specific loop syntax
 
 
 #.	Sections
@@ -784,9 +777,8 @@ TODO: "EXIT FUNCTION"
 Format:
 	?<functionName> [<expr>[, <expr> ...]]
 
-```
-DATA $AA, (?functionName $10, $20, $30), $BB, $CC
-```
+
+	DATA $AA, (?functionName $10, $20, $30), $BB, $CC
 
 ...
 

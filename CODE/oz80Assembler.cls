@@ -19,13 +19,13 @@ Option Explicit
 '======================================================================================
 'CLASS :: oz80Assembler
 
-Private Tokeniser As oz80Tokeniser
-
 '/// PUBLIC INTERFACE /////////////////////////////////////////////////////////////////
 
 'Assemble : Take a source file and produce a binary _
  ======================================================================================
 Public Sub Assemble(ByVal FilePath As String)
+    Dim Tokeniser As oz80Tokeniser
+    
     Debug.Print
     Debug.Print "OZ80MANDIAS v" & App.Major & "." & App.Minor & "," & App.Revision
     

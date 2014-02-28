@@ -73,33 +73,38 @@ Dim CompStrArr() As Integer
 
 'These define the various punctiation marks (in ASCII codes) for the language syntax
 Private Enum SYNTAX
-    SYNTAX_COMMENT = 96       '`
-    SYNTAX_HINT1 = 59         ';
-    SYNTAX_HINT2 = 59         ''
-    SYNTAX_QUOTE = 34         '"
-    SYNTAX_LABEL = 58         ':
-    SYNTAX_PROPERTY = 46      '.
-    SYNTAX_VARIABLE = 35      '#
-    SYNTAX_MACRO = 64         '@
-    SYNTAX_FUNCT = 63         '?
-    SYNTAX_NUMBER_HEX = 36    '$
-    SYNTAX_NUMBER_BIN = 37    '%
-    SYNTAX_NEXT = 44          ',
-    SYNTAX_PAREN_OPEN = 40    '(
-    SYNTAX_PAREN_CLOSE = 41   ')
-    SYNTAX_BLOCK_OPEN = 123   '{
-    SYNTAX_BLOCK_CLOSE = 125  '}
-    SYNTAX_OPERATOR_ADD = 43  '+
-    SYNTAX_OPERATOR_SUB = 45  '-
-    SYNTAX_OPERATOR_MUL = 42  '*
-    SYNTAX_OPERATOR_DIV = 47  '/
-    SYNTAX_OPERATOR_POW = 94  '^
-    SYNTAX_OPERATOR_MOD = 92  '\
+    SYNTAX_COMMENT = 96         '`
+    SYNTAX_HINT1 = 59           ';
+    SYNTAX_HINT2 = 59           ''
+    SYNTAX_QUOTE = 34           '"
+    SYNTAX_LABEL = 58           ':
+    SYNTAX_PROPERTY = 46        '.
+    SYNTAX_VARIABLE = 35        '#
+    SYNTAX_MACRO = 64           '@
+    SYNTAX_FUNCT = 63           '?
+    SYNTAX_NUMBER_HEX = 36      '$
+    SYNTAX_NUMBER_BIN = 37      '%
+    SYNTAX_NEXT = 44            ',
+    SYNTAX_PAREN_OPEN = 40      '(
+    SYNTAX_PAREN_CLOSE = 41     ')
+    SYNTAX_BLOCK_OPEN = 123     '{
+    SYNTAX_BLOCK_CLOSE = 125    '}
+    SYNTAX_OPERATOR_ADD = 43    '+
+    SYNTAX_OPERATOR_SUB = 45    '-
+    SYNTAX_OPERATOR_MUL = 42    '*
+    SYNTAX_OPERATOR_DIV = 47    '/
+    SYNTAX_OPERATOR_POW = 94    '^
+    SYNTAX_OPERATOR_MOD = 92    '\
+    SYNTAX_OPERATOR_OR = 124    '|
+    SYNTAX_OPERATOR_AND = 38    '&
 End Enum
 
 'This makes life a whole lot easier
 Private Enum ASCII
     UNDRSCR = 95
+    
+    NUM0 = 48
+    NUM9 = 57
     
     A = 97
     B = 98
@@ -135,6 +140,7 @@ Private Enum ASCII
 End Enum
 
 '--------------------------------------------------------------------------------------
+
 Public Enum OZ80_TOKEN
     'These are just the mnemonic tokens -- the assembler itself checks the
      'parameters and determines which opcode should be used
@@ -273,6 +279,8 @@ Public Enum OZ80_TOKEN
     TOKEN_OPERATOR_POW = &HA4           'Power "^"
     TOKEN_OPERATOR_MOD = &HA5           'Modulus "\"
     TOKEN_OPERATOR_REP = &HA6           'Repeat "x"
+    TOKEN_OPERATOR_OR = &HA7            'Bitwise Or "|"
+    TOKEN_OPERATOR_AND = &HA8           'Bitwise And "&"
     
     'Grouping: (i.e. parenthesis, braces)
     TOKEN_PARENOPEN = &HB0
@@ -306,6 +314,8 @@ Private LowCase(0 To 255) As Long
 Private Text() As Byte
 
 '/// EVENTS ///////////////////////////////////////////////////////////////////////////
+
+Event Error(ByRef Err As ErrObject)
 
 'CLASS Initialize _
  ======================================================================================
@@ -357,25 +367,42 @@ End Sub
 
 'Tokenise : Break a file into all its individual words and convert to machine tokens _
  ======================================================================================
-Public Sub Tokenise(ByRef FilePath As String)
+Public Function Tokenise(ByRef FilePath As String) As OZ80_ERROR
     'This function is tuned for speed -- it does not conform to "best practices", _
      or even structured code; GOTOs are fast, deal with it
-    
+
+    'Measure the time this takes
     Dim Start As Long
     Let Start = kernel32_GetTickCount()
     
+    'Just a loop counter
     Dim ii As Long
     
     Dim IsQuote As Boolean
     Dim IsComment As Boolean
     Dim IsCommentMulti As Boolean
     
+    Dim Number As Long, Multiplier As Long
+    
     'Read the whole file into a single string _
      ----------------------------------------------------------------------------------
     Dim FileNumber As String
     Let FileNumber = FreeFile
     
+    'Check the file even exists first...
+    If FileExists(FilePath) = False Then
+        Let Tokenise = OZ80_ERROR_FILENOTFOUND
+        Call Err.Raise( _
+            Number:=vbObjectError + OZ80_ERROR_FILENOTFOUND, _
+            Source:="oz80Tokeniser", _
+            Description:="The file '" & FilePath & "' could not be found." _
+        )
+        Exit Function
+    End If
+    
     Debug.Print "Parsing file: " & FilePath
+    'Once the file is open, ensure it's closed upon error
+    On Error GoTo ErrorOpenFile
     Open FilePath For Input Access Read Lock Write As #FileNumber
     'Read the file as a binary string with one-byte per character (ASCII). _
      We first normalise to Unicode to deal with locale specifics and then downsample _
@@ -385,10 +412,13 @@ Public Sub Tokenise(ByRef FilePath As String)
         vbFromUnicode _
     )
     
-    'Cache this for speed
+    'Cache this for speed, we'll be referring to it every loop
     Dim TextLen As Long: Let TextLen = UBound(Text)
     Debug.Print "- Length: " & Format$(TextLen, "#,#") & " bytes"
+    
+    'Continue error handling normally
     Close #FileNumber
+    On Error GoTo 0
     
     Dim TextPos As Long
     Let TextPos = -1
@@ -407,6 +437,8 @@ ReadChar:
     'Read a character:
     Dim AscChar As Long
     Let AscChar = Text(TextPos)
+    
+    If AscChar = SYNTAX_BLOCK_OPEN Then Stop
     
     'Comments:
     '----------------------------------------------------------------------------------
@@ -490,11 +522,14 @@ ReadChar:
         If AscChar = SYNTAX_OPERATOR_DIV Then GoTo WordBreak
         If AscChar = SYNTAX_OPERATOR_POW Then GoTo WordBreak
         If AscChar = SYNTAX_OPERATOR_MOD Then GoTo WordBreak
+        If AscChar = SYNTAX_OPERATOR_OR Then GoTo WordBreak
+        If AscChar = SYNTAX_OPERATOR_AND Then GoTo WordBreak
         
     'Quotes:
     '----------------------------------------------------------------------------------
     Else
-        'TODO: skip tabs and line breaks
+        'TODO: skip tabs and line breaks -- not possible yet due to the memcopy! _
+               -- will need to copy into a second byte array? filter array?
         'Skip over the closing quote so that it doesn't get tokenised
         If AscChar = SYNTAX_QUOTE Then Let IsQuote = False: GoTo EndWord2
         
@@ -503,6 +538,7 @@ ReadChar:
     '----------------------------------------------------------------------------------
     
 NextChar:
+    'Is this the first character of the word?
     If IsWord = 0 Then Let WordBegin = TextPos: Let IsWord = 1
     GoTo SkipChar
 
@@ -514,7 +550,7 @@ WordBreak:
     Let WordBegin = TextPos: Let IsWord = 1
     
 EndWord:
-    If IsWord = 0 Then GoTo EndOfFile
+    If IsWord = 0 Then GoTo Finish
 EndWord2:
     'Remember the end point and length of the word, _
      we can use this to compare bytes (faster than string comparisons)
@@ -530,13 +566,11 @@ EndWord2:
     Dim Asc1 As Long, Asc2 As Long, Asc3 As Long, Asc4 As Long
     Let Asc1 = LowCase(Text(WordBegin))
     Let Asc2 = 0: Let Asc3 = 0: Let Asc4 = 0
-    If WordLen > 3 Then
-        Let Asc4 = LowCase(Text(WordBegin + 3))
-    ElseIf WordLen > 2 Then
-        Let Asc3 = LowCase(Text(WordBegin + 2))
-    ElseIf WordLen > 1 Then
-        Let Asc2 = LowCase(Text(WordBegin + 1))
-    End If
+    If WordLen > 2 Then Let Asc4 = LowCase(Text(WordBegin + 3))
+    If WordLen > 1 Then Let Asc3 = LowCase(Text(WordBegin + 2))
+    If WordLen > 0 Then Let Asc2 = LowCase(Text(WordBegin + 1))
+    
+    If WordLen < 0 Then Stop
     
     'Check the first letter of the word to find the right kind of token:
     
@@ -557,8 +591,8 @@ EndWord2:
             GoTo NextWord
         
         'A label cannot begin with a number but must otherwise be A-Z, 0-9 and "_"
-        ElseIf IsValidName(WordBegin + 1, WordLen - 1) = False Then
-            'TODO: Error - not a valid label name
+        ElseIf IsValidName(WordBegin + 1, WordBegin + WordLen) = False Then
+            GoTo ErrorInvalidName
         Else
             'TODO: Tokenise
             GoTo NextWord
@@ -576,8 +610,8 @@ EndWord2:
             GoTo NextWord
         
         'A property cannot begin with a number but must otherwise be A-Z, 0-9 and "_"
-        ElseIf IsValidName(WordBegin + 1, WordLen - 1) = False Then
-            'TODO: Error - not a valid property name
+        ElseIf IsValidName(WordBegin + 1, WordBegin + WordLen) = False Then
+            GoTo ErrorInvalidName
         Else
             'TODO: Tokenise
             GoTo NextWord
@@ -586,11 +620,11 @@ EndWord2:
     ElseIf Asc1 = SYNTAX_VARIABLE Then '....................................... `#` ...
         'A variable name cannot be just '#'
         If Asc2 = 0 Then
-            'TODO: Error - invalid variable name
+            GoTo ErrorInvalidName
         
         'A variable cannot begin with a number but must otherwise be A-Z, 0-9 and "_"
-        ElseIf IsValidName(WordBegin + 1, WordLen - 1) = False Then
-            'TODO: Error - not a valid variable name
+        ElseIf IsValidName(WordBegin + 1, WordBegin + WordLen) = False Then
+            GoTo ErrorInvalidName
         Else
             'TODO: Tokenise
             GoTo NextWord
@@ -782,19 +816,18 @@ EndWord2:
         Call Add(TOKEN_PARENCLOSE): GoTo NextWord
     
     'A decimal number?
-    ElseIf Asc1 >= 48 And Asc1 <= 57 Then '.................................. `0-9` ...
+    ElseIf Asc1 >= NUM0 And Asc1 <= NUM9 Then '.............................. `0-9` ...
         'Validate the number
-        Dim Number As Long, Multiplier As Long
         Let Number = 0: Let Multiplier = 1
         For ii = WordBegin + WordLen To WordBegin Step -1
-            If Text(ii) < 48 Or Text(ii) > 57 Then
+            If Text(ii) < NUM0 Or Text(ii) > NUM9 Then
                 'TODO: Error, invalid number
                 Stop
             Else
                 'Convert the number from ASCII codes into a value
                 'TODO: Handle an overflow!!!
                 'TODO: Optimise this into LUTs
-                Let Number = Number + (Text(ii) - 48) * Multiplier
+                Let Number = Number + (Text(ii) - NUM0) * Multiplier
                 Let Multiplier = Multiplier * 10
             End If
         Next ii
@@ -835,6 +868,10 @@ EndWord2:
         Call Add(TOKEN_OPERATOR_POW): GoTo NextWord
     ElseIf Asc1 = SYNTAX_OPERATOR_MOD Then '................................... `\` ...
         Call Add(TOKEN_OPERATOR_MOD): GoTo NextWord
+    ElseIf Asc1 = SYNTAX_OPERATOR_OR Then  '................................... `|` ...
+        Call Add(TOKEN_OPERATOR_OR): GoTo NextWord
+    ElseIf Asc1 = SYNTAX_OPERATOR_AND Then '................................... `&` ...
+        Call Add(TOKEN_OPERATOR_AND): GoTo NextWord
     End If
     
     'Z80 Registers: _
@@ -890,18 +927,56 @@ TwoLetters:
     End If
     
     '----------------------------------------------------------------------------------
-WordError:
-    'TODO: Error here - unrecognised word
-'    Debug.Print "! Unrecognised word: " & Word
-
-    '----------------------------------------------------------------------------------
 NextWord:
     Dim WordCount As Long
     Let WordCount = WordCount + 1
     GoTo ReadWord
     
     '----------------------------------------------------------------------------------
-EndOfFile:
+GetWord:
+    'Build a string (for use in error messages) of the word from the byte array
+    Dim Word As String: Let Word = vbNullString
+    For ii = WordBegin To WordBegin + WordLen
+        Let Word = Word & Chr$(Text(ii))
+    Next ii
+    Return
+
+ErrorOpenFile:
+    'If an error occured during file reading, ensure the file handle is closed
+    On Error GoTo 0
+    Close #FileNumber
+    Let Tokenise = OZ80_ERROR_FILEREAD
+    Call RaiseError( _
+        OZ80_ERROR_FILEREAD, _
+        "A problem occured when reading the file '" & FilePath & "', " & _
+        "the system says: " & vbCrLf & vbCrLf & _
+        "Err #" & Err.Number & ": " & Err.Description _
+    )
+    GoTo Finish
+
+ErrorInvalidName:
+    On Error GoTo 0
+    GoSub GetWord
+    Let Tokenise = OZ80_ERROR_INVALIDNAME
+    Call RaiseError( _
+        OZ80_ERROR_INVALIDNAME, _
+        "Failure parsing '" & Word & "'; " & _
+        "Variable, label and property names can contain A-Z, 0-9 underscore and dot " & _
+        "with the exceptions that the first letter cannot be a number or a dot, " & _
+        "two dots cannot occur in a row nor can a number follow a dot and the name " & _
+        "cannot end in a dot" _
+    )
+    GoTo Finish
+    
+WordError:
+    'TODO: Error here - unrecognised word
+    GoSub GetWord
+    Debug.Print Word
+    Stop
+    
+ErrorOut:
+Finish:
+    On Error Resume Next
     Erase Text
     '    Debug.Print "- Tokens: "
     '    Debug.Print "  NEXT: " & Format$(TokenCounts(OZ80_TOKEN.TOKEN_NEXT), "#,#")
@@ -911,7 +986,7 @@ EndOfFile:
 
     Debug.Print "- Words: " & Format$(WordCount, "#,#")
     Debug.Print "- Time: " & Format$((kernel32_GetTickCount() - Start) / 1000, "0.000") & "s"
-End Sub
+End Function
 
 '/// PRIVATE PROCEDURES ///////////////////////////////////////////////////////////////
 
@@ -953,21 +1028,70 @@ Private Function CompStr( _
     Let CompStr = True
 End Function
 
+'FileExists : See if a file exists or not _
+ ======================================================================================
+'<cuinl.tripod.com/Tips/fileexist.htm>
+Private Function FileExists(ByRef Path As String) As Boolean
+    Let FileExists = CBool(Dir$(Path) <> vbNullString)
+End Function
+
 'IsValidName : Check validity for variables, labels & properties _
  ======================================================================================
-Public Function IsValidName(ByRef Begin As Long, ByRef Length As Long) As Boolean
+Public Function IsValidName(ByRef First As Long, ByRef Last As Long) As Boolean
+    'Variable, label and property names can contain A-Z, 0-9 underscore and dot with _
+     the exceptions that the first letter cannot be a number or a dot, two dots cannot _
+     occur in a row nor can a number follow a dot and the name cannot end in a dot
+    
+    'NOTE: This function assumes that you have skipped over the prefix (`#`/`:`/`.`)
+    
+    'The name cannot begin with a number or a dot
+    If Text(First) = SYNTAX_PROPERTY Then Exit Function
+    If Text(First) >= NUM0 And Text(First) <= NUM9 Then Exit Function
+    'Cannot end in a dot
+    If Text(Last) = SYNTAX_PROPERTY Then Exit Function
+    
     Dim ii As Long
-    For ii = Begin To Begin + Length
-        'Is letter not a number?
-        If Text(ii) < 48 Or Text(ii) > 57 Then
-            'Is letter outside of A-Z?
-            If Text(ii) < A Or Text(ii) > Z Then
-                'Finally, not an underscore?
-                If Text(ii) <> UNDRSCR Then Exit Function
+    For ii = First To Last
+        'Not a dot?
+        If Text(ii) <> SYNTAX_PROPERTY Then
+            'Is letter not a number?
+            If Text(ii) < NUM0 Or Text(ii) > NUM9 Then
+                'Is letter outside of A-Z (lower case and upper case)?
+                If Text(ii) < A Or Text(ii) > Z Then
+                    If Text(ii) < 65 Or Text(ii) > 90 Then
+                        'Finally, not an underscore?
+                        If Text(ii) <> UNDRSCR Then Exit Function
+                    End If
+                End If
             End If
         Else
-            If ii = Begin Then Exit Function
+            'If a dot, ensure that the next letter is not a number. _
+             (the check for the last letter as a dot has already been done, _
+              so we can safely assume there remains at least one letter)
+            If Text(ii + 1) >= NUM0 And Text(ii + 1) <= NUM9 Then Exit Function
+            'Two dots in a row not allowed
+            If Text(ii + 1) = SYNTAX_PROPERTY Then Exit Function
         End If
     Next ii
+    
     Let IsValidName = True
 End Function
+
+'RiaseError : provide error details through an event _
+ ======================================================================================
+Private Sub RaiseError( _
+    ByRef Number As OZ80_ERROR, _
+    ByRef Description As String _
+)
+    Debug.Print
+    Debug.Print "! ERROR: #" & Number
+    Debug.Print "- " & Description
+    Debug.Print
+    
+    Call Err.Clear
+    Let Err.Number = vbObjectError + Number
+    Let Err.Description = Description
+    Let Err.Source = "oz80Tokeniser.Tokenise"
+    
+    RaiseEvent Error(Err)
+End Sub

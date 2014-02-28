@@ -18,25 +18,11 @@ Public Sub Main()
     Dim StartTime As Single
     Let StartTime = Timer
     
-'    Call Assembler.Assemble(App.Path & "\S1.sms.asm")
+    'TODO: This will obviously be converted to use the command arguments
     Call Assembler.Assemble(App.Path & "\sonic1-sms.oz80")
     
-    If InIDE = False Then MsgBox Format$(Timer - StartTime, "0.000")
+    If Assembler.InIDE = False Then MsgBox Format$(Timer - StartTime, "0.000")
     
     Set Assembler = Nothing
 End Sub
-
-'PROPERTY InIDE : Are we running the code from the Visual Basic IDE? _
- ======================================================================================
-Public Property Get InIDE() As Boolean
-    On Error GoTo Err_True
-    
-    'Do something that only faults in the IDE
-    Debug.Print 1 \ 0
-    InIDE = False
-    Exit Property
-
-Err_True:
-    InIDE = True
-End Property
 

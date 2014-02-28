@@ -19,11 +19,35 @@ Option Explicit
 '======================================================================================
 'CLASS :: oz80Assembler
 
+Public Enum OZ80_ERROR
+    OZ80_ERROR_NONE = 0                 'Assembly completed successfully
+    OZ80_ERROR_UNEXPECTED = 1           'I made a programming mistake
+    OZ80_ERROR_FILENOTFOUND = 2         'Requested file does not exist
+    OZ80_ERROR_FILEREAD = 3             'Some kind of problem with file handle open
+    OZ80_ERROR_INVALIDNAME = 4          'Invalid label/property/variable name
+End Enum
+
+Public InIDE As Boolean
+
+'/// EVENTS ///////////////////////////////////////////////////////////////////////////
+
+Private Sub Class_Initialize()
+    On Error GoTo Err_True
+    
+    'Do something that only faults in the IDE
+    Debug.Print 1 \ 0
+    Let Me.InIDE = False
+    Exit Sub
+
+Err_True:
+    Let Me.InIDE = True
+End Sub
+
 '/// PUBLIC INTERFACE /////////////////////////////////////////////////////////////////
 
 'Assemble : Take a source file and produce a binary _
  ======================================================================================
-Public Sub Assemble(ByVal FilePath As String)
+Public Function Assemble(ByVal FilePath As String) As OZ80_ERROR
     Dim Tokeniser As oz80Tokeniser
     
     Debug.Print
@@ -37,16 +61,18 @@ Public Sub Assemble(ByVal FilePath As String)
     'Create a tokeniser object to hold the machine representation of the text files; _
      the assembler doesn't work with the original text directly
     Set Tokeniser = New oz80Tokeniser
-    Call Tokeniser.Tokenise(FilePath)
+    'Explode the source code file into tokens
+    If Tokeniser.Tokenise(FilePath) <> OZ80_ERROR_NONE Then GoTo Finish
     
     'Stage 2: Validate & Optimise Token Stream _
      ----------------------------------------------------------------------------------
     'The token stream is only a word-for-word machine representation of the source _
      code, we need to check the grammer for validity and whilst there we will do some _
      optimisations on the stream (e.g. collapsing lists into byte streams)
+    
      
-     
-    'Clean up
+Finish:
+    'For any error that occured, it will be assumed that the relevant function has _
+     already printed the error since it will have the right information to hand
     Set Tokeniser = Nothing
-End Sub
-
+End Function

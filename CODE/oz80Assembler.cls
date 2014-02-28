@@ -25,6 +25,7 @@ Public Enum OZ80_ERROR
     OZ80_ERROR_FILENOTFOUND = 2         'Requested file does not exist
     OZ80_ERROR_FILEREAD = 3             'Some kind of problem with file handle open
     OZ80_ERROR_INVALIDNAME = 4          'Invalid label/property/variable name
+    OZ80_ERROR_BADWORD = 5              'Couldn't parse a word
 End Enum
 
 Public InIDE As Boolean

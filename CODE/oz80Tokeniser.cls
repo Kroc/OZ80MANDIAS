@@ -114,7 +114,7 @@ Private Enum ASCII
     F = 102
     G = 103
     H = 104
-    i = 105
+    I = 105
     J = 106
     K = 107
     L = 108
@@ -213,7 +213,7 @@ Public Enum OZ80_TOKEN
     TOKEN_Z80_SUB = &H43                'Subtract
     TOKEN_Z80_XOR = &H44                'Bitwise XOR
     
-    'Specifies a Z80 register
+    'Z80 registers
     TOKEN_REGISTER_A = &H50             'Accumulator
     TOKEN_REGISTER_B = &H51
     TOKEN_REGISTER_C = &H52
@@ -240,6 +240,16 @@ Public Enum OZ80_TOKEN
     TOKEN_REGISTER_IXH = &H63
     TOKEN_REGISTER_IYL = &H64
     TOKEN_REGISTER_IYH = &H65
+    
+    'Z80 flag conditions used on JP, CALL &  RET
+    TOKEN_FLAG_C = &H68                 'Carry set
+    TOKEN_FLAG_NC = &H69                'Carry not set
+    TOKEN_FLAG_Z = &H6A                 'Zero set
+    TOKEN_FLAG_NZ = &H6B                'Zero not set
+    TOKEN_FLAG_M = &H6C                 'Sign is set
+    TOKEN_FLAG_P = &H6D                 'Sign is not set
+    TOKEN_FLAG_PE = &H6E                'Parity/Overflow is set
+    TOKEN_FLAG_PO = &H6F                'Parity/Overflow is not set
     
     'OZ80's keywords
     TOKEN_KEYWORD_AT = &H70
@@ -384,6 +394,8 @@ Public Function Tokenise(ByRef FilePath As String) As OZ80_ERROR
     
     Dim Number As Long, Multiplier As Long
     
+    Dim Word As String
+    
     'Read the whole file into a single string _
      ----------------------------------------------------------------------------------
     Dim FileNumber As String
@@ -400,7 +412,7 @@ Public Function Tokenise(ByRef FilePath As String) As OZ80_ERROR
         Exit Function
     End If
     
-    Debug.Print "Parsing file: " & FilePath
+    Debug.Print "* Parsing file: " & FilePath
     'Once the file is open, ensure it's closed upon error
     On Error GoTo ErrorOpenFile
     Open FilePath For Input Access Read Lock Write As #FileNumber
@@ -422,7 +434,7 @@ Public Function Tokenise(ByRef FilePath As String) As OZ80_ERROR
     
     Dim TextPos As Long
     Let TextPos = -1
-
+    
     '----------------------------------------------------------------------------------
 ReadWord:
     Dim WordBegin As Long               'The index in the text where the word begins
@@ -437,8 +449,6 @@ ReadChar:
     'Read a character:
     Dim AscChar As Long
     Let AscChar = Text(TextPos)
-    
-    If AscChar = SYNTAX_BLOCK_OPEN Then Stop
     
     'Comments:
     '----------------------------------------------------------------------------------
@@ -474,10 +484,29 @@ ReadChar:
     ElseIf IsQuote = False Then
         'Special handling for the beginning of a word
         If IsWord = 0 Then
+            'Skip whitespace before the word begins
             If AscChar = aSPC Then GoTo SkipChar
             If AscChar = aTAB Then GoTo SkipChar
             If AscChar = aCR Then GoTo SkipChar
             If AscChar = aLF Then GoTo SkipChar
+            
+            'Punctuation characters that are only one letter long. _
+             When we hit one of these we need to end the word immediately, but parsing _
+             normally ends a word on the letter after, so we deal with the edge case
+            If AscChar = SYNTAX_NEXT Then GoTo Punctuation
+            If AscChar = SYNTAX_PAREN_OPEN Then GoTo Punctuation
+            If AscChar = SYNTAX_PAREN_CLOSE Then GoTo Punctuation
+            If AscChar = SYNTAX_BLOCK_OPEN Then GoTo Punctuation
+            If AscChar = SYNTAX_BLOCK_CLOSE Then GoTo Punctuation
+            
+            If AscChar = SYNTAX_OPERATOR_ADD Then GoTo Punctuation
+            If AscChar = SYNTAX_OPERATOR_SUB Then GoTo Punctuation
+            If AscChar = SYNTAX_OPERATOR_MUL Then GoTo Punctuation
+            If AscChar = SYNTAX_OPERATOR_DIV Then GoTo Punctuation
+            If AscChar = SYNTAX_OPERATOR_POW Then GoTo Punctuation
+            If AscChar = SYNTAX_OPERATOR_MOD Then GoTo Punctuation
+            If AscChar = SYNTAX_OPERATOR_OR Then GoTo Punctuation
+            If AscChar = SYNTAX_OPERATOR_AND Then GoTo Punctuation
         Else
             'A word is underway, check for end of line (note the `Else`, we don't _
              want to test line endings twice when the Word is currently empty)
@@ -493,6 +522,22 @@ ReadChar:
             'End the word on a space instead of at the end of the line
             If AscChar = aSPC Then GoTo EndWord
             If AscChar = aTAB Then GoTo EndWord
+            
+            'Symbols that can break a word in the middle without spaces to separate
+            If AscChar = SYNTAX_NEXT Then GoTo WordBreak
+            If AscChar = SYNTAX_PAREN_OPEN Then GoTo WordBreak
+            If AscChar = SYNTAX_PAREN_CLOSE Then GoTo WordBreak
+            If AscChar = SYNTAX_BLOCK_OPEN Then GoTo WordBreak
+            If AscChar = SYNTAX_BLOCK_CLOSE Then GoTo WordBreak
+            
+            If AscChar = SYNTAX_OPERATOR_ADD Then GoTo WordBreak
+            If AscChar = SYNTAX_OPERATOR_SUB Then GoTo WordBreak
+            If AscChar = SYNTAX_OPERATOR_MUL Then GoTo WordBreak
+            If AscChar = SYNTAX_OPERATOR_DIV Then GoTo WordBreak
+            If AscChar = SYNTAX_OPERATOR_POW Then GoTo WordBreak
+            If AscChar = SYNTAX_OPERATOR_MOD Then GoTo WordBreak
+            If AscChar = SYNTAX_OPERATOR_OR Then GoTo WordBreak
+            If AscChar = SYNTAX_OPERATOR_AND Then GoTo WordBreak
         End If
         
         'Is this a quote? (in which case, ignore wordbreaks until quote end). _
@@ -508,22 +553,6 @@ ReadChar:
             GoTo WordBreak
             
         End If
-    
-        'Symbols that can break a word in the middle without spaces to separate
-        If AscChar = SYNTAX_NEXT Then GoTo WordBreak
-        If AscChar = SYNTAX_PAREN_OPEN Then GoTo WordBreak
-        If AscChar = SYNTAX_PAREN_CLOSE Then GoTo WordBreak
-        If AscChar = SYNTAX_BLOCK_OPEN Then GoTo WordBreak
-        If AscChar = SYNTAX_BLOCK_CLOSE Then GoTo WordBreak
-        
-        If AscChar = SYNTAX_OPERATOR_ADD Then GoTo WordBreak
-        If AscChar = SYNTAX_OPERATOR_SUB Then GoTo WordBreak
-        If AscChar = SYNTAX_OPERATOR_MUL Then GoTo WordBreak
-        If AscChar = SYNTAX_OPERATOR_DIV Then GoTo WordBreak
-        If AscChar = SYNTAX_OPERATOR_POW Then GoTo WordBreak
-        If AscChar = SYNTAX_OPERATOR_MOD Then GoTo WordBreak
-        If AscChar = SYNTAX_OPERATOR_OR Then GoTo WordBreak
-        If AscChar = SYNTAX_OPERATOR_AND Then GoTo WordBreak
         
     'Quotes:
     '----------------------------------------------------------------------------------
@@ -535,32 +564,42 @@ ReadChar:
         
     End If
     
-    '----------------------------------------------------------------------------------
-    
 NextChar:
-    'Is this the first character of the word?
+    'Is this the first character of the word? If so, record the starting position of _
+     the word and flag as word in-progress
     If IsWord = 0 Then Let WordBegin = TextPos: Let IsWord = 1
     GoTo SkipChar
 
+    '----------------------------------------------------------------------------------
+    Dim WordEnd As Long, WordLen As Long
+    
+Punctuation:
+    Let WordBegin = TextPos
+    Let WordEnd = TextPos
+    Let WordLen = 0
+    GoTo TokenWord
+    
 WordBreak:
     'If the word is longer than one character, then save the current character _
      for use in the next word. i.e. when a comma is reached, process the text _
      before the comma as a word, and take the comma as the next word
-    If IsWord Then Let TextPos = TextPos - 1: GoTo EndWord2
-    Let WordBegin = TextPos: Let IsWord = 1
+    Let TextPos = TextPos - 1
+    Let WordEnd = TextPos
+    Let WordLen = (WordEnd - WordBegin) 'Note that this is 0-based, so 0 = 1 char
+    GoTo TokenWord
     
 EndWord:
     If IsWord = 0 Then GoTo Finish
 EndWord2:
     'Remember the end point and length of the word, _
      we can use this to compare bytes (faster than string comparisons)
-    Dim WordEnd As Long
-    Let WordEnd = TextPos - 1
-    Dim WordLen As Long
-    Let WordLen = (WordEnd - WordBegin) 'Note that this is 0-based, so 0 = 1 char
     
+    Let WordEnd = TextPos - 1
+    Let WordLen = (WordEnd - WordBegin) 'Note that this is 0-based, so 0 = 1 char
+
     'Tokenise the word: _
      ----------------------------------------------------------------------------------
+TokenWord:
     'Extract the 1st, 2nd, 3rd & 4th letters of the word as these make up most _
      comparisons and can be done quickly without string comparisons
     Dim Asc1 As Long, Asc2 As Long, Asc3 As Long, Asc4 As Long
@@ -657,6 +696,8 @@ EndWord2:
         If CompStr(WordBegin, WordLen, "cpi") = 0 Then Call Add(TOKEN_Z80_CPI): GoTo NextWord
         If CompStr(WordBegin, WordLen, "cpir") = 0 Then Call Add(TOKEN_Z80_CPIR): GoTo NextWord
         If CompStr(WordBegin, WordLen, "cpl") = 0 Then Call Add(TOKEN_Z80_CPL): GoTo NextWord
+        'Z80 flag condition
+        If Asc2 = 0 Then Call Add(TOKEN_FLAG_C): GoTo NextWord
         
     ElseIf Asc1 = D Then '..................................................... `d` ...
         'Z80 instructions
@@ -685,7 +726,7 @@ EndWord2:
         'Z80 instructions
         If CompStr(WordBegin, WordLen, "halt") = 0 Then Call Add(TOKEN_Z80_HALT): GoTo NextWord
         
-    ElseIf Asc1 = i Then '..................................................... `i` ...
+    ElseIf Asc1 = I Then '..................................................... `i` ...
         'Z80 instructions
         If CompStr(WordBegin, WordLen, "im") = 0 Then Call Add(TOKEN_Z80_IM): GoTo NextWord
         If CompStr(WordBegin, WordLen, "in") = 0 Then Call Add(TOKEN_Z80_IN): GoTo NextWord
@@ -728,10 +769,21 @@ EndWord2:
         'Keywords
         If CompStr(WordBegin, WordLen, "length") = 0 Then Call Add(TOKEN_KEYWORD_LENGTH): GoTo NextWord
     
+    ElseIf Asc1 = M Then '..................................................... `m` ...
+        'Z80 flag conditions
+        If Asc2 = 0 Then Add (TOKEN_FLAG_M)
+        'There is no `m` register
+        GoTo WordError
+        
     ElseIf Asc1 = N Then '..................................................... `n` ...
         'Z80 instructions
         If CompStr(WordBegin, WordLen, "neg") = 0 Then Call Add(TOKEN_Z80_NEG): GoTo NextWord
         If CompStr(WordBegin, WordLen, "nop") = 0 Then Call Add(TOKEN_Z80_NOP): GoTo NextWord
+        'Z80 flag conditions
+        If Asc3 = 0 Then
+            If Asc2 = C Then Add (TOKEN_FLAG_NC)
+            If Asc2 = Z Then Add (TOKEN_FLAG_NZ)
+        End If
         'There are no `n` registers
         GoTo WordError
         
@@ -752,6 +804,12 @@ EndWord2:
         'Z80 instructions
         If CompStr(WordBegin, WordLen, "pop") = 0 Then Call Add(TOKEN_Z80_POP): GoTo NextWord
         If CompStr(WordBegin, WordLen, "push") = 0 Then Call Add(TOKEN_Z80_PUSH): GoTo NextWord
+        'Z80 flag conditions
+        If Asc2 = 0 Then Add (TOKEN_FLAG_P)
+        If Asc3 = 0 Then
+            If Asc2 = E Then Add (TOKEN_FLAG_PE)
+            If Asc2 = O Then Add (TOKEN_FLAG_PO)
+        End If
         'Keywords
         If CompStr(WordBegin, WordLen, "params") = 0 Then Call Add(TOKEN_KEYWORD_PARAMS): GoTo NextWord
         If CompStr(WordBegin, WordLen, "proc") = 0 Then Call Add(TOKEN_KEYWORD_PROC): GoTo NextWord
@@ -795,7 +853,7 @@ EndWord2:
     ElseIf Asc1 = W Then '..................................................... `w` ...
         'Keywords
         If CompStr(WordBegin, WordLen, "word") = 0 Then Call Add(TOKEN_KEYWORD_WORD): GoTo NextWord
-        'There are no `w` registers
+        'There is no `w` register
         GoTo WordError
         
     ElseIf Asc1 = X Then '..................................................... `x` ...
@@ -803,7 +861,13 @@ EndWord2:
         If WordLen = 0 Then Call Add(TOKEN_OPERATOR_REP): GoTo NextWord
         'Z80 instructions
         If CompStr(WordBegin, WordLen, "xor") = 0 Then Call Add(TOKEN_Z80_XOR): GoTo NextWord
-        'There are no `x` registers
+        'There is no `x` register
+        GoTo WordError
+    
+    ElseIf Asc1 = Z Then '..................................................... `z` ...
+        'Z80 flag conditions
+        If Asc2 = 0 Then Call Add(TOKEN_FLAG_Z): GoTo NextWord
+        'There is no 'z' register
         GoTo WordError
         
     ElseIf Asc1 = SYNTAX_BLOCK_OPEN Then '..................................... `{` ...
@@ -903,7 +967,7 @@ OneLetter:
     If Asc1 = D Then Call Add(TOKEN_REGISTER_D): GoTo NextWord
     If Asc1 = E Then Call Add(TOKEN_REGISTER_E): GoTo NextWord
     If Asc1 = H Then Call Add(TOKEN_REGISTER_H): GoTo NextWord
-    If Asc1 = i Then Call Add(TOKEN_REGISTER_I): GoTo NextWord
+    If Asc1 = I Then Call Add(TOKEN_REGISTER_I): GoTo NextWord
     If Asc1 = L Then Call Add(TOKEN_REGISTER_L): GoTo NextWord
     If Asc1 = R Then Call Add(TOKEN_REGISTER_R): GoTo NextWord
     GoTo WordError
@@ -917,7 +981,7 @@ TwoLetters:
         If Asc2 = E Then Call Add(TOKEN_REGISTER_DE): GoTo NextWord
     ElseIf Asc1 = H Then  '"hl"
         If Asc2 = L Then Call Add(TOKEN_REGISTER_HL): GoTo NextWord
-    ElseIf Asc1 = i Then  '"ix"/"iy"
+    ElseIf Asc1 = I Then  '"ix"/"iy"
         If Asc2 = X Then Call Add(TOKEN_REGISTER_IX): GoTo NextWord
         If Asc2 = Y Then Call Add(TOKEN_REGISTER_IY): GoTo NextWord
     ElseIf Asc1 = P Then  '"pc"
@@ -935,7 +999,7 @@ NextWord:
     '----------------------------------------------------------------------------------
 GetWord:
     'Build a string (for use in error messages) of the word from the byte array
-    Dim Word As String: Let Word = vbNullString
+    Let Word = vbNullString
     For ii = WordBegin To WordBegin + WordLen
         Let Word = Word & Chr$(Text(ii))
     Next ii
@@ -969,10 +1033,15 @@ ErrorInvalidName:
     GoTo Finish
     
 WordError:
-    'TODO: Error here - unrecognised word
     GoSub GetWord
-    Debug.Print Word
-    Stop
+    Let Tokenise = OZ80_ERROR_BADWORD
+    Call RaiseError( _
+        OZ80_ERROR_BADWORD, _
+        "Faliure parsing '" & Word & "'; " & _
+        "Not a known keyword, Z80 instruction, register or other known word. " & _
+        "Typo, perhaps?" _
+    )
+    GoTo Finish
     
 ErrorOut:
 Finish:

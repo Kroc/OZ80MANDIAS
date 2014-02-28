@@ -1,4 +1,3 @@
-TEST
 `` Sonic 1 Master System Disassembly
    created by Kroc Camen <kroc@camendesign.com>
    for MaSS1VE: The Master System Sonic 1 Visual Editor <github.com/Kroc/MaSS1VE>
@@ -798,19 +797,19 @@ PROC :doRasterSplit
 	
 	`underwater boss palette?
 	bit	4, (iy+#vars.timeLightningFlags)
-	jr	z, _f			`jump forward to `__`
+	jr	z, ._
 	
 	ld	hl, :S1_UnderwaterPalette_Boss
 
 	`copy the palette into the VDP
-__	ld   a, (hl)
+._	ld   a, (hl)
 	out	(#SMS_VDP_DATA), a
 	inc	hl
 	nop
 	ld	a, (hl)
 	out	(#SMS_VDP_DATA), a
 	inc	hl
-	djnz	_b			`jump backward to `__`
+	djnz	._
 	
 	ld	a, (#RAM_VDPREGISTER_0)
 	and	%11101111		`remove bit 4 -- disable line interrupts
@@ -1019,9 +1018,9 @@ PROC :updateVDPSprites {
 	`--- sprite Y positions -------------------------------------------------------
 	
 	`set the VDP address to $3F00 (sprite info table, Y-positions)
-	ld	a, <$3F00
+	ld	a, $3F00.lo
 	out	(#SMS_VDP_CONTROL), a
-	ld	a, >$3F00
+	ld	a, $3F00.hi
 	or	%01000000		`add bit 6 to mark an address being given
 	out	(#SMS_VDP_CONTROL), a
 	
@@ -1069,9 +1068,9 @@ PROC :updateVDPSprites {
 	ld	b, (iy+#vars.spriteUpdateCount)
 	
 	`set the VDP address to $3F80 (sprite info table, X-positions & indexes)
-	ld	a, <$3F80
+	ld	a, $3F80.lo
 	out	(#SMS_VDP_CONTROL), a
-	ld	a, >$3F80
+	ld	a, $3F80.hi
 	or	%01000000		`add bit 6 to mark an address being given
 	out	(#SMS_VDP_CONTROL), a
 	
@@ -1472,7 +1471,7 @@ PROC :decompressArt
 	res	1, (iy+#vars.flags9)
 	ret
 
-.rowIndexTable:
+.rowIndexTable
 DATA %00000001
 DATA %00000010
 DATA %00000100
@@ -2291,7 +2290,7 @@ PROC :fillScrollTiles {
 	srl	a
 	srl	a
 	srl	a
-	bit	7, (iy+vars.flags0)	`camera moved up?
+	bit	7, (iy+#vars.flags0)	`camera moved up?
 	jr	nz, +
 	add	a, $18
 +	cp	$1C
@@ -3119,7 +3118,7 @@ PROC :_LABEL_C52_106 {
 	ld	a, (#RAM_VDPREGISTER_1)
 	and	%10111111
 	ld	(#RAM_VDPREGISTER_1), a
-	res	0, (iy+vars.flags0)
+	res	0, (iy+#vars.flags0)
 	call	:waitForInterrupt
 	
 	`map screen 1 tileset
@@ -3405,14 +3404,14 @@ PROC :_0e4b {
 	jp	_b
 }
 
-:_0e72:
-DATA <_1129, >_1129, $04, $01
-DATA <_113b, >_113b, $04, $00
+:_0e72
+DATA :_1129, $04, $01
+DATA :_113b, $04, $00
 :_0e7a
-DATA <_114d, >_114d, $04, $01
-DATA <_115f, >_115f, $04, $00
+DATA :_114d, $04, $01
+DATA :_115f, $04, $00
 :_0e82
-DATA <_1183, >_1183, $04, $00
+DATA :_1183, $04, $00
 
 `____________________________________________________________________________[$0E86]___
 
@@ -3528,103 +3527,103 @@ DATA $2B, $20, $35, $1B, $16, $2A, $00, $3F, $03, $0F, $01, $15, $07, $2D, $00, 
 `----------------------------------------------------------------------------[$0F4E]---
 
 :_f4e
-DATA <_0f84, >_0f84, $00			`Green Hill Act 1
-DATA <_0f93, >_0f93, $00			`Green Hill Act 2
-DATA <_0fde, >_0fde, $01			`Green Hill Act 3
-DATA <_0fa2, >_0fa2, $00			`Bridge Act 1
-DATA <_0fb1, >_0fb1, $00			`Bridge Act 2
-DATA <_107e, >_107e, $02			`Bridge Act 3
-DATA <_0fc0, >_0fc0, $00			`Jungle Act 1
-DATA <_0fcf, >_0fcf, $00			`Jungle Act 2
-DATA <_1088, >_1088, $03			`Jungle Act 3
-DATA <_100b, >_100b, $00			`Labyrinth Act 1
-DATA <_101a, >_101a, $00			`Labyrinth Act 2
-DATA <_1092, >_1092, $00			`Labyrinth Act 3
-DATA <_1029, >_1029, $00			`Scrap Brain Act 1
-DATA <_1038, >_1038, $00			`Scrap Brain Act 2
-DATA <_109c, >_109c, $00			`Scrap Brain Act 3
-DATA <_1047, >_1047, $00			`Sky Base Act 1
-DATA <_1056, >_1056, $00			`Sky Base Act 2
-DATA <_1056, >_1056, $00			`Sky Base Act 3
+DATA :_0f84, $00				`Green Hill Act 1
+DATA :_0f93, $00				`Green Hill Act 2
+DATA :_0fde, $01				`Green Hill Act 3
+DATA :_0fa2, $00				`Bridge Act 1
+DATA :_0fb1, $00				`Bridge Act 2
+DATA :_107e, $02				`Bridge Act 3
+DATA :_0fc0, $00				`Jungle Act 1
+DATA :_0fcf, $00				`Jungle Act 2
+DATA :_1088, $03				`Jungle Act 3
+DATA :_100b, $00				`Labyrinth Act 1
+DATA :_101a, $00				`Labyrinth Act 2
+DATA :_1092, $00				`Labyrinth Act 3
+DATA :_1029, $00				`Scrap Brain Act 1
+DATA :_1038, $00				`Scrap Brain Act 2
+DATA :_109c, $00				`Scrap Brain Act 3
+DATA :_1047, $00				`Sky Base Act 1
+DATA :_1056, $00				`Sky Base Act 2
+DATA :_1056, $00				`Sky Base Act 3
 
 `----------------------------------------------------------------------------[$0F84]---
 
 :_0f84					`Green Hill Act 1
-DATA <_10bd, >_10bd, $50, $68, $1E
-DATA <_10ab, >_10ab, $50, $68, $1E
-DATA <_0f84, >_0f84, $00, $00, $00
+DATA :_10bd, $50, $68, $1E
+DATA :_10ab, $50, $68, $1E
+DATA :_0f84, $00, $00, $00
 :_0f93					`Green Hill Act 2
-DATA <_10cf, >_10cf, $50, $60, $1E
-DATA <_10ab, >_10ab, $50, $60, $1E
-DATA <_0f93, >_0f93, $00, $00, $00
+DATA :_10cf, $50, $60, $1E
+DATA :_10ab, $50, $60, $1E
+DATA :_0f93, $00, $00, $00
 :_0fa2					`Bridge Act 1
-DATA <_10e1, >_10e1, $60, $60, $1E
-DATA <_10ab, >_10ab, $60, $60, $1E
-DATA <_0fa2, >_0fa2, $00, $00, $00
+DATA :_10e1, $60, $60, $1E
+DATA :_10ab, $60, $60, $1E
+DATA :_0fa2, $00, $00, $00
 :_0fb1					`Bridge Act 2
-DATA <_10f3, >_10f3, $80, $50, $1E
-DATA <_10ab, >_10ab, $80, $50, $1E
-DATA <_0fb1, >_0fb1, $00, $00, $00
+DATA :_10f3, $80, $50, $1E
+DATA :_10ab, $80, $50, $1E
+DATA :_0fb1, $00, $00, $00
 :_0fc0					`Jungle Act 1
-DATA <_1105, >_1105, $70, $48, $1E
-DATA <_10ab, >_10ab, $70, $48, $1E
-DATA <_0fc0, >_0fc0, $00, $00, $00
+DATA :_1105, $70, $48, $1E
+DATA :_10ab, $70, $48, $1E
+DATA :_0fc0, $00, $00, $00
 :_0fcf					`Jungle Act 2
-DATA <_1117, >_1117, $70, $38, $1E
-DATA <_10ab, >_10ab, $70, $38, $1E
-DATA <_0fcf, >_0fcf, $00, $00, $00
+DATA :_1117, $70, $38, $1E
+DATA :_10ab, $70, $38, $1E
+DATA :_0fcf, $00, $00, $00
 :_0fde					`Green Hill Act 3
-DATA <_1183, >_1183, $58, $58, $08
-DATA <_1183, >_1183, $58, $58, $08
-DATA <_1183, >_1183, $58, $56, $08
-DATA <_1183, >_1183, $58, $56, $08
-DATA <_1183, >_1183, $58, $55, $08
-DATA <_1183, >_1183, $58, $55, $08
-DATA <_1183, >_1183, $58, $56, $08
-DATA <_1183, >_1183, $58, $56, $08
-DATA <_0fde, >_0fde, $00, $00, $00
+DATA :_1183, $58, $58, $08
+DATA :_1183, $58, $58, $08
+DATA :_1183, $58, $56, $08
+DATA :_1183, $58, $56, $08
+DATA :_1183, $58, $55, $08
+DATA :_1183, $58, $55, $08
+DATA :_1183, $58, $56, $08
+DATA :_1183, $58, $56, $08
+DATA :_0fde, $00, $00, $00
 :_100b					`Labyrinth Act 1
-DATA <_1195, >_1195, $58, $68, $1E
-DATA <_10ab, >_10ab, $58, $68, $1E
-DATA <_100b, >_100b, $00, $00, $00
+DATA :_1195, $58, $68, $1E
+DATA :_10ab, $58, $68, $1E
+DATA :_100b, $00, $00, $00
 :_101a					`Labyrinth Act 2
-DATA <_11a7, >_11a7, $68, $78, $1E
-DATA <_10ab, >_10ab, $68, $78, $1E
-DATA <_101a, >_101a, $00, $00, $00
+DATA :_11a7, $68, $78, $1E
+DATA :_10ab, $68, $78, $1E
+DATA :_101a, $00, $00, $00
 :_1029					`Scrap Brain Act 1
-DATA <_11b9, >_11b9, $70, $58, $1E
-DATA <_10ab, >_10ab, $70, $58, $1E
-DATA <_1029, >_1029, $00, $00, $00
+DATA :_11b9, $70, $58, $1E
+DATA :_10ab, $70, $58, $1E
+DATA :_1029, $00, $00, $00
 :_1038					`Scrap Brain Act 2
-DATA <_11cb, >_11cb, $78, $48, $1E
-DATA <_10ab, >_10ab, $78, $48, $1E
-DATA <_1038, >_1038, $00, $00, $00
+DATA :_11cb, $78, $48, $1E
+DATA :_10ab, $78, $48, $1E
+DATA :_1038, $00, $00, $00
 :_1047					`Sky Base Act 1
-DATA <_11dd, >_11dd, $68, $28, $1E
-DATA <_10ab, >_10ab, $68, $28, $1E
-DATA <_1047, >_1047, $00, $00, $00
+DATA :_11dd, $68, $28, $1E
+DATA :_10ab, $68, $28, $1E
+DATA :_1047, $00, $00, $00
 :_1056					`Sky Base Act 2 / 3
-DATA <_11ef, >_11ef, $80, $28, $1E
-DATA <_11ef, >_11ef, $80, $26, $08
-DATA <_11ef, >_11ef, $80, $26, $08
-DATA <_11ef, >_11ef, $80, $25, $08
-DATA <_11ef, >_11ef, $80, $25, $08
-DATA <_11ef, >_11ef, $80, $26, $08
-DATA <_11ef, >_11ef, $80, $26, $08
-DATA <_1056, >_1056, $00, $00, $00
+DATA :_11ef, $80, $28, $1E
+DATA :_11ef, $80, $26, $08
+DATA :_11ef, $80, $26, $08
+DATA :_11ef, $80, $25, $08
+DATA :_11ef, $80, $25, $08
+DATA :_11ef, $80, $26, $08
+DATA :_11ef, $80, $26, $08
+DATA :_1056, $00, $00, $00
 :_107e					`Bridge Act 3
-DATA <_1183, >_1183, $80, $48, $08
-DATA <_107e, >_107e, $00, $00, $00
+DATA :_1183, $80, $48, $08
+DATA :_107e, $00, $00, $00
 :_1088					`Jungle Act 3
-DATA <_1183, >_1183, $78, $30, $08
-DATA <_1088, >_1088, $00, $00, $00
+DATA :_1183, $78, $30, $08
+DATA :_1088, $00, $00, $00
 :_1092					`Labyrinth Act 3
-DATA <_1183, >_1183, $70, $60, $08
-DATA <_1092, >_1092, $00, $00, $00
+DATA :_1183, $70, $60, $08
+DATA :_1092, $00, $00, $00
 :_109c					`Scrap Brain Act 3
-DATA <_1129, >_1129, $68, $40, $08
-DATA <_113b, >_113b, $68, $40, $08
-DATA <_109c, >_109c, $00, $00, $00
+DATA :_1129, $68, $40, $08
+DATA :_113b, $68, $40, $08
+DATA :_109c, $00, $00, $00
 
 `----------------------------------------------------------------------------[$10AB]---
 
@@ -3891,32 +3890,32 @@ DATA $F1, $F1, $F1, $F1, $F1, $F1, $F1, $F1, $F1, $F1, $F1, $F1, $F1, $FF
 
 `wagging finger animation data:
 :_1372
-DATA <_13bd, >_13bd, $08
-DATA <_13cf, >_13cf, $08
-DATA <_13bd, >_13bd, $08
-DATA <_13cf, >_13cf, $08
-DATA <_13bd, >_13bd, $08
-DATA <_13cf, >_13cf, $08
-DATA <_13bd, >_13bd, $08
-DATA <_13cf, >_13cf, $08
-DATA <_13bd, >_13bd, $08
-DATA <_13cf, >_13cf, $08
-DATA <_13bd, >_13bd, $08
-DATA <_13cf, >_13cf, $08
-DATA <_13bd, >_13bd, $08
-DATA <_13cf, >_13cf, $08
-DATA <_13bd, >_13bd, $08
-DATA <_13cf, >_13cf, $08
-DATA <_13bd, >_13bd, $08
-DATA <_13cf, >_13cf, $08
-DATA <_13bd, >_13bd, $08
-DATA <_13cf, >_13cf, $08
-DATA <_13bd, >_13bd, $08
-DATA <_13cf, >_13cf, $08
+DATA :_13bd, $08
+DATA :_13cf, $08
+DATA :_13bd, $08
+DATA :_13cf, $08
+DATA :_13bd, $08
+DATA :_13cf, $08
+DATA :_13bd, $08
+DATA :_13cf, $08
+DATA :_13bd, $08
+DATA :_13cf, $08
+DATA :_13bd, $08
+DATA :_13cf, $08
+DATA :_13bd, $08
+DATA :_13cf, $08
+DATA :_13bd, $08
+DATA :_13cf, $08
+DATA :_13bd, $08
+DATA :_13cf, $08
+DATA :_13bd, $08
+DATA :_13cf, $08
+DATA :_13bd, $08
+DATA :_13cf, $08
 :_13b4
-DATA <_13bd, >_13bd, $FF
-DATA <_13bd, >_13bd, $FF
-DATA <_13b4, >_13b4, $00
+DATA :_13bd, $FF
+DATA :_13bd, $FF
+DATA :_13b4, $00
 :_13bd					`frame 1 sprite layout
 DATA $00, $02, $04, $FF, $FF, $FF
 DATA $20, $22, $24, $FF, $FF, $FF
@@ -5001,7 +5000,7 @@ PROC :_LABEL_1C49_62 {
 	
 `____________________________________________________________________________[$1CE8]___
 
-PROC :_fillMemoryWithValue:
+PROC :_fillMemoryWithValue
 	PARAMS	hl,	`memory address
 		b,	`length
 		a	`value
@@ -7050,9 +7049,9 @@ DATA :doObjectCode_boss_labyrinth	`#49: boss (Labyrinth)
 DATA :doObjectCode_boss_skyBase		`#4A: boss (Sky Base)
 DATA :doObjectCode_meta_trip		`#4B: trip zone (Green Hill)
 DATA :doObjectCode_platform_flipper	`#4C: Flipper (Special Stage)
-DATA :$0000				`#4D: RESET!
+DATA $0000				`#4D: RESET!
 DATA :doObjectCode_platform_balance	`#4E: balance (Bridge)
-DATA :$0000				`#4F: RESET!
+DATA $0000				`#4F: RESET!
 DATA :doObjectCode_flower		`#50: flower (Green Hill)
 DATA :doObjectCode_powerUp_checkpoint	`#51: monitor - checkpoint
 DATA :doObjectCode_powerUp_continue	`#52: monitor - continue
@@ -17732,7 +17731,7 @@ __	ld      hl,$00a2
 	call	:_3581
 	ret
 	
-._9432:	ld	l,(ix+#object.X+0)
+._9432	ld	l,(ix+#object.X+0)
 	ld	h,(ix+#object.X+1)
 	ld	de,$0004
 	add	hl,de

@@ -673,8 +673,8 @@ TokenWord:
     If WordLen > 1 Then Let Asc3 = LowCase(Text(WordBegin + 2))
     If WordLen > 0 Then Let Asc2 = LowCase(Text(WordBegin + 1))
     
-    GoSub GetWord
-    Debug.Print "= " & Word
+'    GoSub GetWord
+'    Debug.Print "= " & Word
     
     'Check the first letter of the word to find the right kind of token:
     

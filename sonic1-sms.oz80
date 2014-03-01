@@ -3240,7 +3240,7 @@ PROC :_LABEL_C52_106 {
 	add	a, c
 	ld	e, a
 	ld	d, $00
-	ld	hl, _f4e
+	ld	hl, :_f4e
 	add	hl, de
 	ld	e, (hl)
 	inc	hl
@@ -3249,7 +3249,7 @@ PROC :_LABEL_C52_106 {
 	ld	(#RAM_TEMP3), de
 	ld	a, (hl)
 	and	a
-	jr	z, _f
+	jr	z, ._
 	
 	dec	a
 	add	a, a
@@ -3263,7 +3263,7 @@ PROC :_LABEL_C52_106 {
 	ld	l, a
 	jp	(hl)
 
-__	ld   a, $01
+._	ld   a, $01
 	ld	(#RAM_TEMP1),a
 	ld	bc,$012c
 
@@ -3329,7 +3329,7 @@ PROC :_0dd9 {
 -	call	:_LABEL_E86_110
 	ld	a,(iy+#vars.joypad)
 	cp	$ff
-	jp	nz,_b
+	jp	nz,:_LABEL_C52_106._
 	push	bc
 	ld	bc,:_0e72
 	call	:_0edd
@@ -3346,7 +3346,7 @@ PROC :_0dd9 {
 -	call	:_LABEL_E86_110
 	ld	a,(iy+#vars.joypad)
 	cp	$ff
-	jp	nz,_b
+	jp	nz,:_LABEL_C52_106._
 	push	bc
 	ld	bc,:_0e7a
 	call	:_0edd
@@ -3354,7 +3354,7 @@ PROC :_0dd9 {
 	inc	hl
 	djnz	-
 	
-	jp	_b
+	jp	:_LABEL_C52_106._
 }
 
 `____________________________________________________________________________[$0E24]___
@@ -3370,7 +3370,7 @@ PROC :_0e24 {
 -	call	:_LABEL_E86_110
 	ld	a,(iy+#vars.joypad)
 	cp	$ff
-	jp	nz,_b
+	jp	nz,:_LABEL_C52_106._
 	push	bc
 	ld	bc,:_0e82
 	call	:_0edd
@@ -3378,7 +3378,7 @@ PROC :_0e24 {
 	dec	de
 	djnz	-
 	
-	jp	_b
+	jp	:_LABEL_C52_106._
 }
 
 `____________________________________________________________________________[$0E4B]___
@@ -3394,14 +3394,14 @@ PROC :_0e4b {
 -	call	:_LABEL_E86_110
 	ld	a,(iy+#vars.joypad)
 	cp	$ff
-	jp	nz,_b
+	jp	nz,:_LABEL_C52_106._
 	push	bc
 	ld	bc,:_0e82
 	call	:_0edd
 	pop	bc
 	inc	de
 	djnz	-
-	jp	_b
+	jp	:_LABEL_C52_106._
 }
 
 :_0e72
@@ -3964,7 +3964,7 @@ PROC :_1401 {
 	xor	a
 	ld	(#RAM_VDPSCROLL_HORIZONTAL),a
 	ld	(#RAM_VDPSCROLL_VERTICAL),a
-	ld	hl,_14fc
+	ld	hl,:_14fc
 	ld	a,%00000011
 	call	:loadPaletteOnInterrupt
 	ei	
@@ -4132,11 +4132,11 @@ PROC :_155e {
 	ld	(#RAM_TEMP1),a
 	call	:decompressScreen
 	
-	ld	hl,_1711
+	ld	hl,:_1711
 	ld	c,$10
 	ld	a,($D27F)
 	and	a
-	call	nz,_16d9
+	call	nz,:_16d9
 	
 	ld	a,(#RAM_CURRENT_LEVEL)
 	cp	$1c
@@ -4149,10 +4149,10 @@ PROC :_155e {
 	ld	a,(#RAM_CURRENT_LEVEL)
 	ld	e,a
 	ld	d,$00
-	ld	hl,_1b69
+	ld	hl,:_1b69
 	add	hl,de
 	ld	e,(hl)
-	ld	hl,_1b51
+	ld	hl,:_1b51
 	add	hl,de
 	ld	b,$04
 	
@@ -4259,7 +4259,7 @@ PROC :_155e {
 	call	:_19b4
 	ld	a,(#RAM_CURRENT_LEVEL)
 	cp	28
-	call	c,_19df
+	call	c,:_19df
 	ld	a,($D216)
 	inc	a
 	ld	($D216),a
@@ -4584,7 +4584,7 @@ PROC :_1860 {
 	dec	bc
 	ld	a,b
 	or	c
-	jp	nz,_1860
+	jp	nz,:_1860
 	ret
 }
 
@@ -4821,7 +4821,7 @@ PROC :_1aca {
 PROC :_1b13 {
 	ld	a,(hl)
 	and	$f0
-	jr	nz,_f
+	jr	nz,._
 	ld	a,$fe
 	ld	(de),a
 	inc	de
@@ -4841,7 +4841,7 @@ PROC :_1b13 {
 	ld	hl,$D2BE
 	ret
 	
-__	ld      a,(hl)
+._	ld      a,(hl)
 	rrca	
 	rrca	
 	rrca	
@@ -4858,7 +4858,7 @@ __	ld      a,(hl)
 	ld	(de),a
 	inc	hl
 	inc	de
-	djnz	_b
+	djnz	._
 	ld	a,$ff
 	ld	(de),a
 	ld	hl,$D2BE
@@ -5114,12 +5114,12 @@ PROC :_LABEL_1CED_131 {
 	
 	`demo mode?
 	bit	1,(iy+#vars.scrollRingFlags)
-	jr	z,_1dae
+	jr	z,._1dae
 	
 	ld	hl,$0000
 	ld	($D2B5),hl
 	ld	(iy+#vars.spriteUpdateCount),h
-_1dae:
+._1dae
 	res	0,(iy+#vars.flags0)
 	call	:waitForInterrupt
 	
@@ -5141,14 +5141,14 @@ _1dae:
 	
 	ld	a,($D289)
 	and	a
-	call	nz,_1fa9
+	call	nz,:_1fa9
 	
 	jr	++
 	
 +	ld	a,($D287)
 	and	a
 	jp	nz,:_2067
-_1de2:					`jump to here from _2067
+._1de2					`jump to here from _2067
 	ld	a,($D2B1)
 	and	a
 	call	nz,:_1f06
@@ -5230,7 +5230,7 @@ _1de2:					`jump to here from _2067
 	bit	3,(iy+#vars.timeLightningFlags)
 	call	nz,:_1e9e
 	
-	jp	:_1dae
+	jp	._1dae
 	
 	`------------------------------------------------------------------------------
 ++	ld	(iy+#vars.joypad),$f7
@@ -5509,7 +5509,7 @@ PROC :_1fa9 {
 
 `____________________________________________________________________________[$2023]___
 
-_2023:
+:_2023
 DATA $0000, :_202d, :_2031, :_2039, :_203f
 
 PROC :_202d {
@@ -5550,11 +5550,11 @@ DATA $7F, $7F, $7F, $7F, $7F, $7F, $7F, $7F, $7F, $7F, $7F, $7F, $7F, $7F, $7F, 
 PROC :_2067 {
 	dec	a
 	ld	($D287),a
-	jp	nz,:_1de2
+	jp	nz,:_LABEL_1CED_131._1de2
 	
 	`demo mode?
 	bit	1,(iy+#vars.scrollRingFlags)
-	jr	nz,_20b8
+	jr	nz,:_20b8
 	bit	4,(iy+#vars.origFlags6)
 	jr	z,+
 	set	4,(iy+#vars.flags6)

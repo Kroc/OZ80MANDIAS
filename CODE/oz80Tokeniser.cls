@@ -957,14 +957,21 @@ TokenWord:
         Let Number = 0: Let Multiplier = 1
         For ii = WordBegin + WordLen To WordBegin Step -1
             If Text(ii) < NUM0 Or Text(ii) > NUM9 Then
-                'TODO: Error, invalid number
-                Stop
+                'Error, invalid number!
+                GoSub GetWord
+                Let Tokenise = OZ80_ERROR_BADNUMBER_DEC
+                Call RaiseError(Tokenise, _
+                    "Not a valid decimal number! '" & Word & "'", _
+                    LineBegin, ColBegin _
+                )
+                GoTo Finish
             Else
                 'Convert the number from ASCII codes into a value
-                'TODO: Handle an overflow!!!
+                On Error GoTo ErrorOverflow
                 'TODO: Optimise this into LUTs
                 Let Number = Number + (Text(ii) - NUM0) * Multiplier
-                Let Multiplier = Multiplier * 10
+                If ii > WordBegin Then Let Multiplier = Multiplier * 10
+                On Error GoTo 0
             End If
         Next ii
         'Add the token to signal a number
@@ -1083,8 +1090,7 @@ ErrorOpenFile:
     On Error GoTo 0
     Close #FileNumber
     Let Tokenise = OZ80_ERROR_FILEREAD
-    Call RaiseError( _
-        OZ80_ERROR_FILEREAD, _
+    Call RaiseError(Tokenise, _
         "A problem occured when reading the file '" & FilePath & "', " & _
         "the system says: " & vbCrLf & vbCrLf & _
         "Err #" & Err.Number & ": " & Err.Description _
@@ -1095,8 +1101,7 @@ ErrorInvalidName:
     On Error GoTo 0
     GoSub GetWord
     Let Tokenise = OZ80_ERROR_INVALIDNAME
-    Call RaiseError( _
-        OZ80_ERROR_INVALIDNAME, _
+    Call RaiseError(Tokenise, _
         "Failure parsing '" & Word & "'; " & _
         "Variable, label and property names can contain A-Z, 0-9 underscore and dot " & _
         "with the exceptions that the first letter cannot be a number or a dot, " & _
@@ -1104,19 +1109,27 @@ ErrorInvalidName:
         "cannot end in a dot", LineBegin, ColBegin _
     )
     GoTo Finish
+
+ErrorOverflow:
+    On Error GoTo 0
+    GoSub GetWord
+    Let Tokenise = OZ80_ERROR_OVERFLOW
+    Call RaiseError(Tokenise, _
+        "Number too large! ('" & Word & "') Numbers are limited to a maximum of " & _
+        "31-bits (" & Format$((2 ^ 31) - 1, "#,#") & ").", LineBegin, ColBegin _
+    )
+    GoTo Finish
     
 WordError:
     GoSub GetWord
     Let Tokenise = OZ80_ERROR_BADWORD
-    Call RaiseError( _
-        OZ80_ERROR_BADWORD, _
+    Call RaiseError(Tokenise, _
         "Faliure parsing '" & Word & "'; " & _
         "Not a known keyword, Z80 instruction, register or other known word. " & _
         "Typo, perhaps?", LineBegin, ColBegin _
     )
     GoTo Finish
     
-ErrorOut:
 Finish:
     If Tokenise = OZ80_ERROR_NONE Then
        'Reduce the buffers to the final size

@@ -26,6 +26,8 @@ Public Enum OZ80_ERROR
     OZ80_ERROR_FILEREAD = 3             'Some kind of problem with file handle open
     OZ80_ERROR_INVALIDNAME = 4          'Invalid label/property/variable name
     OZ80_ERROR_BADWORD = 5              'Couldn't parse a word
+    OZ80_ERROR_BADNUMBER_DEC = 6        'Not a valid decimal number
+    OZ80_ERROR_OVERFLOW = 7             'A number overflowed the maximum
 End Enum
 
 Public InIDE As Boolean

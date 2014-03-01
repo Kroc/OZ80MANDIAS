@@ -343,11 +343,19 @@ Private MetaLimit As Long
 'So we can look at which tokens are most common, for optimising
 Private TokenCounts(0 To 255) As Long
 
-'A look up table of ASCII codes from upper-case to lower-case
-Private LowCase(0 To 255) As Long
-
 'The buffer used to parse the source text file
 Private Text() As Byte
+
+'A look up table of ASCII codes from upper-case to lower-case
+Private LowCase(0 To 255) As Long
+'A look up table of ASCII codes to validate numbers
+Private IsNumber(0 To 255) As Boolean
+'A look up table of ASCII codes to validate hexadecimal numbers
+Private IsHex(0 To 255) As Boolean
+
+Private IsAlpha(0 To 255) As Boolean
+
+Private IsAlphaNumeric(0 To 255) As Boolean
 
 '/// EVENTS ///////////////////////////////////////////////////////////////////////////
 
@@ -356,11 +364,25 @@ Event Error(ByRef Err As ErrObject)
 'CLASS Initialize _
  ======================================================================================
 Private Sub Class_Initialize()
-    'Initialise the lookup table of upper-case to lower-case values
     Dim ii As Long
     For ii = 0 To 255
-        If ii >= 65 And ii <= 90 Then
+        'Save time doing and/or comparisons by compiling a look up tables of ASCII _
+         codes that count as numeric / hex / alpha and alphanumeric
+        If ii >= NUM0 And ii <= NUM9 Then
+            Let LowCase(ii) = ii
+            Let IsNumber(ii) = True
+            Let IsHex(ii) = True
+            Let IsAlphaNumeric(ii) = True
+        ElseIf ii >= A And ii <= Z Then
+            Let LowCase(ii) = ii
+            Let IsAlpha(ii) = True
+            Let IsAlphaNumeric(ii) = True
+            If ii <= F Then Let IsHex(ii) = True
+        ElseIf ii >= 65 And ii <= 90 Then
             Let LowCase(ii) = ii Or 32
+            Let IsAlpha(ii) = True
+            Let IsAlphaNumeric(ii) = True
+            If ii <= 70 Then Let IsHex(ii) = True
         Else
             Let LowCase(ii) = ii
         End If
@@ -381,8 +403,8 @@ End Sub
 'CLASS Terminate _
  ======================================================================================
 Private Sub Class_Terminate()
-    'Clean up the look up table
-    Erase LowCase
+    'Clean up the look up tables
+    Erase LowCase, IsNumber
     'The `Tokenise` method will clean this up, but just be doubly sure
     Erase Text
     'Empty the token stream
@@ -685,7 +707,30 @@ TokenWord:
     
     'Hexadecimal number?
     ElseIf Asc1 = SYNTAX_NUMBER_HEX Then '..................................... `$` ...
-        'TODO: Tokenise number
+        'Validate the number
+        Let Number = 0: Let Multiplier = 1
+        For ii = WordBegin + WordLen To WordBegin + 1 Step -1
+            'Check the digits are 0-9, A-F
+            If IsHex(Text(ii)) Then
+'                'Error, invalid number!
+'                GoSub GetWord
+'                Let Tokenise = OZ80_ERROR_BADNUMBER_DEC
+'                Call RaiseError(Tokenise, _
+'                    "Not a valid hexadecimal number! '" & Word & "'", _
+'                    LineBegin, ColBegin _
+'                )
+'                GoTo Finish
+            Else
+                'Convert the number from ASCII codes into a value
+                
+ '               On Error GoTo ErrorOverflow
+ '               'TODO: Optimise this into LUTs
+ '               Let Number = Number + (Text(ii) - NUM0) * Multiplier
+ '               'Don't allow the multiplier to overflow when the number doesn't
+ '               If ii > WordBegin Then Let Multiplier = Multiplier * 10
+ '               On Error GoTo 0
+            End If
+        Next ii
         GoTo NextWord
     
     ElseIf Asc1 = SYNTAX_LABEL Then '.......................................... `:` ...
@@ -952,11 +997,12 @@ TokenWord:
         Call Add(TOKEN_PARENCLOSE, LineBegin, ColBegin): GoTo NextWord
     
     'A decimal number?
-    ElseIf Asc1 >= NUM0 And Asc1 <= NUM9 Then '.............................. `0-9` ...
+    ElseIf IsNumber(Asc1) Then '............................................. `0-9` ...
         'Validate the number
         Let Number = 0: Let Multiplier = 1
         For ii = WordBegin + WordLen To WordBegin Step -1
-            If Text(ii) < NUM0 Or Text(ii) > NUM9 Then
+            'If not a 0-9 digit then this is not a decimal number!
+            If IsNumber(Text(ii)) = False Then
                 'Error, invalid number!
                 GoSub GetWord
                 Let Tokenise = OZ80_ERROR_BADNUMBER_DEC
@@ -970,6 +1016,7 @@ TokenWord:
                 On Error GoTo ErrorOverflow
                 'TODO: Optimise this into LUTs
                 Let Number = Number + (Text(ii) - NUM0) * Multiplier
+                'Don't allow the multiplier to overflow when the number doesn't
                 If ii > WordBegin Then Let Multiplier = Multiplier * 10
                 On Error GoTo 0
             End If
@@ -1097,7 +1144,7 @@ ErrorOpenFile:
     )
     GoTo Finish
 
-ErrorInvalidName:
+ErrorInvalidName: '....................................................................
     On Error GoTo 0
     GoSub GetWord
     Let Tokenise = OZ80_ERROR_INVALIDNAME
@@ -1110,7 +1157,7 @@ ErrorInvalidName:
     )
     GoTo Finish
 
-ErrorOverflow:
+ErrorOverflow: '.......................................................................
     On Error GoTo 0
     GoSub GetWord
     Let Tokenise = OZ80_ERROR_OVERFLOW
@@ -1120,7 +1167,7 @@ ErrorOverflow:
     )
     GoTo Finish
     
-WordError:
+WordError: '...........................................................................
     GoSub GetWord
     Let Tokenise = OZ80_ERROR_BADWORD
     Call RaiseError(Tokenise, _
@@ -1130,6 +1177,7 @@ WordError:
     )
     GoTo Finish
     
+    '----------------------------------------------------------------------------------
 Finish:
     If Tokenise = OZ80_ERROR_NONE Then
        'Reduce the buffers to the final size
@@ -1238,7 +1286,7 @@ Public Function IsValidName(ByRef First As Long, ByRef Last As Long) As Boolean
     
     'The name cannot begin with a number or a dot
     If Text(First) = SYNTAX_PROPERTY Then Exit Function
-    If Text(First) >= NUM0 And Text(First) <= NUM9 Then Exit Function
+    If IsNumber(Text(First)) Then Exit Function
     'Cannot end in a dot
     If Text(Last) = SYNTAX_PROPERTY Then Exit Function
     
@@ -1247,7 +1295,7 @@ Public Function IsValidName(ByRef First As Long, ByRef Last As Long) As Boolean
         'Not a dot?
         If Text(ii) <> SYNTAX_PROPERTY Then
             'Is letter not a number?
-            If Text(ii) < NUM0 Or Text(ii) > NUM9 Then
+            If IsNumber(Text(ii)) = False Then
                 'Is letter outside of A-Z (lower case and upper case)?
                 If Text(ii) < A Or Text(ii) > Z Then
                     If Text(ii) < 65 Or Text(ii) > 90 Then
@@ -1260,7 +1308,7 @@ Public Function IsValidName(ByRef First As Long, ByRef Last As Long) As Boolean
             'If a dot, ensure that the next letter is not a number. _
              (the check for the last letter as a dot has already been done, _
               so we can safely assume there remains at least one letter)
-            If Text(ii + 1) >= NUM0 And Text(ii + 1) <= NUM9 Then Exit Function
+            If IsNumber(Text(ii + 1)) Then Exit Function
             'Two dots in a row not allowed
             If Text(ii + 1) = SYNTAX_PROPERTY Then Exit Function
         End If

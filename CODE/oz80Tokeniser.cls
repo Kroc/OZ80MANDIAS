@@ -184,9 +184,9 @@ Public Enum OZ80_TOKEN
     TOKEN_Z80_OR = &H25                 'Bitwise OR
     TOKEN_Z80_OUT = &H26                'Output to port
     TOKEN_Z80_OUTD = &H27               'Output and Decrement
-    TOKEN_Z80_OUTDR = &H28              'Output, Decrement and Repeat
+    TOKEN_Z80_OTDR = &H28               'Output, Decrement and Repeat
     TOKEN_Z80_OUTI = &H29               'Output and Increment
-    TOKEN_Z80_OUTIR = &H2A              'Output, Increment and Repeat
+    TOKEN_Z80_OTIR = &H2A               'Output, Increment and Repeat
     TOKEN_Z80_POP = &H2B                'Pull from stack
     TOKEN_Z80_PUSH = &H2C               'Push onto stack
     TOKEN_Z80_RES = &H2D                'Reset bit
@@ -261,18 +261,23 @@ Public Enum OZ80_TOKEN
     TOKEN_KEYWORD_DATA = &H75
     TOKEN_KEYWORD_DEF = &H76
     TOKEN_KEYWORD_DEFAULT = &H77
-    TOKEN_KEYWORD_FILL = &H78
-    TOKEN_KEYWORD_INCLUDE = &H79
-    TOKEN_KEYWORD_LENGTH = &H7A
-    TOKEN_KEYWORD_OBJECT = &H7B
-    TOKEN_KEYWORD_PARAMS = &H7C
-    TOKEN_KEYWORD_PROC = &H7D
-    TOKEN_KEYWORD_RETURN = &H7E
-    TOKEN_KEYWORD_SLOT = &H7F
-    TOKEN_KEYWORD_START = &H80
-    TOKEN_KEYWORD_STOP = &H81
-    TOKEN_KEYWORD_STRUCT = &H82
-    TOKEN_KEYWORD_WORD = &H83
+    TOKEN_KEYWORD_ECHO = &H78
+    TOKEN_KEYWORD_ELSE = &H79
+    TOKEN_KEYWORD_EXISTS = &H7A
+    TOKEN_KEYWORD_FAIL = &H7B
+    TOKEN_KEYWORD_FILL = &H7C
+    TOKEN_KEYWORD_IF = &H7D
+    TOKEN_KEYWORD_INCLUDE = &H7E
+    TOKEN_KEYWORD_LENGTH = &H7F
+    TOKEN_KEYWORD_OBJECT = &H80
+    TOKEN_KEYWORD_PARAMS = &H81
+    TOKEN_KEYWORD_PROC = &H82
+    TOKEN_KEYWORD_RETURN = &H83
+    TOKEN_KEYWORD_SLOT = &H84
+    TOKEN_KEYWORD_START = &H85
+    TOKEN_KEYWORD_STOP = &H86
+    TOKEN_KEYWORD_STRUCT = &H87
+    TOKEN_KEYWORD_WORD = &H88
     
     'The parser automatically converts hexadecimal/binary numbers, so we only store
      'a 32-bit long (data field) in the token stream
@@ -668,8 +673,8 @@ TokenWord:
     If WordLen > 1 Then Let Asc3 = LowCase(Text(WordBegin + 2))
     If WordLen > 0 Then Let Asc2 = LowCase(Text(WordBegin + 1))
     
-'    GoSub GetWord
-'    Debug.Print "= " & Word
+    GoSub GetWord
+    Debug.Print "= " & Word
     
     'Check the first letter of the word to find the right kind of token:
     
@@ -775,9 +780,15 @@ TokenWord:
         If CompStr(WordBegin, WordLen, "ei") Then Call Add(TOKEN_Z80_EI, LineBegin, ColBegin): GoTo NextWord
         If CompStr(WordBegin, WordLen, "ex") Then Call Add(TOKEN_Z80_EX, LineBegin, ColBegin): GoTo NextWord
         If CompStr(WordBegin, WordLen, "exx") Then Call Add(TOKEN_Z80_EXX, LineBegin, ColBegin): GoTo NextWord
-    
+        'Keywords
+        If CompStr(WordBegin, WordLen, "echo") Then Call Add(TOKEN_KEYWORD_ECHO, LineBegin, ColBegin): GoTo NextWord
+        If CompStr(WordBegin, WordLen, "else") Then Call Add(TOKEN_KEYWORD_ELSE, LineBegin, ColBegin): GoTo NextWord
+        If CompStr(WordBegin, WordLen, "exists") Then Call Add(TOKEN_KEYWORD_EXISTS, LineBegin, ColBegin): GoTo NextWord
+        
+        
     ElseIf Asc1 = F Then '..................................................... `f` ...
         'Keywords
+        If CompStr(WordBegin, WordLen, "fail") Then Call Add(TOKEN_KEYWORD_FAIL, LineBegin, ColBegin): GoTo NextWord
         If CompStr(WordBegin, WordLen, "fill") Then Call Add(TOKEN_KEYWORD_FILL, LineBegin, ColBegin): GoTo NextWord
         'You can't refer to the `f` register directly (only `af`)
         GoTo WordError
@@ -796,6 +807,7 @@ TokenWord:
         If CompStr(WordBegin, WordLen, "ini") Then Call Add(TOKEN_Z80_INI, LineBegin, ColBegin): GoTo NextWord
         If CompStr(WordBegin, WordLen, "inir") Then Call Add(TOKEN_Z80_INIR, LineBegin, ColBegin): GoTo NextWord
         'Keywords
+        If CompStr(WordBegin, WordLen, "if") Then Call Add(TOKEN_KEYWORD_IF, LineBegin, ColBegin): GoTo NextWord
         If CompStr(WordBegin, WordLen, "include") Then Call Add(TOKEN_KEYWORD_INCLUDE, LineBegin, ColBegin): GoTo NextWord
         
     ElseIf Asc1 = J Then '..................................................... `j` ...
@@ -841,8 +853,8 @@ TokenWord:
         If CompStr(WordBegin, WordLen, "nop") Then Call Add(TOKEN_Z80_NOP, LineBegin, ColBegin): GoTo NextWord
         'Z80 flag conditions
         If Asc3 = 0 Then
-            If Asc2 = C Then Call Add(TOKEN_FLAG_NC, LineBegin, ColBegin)
-            If Asc2 = Z Then Call Add(TOKEN_FLAG_NZ, LineBegin, ColBegin)
+            If Asc2 = C Then Call Add(TOKEN_FLAG_NC, LineBegin, ColBegin): GoTo NextWord
+            If Asc2 = Z Then Call Add(TOKEN_FLAG_NZ, LineBegin, ColBegin): GoTo NextWord
         End If
         'There are no `n` registers
         GoTo WordError
@@ -852,9 +864,9 @@ TokenWord:
         If CompStr(WordBegin, WordLen, "or") Then Call Add(TOKEN_Z80_OR, LineBegin, ColBegin): GoTo NextWord
         If CompStr(WordBegin, WordLen, "out") Then Call Add(TOKEN_Z80_OUT, LineBegin, ColBegin): GoTo NextWord
         If CompStr(WordBegin, WordLen, "outd") Then Call Add(TOKEN_Z80_OUTD, LineBegin, ColBegin): GoTo NextWord
-        If CompStr(WordBegin, WordLen, "outdr") Then Call Add(TOKEN_Z80_OUTDR, LineBegin, ColBegin): GoTo NextWord
+        If CompStr(WordBegin, WordLen, "otdr") Then Call Add(TOKEN_Z80_OTDR, LineBegin, ColBegin): GoTo NextWord
         If CompStr(WordBegin, WordLen, "outi") Then Call Add(TOKEN_Z80_OUTI, LineBegin, ColBegin): GoTo NextWord
-        If CompStr(WordBegin, WordLen, "outir") Then Call Add(TOKEN_Z80_OUTIR, LineBegin, ColBegin): GoTo NextWord
+        If CompStr(WordBegin, WordLen, "otir") Then Call Add(TOKEN_Z80_OTIR, LineBegin, ColBegin): GoTo NextWord
         'Keywords
         If CompStr(WordBegin, WordLen, "object") Then Call Add(TOKEN_KEYWORD_OBJECT, LineBegin, ColBegin): GoTo NextWord
         'There are no `o` registers
@@ -865,10 +877,10 @@ TokenWord:
         If CompStr(WordBegin, WordLen, "pop") Then Call Add(TOKEN_Z80_POP, LineBegin, ColBegin): GoTo NextWord
         If CompStr(WordBegin, WordLen, "push") Then Call Add(TOKEN_Z80_PUSH, LineBegin, ColBegin): GoTo NextWord
         'Z80 flag conditions
-        If Asc2 = 0 Then Call Add(TOKEN_FLAG_P, LineBegin, ColBegin)
+        If Asc2 = 0 Then Call Add(TOKEN_FLAG_P, LineBegin, ColBegin): GoTo NextWord
         If Asc3 = 0 Then
-            If Asc2 = E Then Call Add(TOKEN_FLAG_PE, LineBegin, ColBegin)
-            If Asc2 = O Then Call Add(TOKEN_FLAG_PO, LineBegin, ColBegin)
+            If Asc2 = E Then Call Add(TOKEN_FLAG_PE, LineBegin, ColBegin): GoTo NextWord
+            If Asc2 = O Then Call Add(TOKEN_FLAG_PO, LineBegin, ColBegin): GoTo NextWord
         End If
         'Keywords
         If CompStr(WordBegin, WordLen, "params") Then Call Add(TOKEN_KEYWORD_PARAMS, LineBegin, ColBegin): GoTo NextWord
@@ -1178,8 +1190,9 @@ Private Function CompStr( _
      but using the byte array as the source so we no longer have to concatenate _
      strings in the parsing routine
     
-    'If the lengths don't match then they can't be the same
-    If Length <> Len(CompText) Then Exit Function
+    'If the lengths don't match then they can't be the same. _
+     Note that Length is 0-based here
+    If Length <> Len(CompText) - 1 Then Exit Function
 
     With CompStrSA1D
        .pvData = StrPtr(CompText)

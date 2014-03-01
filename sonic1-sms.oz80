@@ -6731,7 +6731,7 @@ PROC :_2795 {
 	inc	de
 	ld	a,$ff
 	ld	(de),a
-__	ld      a,(hl)
+._	ld      a,(hl)
 	inc	hl
 	cp	$ff
 	ret	z
@@ -6746,7 +6746,7 @@ __	ld      a,(hl)
 	ld	b,(hl)
 	inc	hl
 	call	:_2718
-	jr	_b
+	jr	._
 	
 +	push	hl
 	ld	($D2C0),a
@@ -6757,7 +6757,7 @@ __	ld      a,(hl)
 	ld	hl,$D2BE
 	inc	(hl)
 	pop	hl
-	jr	_b
+	jr	._
 	
 ++	ld	b,(hl)
 	inc	hl
@@ -6814,7 +6814,7 @@ __	ld      a,(hl)
 	pop	bc
 	djnz	---
 	pop	hl
-	jp	_b
+	jp	._
 }
 
 :_2825
@@ -7333,7 +7333,7 @@ PROC :_2f66 {
 	
 +	ld	hl,$0008
 ++	bit	3,(iy+#vars.scrollRingFlags)
-	jr	nz,_f
+	jr	nz,._
 	bit	5,(iy+#vars.scrollRingFlags)
 	jr	z,+
 	ld	hl,$0001
@@ -7341,16 +7341,16 @@ PROC :_2f66 {
 	ld	hl,(#RAM_CAMERA_X)
 	and	a
 	sbc	hl,de
-	jr	c,_f
+	jr	c,._
 	ld	(#RAM_CAMERA_X),hl
-	jp	_f
+	jp	._
 	
 +++	ld	bc,($D261)
 	ld	hl,(#RAM_CAMERA_X)
 	add	hl,bc
 	and	a
 	sbc	hl,de
-	jr	nc,_f
+	jr	nc,._
 	ld	a,l
 	cpl	
 	ld	l,a
@@ -7366,15 +7366,15 @@ PROC :_2f66 {
 	jr	c,++	
 +	ld	hl,$0008
 ++	bit	3,(iy+#vars.scrollRingFlags)
-	jr	nz,_f
+	jr	nz,._
 	bit	5,(iy+#vars.scrollRingFlags)
 	jr	z,+
 	ld	hl,$0001
 +	ld	de,(#RAM_CAMERA_X)
 	add	hl,de
-	jr	c,_f
+	jr	c,._
 	ld	(#RAM_CAMERA_X),hl
-__	ld      hl,(#RAM_CAMERA_X)
+._	ld      hl,(#RAM_CAMERA_X)
 	ld	de,(#RAM_LEVEL_LEFT)
 	and	a
 	sbc	hl,de
@@ -7426,9 +7426,9 @@ __	ld      hl,(#RAM_CAMERA_X)
 	ld	hl,(#RAM_CAMERA_Y)
 	and	a
 	sbc	hl,de
-	jr	c,_f
+	jr	c,._
 	ld	(#RAM_CAMERA_Y),hl
-	jp	_f
+	jp	._
 	
 +++	ld	bc,($D265)
 	ld	hl,(#RAM_CAMERA_Y)
@@ -7437,7 +7437,7 @@ __	ld      hl,(#RAM_CAMERA_X)
 	call	z,:_31db
 	and	a
 	sbc	hl,de
-	jr	nc,_f
+	jr	nc,._
 	ld	a,l
 	cpl	
 	ld	l,a
@@ -7458,12 +7458,12 @@ __	ld      hl,(#RAM_CAMERA_X)
 	ld	l,c
 	ld	h,$00
 ++	bit	4,(iy+#vars.scrollRingFlags)
-	jr	nz,_f
+	jr	nz,._
 	ld	de,(#RAM_CAMERA_Y)
 	add	hl,de
-	jr	c,_f
+	jr	c,._
 	ld	(#RAM_CAMERA_Y),hl
-__	ld      hl,(#RAM_CAMERA_Y)
+._	ld      hl,(#RAM_CAMERA_Y)
 	ld	de,(#RAM_LEVEL_TOP)
 	and	a
 	sbc	hl,de
@@ -8241,7 +8241,7 @@ PROC :processSpriteLayout
 
 `____________________________________________________________________________[$3581]___
 
-_3581:
+PROC :_3581 {
 	ld	hl,(#RAM_TEMP3)
 	ld	bc,(#RAM_TEMP6)
 	add	hl,bc
@@ -8286,6 +8286,7 @@ _3581:
 	ld	(#RAM_SPRITETABLE_CURRENT),bc
 	inc	(iy+#vars.spriteUpdateCount)
 	ret
+}
 
 `____________________________________________________________________________[$35CC]___
 
@@ -9032,7 +9033,7 @@ PROC :_39d8 {
 
 `____________________________________________________________________________[$3A03]___
 
-_3a03:
+PROC :_3a03 {
 	bit	0,(iy+#vars.scrollRingFlags)
 	ret	nz	
 	ld	hl,$D2D0
@@ -10135,9 +10136,9 @@ PROC :_4e8d {
 	ld	b,$02
 	ld	hl,$D2F3
 	bit	3,c
-	jr	z,_f
+	jr	z,._
 	ld	hl,$D2F7
-__	push    hl
+._	push    hl
 	call	:_LABEL_625_57
 	pop	hl
 	and	$0f
@@ -10145,7 +10146,7 @@ __	push    hl
 	inc	hl
 	ld	(hl),$00
 	inc	hl
-	djnz	_b
+	djnz	._
 	ret
 }
 
@@ -11060,7 +11061,7 @@ PROC :_54bc {
 
 PROC :_54c6 {
 	bit	0,(iy+#vars.scrollRingFlags)
-	jp	z,_35fd
+	jp	z,:_35fd
 	ret
 }
 
@@ -11826,14 +11827,14 @@ PROC :doObjectCode_powerUp_ring {
 +	ld	hl,$5180		`$15180 - blinking items art
 ._5b34
 	call	:loadPowerUpIcon
-	ld	(ix+#object.spriteLayout+0),<_5bbf
-	ld	(ix+#object.spriteLayout+1),>_5bbf
+	ld	(ix+#object.spriteLayout+0),:_5bbf.lo
+	ld	(ix+#object.spriteLayout+1),:_5bbf.hi
 	ld	a,(#RAM_FRAMECOUNT)
 	and	$07
 	cp	$05
 	ret	nc
-	ld	(ix+#object.spriteLayout+0),<_5bcc
-	ld	(ix+#object.spriteLayout+1),>_5bcc
+	ld	(ix+#object.spriteLayout+0),:_5bcc.lo
+	ld	(ix+#object.spriteLayout+1),:_5bcc.hi
 	ld	l,(ix+$01)
 	ld	h,(ix+#object.X+0)
 	ld	a,(ix+#object.X+1)
@@ -12293,8 +12294,8 @@ PROC :doObjectCode_powerUp_emerald {
 ++	ld	a,(#RAM_FRAMECOUNT)
 	rrca	
 	jr	c,+
-	ld	(ix+#object.spriteLayout+0),<_5f10
-	ld	(ix+#object.spriteLayout+1),>_5f10
+	ld	(ix+#object.spriteLayout+0),:_5f10.lo
+	ld	(ix+#object.spriteLayout+1),:_5f10.hi
 +	ld	l,(ix+#object.Yspeed+0)
 	ld	h,(ix+#object.Yspeed+1)
 	ld	a,(ix+#object.Ydirection)
@@ -12444,12 +12445,12 @@ PROC :doObjectCode_boss_endSign {
 	rst	$28			`playSFX`
 ++	ld	de,:_6157
 	bit	1,(ix+$11)
-	jr	nz,_f
+	jr	nz,._
 	bit	2,(ix+$11)
-	jr	nz,_f
+	jr	nz,._
 	ld	de,$6171
 	bit	3,(ix+$11)
-	jr	z,_f
+	jr	z,._
 	ld	a,(#RAM_CURRENT_LEVEL)
 	cp	$0c
 	jr	c,+
@@ -12487,7 +12488,7 @@ PROC :doObjectCode_boss_endSign {
 	ld	c,$01
 +++	ld	a,c
 	ld	($D288),a
-__	ld      l,(ix+$12)
+._	ld      l,(ix+$12)
 	ld	h,$00
 	add	hl,de
 	ld	a,(hl)
@@ -12496,7 +12497,7 @@ __	ld      l,(ix+$12)
 	inc	hl
 	ld	a,(hl)
 	ld	(ix+$12),a
-	jp	_b
+	jp	._
 	
 +	ld	l,a
 	ld	h,$00
@@ -13188,8 +13189,8 @@ PROC :doObjectCode_platform {
 	
 	ld	(ix+#object.width),$1A
 	ld	(ix+#object.height),$10
-	ld	(ix+#object.spriteLayout+0),<_6911
-	ld	(ix+#object.spriteLayout+1),>_6911
+	ld	(ix+#object.spriteLayout+0),:_6911.lo
+	ld	(ix+#object.spriteLayout+1),:_6911.hi
 	
 	ld	a,(#RAM_SONIC.Ydirection)
 	and	a
@@ -13452,7 +13453,7 @@ PROC :doObjectCode_badnick_buzzBomber {
 +	ld	a,(ix+$11)
 	cp	$20
 	jp	nz,+
-	call	_7c7b
+	call	:_7c7b
 	jp	c,+
 	push	bc
 	ld	e,(ix+#object.X+0)
@@ -13633,7 +13634,7 @@ PROC :doObjectCode_platform_leftRight {
 	add	hl,de
 	ld	(#RAM_SONIC.X),hl
 	
-+	ld	hl,_6911
++	ld	hl,:_6911
 	ld	a,(#RAM_LEVEL_SOLIDITY)
 	and	a
 	jr	z,+
@@ -13710,7 +13711,7 @@ PROC :doObjectCode_badnick_motobug {
 	call	:_LABEL_3956_11
 	ld	hl,$0000
 	ld	(#RAM_TEMP1),hl
-	call	nc,_35e5
+	call	nc,:_35e5
 	ret
 }
 
@@ -14249,8 +14250,8 @@ PROC :doObjectCode_boss_capsule {
 	ld	a,c
 	cp	$03
 	ret	nz
-	ld	(ix+#object.spriteLayout+0),<_7540
-	ld	(ix+#object.spriteLayout+1),>_7540
+	ld	(ix+#object.spriteLayout+0),:_7540.lo
+	ld	(ix+#object.spriteLayout+1),:_7540.hi
 	bit	1,(iy+#vars.flags6)
 	jr	nz,++
 	set	1,(iy+#vars.flags6)
@@ -14705,8 +14706,8 @@ PROC :_77be {
 	ld	(ix+#object.Yspeed+0),$60
 	ld	(ix+#object.Yspeed+1),$ff
 	ld	(ix+#object.Ydirection),$ff
-	ld	(ix+#object.spriteLayout+0),<_7922
-	ld	(ix+#object.spriteLayout+1),>_7922
+	ld	(ix+#object.spriteLayout+0),:_7922.lo
+	ld	(ix+#object.spriteLayout+1),:_7922.hi
 	ld	l,(ix+#object.X+0)
 	ld	h,(ix+#object.X+1)
 	ld	de,(#RAM_CAMERA_X)
@@ -14983,7 +14984,7 @@ PROC :_7b95 {
 	add	a,c
 	ld	c,a
 	ld	b,$00
-	ld	hl,_7c17
+	ld	hl,:_7c17
 	add	hl,bc
 	ld	e,(hl)
 	inc	hl
@@ -15032,12 +15033,12 @@ PROC :_7b95 {
 }
 
 :_7c17
-DATA <_7c29, >_7c29, $1C
-DATA <_7c31, >_7c31, $1C
-DATA <_7c39, >_7c39, $1C
-DATA <_7c29, >_7c29, $1D
-DATA <_7c31, >_7c31, $1D
-DATA <_7c39, >_7c39, $1D
+DATA :_7c29, $1C
+DATA :_7c31, $1C
+DATA :_7c39, $1C
+DATA :_7c29, $1D
+DATA :_7c31, $1D
+DATA :_7c39, $1D
 
 `sprite layout
 :_7c29
@@ -15262,8 +15263,8 @@ PROC :doObjectCode_badnick_chopper {
 	and	a
 	jr	z,+
 	dec	(ix+$11)
-	ld	(ix+#object.spriteLayout+0),<_7df7
-	ld	(ix+#object.spriteLayout+1),>_7df7
+	ld	(ix+#object.spriteLayout+0),:_7df7.lo
+	ld	(ix+#object.spriteLayout+1),:_7df7.hi
 +	ld	hl,$0204
 	ld	(#RAM_TEMP6),hl
 	call	:_LABEL_3956_11
@@ -15297,8 +15298,8 @@ PROC :doObjectCode_platform_fallVertical {
 	ld	($D269),hl
 	ld	(ix+#object.width),$0c
 	ld	(ix+#object.height),$10
-	ld	(ix+#object.spriteLayout+0),<_7e89
-	ld	(ix+#object.spriteLayout+1),>_7e89
+	ld	(ix+#object.spriteLayout+0),:_7e89.lo
+	ld	(ix+#object.spriteLayout+1),:_7e89.hi
 	bit	0,(ix+$18)
 	jr	nz,._7e3c
 	ld	a,(ix+#object.Y+0)
@@ -15359,8 +15360,8 @@ PROC :doObjectCode_platform_fallHorizontal {
 	ld	($D269),hl
 	ld	(ix+#object.width),$1a
 	ld	(ix+#object.height),$10
-	ld	(ix+#object.spriteLayout+0),<_7ed9
-	ld	(ix+#object.spriteLayout+1),>_7ed9
+	ld	(ix+#object.spriteLayout+0),:_7ed9.lo
+	ld	(ix+#object.spriteLayout+1),:_7ed9.hi
 	bit	0,(ix+$18)
 	jp	nz,:doObjectCode_platform_fallVertical._7e3c
 	ld	a,(ix+#object.Y+0)
@@ -15407,12 +15408,12 @@ PROC :doObjectCode_platform_roll {
 	
 +	ld	a,(#RAM_SONIC.Ydirection)
 	and	a
-	jp	m,_8003
+	jp	m,:_8003
 	
 	ld	hl,$0806
 	ld	(#RAM_TEMP6),hl
 	call	:_LABEL_3956_11
-	jp	c,_8003
+	jp	c,:_8003
 	ld	bc,$0010
 	ld	e,(ix+#object.Yspeed+0)
 	ld	d,(ix+#object.Yspeed+1)
@@ -15515,8 +15516,8 @@ DATA $00, $00, $00
 
 `jumped to by `doObjectCode_platform_roll`, OBJECT: log - floating (Jungle)
 :_8003   
-	ld	(ix+object.spriteLayout+0),<_8022
-	ld	(ix+object.spriteLayout+1),>_8022
+	ld	(ix+object.spriteLayout+0),:_8022.lo
+	ld	(ix+object.spriteLayout+1),:_8022.hi
 :_800b
 	inc	(ix+$11)
 	ld	a,(ix+$11)
@@ -15594,8 +15595,8 @@ PROC :doObjectCode_boss_jungle {
 +	call	:_7ca6
 	bit	0,(ix+$11)
 	jr	nz,+
-	ld	(ix+#object.spriteLayout+0),<_81f4
-	ld	(ix+#object.spriteLayout+1),>_81f4
+	ld	(ix+#object.spriteLayout+0),:_81f4.lo
+	ld	(ix+#object.spriteLayout+1),:_81f4.hi
 	ld	(ix+#object.Yspeed+0),$80
 	ld	(ix+#object.Yspeed+1),$00
 	ld	(ix+#object.Ydirection),$00
@@ -15616,8 +15617,8 @@ PROC :doObjectCode_boss_jungle {
 	ld	h,(ix+#object.X+1)
 	bit	1,(ix+$11)
 	jr	nz,+
-	ld	(ix+#object.spriteLayout+0),<_81f4
-	ld	(ix+#object.spriteLayout+1),>_81f4
+	ld	(ix+#object.spriteLayout+0),:_81f4.lo
+	ld	(ix+#object.spriteLayout+1),:_81f4.hi
 	res	1,(ix+$18)
 	ld	(ix+#object.Xspeed+0),$00
 	ld	(ix+#object.Xspeed+1),$ff
@@ -15629,8 +15630,8 @@ PROC :doObjectCode_boss_jungle {
 	ld	(ix+$12),$67
 	jp	++++
 	
-+	ld	(ix+#object.spriteLayout+0),<_8206
-	ld	(ix+#object.spriteLayout+1),>_8206
++	ld	(ix+#object.spriteLayout+0),:_8206.lo
+	ld	(ix+#object.spriteLayout+1),:_8206.hi
 	set	1,(ix+$18)
 	ld	(ix+#object.Xspeed+0),$00
 	ld	(ix+#object.Xspeed+1),$01
@@ -15669,7 +15670,7 @@ PROC :doObjectCode_boss_jungle {
 	ld	a,($D2EC)
 	cp	$08
 	jr	nc,++++
-	call	_7c7b
+	call	:_7c7b
 	ret	c
 	ld	e,(ix+#object.X+0)
 	ld	d,(ix+#object.X+1)
@@ -15927,8 +15928,8 @@ PROC :doObjectCode_platform_bridge {
 	set	0,(ix+$18)
 	ld	a,$20
 	rst	$28			`playSFX`
-++	ld	(ix+#object.spriteLayout+0),<_8481
-	ld	(ix+#object.spriteLayout+1),>_8481
+++	ld	(ix+#object.spriteLayout+0),:_8481.lo
+	ld	(ix+#object.spriteLayout+1),:_8481.hi
 	ld	l,(ix+#object.Yspeed+0)
 	ld	h,(ix+#object.Yspeed+1)
 	ld	a,(ix+#object.Ydirection)
@@ -15984,8 +15985,8 @@ PROC :doObjectCode_boss_bridge {
 	ld	(ix+#object.width),$1e
 	ld	(ix+#object.height),$1c
 	call	:_7ca6
-	ld	(ix+#object.spriteLayout+0),<_865a
-	ld	(ix+#object.spriteLayout+1),>_865a
+	ld	(ix+#object.spriteLayout+0),:_865a.lo
+	ld	(ix+#object.spriteLayout+1),:_865a.hi
 	bit	0,(ix+$18)
 	jr	nz,+
 	
@@ -16297,7 +16298,7 @@ PROC :doObjectCode_platform_balance {
 	ld	de,$0010
 	add	hl,de
 	ld	(#RAM_TEMP6),hl
-	ld	hl,_8830
+	ld	hl,:_8830
 	call	:_881a
 	ld	hl,$002c
 	ld	(#RAM_TEMP4),hl
@@ -16530,8 +16531,8 @@ PROC :doObjectCode_trap_spikeBall {
 	ld	(#RAM_TEMP6),hl
 	call	:_LABEL_3956_11
 	call	nc,:_35fd
-	ld	(ix+#object.spriteLayout+0),<_8987
-	ld	(ix+#object.spriteLayout+1),>_8987
+	ld	(ix+#object.spriteLayout+0),:_8987.lo
+	ld	(ix+#object.spriteLayout+1),:_8987.hi
 	inc	(ix+$11)
 	ld	a,(ix+$11)
 	cp	$b4
@@ -16900,15 +16901,15 @@ PROC :doObjectCode_trap_fireball {
 	ld	(ix+#object.Xspeed+0),$00
 	ld	(ix+#object.Xspeed+1),$ff
 	ld	(ix+#object.Xdirection),$ff
-	ld	(ix+#object.spriteLayout+0),<_8d39
-	ld	(ix+#object.spriteLayout+1),>_8d39
+	ld	(ix+#object.spriteLayout+0),:_8d39.lo
+	ld	(ix+#object.spriteLayout+1),:_8d39.hi
 	jr	++
 	
 +	ld	(ix+#object.Xspeed+0),a
 	ld	(ix+#object.Xspeed+1),$01
 	ld	(ix+#object.Xdirection),a
-	ld	(ix+#object.spriteLayout+0),<_8d41
-	ld	(ix+#object.spriteLayout+1),>_8d41
+	ld	(ix+#object.spriteLayout+0),:_8d41.lo
+	ld	(ix+#object.spriteLayout+1),:_8d41.hi
 ++	ld	(ix+#object.Yspeed+0),a
 	ld	(ix+#object.Yspeed+1),a
 	ld	(ix+#object.Ydirection),a
@@ -17347,8 +17348,8 @@ PROC :doObjectCode_platform_float {
 	set	5,(ix+$18)
 	ld	(ix+#object.width),$1e
 	ld	(ix+#object.height),$1c
-	ld	(ix+#object.spriteLayout+0),<_91de
-	ld	(ix+#object.spriteLayout+1),>_91de
+	ld	(ix+#object.spriteLayout+0),:_91de.lo
+	ld	(ix+#object.spriteLayout+1),:_91de.hi
 	bit	1,(ix+$18)
 	jr	nz,+
 	ld	l,(ix+#object.X+0)
@@ -17488,7 +17489,7 @@ PROC :_91eb {
 	and	$0f
 	ld	e,a
 	ld	d,$00
-	ld	hl,_9257
+	ld	hl,:_9257
 	add	hl,de
 	ld	c,(hl)
 	pop	hl
@@ -17540,8 +17541,8 @@ PROC :doObjectCode_boss_labyrinth {
 	ld	(ix+#object.width), $20
 	ld	(ix+#object.height), $1C
 	call	:_7ca6
-	ld	(ix+#object.spriteLayout+0),<_9493
-	ld	(ix+#object.spriteLayout+1),>_9493
+	ld	(ix+#object.spriteLayout+0),:_9493.lo
+	ld	(ix+#object.spriteLayout+1),:_9493.hi
 	bit	0,(ix+$18)
 	jr	nz,+
 	
@@ -17590,7 +17591,7 @@ PROC :doObjectCode_boss_labyrinth {
 	inc	hl
 	ld	(ix+#object.Y+1),a
 	inc	(ix+$11)
-	jp	_f
+	jp	._
 	
 +	dec	a
 	jr	nz,+++
@@ -17619,10 +17620,10 @@ PROC :doObjectCode_boss_labyrinth {
 	ld	d,(ix+#object.Y+1)
 	and	a
 	sbc	hl,de
-	jp	nz,_f
+	jp	nz,._
 	inc	(ix+$11)
 	ld	(ix+$12),$00
-	jp	_f
+	jp	._
 	
 +++	dec	a
 	jp	nz,+
@@ -17633,7 +17634,7 @@ PROC :doObjectCode_boss_labyrinth {
 	inc	(ix+$12)
 	ld	a,(ix+$12)
 	cp	$64
-	jp	nz,_f
+	jp	nz,._
 	inc	(ix+$11)
 	ld	l,(ix+#object.X+0)
 	ld	h,(ix+#object.X+1)
@@ -17650,9 +17651,9 @@ PROC :doObjectCode_boss_labyrinth {
 	jp	z,._9432
 	ld	a,($D2EC)
 	cp	$08
-	jp	nc,_f
+	jp	nc,._
 	call	:_7c7b
-	jp	c,_f
+	jp	c,._
 	push	ix
 	push	hl
 	pop	ix
@@ -17674,7 +17675,7 @@ PROC :doObjectCode_boss_labyrinth {
 	ld	(ix+#object.Yspeed+1),a
 	ld	(ix+#object.Ydirection),a
 	pop	ix
-	jp	_f
+	jp	._
 	
 +	ld	a,(ix+$13)
 	and	a
@@ -17701,14 +17702,14 @@ PROC :doObjectCode_boss_labyrinth {
 	ld	d,(ix+#object.Y+1)
 	xor	a
 	sbc	hl,de
-	jr	nz,_f
+	jr	nz,._
 	ld	(ix+$11),a
 	inc	(ix+$13)
 	ld	a,(ix+$13)
 	cp	$03
-	jr	c,_f
+	jr	c,._
 	ld	(ix+$13),$00
-__	ld      hl,$00a2
+._	ld      hl,$00a2
 	ld	($D216),hl
 	call	:_77be
 	ld	a,($D2EC)
@@ -17758,7 +17759,7 @@ __	ld      hl,$00a2
 	call	:_85d1
 	ld	a,$01
 	rst	$28			`playSFX`
-	jp	_b
+	jp	._
 }
 
 :_947b
@@ -18211,9 +18212,9 @@ PROC :_96f8 {
 
 doObjectCode_platform_flipper:
 	set	5,(ix+$18)
-	ld	(ix+object.spriteLayout+0),<_9a7e
-	ld	(ix+object.spriteLayout+1),>_9a7e
-	bit	5,(iy+vars.joypad)
+	ld	(ix+object.spriteLayout+0),:_9a7e.lo
+	ld	(ix+object.spriteLayout+1),:_9a7e.hi
+	bit	5,(iy+#vars.joypad)
 	jr	nz,+
 	ld	a,(ix+$11)
 	ld	(ix+$12),a
@@ -18232,12 +18233,12 @@ doObjectCode_platform_flipper:
 	jr	nc,+
 	ld	hl,$140c
 	ld	(RAM_TEMP6),hl
-	ld	(ix+object.width),$1e
-	ld	(ix+object.height),$16
-	call	_LABEL_3956_11
+	ld	(ix+#object.width),$1e
+	ld	(ix+#object.height),$16
+	call	:_LABEL_3956_11
 	ret	c
-	ld	bc,_999e
-	call	_9aaf
+	ld	bc,:_999e
+	call	:_9aaf
 	ret	nc
 	ld	a,($D2E8)
 	ld	hl,($D2E6)
@@ -18254,16 +18255,16 @@ doObjectCode_platform_flipper:
 	
 +	cp	$04
 	jp	nc,+
-	ld	(ix+object.spriteLayout+0),<_9a90
-	ld	(ix+object.spriteLayout+1),>_9a90
+	ld	(ix+object.spriteLayout+0),:_9a90.lo
+	ld	(ix+object.spriteLayout+1),:_9a90.hi
 	ld	hl,$080f
 	ld	(RAM_TEMP6),hl
 	ld	(ix+object.width),$1e
 	ld	(ix+object.height),$16
-	call	_LABEL_3956_11
+	call	:_LABEL_3956_11
 	ret	c
-	ld	bc,_99be
-	call	_9aaf
+	ld	bc,:_99be
+	call	:_9aaf
 	ret	nc
 	ld	a,(ix+$12)
 	cp	(ix+$11)
@@ -18274,7 +18275,7 @@ doObjectCode_platform_flipper:
 	add	a,a
 	ld	c,a
 	ld	b,$00
-	ld	hl,_99fe
+	ld	hl,:_99fe
 	add	hl,bc
 	ld	e,(hl)
 	inc	hl
@@ -18285,7 +18286,7 @@ doObjectCode_platform_flipper:
 	adc	a,$ff
 	ld	(RAM_SONIC+object.Xspeed),hl
 	ld	(RAM_SONIC+object.Xdirection),a
-	ld	hl,_9a3e
+	ld	hl,:_9a3e
 	add	hl,bc
 	ld	e,(hl)
 	inc	hl
@@ -18319,16 +18320,16 @@ doObjectCode_platform_flipper:
 	ld	(RAM_SONIC+object.Xdirection),a
 	ret
 	
-+	ld	(ix+object.spriteLayout+0),<_9aa2
-	ld	(ix+object.spriteLayout+1),>_9aa2
++	ld	(ix+object.spriteLayout+0),:_9aa2.lo
+	ld	(ix+object.spriteLayout+1),:_9aa2.hi
 	ld	hl,$021a
 	ld	(RAM_TEMP6),hl
 	ld	(ix+object.width),$1e
 	ld	(ix+object.height),$16
-	call	_LABEL_3956_11
+	call	:_LABEL_3956_11
 	ret	c
-	ld	bc,_99de
-	call	_9aaf
+	ld	bc,:_99de
+	call	:_9aaf
 	ret	nc
 	ld	a,($D2E8)
 	ld	hl,($D2E6)
@@ -18343,36 +18344,36 @@ doObjectCode_platform_flipper:
 	ld	(RAM_SONIC+object.Xdirection),a
 	ret
 
-_999e:
+:_999e
 DATA $FF, $FF, $FE, $FE, $FE, $FD, $FD, $FD, $FC, $FC, $FC, $FC, $FB, $FB, $FB, $FB
 DATA $FA, $FA, $FA, $FA, $FA, $F9, $F9, $F9, $F9, $F9, $F9, $FA, $FA, $FB, $FC, $FE
-_99be:
+:_99be
 DATA $EA, $EA, $EA, $F6, $F7, $F8, $F8, $F8, $F9, $F9, $F9, $FA, $FA, $FA, $FB, $FB
 DATA $FB, $FB, $FC, $FC, $FC, $FC, $FD, $FD, $FD, $FD, $FE, $FE, $FF, $00, $02, $04
-_99de:
+:_99de
 DATA $EA, $EA, $EA, $EA, $EA, $EA, $EA, $EA, $EA, $EA, $EA, $EA, $EE, $ED, $EC, $EC
 DATA $EC, $ED, $EE, $EF, $F0, $F2, $F3, $F4, $F5, $F7, $F8, $F9, $FA, $FB, $FD, $FF
-_99fe:
+:_99fe
 DATA $00, $F8, $00, $F8, $00, $F9, $00, $FA, $00, $FB, $00, $FC, $E0, $FC, $80, $FD
 DATA $C0, $FD, $00, $FE, $40, $FE, $80, $FE, $C0, $FE, $00, $FF, $20, $FF, $40, $FF
 DATA $60, $FF, $80, $FF, $A0, $FF, $C0, $FF, $E0, $FF, $E8, $FF, $EA, $FF, $EC, $FF
 DATA $EE, $FF, $F0, $FF, $F2, $FF, $F4, $FF, $F6, $FF, $F8, $FF, $FC, $FF, $FE, $FF
-_9a3e:
+:_9a3e
 DATA $00, $FC, $00, $FC, $00, $FC, $00, $FB, $00, $FA, $00, $F9, $00, $F8, $00, $F7
 DATA $00, $F6, $80, $F5, $00, $F5, $C0, $F4, $80, $F4, $40, $F4, $00, $F4, $00, $F4
 DATA $00, $F4, $00, $F4, $40, $F4, $80, $F4, $C0, $F4, $00, $F5, $00, $F6, $00, $F7
 DATA $00, $F9, $00, $FA, $00, $FC, $80, $FC, $00, $FD, $C0, $FD, $00, $FF, $00, $FF
 
 `sprite layout
-_9a7e:
+:_9a7e
 DATA $FE, $FF, $FF, $FF, $FF, $FF
 DATA $38, $3A, $3C, $3E, $FF, $FF
 DATA $FF, $FF, $FF, $FF, $FF, $FF
-_9a90:
+:_9a90
 DATA $48, $4A, $4C, $4E, $FF, $FF
 DATA $68, $6A, $6C, $6E, $FF, $FF
 DATA $FF, $FF, $FF, $FF, $FF, $FF
-_9aa2:
+:_9aa2
 DATA $FE, $12, $14, $16, $FF, $FF
 DATA $FE, $32, $34, $36, $FF, $FF
 DATA $FF

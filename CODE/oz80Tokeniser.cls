@@ -352,9 +352,9 @@ Private LowCase(0 To 255) As Long
 Private IsNumber(0 To 255) As Boolean
 'A look up table of ASCII codes to validate hexadecimal numbers
 Private IsHex(0 To 255) As Boolean
-
+'A look up table of ASCII codes to validate alpha characters (both cases)
 Private IsAlpha(0 To 255) As Boolean
-
+'A look up table of ASCII codes to validate alphanumeric characters (both cases)
 Private IsAlphaNumeric(0 To 255) As Boolean
 
 '/// EVENTS ///////////////////////////////////////////////////////////////////////////
@@ -1014,7 +1014,8 @@ TokenWord:
             Else
                 'Convert the number from ASCII codes into a value
                 On Error GoTo ErrorOverflow
-                'TODO: Optimise this into LUTs
+                'I've tried putting this into a lookup table and it's exactly the _
+                 same speed
                 Let Number = Number + (Text(ii) - NUM0) * Multiplier
                 'Don't allow the multiplier to overflow when the number doesn't
                 If ii > WordBegin Then Let Multiplier = Multiplier * 10
@@ -1294,15 +1295,10 @@ Public Function IsValidName(ByRef First As Long, ByRef Last As Long) As Boolean
     For ii = First To Last
         'Not a dot?
         If Text(ii) <> SYNTAX_PROPERTY Then
-            'Is letter not a number?
-            If IsNumber(Text(ii)) = False Then
-                'Is letter outside of A-Z (lower case and upper case)?
-                If Text(ii) < A Or Text(ii) > Z Then
-                    If Text(ii) < 65 Or Text(ii) > 90 Then
-                        'Finally, not an underscore?
-                        If Text(ii) <> UNDRSCR Then Exit Function
-                    End If
-                End If
+            'Is letter not alphanumeric?
+            If IsAlphaNumeric(Text(ii)) = False Then
+                'Finally, not an underscore?
+                If Text(ii) <> UNDRSCR Then Exit Function
             End If
         Else
             'If a dot, ensure that the next letter is not a number. _

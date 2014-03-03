@@ -143,6 +143,39 @@ Private Enum SYNTAX
 End Enum
 
 Public Enum OZ80_TOKEN
+    TOKEN_Z80 = &H1                     'Z80 instruction
+    TOKEN_REGISTER = &H2                'Z80 register
+    TOKEN_FLAG = &H3                    'Z80 flag condition (used on JP, CALL &  RET)
+    TOKEN_OPERATOR = &H4                'Operator (e.g. "+ - * /")
+    TOKEN_KEYWORD = &H5                 'Keyword (IF/DATA/ECHO &c.)
+    
+    
+    'The parser automatically converts hexadecimal/binary numbers, so we only store
+     'a 32-bit long (data field) in the token stream
+    TOKEN_NUMBER = &H70
+    'Number prefixes ("K", "KB" & "Kbit")
+    TOKEN_PREFIX_K = &H7A               'x1000
+    TOKEN_PREFIX_KB = &H7B              'x1024
+    TOKEN_PREFIX_KBIT = &H7C            'x128 (1024 bits)
+    
+    'Grouping: (i.e. parenthesis, braces)
+    TOKEN_PARENOPEN = &HD0
+    TOKEN_PARENCLOSE = &HD1
+    TOKEN_BLOCKOPEN = &HD2
+    TOKEN_BLOCKCLOSE = &HD3
+    
+    TOKEN_QUOTE = &HE0
+    
+    TOKEN_LABEL = &HA0
+    TOKEN_VARIABLE = &HA1
+    TOKEN_PROPERTY = &HA2
+    'A list is a series of 1 or more expressions separated by commas,
+     'i.e.parameter lists
+    TOKEN_LIST = &HA3
+    TOKEN_NEXT = &HC1                   'Sandwiched between list items, i.e. ","
+End Enum
+
+Public Enum OZ80_TOKEN_DATA
     'These are just the mnemonic tokens -- the assembler itself checks the
      'parameters and determines which opcode should be used
     TOKEN_Z80_ADC = &H1                 'Add with Carry
@@ -214,107 +247,82 @@ Public Enum OZ80_TOKEN
     TOKEN_Z80_SUB = &H43                'Subtract
     TOKEN_Z80_XOR = &H44                'Bitwise XOR
     
-    'Z80 registers
-    TOKEN_REGISTER_A = &H50             'Accumulator
-    TOKEN_REGISTER_B = &H51
-    TOKEN_REGISTER_C = &H52
-    TOKEN_REGISTER_D = &H53
-    TOKEN_REGISTER_E = &H54
-    TOKEN_REGISTER_F = &H55             'Flags register
-    TOKEN_REGISTER_H = &H56
-    TOKEN_REGISTER_I = &H57             'Interrupt - not to be confused with IX & IY
-    TOKEN_REGISTER_L = &H58
-    TOKEN_REGISTER_R = &H59             'Refresh register (pseudo-random)
-
-    TOKEN_REGISTER_AF = &H5A
-    TOKEN_REGISTER_BC = &H5B
-    TOKEN_REGISTER_DE = &H5C
-    TOKEN_REGISTER_HL = &H5D
-    TOKEN_REGISTER_IX = &H5E
-    TOKEN_REGISTER_IY = &H5F
+    'Z80 Registers ....................................................................
+    TOKEN_REGISTER_A = &H1              'Accumulator
+    TOKEN_REGISTER_F = &H2              'Flags register
+    TOKEN_REGISTER_B = &H4
+    TOKEN_REGISTER_C = &H8
+    TOKEN_REGISTER_D = &H10
+    TOKEN_REGISTER_E = &H20
+    TOKEN_REGISTER_H = &H40
+    TOKEN_REGISTER_L = &H80
     
-    TOKEN_REGISTER_SP = &H60            'Stack pointer
-    TOKEN_REGISTER_PC = &H61            'Program counter
+    TOKEN_REGISTER_I = &H100            'Interrupt - not to be confused with IX & IY
+    TOKEN_REGISTER_R = &H101            'Refresh register (pseudo-random)
+    
+    TOKEN_REGISTER_SP = &H104           'Stack pointer
+    TOKEN_REGISTER_PC = &H108           'Program counter
+    
+    TOKEN_REGISTER_AF = TOKEN_REGISTER_A Or TOKEN_REGISTER_F
+    TOKEN_REGISTER_BC = TOKEN_REGISTER_B Or TOKEN_REGISTER_C
+    TOKEN_REGISTER_DE = TOKEN_REGISTER_D Or TOKEN_REGISTER_E
+    TOKEN_REGISTER_HL = TOKEN_REGISTER_H Or TOKEN_REGISTER_L
     
     'Undocumented Z80 instructions can access the 8-bit halves of IX & IY
-    TOKEN_REGISTER_IXL = &H62
-    TOKEN_REGISTER_IXH = &H63
-    TOKEN_REGISTER_IYL = &H64
-    TOKEN_REGISTER_IYH = &H65
+    TOKEN_REGISTER_IXL = &H201
+    TOKEN_REGISTER_IXH = &H202
+    TOKEN_REGISTER_IYL = &H211
+    TOKEN_REGISTER_IYH = &H212
+    TOKEN_REGISTER_IX = TOKEN_REGISTER_IXL Or TOKEN_REGISTER_IXH
+    TOKEN_REGISTER_IY = TOKEN_REGISTER_IYL Or TOKEN_REGISTER_IYH
     
-    'Z80 flag conditions used on JP, CALL &  RET
-    TOKEN_FLAG_C = &H68                 'Carry set
-    TOKEN_FLAG_NC = &H69                'Carry not set
-    TOKEN_FLAG_Z = &H6A                 'Zero set
-    TOKEN_FLAG_NZ = &H6B                'Zero not set
-    TOKEN_FLAG_M = &H6C                 'Sign is set
-    TOKEN_FLAG_P = &H6D                 'Sign is not set
-    TOKEN_FLAG_PE = &H6E                'Parity/Overflow is set
-    TOKEN_FLAG_PO = &H6F                'Parity/Overflow is not set
+    'Z80 Flag Conditions ..............................................................
+    TOKEN_FLAG_C = &H1                  'Carry set
+    TOKEN_FLAG_NC = &H2                 'Carry not set
+    TOKEN_FLAG_Z = &H3                  'Zero set
+    TOKEN_FLAG_NZ = &H4                 'Zero not set
+    TOKEN_FLAG_M = &H5                  'Sign is set
+    TOKEN_FLAG_P = &H6                  'Sign is not set
+    TOKEN_FLAG_PE = &H7                 'Parity/Overflow is set
+    TOKEN_FLAG_PO = &H8                 'Parity/Overflow is not set
     
-    'The parser automatically converts hexadecimal/binary numbers, so we only store
-     'a 32-bit long (data field) in the token stream
-    TOKEN_NUMBER = &H70
-    'Number prefixes ("K", "KB" & "Kbit")
-    TOKEN_PREFIX_K = &H7A               'x1000
-    TOKEN_PREFIX_KB = &H7B              'x1024
-    TOKEN_PREFIX_KBIT = &H7C            'x128 (1024 bits)
+    'Operators ........................................................................
+    TOKEN_OPERATOR_ADD = &H1            'Add "+"
+    TOKEN_OPERATOR_SUB = &H2            'Subtract "-"
+    TOKEN_OPERATOR_MUL = &H3            'Multiply "*"
+    TOKEN_OPERATOR_DIV = &H4            'Divide "/"
+    TOKEN_OPERATOR_POW = &H5            'Power "^"
+    TOKEN_OPERATOR_MOD = &H6            'Modulus "\"
+    TOKEN_OPERATOR_REP = &H7            'Repeat "x"
+    TOKEN_OPERATOR_OR = &H8             'Bitwise Or "|"
+    TOKEN_OPERATOR_AND = &H9            'Bitwise And "&"
     
-    'Specifies an operator
-    TOKEN_OPERATOR_ADD = &H80           'Add "+"
-    TOKEN_OPERATOR_SUB = &H81           'Subtract "-"
-    TOKEN_OPERATOR_MUL = &H82           'Multiply "*"
-    TOKEN_OPERATOR_DIV = &H83           'Divide "/"
-    TOKEN_OPERATOR_POW = &H84           'Power "^"
-    TOKEN_OPERATOR_MOD = &H85           'Modulus "\"
-    TOKEN_OPERATOR_REP = &H86           'Repeat "x"
-    TOKEN_OPERATOR_OR = &H87            'Bitwise Or "|"
-    TOKEN_OPERATOR_AND = &H88           'Bitwise And "&"
-    
-    'OZ80's keywords
-    TOKEN_KEYWORD_AT = &H90
-    TOKEN_KEYWORD_AS = &H91
-    TOKEN_KEYWORD_BANK = &H92
-    TOKEN_KEYWORD_BINARY = &H93
-    TOKEN_KEYWORD_BYTE = &H94
-    TOKEN_KEYWORD_DATA = &H95
-    TOKEN_KEYWORD_DEF = &H96
-    TOKEN_KEYWORD_DEFAULT = &H97
-    TOKEN_KEYWORD_ECHO = &H98
-    TOKEN_KEYWORD_ELSE = &H99
-    TOKEN_KEYWORD_EXISTS = &H9A
-    TOKEN_KEYWORD_FAIL = &H9B
-    TOKEN_KEYWORD_FILL = &H9C
-    TOKEN_KEYWORD_IF = &H9D
-    TOKEN_KEYWORD_INCLUDE = &H9E
-    TOKEN_KEYWORD_LENGTH = &H9F
-    TOKEN_KEYWORD_OBJECT = &HA0
-    TOKEN_KEYWORD_PARAMS = &HA1
-    TOKEN_KEYWORD_PROC = &HA2
-    TOKEN_KEYWORD_RETURN = &HA3
-    TOKEN_KEYWORD_SLOT = &HA4
-    TOKEN_KEYWORD_START = &HA5
-    TOKEN_KEYWORD_STOP = &HA6
-    TOKEN_KEYWORD_STRUCT = &HA7
-    TOKEN_KEYWORD_WORD = &HA8
-    
-    'Grouping: (i.e. parenthesis, braces)
-    TOKEN_PARENOPEN = &HD0
-    TOKEN_PARENCLOSE = &HD1
-    TOKEN_BLOCKOPEN = &HD2
-    TOKEN_BLOCKCLOSE = &HD3
-    
-    TOKEN_QUOTE = &HE0
-    
-    'Label, Variable and Property tokens use the high byte as a marker and the rest
-     'of the token is an index into the string array of names
-    TOKEN_LABEL = &HA0000000
-    TOKEN_VARIABLE = &HB0000000
-    TOKEN_PROPERTY = &HC0000000
-    'A list is a series of 1 or more expressions separated by commas,
-     'i.e.parameter lists
-    TOKEN_LIST = &HD0000000
-    TOKEN_NEXT = &HC1                   'Sandwiched between list items, i.e. ","
+    'Keywords .........................................................................
+    TOKEN_KEYWORD_AT = &H1
+    TOKEN_KEYWORD_AS = &H2
+    TOKEN_KEYWORD_BANK = &H3
+    TOKEN_KEYWORD_BINARY = &H4
+    TOKEN_KEYWORD_BYTE = &H5
+    TOKEN_KEYWORD_DATA = &H6
+    TOKEN_KEYWORD_DEF = &H7
+    TOKEN_KEYWORD_DEFAULT = &H8
+    TOKEN_KEYWORD_ECHO = &H9
+    TOKEN_KEYWORD_ELSE = &HA
+    TOKEN_KEYWORD_EXISTS = &HB
+    TOKEN_KEYWORD_FAIL = &HC
+    TOKEN_KEYWORD_FILL = &HD
+    TOKEN_KEYWORD_IF = &HE
+    TOKEN_KEYWORD_INCLUDE = &HF
+    TOKEN_KEYWORD_LENGTH = &H10
+    TOKEN_KEYWORD_OBJECT = &H11
+    TOKEN_KEYWORD_PARAMS = &H12
+    TOKEN_KEYWORD_PROC = &H13
+    TOKEN_KEYWORD_RETURN = &H14
+    TOKEN_KEYWORD_SLOT = &H15
+    TOKEN_KEYWORD_START = &H16
+    TOKEN_KEYWORD_STOP = &H17
+    TOKEN_KEYWORD_STRUCT = &H18
+    TOKEN_KEYWORD_WORD = &H19
 End Enum
 
 'Use a 100'000 item initial buffer for the token stream
@@ -326,17 +334,15 @@ Private Const TOKEN_BUFFER As Long = 100000
 Private Text() As Byte
 
 Private Type Token
-    Kind As OZ80_TOKEN
+    Kind As Byte                        '=OZ80_TOKEN
+    Data As Long                        'Associated number
     Line As Long                        'Line number in the original source text
     Col As Long                         'Column number in the original source text
 End Type
 
 Private Tokens() As Token               'The token stream will live here
-Private TokenLimit As Long             'The length of the buffer used for above
+Private TokenLimit As Long              'The length of the buffer used for above
 Private TokenCount As Long              'The current amount of space used in the array
-
-'So we can look at which tokens are most common, for optimising
-Private TokenCounts(0 To 255) As Long
 
 'A look up table of ASCII codes from upper-case to lower-case
 Private LowCase(0 To 255) As Long
@@ -401,7 +407,6 @@ Private Sub Class_Terminate()
     Erase Text
     'Empty the token stream
     Erase Tokens
-    Erase TokenCounts
     
     Call msvbvm60_PutMem4(CompStrPtr, 0&)
 End Sub
@@ -683,7 +688,8 @@ TokenWord:
     
     'Comma (very common!)
     If Asc1 = SYNTAX_NEXT Then '............................................... `,` ...
-        Call Add(OZ80_TOKEN.TOKEN_NEXT, LineBegin, ColBegin)
+        'TODO: Collapse list items into continuous number tokens?
+        'TODO: Add one to the list count and if item is not valid in a list, error out
         GoTo NextWord
     
     'Hexadecimal number?
@@ -693,7 +699,7 @@ TokenWord:
         For ii = WordBegin + WordLen To WordBegin + 1 Step -1
             'Check the digits are 0-9, A-F
             If IsHex(Text(ii)) = False Then
-                'Error, invalid number!
+                'Error, invalid hexadecimal number!
                 GoSub GetWord
                 Let Tokenise = OZ80_ERROR_BADNUMBER_DEC
                 Call RaiseError(Tokenise, _
@@ -709,20 +715,15 @@ TokenWord:
         GoSub GetWord
         Let Number = Val("&H" & Mid$(Word, 2) & "&")
         On Error GoTo 0
-        'Add the token to signal a number
-        Call Add(TOKEN_NUMBER, LineBegin, ColBegin)
-'        'Copy the long directly into the token stream
-'        'TODO: this could overflow the buffer!
-'        Call kernel32_RtlMoveMemory( _
-'            Tokens(TokensLength), Number, 4 _
-'        )
-'        Let TokensLength = TokensLength + 4
+        'Add the token for the number
+        Call Add(TOKEN_NUMBER, Number, LineBegin, ColBegin)
         GoTo NextWord
     
     ElseIf Asc1 = SYNTAX_LABEL Then '.......................................... `:` ...
         'A label can be `:` only, without a name (when used within a PROC)
         If Asc2 = 0 Then
-            'TODO: Tokenise this
+            'This is tokenised as having a label index of 0
+            Call Add(TOKEN_LABEL, 0, LineBegin, ColBegin)
             GoTo NextWord
         
         'A label cannot begin with a number but must otherwise be A-Z, 0-9 and "_"
@@ -740,8 +741,9 @@ TokenWord:
          properties
         
         'A property can be `.` only, without a name (when used within a PROC)
+        '-- currently undecided about this
         If Asc2 = 0 Then
-            'TODO: Tokenise this
+            GoTo ErrorInvalidName
             GoTo NextWord
         
         'A property cannot begin with a number but must otherwise be A-Z, 0-9 and "_"
@@ -767,220 +769,220 @@ TokenWord:
         
     ElseIf Asc1 = A Then '..................................................... `a` ...
         'Z80 instructions
-        If CompStr(WordBegin, WordLen, "adc") Then Call Add(TOKEN_Z80_ADC, LineBegin, ColBegin): GoTo NextWord
-        If CompStr(WordBegin, WordLen, "add") Then Call Add(TOKEN_Z80_ADD, LineBegin, ColBegin): GoTo NextWord
-        If CompStr(WordBegin, WordLen, "and") Then Call Add(TOKEN_Z80_AND, LineBegin, ColBegin): GoTo NextWord
+        If CompStr(WordBegin, WordLen, "adc") Then Call Add(TOKEN_Z80, TOKEN_Z80_ADC, LineBegin, ColBegin): GoTo NextWord
+        If CompStr(WordBegin, WordLen, "add") Then Call Add(TOKEN_Z80, TOKEN_Z80_ADD, LineBegin, ColBegin): GoTo NextWord
+        If CompStr(WordBegin, WordLen, "and") Then Call Add(TOKEN_Z80, TOKEN_Z80_AND, LineBegin, ColBegin): GoTo NextWord
         'Keywords
-        If CompStr(WordBegin, WordLen, "as") Then Call Add(TOKEN_KEYWORD_AS, LineBegin, ColBegin): GoTo NextWord
-        If CompStr(WordBegin, WordLen, "at") Then Call Add(TOKEN_KEYWORD_AT, LineBegin, ColBegin): GoTo NextWord
+        If CompStr(WordBegin, WordLen, "as") Then Call Add(TOKEN_KEYWORD, TOKEN_KEYWORD_AS, LineBegin, ColBegin): GoTo NextWord
+        If CompStr(WordBegin, WordLen, "at") Then Call Add(TOKEN_KEYWORD, TOKEN_KEYWORD_AT, LineBegin, ColBegin): GoTo NextWord
          
     ElseIf Asc1 = B Then '..................................................... `b` ...
         'Z80 instructions
-        If CompStr(WordBegin, WordLen, "bit") Then Call Add(TOKEN_Z80_BIT, LineBegin, ColBegin): GoTo NextWord
+        If CompStr(WordBegin, WordLen, "bit") Then Call Add(TOKEN_Z80, TOKEN_Z80_BIT, LineBegin, ColBegin): GoTo NextWord
         'Keywords
-        If CompStr(WordBegin, WordLen, "bank") Then Call Add(TOKEN_KEYWORD_BANK, LineBegin, ColBegin): GoTo NextWord
-        If CompStr(WordBegin, WordLen, "binary") Then Call Add(TOKEN_KEYWORD_BINARY, LineBegin, ColBegin): GoTo NextWord
-        If CompStr(WordBegin, WordLen, "byte") Then Call Add(TOKEN_KEYWORD_BYTE, LineBegin, ColBegin): GoTo NextWord
+        If CompStr(WordBegin, WordLen, "bank") Then Call Add(TOKEN_KEYWORD, TOKEN_KEYWORD_BANK, LineBegin, ColBegin): GoTo NextWord
+        If CompStr(WordBegin, WordLen, "binary") Then Call Add(TOKEN_KEYWORD, TOKEN_KEYWORD_BINARY, LineBegin, ColBegin): GoTo NextWord
+        If CompStr(WordBegin, WordLen, "byte") Then Call Add(TOKEN_KEYWORD, TOKEN_KEYWORD_BYTE, LineBegin, ColBegin): GoTo NextWord
         
     ElseIf Asc1 = C Then '..................................................... `c` ...
         'Z80 instructions
-        If CompStr(WordBegin, WordLen, "call") Then Call Add(TOKEN_Z80_CALL, LineBegin, ColBegin): GoTo NextWord
-        If CompStr(WordBegin, WordLen, "ccf") Then Call Add(TOKEN_Z80_CCF, LineBegin, ColBegin): GoTo NextWord
-        If CompStr(WordBegin, WordLen, "cp") Then Call Add(TOKEN_Z80_CP, LineBegin, ColBegin): GoTo NextWord
-        If CompStr(WordBegin, WordLen, "cpd") Then Call Add(TOKEN_Z80_CPD, LineBegin, ColBegin): GoTo NextWord
-        If CompStr(WordBegin, WordLen, "cpdr") Then Call Add(TOKEN_Z80_CPDR, LineBegin, ColBegin): GoTo NextWord
-        If CompStr(WordBegin, WordLen, "cpi") Then Call Add(TOKEN_Z80_CPI, LineBegin, ColBegin): GoTo NextWord
-        If CompStr(WordBegin, WordLen, "cpir") Then Call Add(TOKEN_Z80_CPIR, LineBegin, ColBegin): GoTo NextWord
-        If CompStr(WordBegin, WordLen, "cpl") Then Call Add(TOKEN_Z80_CPL, LineBegin, ColBegin): GoTo NextWord
+        If CompStr(WordBegin, WordLen, "call") Then Call Add(TOKEN_Z80, TOKEN_Z80_CALL, LineBegin, ColBegin): GoTo NextWord
+        If CompStr(WordBegin, WordLen, "ccf") Then Call Add(TOKEN_Z80, TOKEN_Z80_CCF, LineBegin, ColBegin): GoTo NextWord
+        If CompStr(WordBegin, WordLen, "cp") Then Call Add(TOKEN_Z80, TOKEN_Z80_CP, LineBegin, ColBegin): GoTo NextWord
+        If CompStr(WordBegin, WordLen, "cpd") Then Call Add(TOKEN_Z80, TOKEN_Z80_CPD, LineBegin, ColBegin): GoTo NextWord
+        If CompStr(WordBegin, WordLen, "cpdr") Then Call Add(TOKEN_Z80, TOKEN_Z80_CPDR, LineBegin, ColBegin): GoTo NextWord
+        If CompStr(WordBegin, WordLen, "cpi") Then Call Add(TOKEN_Z80, TOKEN_Z80_CPI, LineBegin, ColBegin): GoTo NextWord
+        If CompStr(WordBegin, WordLen, "cpir") Then Call Add(TOKEN_Z80, TOKEN_Z80_CPIR, LineBegin, ColBegin): GoTo NextWord
+        If CompStr(WordBegin, WordLen, "cpl") Then Call Add(TOKEN_Z80, TOKEN_Z80_CPL, LineBegin, ColBegin): GoTo NextWord
         'Z80 flag condition
-        If Asc2 = 0 Then Call Add(TOKEN_FLAG_C, LineBegin, ColBegin): GoTo NextWord
+        If Asc2 = 0 Then Call Add(TOKEN_FLAG, TOKEN_FLAG_C, LineBegin, ColBegin): GoTo NextWord
         
     ElseIf Asc1 = D Then '..................................................... `d` ...
         'Z80 instructions
-        If CompStr(WordBegin, WordLen, "daa") Then Call Add(TOKEN_Z80_DAA, LineBegin, ColBegin): GoTo NextWord
-        If CompStr(WordBegin, WordLen, "dec") Then Call Add(TOKEN_Z80_DEC, LineBegin, ColBegin): GoTo NextWord
-        If CompStr(WordBegin, WordLen, "di") Then Call Add(TOKEN_Z80_DI, LineBegin, ColBegin): GoTo NextWord
-        If CompStr(WordBegin, WordLen, "djnz") Then Call Add(TOKEN_Z80_DJNZ, LineBegin, ColBegin): GoTo NextWord
+        If CompStr(WordBegin, WordLen, "daa") Then Call Add(TOKEN_Z80, TOKEN_Z80_DAA, LineBegin, ColBegin): GoTo NextWord
+        If CompStr(WordBegin, WordLen, "dec") Then Call Add(TOKEN_Z80, TOKEN_Z80_DEC, LineBegin, ColBegin): GoTo NextWord
+        If CompStr(WordBegin, WordLen, "di") Then Call Add(TOKEN_Z80, TOKEN_Z80_DI, LineBegin, ColBegin): GoTo NextWord
+        If CompStr(WordBegin, WordLen, "djnz") Then Call Add(TOKEN_Z80, TOKEN_Z80_DJNZ, LineBegin, ColBegin): GoTo NextWord
         'Keywords
-        If CompStr(WordBegin, WordLen, "data") Then Call Add(TOKEN_KEYWORD_DATA, LineBegin, ColBegin): GoTo NextWord
-        If CompStr(WordBegin, WordLen, "def") Then Call Add(TOKEN_KEYWORD_DEF, LineBegin, ColBegin): GoTo NextWord
-        If CompStr(WordBegin, WordLen, "default") Then Call Add(TOKEN_KEYWORD_DEFAULT, LineBegin, ColBegin): GoTo NextWord
+        If CompStr(WordBegin, WordLen, "data") Then Call Add(TOKEN_KEYWORD, TOKEN_KEYWORD_DATA, LineBegin, ColBegin): GoTo NextWord
+        If CompStr(WordBegin, WordLen, "def") Then Call Add(TOKEN_KEYWORD, TOKEN_KEYWORD_DEF, LineBegin, ColBegin): GoTo NextWord
+        If CompStr(WordBegin, WordLen, "default") Then Call Add(TOKEN_KEYWORD, TOKEN_KEYWORD_DEFAULT, LineBegin, ColBegin): GoTo NextWord
         
     ElseIf Asc1 = E Then '..................................................... `e` ...
         'Z80 instructions
-        If CompStr(WordBegin, WordLen, "ei") Then Call Add(TOKEN_Z80_EI, LineBegin, ColBegin): GoTo NextWord
-        If CompStr(WordBegin, WordLen, "ex") Then Call Add(TOKEN_Z80_EX, LineBegin, ColBegin): GoTo NextWord
-        If CompStr(WordBegin, WordLen, "exx") Then Call Add(TOKEN_Z80_EXX, LineBegin, ColBegin): GoTo NextWord
+        If CompStr(WordBegin, WordLen, "ei") Then Call Add(TOKEN_Z80, TOKEN_Z80_EI, LineBegin, ColBegin): GoTo NextWord
+        If CompStr(WordBegin, WordLen, "ex") Then Call Add(TOKEN_Z80, TOKEN_Z80_EX, LineBegin, ColBegin): GoTo NextWord
+        If CompStr(WordBegin, WordLen, "exx") Then Call Add(TOKEN_Z80, TOKEN_Z80_EXX, LineBegin, ColBegin): GoTo NextWord
         'Keywords
-        If CompStr(WordBegin, WordLen, "echo") Then Call Add(TOKEN_KEYWORD_ECHO, LineBegin, ColBegin): GoTo NextWord
-        If CompStr(WordBegin, WordLen, "else") Then Call Add(TOKEN_KEYWORD_ELSE, LineBegin, ColBegin): GoTo NextWord
-        If CompStr(WordBegin, WordLen, "exists") Then Call Add(TOKEN_KEYWORD_EXISTS, LineBegin, ColBegin): GoTo NextWord
-        
+        If CompStr(WordBegin, WordLen, "echo") Then Call Add(TOKEN_KEYWORD, TOKEN_KEYWORD_ECHO, LineBegin, ColBegin): GoTo NextWord
+        If CompStr(WordBegin, WordLen, "else") Then Call Add(TOKEN_KEYWORD, TOKEN_KEYWORD_ELSE, LineBegin, ColBegin): GoTo NextWord
+        If CompStr(WordBegin, WordLen, "exists") Then Call Add(TOKEN_KEYWORD, TOKEN_KEYWORD_EXISTS, LineBegin, ColBegin): GoTo NextWord
         
     ElseIf Asc1 = F Then '..................................................... `f` ...
         'Keywords
-        If CompStr(WordBegin, WordLen, "fail") Then Call Add(TOKEN_KEYWORD_FAIL, LineBegin, ColBegin): GoTo NextWord
-        If CompStr(WordBegin, WordLen, "fill") Then Call Add(TOKEN_KEYWORD_FILL, LineBegin, ColBegin): GoTo NextWord
+        If CompStr(WordBegin, WordLen, "fail") Then Call Add(TOKEN_KEYWORD, TOKEN_KEYWORD_FAIL, LineBegin, ColBegin): GoTo NextWord
+        If CompStr(WordBegin, WordLen, "fill") Then Call Add(TOKEN_KEYWORD, TOKEN_KEYWORD_FILL, LineBegin, ColBegin): GoTo NextWord
         'You can't refer to the `f` register directly (only `af`)
         GoTo WordError
         
     ElseIf Asc1 = H Then '..................................................... `h` ...
         'Z80 instructions
-        If CompStr(WordBegin, WordLen, "halt") Then Call Add(TOKEN_Z80_HALT, LineBegin, ColBegin): GoTo NextWord
+        If CompStr(WordBegin, WordLen, "halt") Then Call Add(TOKEN_Z80, TOKEN_Z80_HALT, LineBegin, ColBegin): GoTo NextWord
         
     ElseIf Asc1 = I Then '..................................................... `i` ...
         'Z80 instructions
-        If CompStr(WordBegin, WordLen, "im") Then Call Add(TOKEN_Z80_IM, LineBegin, ColBegin): GoTo NextWord
-        If CompStr(WordBegin, WordLen, "in") Then Call Add(TOKEN_Z80_IN, LineBegin, ColBegin): GoTo NextWord
-        If CompStr(WordBegin, WordLen, "inc") Then Call Add(TOKEN_Z80_INC, LineBegin, ColBegin): GoTo NextWord
-        If CompStr(WordBegin, WordLen, "ind") Then Call Add(TOKEN_Z80_IND, LineBegin, ColBegin): GoTo NextWord
-        If CompStr(WordBegin, WordLen, "indr") Then Call Add(TOKEN_Z80_INDR, LineBegin, ColBegin): GoTo NextWord
-        If CompStr(WordBegin, WordLen, "ini") Then Call Add(TOKEN_Z80_INI, LineBegin, ColBegin): GoTo NextWord
-        If CompStr(WordBegin, WordLen, "inir") Then Call Add(TOKEN_Z80_INIR, LineBegin, ColBegin): GoTo NextWord
+        If CompStr(WordBegin, WordLen, "im") Then Call Add(TOKEN_Z80, TOKEN_Z80_IM, LineBegin, ColBegin): GoTo NextWord
+        If CompStr(WordBegin, WordLen, "in") Then Call Add(TOKEN_Z80, TOKEN_Z80_IN, LineBegin, ColBegin): GoTo NextWord
+        If CompStr(WordBegin, WordLen, "inc") Then Call Add(TOKEN_Z80, TOKEN_Z80_INC, LineBegin, ColBegin): GoTo NextWord
+        If CompStr(WordBegin, WordLen, "ind") Then Call Add(TOKEN_Z80, TOKEN_Z80_IND, LineBegin, ColBegin): GoTo NextWord
+        If CompStr(WordBegin, WordLen, "indr") Then Call Add(TOKEN_Z80, TOKEN_Z80_INDR, LineBegin, ColBegin): GoTo NextWord
+        If CompStr(WordBegin, WordLen, "ini") Then Call Add(TOKEN_Z80, TOKEN_Z80_INI, LineBegin, ColBegin): GoTo NextWord
+        If CompStr(WordBegin, WordLen, "inir") Then Call Add(TOKEN_Z80, TOKEN_Z80_INIR, LineBegin, ColBegin): GoTo NextWord
         'Keywords
-        If CompStr(WordBegin, WordLen, "if") Then Call Add(TOKEN_KEYWORD_IF, LineBegin, ColBegin): GoTo NextWord
-        If CompStr(WordBegin, WordLen, "include") Then Call Add(TOKEN_KEYWORD_INCLUDE, LineBegin, ColBegin): GoTo NextWord
+        If CompStr(WordBegin, WordLen, "if") Then Call Add(TOKEN_KEYWORD, TOKEN_KEYWORD_IF, LineBegin, ColBegin): GoTo NextWord
+        If CompStr(WordBegin, WordLen, "include") Then Call Add(TOKEN_KEYWORD, TOKEN_KEYWORD_INCLUDE, LineBegin, ColBegin): GoTo NextWord
         
     ElseIf Asc1 = J Then '..................................................... `j` ...
         'Z80 instructions
-        If CompStr(WordBegin, WordLen, "jp") Then Call Add(TOKEN_Z80_JP, LineBegin, ColBegin): GoTo NextWord
-        If CompStr(WordBegin, WordLen, "jr") Then Call Add(TOKEN_Z80_JR, LineBegin, ColBegin): GoTo NextWord
+        If CompStr(WordBegin, WordLen, "jp") Then Call Add(TOKEN_Z80, TOKEN_Z80_JP, LineBegin, ColBegin): GoTo NextWord
+        If CompStr(WordBegin, WordLen, "jr") Then Call Add(TOKEN_Z80, TOKEN_Z80_JR, LineBegin, ColBegin): GoTo NextWord
         'There are no `j` registers
         GoTo WordError
         
     ElseIf Asc1 = K Then '..................................................... `k` ...
-        'Number suffixes K, KB & Kbit
-        If Asc2 = 0 Then    'Just `K`
-            Call Add(TOKEN_PREFIX_K, LineBegin, ColBegin): GoTo NextWord
-        'B must be next for `KB` and `Kbit`
-        ElseIf Asc2 = B Then
-            'If only two letters, then it's `KB`
-            If Asc3 = 0 Then Call Add(TOKEN_PREFIX_KB, LineBegin, ColBegin): GoTo NextWord
-            'verify ...`Kbit`, we don't have Asc5 so avoid things like `Kbitty`
-            If CompStr(WordBegin, WordLen, "kbit") Then Call Add(TOKEN_PREFIX_KBIT, LineBegin, ColBegin): GoTo NextWord
-        End If
-        'There are no `k` registers
-        GoTo WordError
+        'TODO: Reimplement this
+'        'Number suffixes K, KB & Kbit
+'        If Asc2 = 0 Then    'Just `K`
+'            Call Add(TOKEN_PREFIX_K, LineBegin, ColBegin): GoTo NextWord
+'        'B must be next for `KB` and `Kbit`
+'        ElseIf Asc2 = B Then
+'            'If only two letters, then it's `KB`
+'            If Asc3 = 0 Then Call Add(TOKEN_PREFIX_KB, LineBegin, ColBegin): GoTo NextWord
+'            'verify ...`Kbit`, we don't have Asc5 so avoid things like `Kbitty`
+'            If CompStr(WordBegin, WordLen, "kbit") Then Call Add(TOKEN_PREFIX_KBIT, LineBegin, ColBegin): GoTo NextWord
+'        End If
+'        'There are no `k` registers
+'        GoTo WordError
         
     ElseIf Asc1 = L Then '..................................................... `l` ...
         'Z80 instructions
-        If CompStr(WordBegin, WordLen, "ld") Then Call Add(TOKEN_Z80_LD, LineBegin, ColBegin): GoTo NextWord
-        If CompStr(WordBegin, WordLen, "ldd") Then Call Add(TOKEN_Z80_LDD, LineBegin, ColBegin): GoTo NextWord
-        If CompStr(WordBegin, WordLen, "lddr") Then Call Add(TOKEN_Z80_LDDR, LineBegin, ColBegin): GoTo NextWord
-        If CompStr(WordBegin, WordLen, "ldi") Then Call Add(TOKEN_Z80_LDI, LineBegin, ColBegin): GoTo NextWord
-        If CompStr(WordBegin, WordLen, "ldir") Then Call Add(TOKEN_Z80_LDIR, LineBegin, ColBegin): GoTo NextWord
+        If CompStr(WordBegin, WordLen, "ld") Then Call Add(TOKEN_Z80, TOKEN_Z80_LD, LineBegin, ColBegin): GoTo NextWord
+        If CompStr(WordBegin, WordLen, "ldd") Then Call Add(TOKEN_Z80, TOKEN_Z80_LDD, LineBegin, ColBegin): GoTo NextWord
+        If CompStr(WordBegin, WordLen, "lddr") Then Call Add(TOKEN_Z80, TOKEN_Z80_LDDR, LineBegin, ColBegin): GoTo NextWord
+        If CompStr(WordBegin, WordLen, "ldi") Then Call Add(TOKEN_Z80, TOKEN_Z80_LDI, LineBegin, ColBegin): GoTo NextWord
+        If CompStr(WordBegin, WordLen, "ldir") Then Call Add(TOKEN_Z80, TOKEN_Z80_LDIR, LineBegin, ColBegin): GoTo NextWord
         'Keywords
-        If CompStr(WordBegin, WordLen, "length") Then Call Add(TOKEN_KEYWORD_LENGTH, LineBegin, ColBegin): GoTo NextWord
+        If CompStr(WordBegin, WordLen, "length") Then Call Add(TOKEN_KEYWORD, TOKEN_KEYWORD_LENGTH, LineBegin, ColBegin): GoTo NextWord
     
     ElseIf Asc1 = M Then '..................................................... `m` ...
         'Z80 flag conditions
-        If Asc2 = 0 Then Call Add(TOKEN_FLAG_M, LineBegin, ColBegin): GoTo NextWord
+        If Asc2 = 0 Then Call Add(TOKEN_FLAG, TOKEN_FLAG_M, LineBegin, ColBegin): GoTo NextWord
         'There is no `m` register
         GoTo WordError
         
     ElseIf Asc1 = N Then '..................................................... `n` ...
         'Z80 instructions
-        If CompStr(WordBegin, WordLen, "neg") Then Call Add(TOKEN_Z80_NEG, LineBegin, ColBegin): GoTo NextWord
-        If CompStr(WordBegin, WordLen, "nop") Then Call Add(TOKEN_Z80_NOP, LineBegin, ColBegin): GoTo NextWord
+        If CompStr(WordBegin, WordLen, "neg") Then Call Add(TOKEN_Z80, TOKEN_Z80_NEG, LineBegin, ColBegin): GoTo NextWord
+        If CompStr(WordBegin, WordLen, "nop") Then Call Add(TOKEN_Z80, TOKEN_Z80_NOP, LineBegin, ColBegin): GoTo NextWord
         'Z80 flag conditions
         If Asc3 = 0 Then
-            If Asc2 = C Then Call Add(TOKEN_FLAG_NC, LineBegin, ColBegin): GoTo NextWord
-            If Asc2 = Z Then Call Add(TOKEN_FLAG_NZ, LineBegin, ColBegin): GoTo NextWord
+            If Asc2 = C Then Call Add(TOKEN_FLAG, TOKEN_FLAG_NC, LineBegin, ColBegin): GoTo NextWord
+            If Asc2 = Z Then Call Add(TOKEN_FLAG, TOKEN_FLAG_NZ, LineBegin, ColBegin): GoTo NextWord
         End If
         'There are no `n` registers
         GoTo WordError
         
     ElseIf Asc1 = O Then '..................................................... `o` ...
         'Z80 instructions
-        If CompStr(WordBegin, WordLen, "or") Then Call Add(TOKEN_Z80_OR, LineBegin, ColBegin): GoTo NextWord
-        If CompStr(WordBegin, WordLen, "out") Then Call Add(TOKEN_Z80_OUT, LineBegin, ColBegin): GoTo NextWord
-        If CompStr(WordBegin, WordLen, "outd") Then Call Add(TOKEN_Z80_OUTD, LineBegin, ColBegin): GoTo NextWord
-        If CompStr(WordBegin, WordLen, "otdr") Then Call Add(TOKEN_Z80_OTDR, LineBegin, ColBegin): GoTo NextWord
-        If CompStr(WordBegin, WordLen, "outi") Then Call Add(TOKEN_Z80_OUTI, LineBegin, ColBegin): GoTo NextWord
-        If CompStr(WordBegin, WordLen, "otir") Then Call Add(TOKEN_Z80_OTIR, LineBegin, ColBegin): GoTo NextWord
+        If CompStr(WordBegin, WordLen, "or") Then Call Add(TOKEN_Z80, TOKEN_Z80_OR, LineBegin, ColBegin): GoTo NextWord
+        If CompStr(WordBegin, WordLen, "out") Then Call Add(TOKEN_Z80, TOKEN_Z80_OUT, LineBegin, ColBegin): GoTo NextWord
+        If CompStr(WordBegin, WordLen, "outd") Then Call Add(TOKEN_Z80, TOKEN_Z80_OUTD, LineBegin, ColBegin): GoTo NextWord
+        If CompStr(WordBegin, WordLen, "otdr") Then Call Add(TOKEN_Z80, TOKEN_Z80_OTDR, LineBegin, ColBegin): GoTo NextWord
+        If CompStr(WordBegin, WordLen, "outi") Then Call Add(TOKEN_Z80, TOKEN_Z80_OUTI, LineBegin, ColBegin): GoTo NextWord
+        If CompStr(WordBegin, WordLen, "otir") Then Call Add(TOKEN_Z80, TOKEN_Z80_OTIR, LineBegin, ColBegin): GoTo NextWord
         'Keywords
-        If CompStr(WordBegin, WordLen, "object") Then Call Add(TOKEN_KEYWORD_OBJECT, LineBegin, ColBegin): GoTo NextWord
+        If CompStr(WordBegin, WordLen, "object") Then Call Add(TOKEN_KEYWORD, TOKEN_KEYWORD_OBJECT, LineBegin, ColBegin): GoTo NextWord
         'There are no `o` registers
         GoTo WordError
         
     ElseIf Asc1 = P Then '..................................................... `p` ...
         'Z80 instructions
-        If CompStr(WordBegin, WordLen, "pop") Then Call Add(TOKEN_Z80_POP, LineBegin, ColBegin): GoTo NextWord
-        If CompStr(WordBegin, WordLen, "push") Then Call Add(TOKEN_Z80_PUSH, LineBegin, ColBegin): GoTo NextWord
+        If CompStr(WordBegin, WordLen, "pop") Then Call Add(TOKEN_Z80, TOKEN_Z80_POP, LineBegin, ColBegin): GoTo NextWord
+        If CompStr(WordBegin, WordLen, "push") Then Call Add(TOKEN_Z80, TOKEN_Z80_PUSH, LineBegin, ColBegin): GoTo NextWord
         'Z80 flag conditions
-        If Asc2 = 0 Then Call Add(TOKEN_FLAG_P, LineBegin, ColBegin): GoTo NextWord
+        If Asc2 = 0 Then Call Add(TOKEN_FLAG, TOKEN_FLAG_P, LineBegin, ColBegin): GoTo NextWord
         If Asc3 = 0 Then
-            If Asc2 = E Then Call Add(TOKEN_FLAG_PE, LineBegin, ColBegin): GoTo NextWord
-            If Asc2 = O Then Call Add(TOKEN_FLAG_PO, LineBegin, ColBegin): GoTo NextWord
+            If Asc2 = E Then Call Add(TOKEN_FLAG, TOKEN_FLAG_PE, LineBegin, ColBegin): GoTo NextWord
+            If Asc2 = O Then Call Add(TOKEN_FLAG, TOKEN_FLAG_PO, LineBegin, ColBegin): GoTo NextWord
         End If
         'Keywords
-        If CompStr(WordBegin, WordLen, "params") Then Call Add(TOKEN_KEYWORD_PARAMS, LineBegin, ColBegin): GoTo NextWord
-        If CompStr(WordBegin, WordLen, "proc") Then Call Add(TOKEN_KEYWORD_PROC, LineBegin, ColBegin): GoTo NextWord
+        If CompStr(WordBegin, WordLen, "params") Then Call Add(TOKEN_KEYWORD, TOKEN_KEYWORD_PARAMS, LineBegin, ColBegin): GoTo NextWord
+        If CompStr(WordBegin, WordLen, "proc") Then Call Add(TOKEN_KEYWORD, TOKEN_KEYWORD_PROC, LineBegin, ColBegin): GoTo NextWord
         
     ElseIf Asc1 = R Then '..................................................... `r` ...
         'Z80 instructions
-        If CompStr(WordBegin, WordLen, "res") Then Call Add(TOKEN_Z80_RES, LineBegin, ColBegin): GoTo NextWord
-        If CompStr(WordBegin, WordLen, "ret") Then Call Add(TOKEN_Z80_RET, LineBegin, ColBegin): GoTo NextWord
-        If CompStr(WordBegin, WordLen, "reti") Then Call Add(TOKEN_Z80_RETI, LineBegin, ColBegin): GoTo NextWord
-        If CompStr(WordBegin, WordLen, "retn") Then Call Add(TOKEN_Z80_RETN, LineBegin, ColBegin): GoTo NextWord
-        If CompStr(WordBegin, WordLen, "rla") Then Call Add(TOKEN_Z80_RLA, LineBegin, ColBegin): GoTo NextWord
-        If CompStr(WordBegin, WordLen, "rl") Then Call Add(TOKEN_Z80_RL, LineBegin, ColBegin): GoTo NextWord
-        If CompStr(WordBegin, WordLen, "rlca") Then Call Add(TOKEN_Z80_RLCA, LineBegin, ColBegin): GoTo NextWord
-        If CompStr(WordBegin, WordLen, "rlc") Then Call Add(TOKEN_Z80_RLC, LineBegin, ColBegin): GoTo NextWord
-        If CompStr(WordBegin, WordLen, "rld") Then Call Add(TOKEN_Z80_RLD, LineBegin, ColBegin): GoTo NextWord
-        If CompStr(WordBegin, WordLen, "rra") Then Call Add(TOKEN_Z80_RRA, LineBegin, ColBegin): GoTo NextWord
-        If CompStr(WordBegin, WordLen, "rr") Then Call Add(TOKEN_Z80_RR, LineBegin, ColBegin): GoTo NextWord
-        If CompStr(WordBegin, WordLen, "rrca") Then Call Add(TOKEN_Z80_RRCA, LineBegin, ColBegin): GoTo NextWord
-        If CompStr(WordBegin, WordLen, "rrc") Then Call Add(TOKEN_Z80_RRC, LineBegin, ColBegin): GoTo NextWord
-        If CompStr(WordBegin, WordLen, "rrd") Then Call Add(TOKEN_Z80_RRD, LineBegin, ColBegin): GoTo NextWord
-        If CompStr(WordBegin, WordLen, "rst") Then Call Add(TOKEN_Z80_RST, LineBegin, ColBegin): GoTo NextWord
+        If CompStr(WordBegin, WordLen, "res") Then Call Add(TOKEN_Z80, TOKEN_Z80_RES, LineBegin, ColBegin): GoTo NextWord
+        If CompStr(WordBegin, WordLen, "ret") Then Call Add(TOKEN_Z80, TOKEN_Z80_RET, LineBegin, ColBegin): GoTo NextWord
+        If CompStr(WordBegin, WordLen, "reti") Then Call Add(TOKEN_Z80, TOKEN_Z80_RETI, LineBegin, ColBegin): GoTo NextWord
+        If CompStr(WordBegin, WordLen, "retn") Then Call Add(TOKEN_Z80, TOKEN_Z80_RETN, LineBegin, ColBegin): GoTo NextWord
+        If CompStr(WordBegin, WordLen, "rla") Then Call Add(TOKEN_Z80, TOKEN_Z80_RLA, LineBegin, ColBegin): GoTo NextWord
+        If CompStr(WordBegin, WordLen, "rl") Then Call Add(TOKEN_Z80, TOKEN_Z80_RL, LineBegin, ColBegin): GoTo NextWord
+        If CompStr(WordBegin, WordLen, "rlca") Then Call Add(TOKEN_Z80, TOKEN_Z80_RLCA, LineBegin, ColBegin): GoTo NextWord
+        If CompStr(WordBegin, WordLen, "rlc") Then Call Add(TOKEN_Z80, TOKEN_Z80_RLC, LineBegin, ColBegin): GoTo NextWord
+        If CompStr(WordBegin, WordLen, "rld") Then Call Add(TOKEN_Z80, TOKEN_Z80_RLD, LineBegin, ColBegin): GoTo NextWord
+        If CompStr(WordBegin, WordLen, "rra") Then Call Add(TOKEN_Z80, TOKEN_Z80_RRA, LineBegin, ColBegin): GoTo NextWord
+        If CompStr(WordBegin, WordLen, "rr") Then Call Add(TOKEN_Z80, TOKEN_Z80_RR, LineBegin, ColBegin): GoTo NextWord
+        If CompStr(WordBegin, WordLen, "rrca") Then Call Add(TOKEN_Z80, TOKEN_Z80_RRCA, LineBegin, ColBegin): GoTo NextWord
+        If CompStr(WordBegin, WordLen, "rrc") Then Call Add(TOKEN_Z80, TOKEN_Z80_RRC, LineBegin, ColBegin): GoTo NextWord
+        If CompStr(WordBegin, WordLen, "rrd") Then Call Add(TOKEN_Z80, TOKEN_Z80_RRD, LineBegin, ColBegin): GoTo NextWord
+        If CompStr(WordBegin, WordLen, "rst") Then Call Add(TOKEN_Z80, TOKEN_Z80_RST, LineBegin, ColBegin): GoTo NextWord
         'Keywords
-        If CompStr(WordBegin, WordLen, "return") Then Call Add(TOKEN_KEYWORD_RETURN, LineBegin, ColBegin): GoTo NextWord
+        If CompStr(WordBegin, WordLen, "return") Then Call Add(TOKEN_KEYWORD, TOKEN_KEYWORD_RETURN, LineBegin, ColBegin): GoTo NextWord
         
     ElseIf Asc1 = S Then '..................................................... `s` ...
         'Z80 instructions
-        If CompStr(WordBegin, WordLen, "sbc") Then Call Add(TOKEN_Z80_SBC, LineBegin, ColBegin): GoTo NextWord
-        If CompStr(WordBegin, WordLen, "scf") Then Call Add(TOKEN_Z80_SCF, LineBegin, ColBegin): GoTo NextWord
-        If CompStr(WordBegin, WordLen, "set") Then Call Add(TOKEN_Z80_SET, LineBegin, ColBegin): GoTo NextWord
-        If CompStr(WordBegin, WordLen, "sla") Then Call Add(TOKEN_Z80_SLA, LineBegin, ColBegin): GoTo NextWord
-        If CompStr(WordBegin, WordLen, "sra") Then Call Add(TOKEN_Z80_SRA, LineBegin, ColBegin): GoTo NextWord
-        If CompStr(WordBegin, WordLen, "sll") Then Call Add(TOKEN_Z80_SLL, LineBegin, ColBegin): GoTo NextWord
-        If CompStr(WordBegin, WordLen, "srl") Then Call Add(TOKEN_Z80_SRL, LineBegin, ColBegin): GoTo NextWord
-        If CompStr(WordBegin, WordLen, "sub") Then Call Add(TOKEN_Z80_SUB, LineBegin, ColBegin): GoTo NextWord
+        If CompStr(WordBegin, WordLen, "sbc") Then Call Add(TOKEN_Z80, TOKEN_Z80_SBC, LineBegin, ColBegin): GoTo NextWord
+        If CompStr(WordBegin, WordLen, "scf") Then Call Add(TOKEN_Z80, TOKEN_Z80_SCF, LineBegin, ColBegin): GoTo NextWord
+        If CompStr(WordBegin, WordLen, "set") Then Call Add(TOKEN_Z80, TOKEN_Z80_SET, LineBegin, ColBegin): GoTo NextWord
+        If CompStr(WordBegin, WordLen, "sla") Then Call Add(TOKEN_Z80, TOKEN_Z80_SLA, LineBegin, ColBegin): GoTo NextWord
+        If CompStr(WordBegin, WordLen, "sra") Then Call Add(TOKEN_Z80, TOKEN_Z80_SRA, LineBegin, ColBegin): GoTo NextWord
+        If CompStr(WordBegin, WordLen, "sll") Then Call Add(TOKEN_Z80, TOKEN_Z80_SLL, LineBegin, ColBegin): GoTo NextWord
+        If CompStr(WordBegin, WordLen, "srl") Then Call Add(TOKEN_Z80, TOKEN_Z80_SRL, LineBegin, ColBegin): GoTo NextWord
+        If CompStr(WordBegin, WordLen, "sub") Then Call Add(TOKEN_Z80, TOKEN_Z80_SUB, LineBegin, ColBegin): GoTo NextWord
         'Keywords
-        If CompStr(WordBegin, WordLen, "slot") Then Call Add(TOKEN_KEYWORD_SLOT, LineBegin, ColBegin): GoTo NextWord
-        If CompStr(WordBegin, WordLen, "start") Then Call Add(TOKEN_KEYWORD_START, LineBegin, ColBegin): GoTo NextWord
-        If CompStr(WordBegin, WordLen, "stop") Then Call Add(TOKEN_KEYWORD_STOP, LineBegin, ColBegin): GoTo NextWord
-        If CompStr(WordBegin, WordLen, "struct") Then Call Add(TOKEN_KEYWORD_STRUCT, LineBegin, ColBegin): GoTo NextWord
+        If CompStr(WordBegin, WordLen, "slot") Then Call Add(TOKEN_KEYWORD, TOKEN_KEYWORD_SLOT, LineBegin, ColBegin): GoTo NextWord
+        If CompStr(WordBegin, WordLen, "start") Then Call Add(TOKEN_KEYWORD, TOKEN_KEYWORD_START, LineBegin, ColBegin): GoTo NextWord
+        If CompStr(WordBegin, WordLen, "stop") Then Call Add(TOKEN_KEYWORD, TOKEN_KEYWORD_STOP, LineBegin, ColBegin): GoTo NextWord
+        If CompStr(WordBegin, WordLen, "struct") Then Call Add(TOKEN_KEYWORD, TOKEN_KEYWORD_STRUCT, LineBegin, ColBegin): GoTo NextWord
         
     ElseIf Asc1 = W Then '..................................................... `w` ...
         'Keywords
-        If CompStr(WordBegin, WordLen, "word") Then Call Add(TOKEN_KEYWORD_WORD, LineBegin, ColBegin): GoTo NextWord
+        If CompStr(WordBegin, WordLen, "word") Then Call Add(TOKEN_KEYWORD, TOKEN_KEYWORD_WORD, LineBegin, ColBegin): GoTo NextWord
         'There is no `w` register
         GoTo WordError
         
     ElseIf Asc1 = X Then '..................................................... `x` ...
         'If only `x`, then it's the repeat operator
-        If WordLen = 0 Then Call Add(TOKEN_OPERATOR_REP, LineBegin, ColBegin): GoTo NextWord
+        If WordLen = 0 Then Call Add(TOKEN_OPERATOR, TOKEN_OPERATOR_REP, LineBegin, ColBegin): GoTo NextWord
         'Z80 instructions
-        If CompStr(WordBegin, WordLen, "xor") Then Call Add(TOKEN_Z80_XOR, LineBegin, ColBegin): GoTo NextWord
+        If CompStr(WordBegin, WordLen, "xor") Then Call Add(TOKEN_Z80, TOKEN_Z80_XOR, LineBegin, ColBegin): GoTo NextWord
         'There is no `x` register
         GoTo WordError
     
     ElseIf Asc1 = Z Then '..................................................... `z` ...
         'Z80 flag conditions
-        If Asc2 = 0 Then Call Add(TOKEN_FLAG_Z, LineBegin, ColBegin): GoTo NextWord
+        If Asc2 = 0 Then Call Add(TOKEN_FLAG, TOKEN_FLAG_Z, LineBegin, ColBegin): GoTo NextWord
         'There is no 'z' register
         GoTo WordError
         
     ElseIf Asc1 = SYNTAX_BLOCK_OPEN Then '..................................... `{` ...
-        Call Add(TOKEN_BLOCKOPEN, LineBegin, ColBegin): GoTo NextWord
+        Call Add(TOKEN_BLOCKOPEN, 0, LineBegin, ColBegin): GoTo NextWord
     ElseIf Asc1 = SYNTAX_BLOCK_CLOSE Then  '................................... `}` ...
-        Call Add(TOKEN_BLOCKCLOSE, LineBegin, ColBegin): GoTo NextWord
+        Call Add(TOKEN_BLOCKCLOSE, 0, LineBegin, ColBegin): GoTo NextWord
     ElseIf Asc1 = SYNTAX_PAREN_OPEN Then '..................................... `(` ...
-        Call Add(TOKEN_PARENOPEN, LineBegin, ColBegin): GoTo NextWord
+        Call Add(TOKEN_PARENOPEN, 0, LineBegin, ColBegin): GoTo NextWord
     ElseIf Asc1 = SYNTAX_PAREN_CLOSE Then '.................................... `)` ...
-        Call Add(TOKEN_PARENCLOSE, LineBegin, ColBegin): GoTo NextWord
+        Call Add(TOKEN_PARENCLOSE, 0, LineBegin, ColBegin): GoTo NextWord
     
     'A decimal number?
     ElseIf IsNumber(Asc1) Then '............................................. `0-9` ...
@@ -1008,14 +1010,8 @@ TokenWord:
                 On Error GoTo 0
             End If
         Next ii
-        'Add the token to signal a number
-        Call Add(TOKEN_NUMBER, LineBegin, ColBegin)
-'        'Copy the long directly into the token stream
-'        'TODO: This could overflow the buffer!
-'        Call kernel32_RtlMoveMemory( _
-'            Tokens(TokensLength), Number, 4 _
-'        )
-'        Let TokensLength = TokensLength + 4
+        'Add the token with the number value
+        Call Add(TOKEN_NUMBER, Number, LineBegin, ColBegin)
         GoTo NextWord
         
     'Binary number?
@@ -1025,32 +1021,25 @@ TokenWord:
         
     'String (quote)
     ElseIf Asc1 = SYNTAX_QUOTE Then '.......................................... `"` ...
-        'Add quote token, the quote text follows
-        Call Add(TOKEN_QUOTE, LineBegin, ColBegin)
-'        'Copy the bytes from the quote directly into the token stream
-'        'TODO: This could very easily overflow the buffer!
-'        Call kernel32_RtlMoveMemory( _
-'            Tokens(TokensLength), Text(WordBegin + 1), WordLen - 1 _
-'        )
-'        Let TokensLength = TokensLength + WordLen
+        'TODO: Reimpliment this
         GoTo NextWord
         
     ElseIf Asc1 = SYNTAX_OPERATOR_ADD Then '................................... `+` ...
-        Call Add(TOKEN_OPERATOR_ADD, LineBegin, ColBegin): GoTo NextWord
+        Call Add(TOKEN_OPERATOR, TOKEN_OPERATOR_ADD, LineBegin, ColBegin): GoTo NextWord
     ElseIf Asc1 = SYNTAX_OPERATOR_SUB Then '................................... `-` ...
-        Call Add(TOKEN_OPERATOR_SUB, LineBegin, ColBegin): GoTo NextWord
+        Call Add(TOKEN_OPERATOR, TOKEN_OPERATOR_SUB, LineBegin, ColBegin): GoTo NextWord
     ElseIf Asc1 = SYNTAX_OPERATOR_MUL Then '................................... `*` ...
-        Call Add(TOKEN_OPERATOR_MUL, LineBegin, ColBegin): GoTo NextWord
+        Call Add(TOKEN_OPERATOR, TOKEN_OPERATOR_MUL, LineBegin, ColBegin): GoTo NextWord
     ElseIf Asc1 = SYNTAX_OPERATOR_DIV Then '................................... `/` ...
-        Call Add(TOKEN_OPERATOR_DIV, LineBegin, ColBegin): GoTo NextWord
+        Call Add(TOKEN_OPERATOR, TOKEN_OPERATOR_DIV, LineBegin, ColBegin): GoTo NextWord
     ElseIf Asc1 = SYNTAX_OPERATOR_POW Then '................................... `^` ...
-        Call Add(TOKEN_OPERATOR_POW, LineBegin, ColBegin): GoTo NextWord
+        Call Add(TOKEN_OPERATOR, TOKEN_OPERATOR_POW, LineBegin, ColBegin): GoTo NextWord
     ElseIf Asc1 = SYNTAX_OPERATOR_MOD Then '................................... `\` ...
-        Call Add(TOKEN_OPERATOR_MOD, LineBegin, ColBegin): GoTo NextWord
+        Call Add(TOKEN_OPERATOR, TOKEN_OPERATOR_MOD, LineBegin, ColBegin): GoTo NextWord
     ElseIf Asc1 = SYNTAX_OPERATOR_OR Then  '................................... `|` ...
-        Call Add(TOKEN_OPERATOR_OR, LineBegin, ColBegin): GoTo NextWord
+        Call Add(TOKEN_OPERATOR, TOKEN_OPERATOR_OR, LineBegin, ColBegin): GoTo NextWord
     ElseIf Asc1 = SYNTAX_OPERATOR_AND Then '................................... `&` ...
-        Call Add(TOKEN_OPERATOR_AND, LineBegin, ColBegin): GoTo NextWord
+        Call Add(TOKEN_OPERATOR, TOKEN_OPERATOR_AND, LineBegin, ColBegin): GoTo NextWord
     End If
     
     'Z80 Registers: _
@@ -1076,33 +1065,33 @@ TokenWord:
     GoTo WordError
 
 OneLetter:
-    If Asc1 = A Then Call Add(TOKEN_REGISTER_A, LineBegin, ColBegin): GoTo NextWord
-    If Asc1 = B Then Call Add(TOKEN_REGISTER_B, LineBegin, ColBegin): GoTo NextWord
-    If Asc1 = C Then Call Add(TOKEN_REGISTER_C, LineBegin, ColBegin): GoTo NextWord
-    If Asc1 = D Then Call Add(TOKEN_REGISTER_D, LineBegin, ColBegin): GoTo NextWord
-    If Asc1 = E Then Call Add(TOKEN_REGISTER_E, LineBegin, ColBegin): GoTo NextWord
-    If Asc1 = H Then Call Add(TOKEN_REGISTER_H, LineBegin, ColBegin): GoTo NextWord
-    If Asc1 = I Then Call Add(TOKEN_REGISTER_I, LineBegin, ColBegin): GoTo NextWord
-    If Asc1 = L Then Call Add(TOKEN_REGISTER_L, LineBegin, ColBegin): GoTo NextWord
-    If Asc1 = R Then Call Add(TOKEN_REGISTER_R, LineBegin, ColBegin): GoTo NextWord
+    If Asc1 = A Then Call Add(TOKEN_REGISTER, TOKEN_REGISTER_A, LineBegin, ColBegin): GoTo NextWord
+    If Asc1 = B Then Call Add(TOKEN_REGISTER, TOKEN_REGISTER_B, LineBegin, ColBegin): GoTo NextWord
+    If Asc1 = C Then Call Add(TOKEN_REGISTER, TOKEN_REGISTER_C, LineBegin, ColBegin): GoTo NextWord
+    If Asc1 = D Then Call Add(TOKEN_REGISTER, TOKEN_REGISTER_D, LineBegin, ColBegin): GoTo NextWord
+    If Asc1 = E Then Call Add(TOKEN_REGISTER, TOKEN_REGISTER_E, LineBegin, ColBegin): GoTo NextWord
+    If Asc1 = H Then Call Add(TOKEN_REGISTER, TOKEN_REGISTER_H, LineBegin, ColBegin): GoTo NextWord
+    If Asc1 = I Then Call Add(TOKEN_REGISTER, TOKEN_REGISTER_I, LineBegin, ColBegin): GoTo NextWord
+    If Asc1 = L Then Call Add(TOKEN_REGISTER, TOKEN_REGISTER_L, LineBegin, ColBegin): GoTo NextWord
+    If Asc1 = R Then Call Add(TOKEN_REGISTER, TOKEN_REGISTER_R, LineBegin, ColBegin): GoTo NextWord
     GoTo WordError
 
 TwoLetters:
     If Asc1 = A Then       '"af"
-        If Asc2 = F Then Call Add(TOKEN_REGISTER_AF, LineBegin, ColBegin): GoTo NextWord
+        If Asc2 = F Then Call Add(TOKEN_REGISTER, TOKEN_REGISTER_AF, LineBegin, ColBegin): GoTo NextWord
     ElseIf Asc1 = B Then   '"bc"
-        If Asc2 = C Then Call Add(TOKEN_REGISTER_BC, LineBegin, ColBegin): GoTo NextWord
+        If Asc2 = C Then Call Add(TOKEN_REGISTER, TOKEN_REGISTER_BC, LineBegin, ColBegin): GoTo NextWord
     ElseIf Asc1 = D Then  '"de"
-        If Asc2 = E Then Call Add(TOKEN_REGISTER_DE, LineBegin, ColBegin): GoTo NextWord
+        If Asc2 = E Then Call Add(TOKEN_REGISTER, TOKEN_REGISTER_DE, LineBegin, ColBegin): GoTo NextWord
     ElseIf Asc1 = H Then  '"hl"
-        If Asc2 = L Then Call Add(TOKEN_REGISTER_HL, LineBegin, ColBegin): GoTo NextWord
+        If Asc2 = L Then Call Add(TOKEN_REGISTER, TOKEN_REGISTER_HL, LineBegin, ColBegin): GoTo NextWord
     ElseIf Asc1 = I Then  '"ix"/"iy"
-        If Asc2 = X Then Call Add(TOKEN_REGISTER_IX, LineBegin, ColBegin): GoTo NextWord
-        If Asc2 = Y Then Call Add(TOKEN_REGISTER_IY, LineBegin, ColBegin): GoTo NextWord
+        If Asc2 = X Then Call Add(TOKEN_REGISTER, TOKEN_REGISTER_IX, LineBegin, ColBegin): GoTo NextWord
+        If Asc2 = Y Then Call Add(TOKEN_REGISTER, TOKEN_REGISTER_IY, LineBegin, ColBegin): GoTo NextWord
     ElseIf Asc1 = P Then  '"pc"
-        If Asc2 = C Then Call Add(TOKEN_REGISTER_PC, LineBegin, ColBegin): GoTo NextWord
+        If Asc2 = C Then Call Add(TOKEN_REGISTER, TOKEN_REGISTER_PC, LineBegin, ColBegin): GoTo NextWord
     ElseIf Asc1 = S Then  '"sp"
-        If Asc2 = P Then Call Add(TOKEN_REGISTER_SP, LineBegin, ColBegin): GoTo NextWord
+        If Asc2 = P Then Call Add(TOKEN_REGISTER, TOKEN_REGISTER_SP, LineBegin, ColBegin): GoTo NextWord
     End If
     GoTo WordError
     
@@ -1173,12 +1162,6 @@ Finish:
         ReDim Preserve Tokens(0 To TokenCount - 1) As Token
         
         Erase Text
-'       Debug.Print "- Tokens: "
-'       Debug.Print "  NEXT: " & Format$(TokenCounts(OZ80_TOKEN.TOKEN_NEXT), "#,#")
-'       Debug.Print "  (): " & Format$(TokenCounts(OZ80_TOKEN.TOKEN_PARENOPEN) + TokenCounts(OZ80_TOKEN.TOKEN_PARENCLOSE), "#,#")
-'       Debug.Print "  NUMBER: " & Format$(TokenCounts(OZ80_TOKEN.TOKEN_NUMBER), "#,#")
-'       Debug.Print "  {}: " & Format$(TokenCounts(OZ80_TOKEN.TOKEN_BLOCKOPEN) + TokenCounts(OZ80_TOKEN.TOKEN_BLOCKCLOSE), "#,#")
-        
         Debug.Print "- Words: " & Format$(WordCount, "#,#")
         Debug.Print "- Time: " & Format$((kernel32_GetTickCount() - Start) / 1000, "0.000") & "s"
     Else
@@ -1191,18 +1174,15 @@ End Function
 
 'Add : Add a token (any) to the stream _
  ======================================================================================
-Private Sub Add(ByRef Kind As OZ80_TOKEN, ByRef Line As Long, ByRef Col As Long)
+Private Sub Add(ByRef Kind As OZ80_TOKEN, ByRef Data As OZ80_TOKEN_DATA, ByRef Line As Long, ByRef Col As Long)
     'The param MUST be 0-255, but is given as long for speed reasons; _
      the rest of this class will ensure that this is never out of bounds
     With Tokens(TokenCount)
         Let .Kind = Kind
+        Let .Data = Data
         Let .Line = Line
         Let .Col = Col
     End With
-    
-    'Collect info on the number of each different type of token so we can get some _
-     statistics for possible speed optimisations
-    Let TokenCounts(Kind) = TokenCounts(Kind) + 1
     
     'Move to the next token number
     Let TokenCount = TokenCount + 1

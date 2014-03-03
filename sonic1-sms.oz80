@@ -1018,9 +1018,9 @@ PROC :updateVDPSprites {
 	`--- sprite Y positions -------------------------------------------------------
 	
 	`set the VDP address to $3F00 (sprite info table, Y-positions)
-	ld	a, $3F00.lo
+	ld	a, $00
 	out	(#SMS_VDP_CONTROL), a
-	ld	a, $3F00.hi
+	ld	a, $3F
 	or	%01000000		`add bit 6 to mark an address being given
 	out	(#SMS_VDP_CONTROL), a
 	
@@ -1068,9 +1068,9 @@ PROC :updateVDPSprites {
 	ld	b, (iy+#vars.spriteUpdateCount)
 	
 	`set the VDP address to $3F80 (sprite info table, X-positions & indexes)
-	ld	a, $3F80.lo
+	ld	a, $80
 	out	(#SMS_VDP_CONTROL), a
-	ld	a, $3F80.hi
+	ld	a, $3F
 	or	%01000000		`add bit 6 to mark an address being given
 	out	(#SMS_VDP_CONTROL), a
 	

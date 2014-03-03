@@ -711,26 +711,30 @@ TokenWord:
         Let Number = 0: Let Multiplier = 1
         For ii = WordBegin + WordLen To WordBegin + 1 Step -1
             'Check the digits are 0-9, A-F
-            If IsHex(Text(ii)) Then
-'                'Error, invalid number!
-'                GoSub GetWord
-'                Let Tokenise = OZ80_ERROR_BADNUMBER_DEC
-'                Call RaiseError(Tokenise, _
-'                    "Not a valid hexadecimal number! '" & Word & "'", _
-'                    LineBegin, ColBegin _
-'                )
-'                GoTo Finish
-            Else
-                'Convert the number from ASCII codes into a value
-                
- '               On Error GoTo ErrorOverflow
- '               'TODO: Optimise this into LUTs
- '               Let Number = Number + (Text(ii) - NUM0) * Multiplier
- '               'Don't allow the multiplier to overflow when the number doesn't
- '               If ii > WordBegin Then Let Multiplier = Multiplier * 10
- '               On Error GoTo 0
+            If IsHex(Text(ii)) = False Then
+                'Error, invalid number!
+                GoSub GetWord
+                Let Tokenise = OZ80_ERROR_BADNUMBER_DEC
+                Call RaiseError(Tokenise, _
+                    "Not a valid hexadecimal number! '" & Word & "'", _
+                    LineBegin, ColBegin _
+                )
+                GoTo Finish
             End If
         Next ii
+        'The digits are valid, but it could be an overflow
+        On Error GoTo ErrorOverflow
+        'TODO: Test this against another method for speed
+        GoSub GetWord
+        Let Number = Val("&H" & Mid$(Word, 2) & "&")
+        On Error GoTo 0
+        'Add the token to signal a number
+        Call Add(TOKEN_NUMBER, LineBegin, ColBegin)
+        'Copy the long directly into the token stream
+        Call kernel32_RtlMoveMemory( _
+            Tokens(TokensLength), Number, 4 _
+        )
+        Let TokensLength = TokensLength + 4
         GoTo NextWord
     
     ElseIf Asc1 = SYNTAX_LABEL Then '.......................................... `:` ...

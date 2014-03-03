@@ -112,6 +112,8 @@ Private Enum ASCII
     aLF = 13
 End Enum
 
+'--------------------------------------------------------------------------------------
+
 'These define the various punctiation marks (in ASCII codes) for the language syntax
 Private Enum SYNTAX
     SYNTAX_COMMENT = 96         '`
@@ -139,8 +141,6 @@ Private Enum SYNTAX
     SYNTAX_OPERATOR_OR = 124    '|
     SYNTAX_OPERATOR_AND = 38    '&
 End Enum
-
-'--------------------------------------------------------------------------------------
 
 Public Enum OZ80_TOKEN
     'These are just the mnemonic tokens -- the assembler itself checks the
@@ -252,105 +252,97 @@ Public Enum OZ80_TOKEN
     TOKEN_FLAG_PE = &H6E                'Parity/Overflow is set
     TOKEN_FLAG_PO = &H6F                'Parity/Overflow is not set
     
-    'OZ80's keywords
-    TOKEN_KEYWORD_AT = &H70
-    TOKEN_KEYWORD_AS = &H71
-    TOKEN_KEYWORD_BANK = &H72
-    TOKEN_KEYWORD_BINARY = &H73
-    TOKEN_KEYWORD_BYTE = &H74
-    TOKEN_KEYWORD_DATA = &H75
-    TOKEN_KEYWORD_DEF = &H76
-    TOKEN_KEYWORD_DEFAULT = &H77
-    TOKEN_KEYWORD_ECHO = &H78
-    TOKEN_KEYWORD_ELSE = &H79
-    TOKEN_KEYWORD_EXISTS = &H7A
-    TOKEN_KEYWORD_FAIL = &H7B
-    TOKEN_KEYWORD_FILL = &H7C
-    TOKEN_KEYWORD_IF = &H7D
-    TOKEN_KEYWORD_INCLUDE = &H7E
-    TOKEN_KEYWORD_LENGTH = &H7F
-    TOKEN_KEYWORD_OBJECT = &H80
-    TOKEN_KEYWORD_PARAMS = &H81
-    TOKEN_KEYWORD_PROC = &H82
-    TOKEN_KEYWORD_RETURN = &H83
-    TOKEN_KEYWORD_SLOT = &H84
-    TOKEN_KEYWORD_START = &H85
-    TOKEN_KEYWORD_STOP = &H86
-    TOKEN_KEYWORD_STRUCT = &H87
-    TOKEN_KEYWORD_WORD = &H88
-    
     'The parser automatically converts hexadecimal/binary numbers, so we only store
      'a 32-bit long (data field) in the token stream
-    TOKEN_NUMBER = &H90
+    TOKEN_NUMBER = &H70
     'Number prefixes ("K", "KB" & "Kbit")
-    TOKEN_PREFIX_K = &H91               'x1000
-    TOKEN_PREFIX_KB = &H92              'x1024
-    TOKEN_PREFIX_KBIT = &H93            'x128 (1024 bits)
+    TOKEN_PREFIX_K = &H7A               'x1000
+    TOKEN_PREFIX_KB = &H7B              'x1024
+    TOKEN_PREFIX_KBIT = &H7C            'x128 (1024 bits)
     
     'Specifies an operator
-    TOKEN_OPERATOR_ADD = &HA0           'Add "+"
-    TOKEN_OPERATOR_SUB = &HA1           'Subtract "-"
-    TOKEN_OPERATOR_MUL = &HA2           'Multiply "*"
-    TOKEN_OPERATOR_DIV = &HA3           'Divide "/"
-    TOKEN_OPERATOR_POW = &HA4           'Power "^"
-    TOKEN_OPERATOR_MOD = &HA5           'Modulus "\"
-    TOKEN_OPERATOR_REP = &HA6           'Repeat "x"
-    TOKEN_OPERATOR_OR = &HA7            'Bitwise Or "|"
-    TOKEN_OPERATOR_AND = &HA8           'Bitwise And "&"
+    TOKEN_OPERATOR_ADD = &H80           'Add "+"
+    TOKEN_OPERATOR_SUB = &H81           'Subtract "-"
+    TOKEN_OPERATOR_MUL = &H82           'Multiply "*"
+    TOKEN_OPERATOR_DIV = &H83           'Divide "/"
+    TOKEN_OPERATOR_POW = &H84           'Power "^"
+    TOKEN_OPERATOR_MOD = &H85           'Modulus "\"
+    TOKEN_OPERATOR_REP = &H86           'Repeat "x"
+    TOKEN_OPERATOR_OR = &H87            'Bitwise Or "|"
+    TOKEN_OPERATOR_AND = &H88           'Bitwise And "&"
+    
+    'OZ80's keywords
+    TOKEN_KEYWORD_AT = &H90
+    TOKEN_KEYWORD_AS = &H91
+    TOKEN_KEYWORD_BANK = &H92
+    TOKEN_KEYWORD_BINARY = &H93
+    TOKEN_KEYWORD_BYTE = &H94
+    TOKEN_KEYWORD_DATA = &H95
+    TOKEN_KEYWORD_DEF = &H96
+    TOKEN_KEYWORD_DEFAULT = &H97
+    TOKEN_KEYWORD_ECHO = &H98
+    TOKEN_KEYWORD_ELSE = &H99
+    TOKEN_KEYWORD_EXISTS = &H9A
+    TOKEN_KEYWORD_FAIL = &H9B
+    TOKEN_KEYWORD_FILL = &H9C
+    TOKEN_KEYWORD_IF = &H9D
+    TOKEN_KEYWORD_INCLUDE = &H9E
+    TOKEN_KEYWORD_LENGTH = &H9F
+    TOKEN_KEYWORD_OBJECT = &HA0
+    TOKEN_KEYWORD_PARAMS = &HA1
+    TOKEN_KEYWORD_PROC = &HA2
+    TOKEN_KEYWORD_RETURN = &HA3
+    TOKEN_KEYWORD_SLOT = &HA4
+    TOKEN_KEYWORD_START = &HA5
+    TOKEN_KEYWORD_STOP = &HA6
+    TOKEN_KEYWORD_STRUCT = &HA7
+    TOKEN_KEYWORD_WORD = &HA8
     
     'Grouping: (i.e. parenthesis, braces)
-    TOKEN_PARENOPEN = &HB0
-    TOKEN_PARENCLOSE = &HB1
-    TOKEN_BLOCKOPEN = &HB2
-    TOKEN_BLOCKCLOSE = &HB3
+    TOKEN_PARENOPEN = &HD0
+    TOKEN_PARENCLOSE = &HD1
+    TOKEN_BLOCKOPEN = &HD2
+    TOKEN_BLOCKCLOSE = &HD3
     
+    TOKEN_QUOTE = &HE0
+    
+    'Label, Variable and Property tokens use the high byte as a marker and the rest
+     'of the token is an index into the string array of names
+    TOKEN_LABEL = &HA0000000
+    TOKEN_VARIABLE = &HB0000000
+    TOKEN_PROPERTY = &HC0000000
     'A list is a series of 1 or more expressions separated by commas,
      'i.e.parameter lists
-    TOKEN_LIST = &HC0
+    TOKEN_LIST = &HD0000000
     TOKEN_NEXT = &HC1                   'Sandwiched between list items, i.e. ","
-    
-    TOKEN_QUOTE = &HD0
 End Enum
 
-'Use a 512 KB initial buffer for the token stream
-Private Const TOKEN_BUFFER As Long = 524287
-'And a 120'000 item buffer for the meta data for each non-data token byte
-Private Const META_BUFFER As Long = 120000
+'Use a 100'000 item initial buffer for the token stream
+Private Const TOKEN_BUFFER As Long = 100000
 
 '/// DEFS /////////////////////////////////////////////////////////////////////////////
 
-'Please note that the token stream is a combination of tokens (single number codes _
- that act as shorthand for the textual 'words' in the source code), and for some _
- tokens variable length data that follows -- for example a quote token with the length _
- of the quoted text as the next 4 bytes and the quoted text as bytes following that
+'The source text file is held here as a byte-array whilst it gets parsed
+Private Text() As Byte
 
-Private Tokens() As Byte                'The token stream will live here
-Private TokensLimit As Long             'The length of the buffer used for above
-Private TokensLength As Long            'The current amount of space used in the array
-
-Private Type TokenMeta
-    Index As Long
-    Line As Long
-    Col As Long
+Private Type Token
+    Kind As OZ80_TOKEN
+    Line As Long                        'Line number in the original source text
+    Col As Long                         'Column number in the original source text
 End Type
 
-Private Meta() As TokenMeta
-'The number of tokens, exluding the data parts. This is what will set the size of the _
- meta array which is one entry for each token (excluding data)
-Private TokenCount As Long
-Private MetaLimit As Long
+Private Tokens() As Token               'The token stream will live here
+Private TokenLimit As Long             'The length of the buffer used for above
+Private TokenCount As Long              'The current amount of space used in the array
 
 'So we can look at which tokens are most common, for optimising
 Private TokenCounts(0 To 255) As Long
 
-'The buffer used to parse the source text file
-Private Text() As Byte
-
 'A look up table of ASCII codes from upper-case to lower-case
 Private LowCase(0 To 255) As Long
-'A look up table of ASCII codes to validate numbers
+'A look up table of ASCII codes to validate decimal digits
 Private IsNumber(0 To 255) As Boolean
-'A look up table of ASCII codes to validate hexadecimal numbers
+'A look up table of ASCII codes to validate hexadecimal digits
 Private IsHex(0 To 255) As Boolean
 'A look up table of ASCII codes to validate alpha characters (both cases)
 Private IsAlpha(0 To 255) As Boolean
@@ -410,7 +402,6 @@ Private Sub Class_Terminate()
     'Empty the token stream
     Erase Tokens
     Erase TokenCounts
-    Erase Meta
     
     Call msvbvm60_PutMem4(CompStrPtr, 0&)
 End Sub
@@ -430,22 +421,12 @@ Public Function Tokenise(ByRef FilePath As String) As OZ80_ERROR
     'Just a loop counter
     Dim ii As Long
     
-    'Prepare a large buffer (512K) to accept the token stream _
-     (using `ReDim` for every token added is *incredibly* slow)
-    'If the data overflows this buffer, we'll increase it by _
-     another chunk there and then
-    Let TokensLimit = TOKEN_BUFFER
-    ReDim Tokens(0 To TokensLimit) As Byte
-    Let TokensLength = 0
+    'Prepare a large buffer to accept the token stream (using `ReDim` for every token _
+     added is *incredibly* slow). If the tokens overflow this buffer, we'll increase _
+     it by another chunk there and then
+    Let TokenLimit = TOKEN_BUFFER: Let TokenCount = 0
+    ReDim Tokens(0 To TokenLimit) As Token
     Erase Text
-    
-    'Prepare a 120'000 item buffer for the meta data for each non-data token. _
-     This contains the line number column number and index number into the token _
-     stream where the token occurs. This is so that when errors occur we can easily _
-     provide the location in the source code
-    Let TokenCount = 0
-    Let MetaLimit = META_BUFFER
-    ReDim Meta(0 To MetaLimit) As TokenMeta
     
     'Read the whole file into a single string _
      ----------------------------------------------------------------------------------
@@ -730,11 +711,12 @@ TokenWord:
         On Error GoTo 0
         'Add the token to signal a number
         Call Add(TOKEN_NUMBER, LineBegin, ColBegin)
-        'Copy the long directly into the token stream
-        Call kernel32_RtlMoveMemory( _
-            Tokens(TokensLength), Number, 4 _
-        )
-        Let TokensLength = TokensLength + 4
+'        'Copy the long directly into the token stream
+'        'TODO: this could overflow the buffer!
+'        Call kernel32_RtlMoveMemory( _
+'            Tokens(TokensLength), Number, 4 _
+'        )
+'        Let TokensLength = TokensLength + 4
         GoTo NextWord
     
     ElseIf Asc1 = SYNTAX_LABEL Then '.......................................... `:` ...
@@ -1028,11 +1010,12 @@ TokenWord:
         Next ii
         'Add the token to signal a number
         Call Add(TOKEN_NUMBER, LineBegin, ColBegin)
-        'Copy the long directly into the token stream
-        Call kernel32_RtlMoveMemory( _
-            Tokens(TokensLength), Number, 4 _
-        )
-        Let TokensLength = TokensLength + 4
+'        'Copy the long directly into the token stream
+'        'TODO: This could overflow the buffer!
+'        Call kernel32_RtlMoveMemory( _
+'            Tokens(TokensLength), Number, 4 _
+'        )
+'        Let TokensLength = TokensLength + 4
         GoTo NextWord
         
     'Binary number?
@@ -1044,11 +1027,12 @@ TokenWord:
     ElseIf Asc1 = SYNTAX_QUOTE Then '.......................................... `"` ...
         'Add quote token, the quote text follows
         Call Add(TOKEN_QUOTE, LineBegin, ColBegin)
-        'Copy the bytes from the quote directly into the token stream
-        Call kernel32_RtlMoveMemory( _
-            Tokens(TokensLength), Text(WordBegin + 1), WordLen - 1 _
-        )
-        Let TokensLength = TokensLength + WordLen
+'        'Copy the bytes from the quote directly into the token stream
+'        'TODO: This could very easily overflow the buffer!
+'        Call kernel32_RtlMoveMemory( _
+'            Tokens(TokensLength), Text(WordBegin + 1), WordLen - 1 _
+'        )
+'        Let TokensLength = TokensLength + WordLen
         GoTo NextWord
         
     ElseIf Asc1 = SYNTAX_OPERATOR_ADD Then '................................... `+` ...
@@ -1186,8 +1170,7 @@ WordError: '....................................................................
 Finish:
     If Tokenise = OZ80_ERROR_NONE Then
        'Reduce the buffers to the final size
-        ReDim Preserve Tokens(0 To TokensLength - 1) As Byte
-        ReDim Preserve Meta(0 To TokenCount - 1) As TokenMeta
+        ReDim Preserve Tokens(0 To TokenCount - 1) As Token
         
         Erase Text
 '       Debug.Print "- Tokens: "
@@ -1195,11 +1178,11 @@ Finish:
 '       Debug.Print "  (): " & Format$(TokenCounts(OZ80_TOKEN.TOKEN_PARENOPEN) + TokenCounts(OZ80_TOKEN.TOKEN_PARENCLOSE), "#,#")
 '       Debug.Print "  NUMBER: " & Format$(TokenCounts(OZ80_TOKEN.TOKEN_NUMBER), "#,#")
 '       Debug.Print "  {}: " & Format$(TokenCounts(OZ80_TOKEN.TOKEN_BLOCKOPEN) + TokenCounts(OZ80_TOKEN.TOKEN_BLOCKCLOSE), "#,#")
+        
         Debug.Print "- Words: " & Format$(WordCount, "#,#")
         Debug.Print "- Time: " & Format$((kernel32_GetTickCount() - Start) / 1000, "0.000") & "s"
     Else
-        Erase Text, Tokens, Meta
-        Let TokensLength = 0
+        Erase Text, Tokens
         Let TokenCount = 0
     End If
 End Function
@@ -1208,39 +1191,28 @@ End Function
 
 'Add : Add a token (any) to the stream _
  ======================================================================================
-Private Sub Add(ByRef Token As OZ80_TOKEN, ByRef Line As Long, ByRef Col As Long)
+Private Sub Add(ByRef Kind As OZ80_TOKEN, ByRef Line As Long, ByRef Col As Long)
     'The param MUST be 0-255, but is given as long for speed reasons; _
      the rest of this class will ensure that this is never out of bounds
-    Let Tokens(TokensLength) = Token
-    
-    'Collect info on the number of each different type of token so we can get some _
-     statistics for possible speed optimisations
-    Let TokenCounts(Token) = TokenCounts(Token) + 1
-    
-    'Capture the token's position in the source file and token stream
-    With Meta(TokenCount)
-        Let .Index = TokensLength - 1
+    With Tokens(TokenCount)
+        Let .Kind = Kind
         Let .Line = Line
         Let .Col = Col
     End With
     
+    'Collect info on the number of each different type of token so we can get some _
+     statistics for possible speed optimisations
+    Let TokenCounts(Kind) = TokenCounts(Kind) + 1
+    
     'Move to the next token number
     Let TokenCount = TokenCount + 1
-    'Increase the buffer of token information if needed
-    If TokenCount > MetaLimit Then
-        Let MetaLimit = MetaLimit + META_BUFFER
-        ReDim Preserve Meta(0 To MetaLimit) As TokenMeta
-    End If
-    
-    'Move to the next space in the byte stream
-    Let TokensLength = TokensLength + 1
     
     'Note that the tokens array is given a large size to begin with as ReDimming it _
      with every token added is *incredibly* slow. If we go over this buffer size, _
      we need to increase it
-    If TokensLength > TokensLimit Then
-        Let TokensLimit = TokensLimit + TOKEN_BUFFER
-        ReDim Preserve Tokens(0 To TokensLimit) As Byte
+    If TokenCount > TokenLimit Then
+        Let TokenLimit = TokenLimit + TOKEN_BUFFER
+        ReDim Preserve Tokens(0 To TokenLimit) As Token
     End If
 End Sub
 

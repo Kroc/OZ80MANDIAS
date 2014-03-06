@@ -77,6 +77,7 @@ Private Enum ASCII
     UNDRSCR = 95
     
     NUM0 = 48
+    NUM1 = 49
     NUM9 = 57
     
     A = 97
@@ -344,6 +345,11 @@ Private Tokens() As Token               'The token stream will live here
 Private TokenLimit As Long              'The length of the buffer used for above
 Private TokenCount As Long              'The current amount of space used in the array
 
+Private Quotes As Scripting.Dictionary
+Private Labels As Scripting.Dictionary
+Private Variables As Scripting.Dictionary
+Private Properties As Scripting.Dictionary
+
 'A look up table of ASCII codes from upper-case to lower-case
 Private LowCase(0 To 255) As Long
 'A look up table of ASCII codes to validate decimal digits
@@ -386,6 +392,11 @@ Private Sub Class_Initialize()
         End If
     Next ii
     
+    Set Quotes = New Scripting.Dictionary
+    Set Labels = New Scripting.Dictionary
+    Set Variables = New Scripting.Dictionary
+    Set Properties = New Scripting.Dictionary
+    
     With CompStrSA1D
         .cDims = 1
         .fFeatures = FADF_AUTO Or FADF_FIXEDSIZE
@@ -401,6 +412,11 @@ End Sub
 'CLASS Terminate _
  ======================================================================================
 Private Sub Class_Terminate()
+    Set Quotes = Nothing
+    Set Labels = Nothing
+    Set Variables = Nothing
+    Set Properties = Nothing
+    
     'Clean up the look up tables
     Erase LowCase, IsNumber
     'The `Tokenise` method will clean this up, but just be doubly sure
@@ -425,6 +441,11 @@ Public Function Tokenise(ByRef FilePath As String) As OZ80_ERROR
     
     'Just a loop counter
     Dim ii As Long
+    
+    Call Quotes.RemoveAll
+    Call Labels.RemoveAll
+    Call Variables.RemoveAll
+    Call Properties.RemoveAll
     
     'Prepare a large buffer to accept the token stream (using `ReDim` for every token _
      added is *incredibly* slow). If the tokens overflow this buffer, we'll increase _
@@ -473,8 +494,9 @@ Public Function Tokenise(ByRef FilePath As String) As OZ80_ERROR
     Dim IsComment As Boolean
     Dim IsCommentMulti As Boolean
     
+    'These are used whilst converting words into real numbers
     Dim Number As Long, Multiplier As Long
-    
+    'This is used to convert the word from a byte array into a string
     Dim Word As String
     
     'Which character in the source code we're parsing. Since the way the routine is _
@@ -484,7 +506,7 @@ Public Function Tokenise(ByRef FilePath As String) As OZ80_ERROR
     Let TextPos = -1
     
     'Line and column number in the source text. Used to record the position in the _
-     original file of each word for producing helpful error messages
+     original file of each word for producing helpful error messages. 1-based
     Dim Line As Long, Col As Long
     Let Line = 1
     
@@ -688,8 +710,9 @@ TokenWord:
     
     'Comma (very common!)
     If Asc1 = SYNTAX_NEXT Then '............................................... `,` ...
-        'TODO: Collapse list items into continuous number tokens?
-        'TODO: Add one to the list count and if item is not valid in a list, error out
+        'NOTE: At this point we can only see one word at a time (and not look ahead), _
+               so we cannot know when a list has started, and even if the grammer is _
+               valid at all (could have a number in completely the wrong place)
         GoTo NextWord
     
     'Hexadecimal number?
@@ -730,7 +753,8 @@ TokenWord:
         ElseIf IsValidName(WordBegin + 1, WordBegin + WordLen) = False Then
             GoTo ErrorInvalidName
         Else
-            'TODO: Tokenise
+            GoSub GetWord
+            Call AddLabel(Word, LineBegin, ColBegin)
             GoTo NextWord
         End If
     
@@ -750,7 +774,8 @@ TokenWord:
         ElseIf IsValidName(WordBegin + 1, WordBegin + WordLen) = False Then
             GoTo ErrorInvalidName
         Else
-            'TODO: Tokenise
+            GoSub GetWord
+            Call AddProperty(Word, LineBegin, ColBegin)
             GoTo NextWord
         End If
     
@@ -763,7 +788,8 @@ TokenWord:
         ElseIf IsValidName(WordBegin + 1, WordBegin + WordLen) = False Then
             GoTo ErrorInvalidName
         Else
-            'TODO: Tokenise
+            GoSub GetWord
+            Call AddVariable(Word, LineBegin, ColBegin)
             GoTo NextWord
         End If
         
@@ -850,19 +876,18 @@ TokenWord:
         GoTo WordError
         
     ElseIf Asc1 = K Then '..................................................... `k` ...
-        'TODO: Reimplement this
-'        'Number suffixes K, KB & Kbit
-'        If Asc2 = 0 Then    'Just `K`
-'            Call Add(TOKEN_PREFIX_K, LineBegin, ColBegin): GoTo NextWord
-'        'B must be next for `KB` and `Kbit`
-'        ElseIf Asc2 = B Then
-'            'If only two letters, then it's `KB`
-'            If Asc3 = 0 Then Call Add(TOKEN_PREFIX_KB, LineBegin, ColBegin): GoTo NextWord
-'            'verify ...`Kbit`, we don't have Asc5 so avoid things like `Kbitty`
-'            If CompStr(WordBegin, WordLen, "kbit") Then Call Add(TOKEN_PREFIX_KBIT, LineBegin, ColBegin): GoTo NextWord
-'        End If
-'        'There are no `k` registers
-'        GoTo WordError
+        'Number suffixes K, KB & Kbit
+        If Asc2 = 0 Then    'Just `K`
+            Call Add(TOKEN_PREFIX_K, 0, LineBegin, ColBegin): GoTo NextWord
+            'B must be next for `KB` and `Kbit`
+        ElseIf Asc2 = B Then
+            'If only two letters, then it's `KB`
+            If Asc3 = 0 Then Call Add(TOKEN_PREFIX_KB, 0, LineBegin, ColBegin): GoTo NextWord
+            'verify ...`Kbit`, we don't have Asc5 so avoid things like `Kbitty`
+            If CompStr(WordBegin, WordLen, "kbit") Then Call Add(TOKEN_PREFIX_KBIT, 0, LineBegin, ColBegin): GoTo NextWord
+        End If
+        'There are no `k` registers
+        GoTo WordError
         
     ElseIf Asc1 = L Then '..................................................... `l` ...
         'Z80 instructions
@@ -1016,12 +1041,26 @@ TokenWord:
         
     'Binary number?
     ElseIf Asc1 = SYNTAX_NUMBER_BIN Then '..................................... `%` ...
-        'TODO: Tokenise number
+        'TODO: Cannot be longer than 31-bits
+        If WordLen > 31 Then GoTo ErrorOverflow
+        Let Number = 0: Let Multiplier = 0
+        For ii = WordBegin + WordLen To WordBegin + 1 Step -1
+            If Text(ii) = NUM1 Then
+                Let Number = Number + 2 ^ Multiplier
+            ElseIf Text(ii) <> NUM0 Then
+                'Error - not a valid binary number
+                Stop
+            End If
+            Let Multiplier = Multiplier + 1
+        Next ii
+        'Tokenise number
+        Call Add(TOKEN_NUMBER, Number, LineBegin, ColBegin)
         GoTo NextWord
         
     'String (quote)
     ElseIf Asc1 = SYNTAX_QUOTE Then '.......................................... `"` ...
-        'TODO: Reimpliment this
+        GoSub GetWord
+        Call AddQuote(Mid$(Word, 2), LineBegin, ColBegin)
         GoTo NextWord
         
     ElseIf Asc1 = SYNTAX_OPERATOR_ADD Then '................................... `+` ...
@@ -1165,6 +1204,10 @@ Finish:
         Debug.Print "- Words: " & Format$(WordCount, "#,#")
         Debug.Print "- Time: " & Format$((kernel32_GetTickCount() - Start) / 1000, "0.000") & "s"
     Else
+        Call Quotes.RemoveAll
+        Call Labels.RemoveAll
+        Call Variables.RemoveAll
+        Call Properties.RemoveAll
         Erase Text, Tokens
         Let TokenCount = 0
     End If
@@ -1193,6 +1236,50 @@ Private Sub Add(ByRef Kind As OZ80_TOKEN, ByRef Data As OZ80_TOKEN_DATA, ByRef L
     If TokenCount > TokenLimit Then
         Let TokenLimit = TokenLimit + TOKEN_BUFFER
         ReDim Preserve Tokens(0 To TokenLimit) As Token
+    End If
+End Sub
+
+'AddLabel : Register a label name for index <> string access _
+ ======================================================================================
+Private Sub AddLabel(ByRef LabelName As String, ByRef Line As Long, ByRef Col As Long)
+    If Labels.Exists(LabelName) = False Then
+        Call Labels.Add(LabelName, TokenCount)
+        Call Add(TOKEN_LABEL, TokenCount, Line, Col)
+    Else
+        Call Add(TOKEN_LABEL, Labels.Item(LabelName), Line, Col)
+    End If
+End Sub
+
+'AddVariable : Register a variable name for index <> string access _
+ ======================================================================================
+Private Sub AddVariable(ByRef VariableName As String, ByRef Line As Long, ByRef Col As Long)
+    If Variables.Exists(VariableName) = False Then
+        Call Variables.Add(VariableName, TokenCount)
+        Call Add(TOKEN_VARIABLE, TokenCount, Line, Col)
+    Else
+        Call Add(TOKEN_VARIABLE, Variables.Item(VariableName), Line, Col)
+    End If
+End Sub
+
+'AddProperty : Register a property name for index <> string access _
+ ======================================================================================
+Private Sub AddProperty(ByRef PropertyName As String, ByRef Line As Long, ByRef Col As Long)
+    If Properties.Exists(PropertyName) = False Then
+        Call Properties.Add(PropertyName, TokenCount)
+        Call Add(TOKEN_PROPERTY, TokenCount, Line, Col)
+    Else
+        Call Add(TOKEN_PROPERTY, Properties.Item(PropertyName), Line, Col)
+    End If
+End Sub
+
+'AddQuote : Strings are stored outside of the token stream and referenced by number _
+ ======================================================================================
+Private Sub AddQuote(ByRef QuoteString As String, ByRef Line As Long, ByRef Col As Long)
+    If Quotes.Exists(QuoteString) = False Then
+        Call Quotes.Add(QuoteString, TokenCount)
+        Call Add(TOKEN_QUOTE, TokenCount, Line, Col)
+    Else
+        Call Add(TOKEN_QUOTE, Quotes.Item(QuoteString), Line, Col)
     End If
 End Sub
 

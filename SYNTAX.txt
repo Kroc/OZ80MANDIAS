@@ -148,15 +148,10 @@ You can include all 8 digits or only as many as you need
 	ld h, %00001111
 	ld h, %1111
 
-For 16-bit numbers either use more digits, or place another binary number after the
-first (for better readability), e.g.
+For 16-bit numbers use more digits. Up to a maximum of 31 digits are supported at this
+time, but more may be supported in the future.
 	
 	ld hl, %0000111100001111
-	ld hl, %00001111%00001111
-
-The second convention allows you to abbreviate 16-bit words like so:
-
-	ld hl, %1%1			`%00000001%00000001 = 257
 
 3.1.	Number Suffixes:
 ---------------------------------------------------------------------------------------

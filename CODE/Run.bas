@@ -7,22 +7,23 @@ Option Explicit
 '======================================================================================
 'MODULE :: Run
 
+'This is not part of the assembler itself, this is just a bootstrap to test it
+
 '/// PUBLIC PROCEDURES ////////////////////////////////////////////////////////////////
 
 'MAIN : "Look on my works ye Mighty, and despair!" _
  ======================================================================================
 Public Sub Main()
-    Dim Assembler As oz80Assembler
-    Set Assembler = New oz80Assembler
-    
     Dim StartTime As Single
     Let StartTime = Timer
     
     'TODO: This will obviously be converted to use the command arguments
-    Call Assembler.Assemble(App.Path & "\sonic1-sms.oz80")
+    Call oz80.Assemble(App.Path & "\sonic1-sms.oz80")
     
-    If Assembler.InIDE = False Then MsgBox Format$(Timer - StartTime, "0.000")
-    
-    Set Assembler = Nothing
+    'Do something that only faults in the IDE
+    On Error GoTo Err_True
+    Debug.Print 1 \ 0
+    MsgBox Format$(Timer - StartTime, "0.000")
+Err_True:
 End Sub
 

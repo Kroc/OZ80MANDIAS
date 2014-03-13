@@ -5,6 +5,7 @@ Module=Run; CODE\Run.bas
 RelatedDoc=SYNTAX.txt
 Class=oz80Assembler; CODE\oz80Assembler.cls
 Class=oz80Tokeniser; CODE\oz80Tokeniser.cls
+Module=oz80; CODE\oz80.bas
 Startup="Sub Main"
 HelpFile=""
 Title="OZ80MANDIAS"

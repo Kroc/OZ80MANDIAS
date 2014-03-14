@@ -773,7 +773,7 @@ Format:
 	?<functionName> [<expr>[, <expr> ...]]
 
 
-	DATA $AA, (?functionName $10, $20, $30), $BB, $CC
+	DATA $AA, {?functionName $10, $20, $30}, $BB, $CC
 
 ...
 

@@ -19,6 +19,7 @@ Public Enum OZ80_ERROR
     OZ80_ERROR_BADWORD = 5              'Couldn't parse a word
     OZ80_ERROR_BADNUMBER_DEC = 6        'Not a valid decimal number
     OZ80_ERROR_OVERFLOW = 7             'A number overflowed the maximum
+    OZ80_ERROR_Z80_PARAMETER = 8        'An unexpected parameter for a z80 instruction
 End Enum
 
 Public Enum OZ80_TOKEN
@@ -47,10 +48,6 @@ Public Enum OZ80_TOKEN
     TOKEN_LABEL = &HA0
     TOKEN_VARIABLE = &HA1
     TOKEN_PROPERTY = &HA2
-    'A list is a series of 1 or more expressions separated by commas,
-     'i.e.parameter lists
-    TOKEN_LIST = &HA3
-    TOKEN_NEXT = &HC1                   'Sandwiched between list items, i.e. ","
 End Enum
 
 Public Enum OZ80_TOKEN_DATA

@@ -1127,7 +1127,7 @@ Private Function CompStr( _
     End With
     
     Dim ii As Long
-    For ii = 0 To Length - 1
+    For ii = 0 To Length
         If LowCase(Text(Begin + ii)) <> CompStrArr(ii) Then Exit Function
     Next ii
     

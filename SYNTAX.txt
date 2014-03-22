@@ -367,15 +367,6 @@ referred to within the procedure as `.loop`. This prevents common labels within
 procedures (such as "loop") from clashing with other procedures' internal labelling.
 Outside of "myProcedure", it is referred to via the full label name.
 
-5.4.	Anonymous Labels
----------------------------------------------------------------------------------------
-Format:
-	-	<code>			`negative label
-	+	<code>			`forward label
-	=	<code>			`bi-directional label
-		jp : | djnz :		`refers to the PROC's label
-...
-
 
 6.	Variables
 =======================================================================================

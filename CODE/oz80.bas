@@ -12,7 +12,6 @@ Option Explicit
 
 Public Enum OZ80_ERROR
     OZ80_ERROR_NONE = 0                 'Assembly completed successfully
-    OZ80_ERROR_UNEXPECTED = 1           'I made a programming mistake
     OZ80_ERROR_FILENOTFOUND = 2         'Requested file does not exist
     OZ80_ERROR_FILEREAD = 3             'Some kind of problem with file handle open
     OZ80_ERROR_INVALIDNAME = 4          'Invalid label/property/variable name
@@ -25,9 +24,10 @@ End Enum
 Public Enum OZ80_TOKEN
     TOKEN_Z80 = &H1                     'Z80 instruction
     TOKEN_REGISTER = &H2                'Z80 register
-    TOKEN_FLAG = &H3                    'Z80 flag condition (used on JP, CALL &  RET)
-    TOKEN_OPERATOR = &H4                'Operator (e.g. "+ - * /")
-    TOKEN_KEYWORD = &H5                 'Keyword (IF/DATA/ECHO &c.)
+    TOKEN_FLAG = &H2                    'Z80 flag condition (used on JP, CALL &  RET)
+                                         '(part of registers, due to shared "C")
+    TOKEN_OPERATOR = &H3                'Operator (e.g. "+ - * /")
+    TOKEN_KEYWORD = &H4                 'Keyword (IF/DATA/ECHO &c.)
     
     'The parser automatically converts hexadecimal/binary numbers, so we only store
      'a 32-bit long (data field) in the token stream
@@ -152,14 +152,16 @@ Public Enum OZ80_TOKEN_DATA
     TOKEN_REGISTER_IY = TOKEN_REGISTER_IYL Or TOKEN_REGISTER_IYH
     
     'Z80 Flag Conditions ..............................................................
-    TOKEN_FLAG_C = &H1                  'Carry set
-    TOKEN_FLAG_NC = &H2                 'Carry not set
-    TOKEN_FLAG_Z = &H3                  'Zero set
-    TOKEN_FLAG_NZ = &H4                 'Zero not set
-    TOKEN_FLAG_M = &H5                  'Sign is set
-    TOKEN_FLAG_P = &H6                  'Sign is not set
-    TOKEN_FLAG_PE = &H7                 'Parity/Overflow is set
-    TOKEN_FLAG_PO = &H8                 'Parity/Overflow is not set
+    'The flags share the same space as the registers since they share the "C"
+     'register/flag and it's not possible to deterime which is implied early on
+    TOKEN_FLAG_C = &H8                  'Carry set
+    TOKEN_FLAG_NC = &H301               'Carry not set
+    TOKEN_FLAG_Z = &H302                'Zero set
+    TOKEN_FLAG_NZ = &H303               'Zero not set
+    TOKEN_FLAG_M = &H304                'Sign is set
+    TOKEN_FLAG_P = &H305                'Sign is not set
+    TOKEN_FLAG_PE = &H306               'Parity/Overflow is set
+    TOKEN_FLAG_PO = &H307               'Parity/Overflow is not set
     
     'Operators ........................................................................
     TOKEN_OPERATOR_ADD = &H1            'Add "+"
@@ -230,19 +232,7 @@ Public Function Assemble(ByVal FilePath As String) As OZ80_ERROR
     Let Assemble = Tokeniser.Tokenise(FilePath)
     If Assemble <> OZ80_ERROR_NONE Then GoTo Finish
     
-    'Stage 2: Validate & Optimise Token Stream _
-     ----------------------------------------------------------------------------------
-    'The token stream is only a word-for-word machine representation of the source _
-     code, we need to check the grammer for validity and whilst there we will do some _
-     optimisations on the stream (e.g. collapsing lists into byte streams)
-    
-    ' * * *
-    'NOTE: I shall monetarily skip implementing this as I know the test code I'm using _
-     is valid, and I want to make progress on actual assembling, which I am not certain _
-     how to approach just yet. I will return to validation later
-    ' * * *
-    
-    'Stage 3: Assemble _
+    'Stage 2: Assemble _
      ----------------------------------------------------------------------------------
     Dim Assembler As oz80Assembler
     Set Assembler = New oz80Assembler

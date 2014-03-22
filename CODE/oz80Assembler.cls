@@ -19,6 +19,8 @@ Option Explicit
 '======================================================================================
 'CLASS :: oz80Assembler
 
+'This class will take a token stream and do the actual assembling into a Z80 binary
+
 '/// API //////////////////////////////////////////////////////////////////////////////
 
 '<msdn.microsoft.com/en-us/library/windows/desktop/ms724408%28v=vs.85%29.aspx>
@@ -32,27 +34,12 @@ Private Tokens() As oz80Token
 Private TokenCount As Long
 Private Token As oz80Token
 
-Private Type OZ80_NAMEITEM
-    Name As String
-    Defined As Boolean
-End Type
-
 Private Bank As Long
 Private Slot As Long
 Private At As Long
 
 Private ROM() As Byte
 Private ROMSize As Long
-
-'This is used to provide the result to an expression evaluation; either it can be _
- calculated, in which case the result value is provided, otherwise it cannot yet be _
- calculated and the reason why is returned (undefined variable / label ...)
-Private Type OZ80_EXPR
-    Kind As OZ80_TOKEN
-    Data As OZ80_TOKEN_DATA
-    Value As Long
-End Type
-
 
 '/// EVENTS ///////////////////////////////////////////////////////////////////////////
 
@@ -66,6 +53,8 @@ End Sub
 
 '/// PUBLIC INTERFACE /////////////////////////////////////////////////////////////////
 
+'Process : Assemble a Z80 binary from a given token stream _
+ ======================================================================================
 Public Function Process(ByRef TokenStream As oz80Tokeniser) As OZ80_ERROR
     Debug.Print
     Debug.Print "* Assembling token stream"
@@ -87,34 +76,61 @@ Public Function Process(ByRef TokenStream As oz80Tokeniser) As OZ80_ERROR
     Let ROMSize = 32768
     ReDim ROM(0 To ROMSize - 1) As Byte
     
+    'Phase 1 : Determine the size of the assembly and fill in all label positions _
+     ----------------------------------------------------------------------------------
     Do
-        Call ContextRoot
+        Call ScopeRoot
     Loop While NextToken()
     
     Debug.Print "- Final ROM size is " & (ROMSize \ 1024) & " KB"
     Debug.Print "- Time: " & Format$((kernel32_GetTickCount() - Start) / 1000, "0.000") & "s"
 End Function
 
-'/// CONTEXT HANDLERS /////////////////////////////////////////////////////////////////
+'/// SCOPE HANDLERS ///////////////////////////////////////////////////////////////////
 
+'This is a structured map of the OZ80 syntax. _
+ The first column on the left is the name of a scope. For each scope, the columns to _
+ the right represent the heirarchy of allowable items in that scope. Whatever is in _
+ the third column is only allowed to follow what is in the second column. Items below _
+ one another within a column represent more than one item being allowed within a scope.
+'Another scope name within a column represents a nested scope. Items within brackets _
+ show optional items. _
+'An example:
+
+'           INCLUDE     <list>
+'                       BINARY      <text>  [START <expr>]  [LENGTH <expr>]
+'                                                           [STOP   <expr>]
+
+'Here the `INCLUDE` keyword can be followed by a list, *or* the keyword `BINARY`. _
+ If `BINARY` is used then it may be optionally followed by the `START` keyword and an _
+ expression. Only if the `START` keyword is included can `LENGTH` *or* `STOP` be used, _
+ but not both. `INCLUDE <list>` cannot be followed by `START` &c.
+
+'NOTES: *   You can take `{ASCII}` to mean any ASCII code 0-127 _
+        *   `{operator}` can be any one of `+ - * / ^ \`
+
+'Scope:     1           2           3       4       5       6       7       8 _
+ --------------------------------------------------------------------------------------
 '<text>     "           {ASCII}     "
 '
 '<expr>     <str>
-'           <number>    [<operator> <expr>]
-'           #var        [<operator> <expr>]
-'           : Label     [<operator> <expr>]
-'           (           <expr>      )
+'           <number>    [{operator} <expr>]
+'           #var        [{operator} <expr>]
+'           : Label     [{operator} <expr>]
+'           {           <expr>      }
 '
 '
-'<list>     <expr>      [,  <list>]
+'<list>     <text>      [,          <list>]
+'           <expr>      [,          <list>]
 '
 '<root>     :label
 '
 '           FILL        BINARY      <text>
 '                       <list>
 '
-'           INCLUDE     [BINARY]    <text>  [START <expr>]  [LENGTH <expr>]
-'                                                           [STOP <expr>]
+'           INCLUDE     <list>
+'                       BINARY      <text>  [START <expr>]  [LENGTH <expr>]
+'                                                           [STOP   <expr>]
 '
 '           TABLE       :label      <table>
 '
@@ -145,16 +161,20 @@ End Function
 '                       <code>
 '
 '           }
+'
 
-'ContextRoot : When we're not within the scope of anything else _
+'ScopeRoot : When we're not within the scope of anything else _
  ======================================================================================
-Private Function ContextRoot() As OZ80_ERROR
+Private Function ScopeRoot() As OZ80_ERROR
+    'When a file begins, it is at the top-most scope. Certain keywords are only _
+     allowed here. Once all nested scopes are exhausted, we return here
+    
     If Token.Kind = OZ80_TOKEN.TOKEN_LABEL Then
         'TODO: Define the label at the current assembly point
         Exit Function
         
     ElseIf Token.Kind = OZ80_TOKEN.TOKEN_KEYWORD Then
-        'Check allowed keywords at this context
+        'Check allowed keywords at this Scope
         If Token.Data = OZ80_TOKEN_DATA.TOKEN_KEYWORD_FILL Then
             'TODO
             Exit Function
@@ -178,14 +198,16 @@ Private Function ContextRoot() As OZ80_ERROR
         End If
     End If
     
-    'The root context also allows for source code, which is a context shared by blocks
-    Call ContextCode
+    'The root Scope also allows for source code, which is a Scope shared by blocks
+    Call ScopeCode
     
 End Function
 
-'ContextCode : Process areas where source code is allowed _
+'ScopeCode : Process areas where source code is allowed _
  ======================================================================================
-Private Function ContextCode() As OZ80_ERROR
+Private Function ScopeCode() As OZ80_ERROR
+    'This scope allows data statements and Z80 source code, e.g. root and procedures
+    
     If Token.Kind = OZ80_TOKEN.TOKEN_KEYWORD Then
         'TODO: Which keywords are allowed here
         If Token.Data = OZ80_TOKEN_DATA.TOKEN_KEYWORD_BYTE Then
@@ -197,13 +219,13 @@ Private Function ContextCode() As OZ80_ERROR
         ElseIf Token.Data = OZ80_TOKEN_DATA.TOKEN_KEYWORD_WORD Then
             'TODO
         Else
-            'TODO: Error - keyword not allowed at this context
+            'TODO: Error - keyword not allowed at this Scope
 '            Stop
         End If
         
     ElseIf Token.Kind = OZ80_TOKEN.TOKEN_Z80 Then
         'Process a Z80 instruction ...
-        Let ContextCode = ContextZ80()
+        Let ScopeCode = ScopeZ80()
     
     Else
         'TODO: Error - unexpected content at this point
@@ -211,65 +233,76 @@ Private Function ContextCode() As OZ80_ERROR
     End If
 End Function
 
-'ContextExpression: Evaluate a calculation into a value _
+'ScopeExpression: Evaluate a calculation into a value _
  ======================================================================================
-Private Function ContextExpression(ByRef Result As OZ80_EXPR) As OZ80_ERROR
-    Dim Operand1 As OZ80_EXPR
-    Dim Operand2 As OZ80_EXPR
-    Dim Operator As OZ80_TOKEN_DATA
+Private Function ScopeExpression( _
+    ByRef Result As Long, ByRef Unknown As Boolean _
+) As OZ80_ERROR
+    Dim Operand1 As Long                'First value in an expression
+    Dim Operand2 As Long                'Next value in an expression
+    Dim Operator As OZ80_TOKEN_DATA     'Operator to use with the expressions
     
-    'Begin with an operand
-    'TODO: Check for quote -- quotes are a lone expression and cannot be an operand
-    Let ContextExpression = ContextOperand(Operand1)
-    If ContextExpression <> OZ80_ERROR_NONE Then GoTo ErrorOut
+    Let Unknown = False
     
-    Let Result.Kind = Operand1.Kind
-    Let Result.Data = Operand1.Data
-    Let Result.Value = Operand1.Value
+    'Begin with fetching the first operand
+    Let ScopeExpression = ScopeOperand(Operand1, Unknown)
+    If ScopeExpression <> OZ80_ERROR_NONE Then GoTo ErrorOut
+    Let Result = Operand1
     
-    'TODO: Somehow record tokens that need values filling in later (such as labels)
-    
-    'Get the operator:
-    If NextToken() = False Then GoTo OutOfTokens
-    '(if not an operator assume the expression has finished)
+    'The file could legitimately end with an expression, so don't error out if the _
+     token stream comes to an end since the expression is valid. The parent scopes _
+     will handle an unexpected end error
+    If NextToken() = False Then Exit Function
+    'If next token is not an operator assume the expression has finished, _
+      the parent will handle whatever the next token is used for
     If Token.Kind <> OZ80_TOKEN.TOKEN_OPERATOR Then Exit Function
+    
 Continue:
     'Remember the operator for after we have operand 2 to work with
     Let Operator = Token.Data
     
     'Get the second operand
-    If NextToken() = False Then GoTo OutOfTokens
-    Let ContextExpression = ContextOperand(Operand2)
+    If NextToken() = False Then
+        'TODO: Error - unexpected end
+        Stop
+    End If
+    Let ScopeExpression = ScopeOperand(Operand2, Unknown)
     'Cannot have an operator hanging there without an operand following
-    If ContextExpression <> OZ80_ERROR_NONE Then GoTo ErrorOut
+    If ScopeExpression <> OZ80_ERROR_NONE Then
+        'TODO: Error - invalid use of operator
+        Stop
+    End If
     
-    'TODO: What if Operand1 is a register or an unknown label?
+    'If either operand were a yet-unknowable value (such as a label or property), _
+     then don't bother applying the operator, but do continue the expression so that _
+     we may reach the end and continue processing the tokens that follow
+    If Unknown = True Then
+        'Do nothing here, just fall out of the if block, skipping operator processing
     
-    'Now apply the operator
-    If Operator = TOKEN_OPERATOR_ADD Then
+    ElseIf Operator = TOKEN_OPERATOR_ADD Then
         'TODO: Check for overflow beforehand
-        Let Result.Value = Operand1.Value + Operand2.Value
+        Let Result = Operand1 + Operand2
         
     ElseIf Operator = TOKEN_OPERATOR_SUB Then
         'TODO: Check for overflow beforehand
-        Let Result.Value = Operand1.Value - Operand2.Value
+        Let Result = Operand1 - Operand2
     
     ElseIf Operator = TOKEN_OPERATOR_MUL Then
         'TODO: Check for overflow beforehand
-        Let Result.Value = Operand1.Value * Operand2.Value
+        Let Result = Operand1 * Operand2
     
     ElseIf Operator = TOKEN_OPERATOR_DIV Then
         'TODO: Check for divide by 0
         'TODO: Should we use Doubles so as to be accurate?
-        Let Result.Value = Operand1.Value / Operand2.Value
+        Let Result = Operand1 / Operand2
     
     ElseIf Operator = TOKEN_OPERATOR_POW Then
         'TODO: Check for overflow
-        Let Result.Value = Operand1.Value ^ Operand2.Value
+        Let Result = Operand1 ^ Operand2
     
     ElseIf Operator = TOKEN_OPERATOR_MOD Then
         'TODO
-        Let Result.Value = Operand1.Value Mod Operand2.Value
+        Let Result = Operand1 Mod Operand2
     
     ElseIf Operator = TOKEN_OPERATOR_AND Then
         'TODO
@@ -282,101 +315,164 @@ Continue:
     
     End If
     
-    'Check if the expression continues...
-    If NextToken() = False Then GoTo OutOfTokens
+    'The file could legitimately end with an expression, so don't error out if the _
+     token stream comes to an end since the expression is valid. The parent scopes _
+     will handle an unexpected end error
+    If NextToken() = False Then Exit Function
+    
+    'Does the expression continue?
     If Token.Kind = OZ80_TOKEN.TOKEN_OPERATOR Then
         'Set the current result as the first operand and go around again
-        Let Operand1.Value = Result.Value
+        Let Operand1 = Result
         GoTo Continue
     End If
-    
-    'At this point the expression is complete, but we need to inform the parent if _
-     it's incomplete due to yet-unknown values (such as labels). The parent can _
-     reserve the space in the ROM and fill in the correct value later on
-    
-    Exit Function
-    
-ErrorOut:
-OutOfTokens:
-    Stop
-End Function
-
-'ContextOperand : Get the value of one half of a calculation _
- ======================================================================================
-Private Function ContextOperand(ByRef Operand As OZ80_EXPR) As OZ80_ERROR
-    If Token.Kind = OZ80_TOKEN.TOKEN_LABEL Then
-        'TODO: If the label is not yet known, the expression cannot be evaluated _
-         until the label is reached
-        Let Operand.Kind = TOKEN_LABEL
-         
-    ElseIf Token.Kind = OZ80_TOKEN.TOKEN_NUMBER Then
-        'This is an easy one
-        Let Operand.Kind = TOKEN_NUMBER
-        Let Operand.Value = Token.Data
-        
-    ElseIf Token.Kind = OZ80_TOKEN.TOKEN_PROPERTY Then
-        'If a property, check the scope to see which variable / label it belongs to
-        'TODO
-        
-    ElseIf Token.Kind = OZ80_TOKEN.TOKEN_REGISTER Then
-        'An expression could contain a register, such as with `ld a, (ix+$8)`. _
-         When this happens, set the type of the operand to "register" and leave it _
-         to `ContextExpression` to manage it
-        Let Operand.Kind = TOKEN_REGISTER
-        Let Operand.Data = Token.Data
-        
-    ElseIf Token.Kind = OZ80_TOKEN.TOKEN_VARIABLE Then
-        'TODO: If the variable is not yet defined, error
-        
-    Else
-        'ERROR: Not a valid operand
-    End If
-    Exit Function
 
 ErrorOut:
 End Function
 
-'ContextParentheses : Calculate the contents of parentheses _
+'ScopeMemory : Work out a memory reference, i.e. `($????)` / `(ix+$??)` _
  ======================================================================================
-Private Function ContextParentheses(ByRef Result As OZ80_EXPR) As OZ80_ERROR
+Private Function ScopeMemory( _
+    ByRef Register As OZ80_TOKEN_DATA, _
+    ByRef Value As Long, ByRef Unknown As Boolean _
+) As OZ80_ERROR
     'It's assumed you've already checked the current token is an open parentheses _
      before calling this function, so move forward into the expression
     If NextToken() = False Then GoTo OutOfTokens
     
-    'Now process the expression; when it ends it will fold back here for us to check _
-     for the closing parentheses
-    If ContextExpression(Result) <> OZ80_ERROR_NONE Then
-        GoTo ErrorOut
+    'The first item in the expression can be a register, typically HL, IX or IY
+    If Token.Kind = OZ80_TOKEN.TOKEN_REGISTER Then
+        'The `IN` & `OUT` instructions accept only the C register
+        If Token.Data = TOKEN_REGISTER_C Then
+            Let Register = TOKEN_REGISTER_C
+        
+        '`LD` accepts registers BC & DE
+        ElseIf Token.Data = TOKEN_REGISTER_BC Then
+            Let Register = TOKEN_REGISTER_BC
+        ElseIf Token.Data = TOKEN_REGISTER_DE Then
+            Let Register = TOKEN_REGISTER_DE
+            
+        ElseIf Token.Data = TOKEN_REGISTER_HL Then
+            'TODO
+            Let Register = TOKEN_REGISTER_HL
+            
+        ElseIf Token.Data = TOKEN_REGISTER_IX Then
+            Let Register = TOKEN_REGISTER_IX
+            'IX can have an additional expression, e.g. `ld a, (ix+$8)`
+            GoTo AddExpr
+            
+        ElseIf Token.Data = TOKEN_REGISTER_IY Then
+            Let Register = TOKEN_REGISTER_IY
+            'IY can also have an additional expression, e.g. `ld a, (ix+$8)`
+            GoTo AddExpr
+            
+        ElseIf Token.Data = TOKEN_REGISTER_SP Then
+            Let Register = TOKEN_REGISTER_SP
+        Else
+            'ERROR: register not allowed here
+            Stop
+        End If
+        'Move to the next token, then check that it's the end of the memory reference
+        'TODO: out of tokens
+        If NextToken() = False Then Stop
+        GoTo EndScope
     End If
-    
-    'After the expression, there should be a closing parentheses
-    If NextToken() = False Then GoTo OutOfTokens
-    If Token.Kind <> OZ80_TOKEN.TOKEN_PARENCLOSE Then
-        'ERROR: Expression did not terminate correctly
-        'TODO: How do we handle lists within parentheses?
-        GoTo ErrorOut
-    End If
-    
-    Exit Function
 
-ErrorOut:
+AddExpr:
+    'The expression must begin with `+`
+    If Token.Kind = OZ80_TOKEN.TOKEN_OPERATOR & Token.Data = TOKEN_OPERATOR_ADD Then
+        'Try and calculate the expression. It might come back unknown and this will be _
+         passed on to the parent to decide if that's a problem or not
+        Let ScopeMemory = ScopeExpression(Value, Unknown)
+    End If
+    
+EndScope:
+    If Token.Kind = OZ80_TOKEN.TOKEN_PARENCLOSE Then Exit Function
+    'ERROR: Unexpected token in memory expression
+    'TODO
+    Exit Function
+    
 OutOfTokens:
+    'TODO
 End Function
 
-'ContextZ80 : Process a Z80 instruction _
+'ScopeOperand : Get the value of one half of a calculation _
  ======================================================================================
-Private Function ContextZ80() As OZ80_ERROR
+Private Function ScopeOperand( _
+    ByRef Operand As Long, ByRef Unknown As Boolean _
+) As OZ80_ERROR
+    If Token.Kind = OZ80_TOKEN.TOKEN_LABEL Then
+        'TODO: If the label is not yet known, the expression cannot be evaluated _
+         until the label is reached
+        Let Unknown = True
+         
+    ElseIf Token.Kind = OZ80_TOKEN.TOKEN_NUMBER Then
+        'This is an easy one
+        Let Operand = Token.Data
+        
+    ElseIf Token.Kind = OZ80_TOKEN.TOKEN_PROPERTY Then
+        'If a property, check the scope to see which variable / label it belongs to
+        'TODO
+        Let Unknown = True
+                
+    ElseIf Token.Kind = OZ80_TOKEN.TOKEN_VARIABLE Then
+        'TODO: If the variable is not yet defined, error
+        Let Unknown = True
+        
+    Else
+        'ERROR: Not a valid operand
+        Debug.Print Token.Line & ", " & Token.Col
+        Stop
+    End If
+End Function
+
+''ScopeParentheses : Calculate the contents of parentheses _
+' ======================================================================================
+'Private Function ScopeParentheses(ByRef Result As OZ80_EXPR) As OZ80_ERROR
+'    'It's assumed you've already checked the current token is an open parentheses _
+'     before calling this function, so move forward into the expression
+'    If NextToken() = False Then GoTo OutOfTokens
+'
+'    'Now process the expression; when it ends it will fold back here for us to check _
+'     for the closing parentheses
+'    If ScopeExpression(Result) <> OZ80_ERROR_NONE Then
+'        GoTo ErrorOut
+'    End If
+'
+'    'After the expression, there should be a closing parentheses
+'    If NextToken() = False Then GoTo OutOfTokens
+'    If Token.Kind <> OZ80_TOKEN.TOKEN_PARENCLOSE Then
+'        'ERROR: Expression did not terminate correctly
+'        'TODO: How do we handle lists within parentheses?
+'        GoTo ErrorOut
+'    End If
+'
+'    Exit Function
+'
+'ErrorOut:
+'OutOfTokens:
+'End Function
+
+'ScopeZ80 : Process a Z80 instruction _
+ ======================================================================================
+Private Function ScopeZ80() As OZ80_ERROR
+    'Parameter expressions might return an unknown value (such as when a label, which _
+     has not been reached yet, is used), which we may have to handle differently
+    Dim Value As Long, Unknown As Boolean
+    
     'ADC : Add with Carry _
      ----------------------------------------------------------------------------------
     If Token.Data = OZ80_TOKEN_DATA.TOKEN_Z80_ADC Then
+        If Token.Line = 7835 Then Stop
+        
         'The instruction has been read, move on to the parameters
         If NextToken() = False Then GoTo OutOfTokens
         'In all instances, the first parameter *MUST* be register A or HL
         'TODO: Support assumed A, i.e. `adc $8`?
         If Token.Kind <> OZ80_TOKEN.TOKEN_REGISTER Then
             'ERROR: First parameter to ADC must be a register
-            Let ContextZ80 = OZ80_ERROR_Z80_PARAMETER
-            Call RaiseError(ContextZ80, _
+            Let ScopeZ80 = OZ80_ERROR_Z80_PARAMETER
+            Call RaiseError(ScopeZ80, _
                 "Z80 instruction `ADC` requires the first parameter to be either " & _
                 "the `A` register or the `HL` register.", _
                 Token.Line, Token.Col _
@@ -384,15 +480,15 @@ Private Function ContextZ80() As OZ80_ERROR
         End If
         
         'The 16-bit parameters are the simplest to handle: _
-         ADC hl, bc|de|hl|sp ..........................................................
+         `ADC hl, bc|de|hl|sp` ........................................................
         If Token.Data = TOKEN_REGISTER_HL Then
             'Move to the second parameter
             If NextToken() = False Then GoTo OutOfTokens
             
             If Token.Kind <> OZ80_TOKEN.TOKEN_REGISTER Then
                 'ERROR: With HL as first, second parameter must be a register
-                Let ContextZ80 = OZ80_ERROR_Z80_PARAMETER
-                Call RaiseError(ContextZ80, _
+                Let ScopeZ80 = OZ80_ERROR_Z80_PARAMETER
+                Call RaiseError(ScopeZ80, _
                     "Z80 instruction `ADC` expects the second parameter to be a " & _
                     "register when the first parameter is the `HL` register.", _
                     Token.Line, Token.Col _
@@ -413,8 +509,8 @@ Private Function ContextZ80() As OZ80_ERROR
                 Call AddByte(&HED): Call AddByte(&H7A)
             Else
                 'ERROR: Invalid register for `ADC hl, ??`
-                Let ContextZ80 = OZ80_ERROR_Z80_PARAMETER
-                Call RaiseError(ContextZ80, _
+                Let ScopeZ80 = OZ80_ERROR_Z80_PARAMETER
+                Call RaiseError(ScopeZ80, _
                     "When the first parameter of the `ADC` Z80 instruction is the " & _
                     "`HL` register, the second parameter may only be one of the " & _
                     "following registers: `BC`, `DE`, `HL` or `SP`.", _
@@ -434,12 +530,12 @@ Private Function ContextZ80() As OZ80_ERROR
         If NextToken() = False Then GoTo OutOfTokens
         
         'If the second parameter is an 8-bit register: _
-         ADC a, a|b|c|d|e|h|l .........................................................
+         `ADC a, a|b|c|d|e|h|l` .......................................................
         If Token.Kind = OZ80_TOKEN.TOKEN_REGISTER Then
             If Token.Data = TOKEN_REGISTER_A Then
                 Call AddByte(&H88 + 7)  'Add opcodes for `ADC a, a`
             ElseIf Token.Data = TOKEN_REGISTER_B Then
-                Call AddByte(&H88)      'Add opcodes for `ADC a, b`
+                Call AddByte(&H88 + 0)  'Add opcodes for `ADC a, b`
             ElseIf Token.Data = TOKEN_REGISTER_C Then
                 Call AddByte(&H88 + 1)  'Add opcodes for `ADC a, c`
             ElseIf Token.Data = TOKEN_REGISTER_D Then
@@ -454,16 +550,49 @@ Private Function ContextZ80() As OZ80_ERROR
                 'ERROR: If second parameter is a register it must be A/B/C/D/E/H or L
                 Stop
             End If
+            Exit Function
         End If
         
-        'Try to evaluate the next parameter
-        Dim Expr As OZ80_EXPR
-        Call ContextExpression(Expr)
+        'Check if there's a memory reference
+        If Token.Kind = OZ80_TOKEN.TOKEN_PARENOPEN Then
+            Dim Register As OZ80_TOKEN_DATA
+            Let ScopeZ80 = ScopeMemory(Register, Value, Unknown)
+            If ScopeZ80 <> OZ80_ERROR_NONE Then Stop
+            
+            '`ADC a, (hl)` ............................................................
+            If Register = TOKEN_REGISTER_HL Then
+                'Add opcodes for `ADC a, (hl)`
+                Call AddByte(&H8E)
+                
+            'ADC a, (ix+$8|iy+$8) .....................................................
+            ElseIf Register = TOKEN_REGISTER_IX Or Register = TOKEN_REGISTER_IY Then
+                'TODO: Check the value is not out of 8-bit range
+                'Add opcodes for `ADC a, (ix+$8|iy+$8)`
+                If Register = TOKEN_REGISTER_IX Then
+                    Call AddByte(&HDD)
+                Else
+                    Call AddByte(&HFD)
+                End If
+                Call AddByte(&H8E)
+                'TODO: If value was invalid, make sure to come back to it later
+                Call AddByte(CByte(Value))
+                
+            Else
+                'ERROR: Invalid memory reference for this instruction
+                Stop
+            End If
+            Exit Function
+        End If
         
-        'ADC a, (hl) ..................................................................
-        'ADC a, (ix+$8|iy+$8) .........................................................
-        'ADC a, $8 ....................................................................
-        
+        'Finally check for a numerical expression _
+         `ADC a, $8` ..................................................................
+        Let ScopeZ80 = ScopeExpression(Value, Unknown)
+        If ScopeZ80 <> OZ80_ERROR_NONE Then Stop
+        'TODO: Check the value is not out of 8-bit range
+        'Add the opcodes for `ADC a, $8`
+        Call AddByte(&HCE)
+        'TODO: If value was invalid, make sure to come back to it later
+        Call AddByte(CByte(Value))
     
     'ADD _
      ----------------------------------------------------------------------------------
@@ -507,98 +636,144 @@ Private Function ContextZ80() As OZ80_ERROR
         'CP $8
         'CP (hl|ix+$8|iy+$8)
     
-    ElseIf Token.Data = OZ80_TOKEN_DATA.TOKEN_Z80_CPD Then '................. `cpd` ...
+    'CPD : Compare & Decrement _
+     ----------------------------------------------------------------------------------
+    ElseIf Token.Data = OZ80_TOKEN_DATA.TOKEN_Z80_CPD Then
         'No parameters, add opcodes $ED $A9
         Call AddByte(&HED): Call AddByte(&HA9)
     
-    ElseIf Token.Data = OZ80_TOKEN_DATA.TOKEN_Z80_CPDR Then '............... `cpdr` ...
+    'CPDR : Compare, Decrement & Repeat _
+     ----------------------------------------------------------------------------------
+    ElseIf Token.Data = OZ80_TOKEN_DATA.TOKEN_Z80_CPDR Then
         'No parameters, add opcodes $ED $B9
         Call AddByte(&HED): Call AddByte(&HB9)
     
-    ElseIf Token.Data = OZ80_TOKEN_DATA.TOKEN_Z80_CPI Then '................. `cpi` ...
+    'CPI : Compare & Increment _
+     ----------------------------------------------------------------------------------
+    ElseIf Token.Data = OZ80_TOKEN_DATA.TOKEN_Z80_CPI Then
         'No parameters, add opcodes $ED $A1
         Call AddByte(&HED): Call AddByte(&HA1)
             
-    ElseIf Token.Data = OZ80_TOKEN_DATA.TOKEN_Z80_CPIR Then '............... `cpir` ...
+    'CPIR : Compare, Increment & Repeat _
+     ----------------------------------------------------------------------------------
+    ElseIf Token.Data = OZ80_TOKEN_DATA.TOKEN_Z80_CPIR Then
         'No parameters, add opcodes $ED $B1
         Call AddByte(&HED): Call AddByte(&HB1)
     
-    ElseIf Token.Data = OZ80_TOKEN_DATA.TOKEN_Z80_CPL Then '................. `cpl` ...
+    'CPL : "Complement" -- 8-bit invert _
+     ----------------------------------------------------------------------------------
+    ElseIf Token.Data = OZ80_TOKEN_DATA.TOKEN_Z80_CPL Then
         'No parameters, add opcode $2F
         Call AddByte(&H2F)
     
-    ElseIf Token.Data = OZ80_TOKEN_DATA.TOKEN_Z80_DAA Then '................. `daa` ...
+    'DAA : Decimal Adjust Accumulator (decimal add) _
+     ----------------------------------------------------------------------------------
+    ElseIf Token.Data = OZ80_TOKEN_DATA.TOKEN_Z80_DAA Then
         'No parameters, add opcode $27
         Call AddByte(&H27)
     
-    ElseIf Token.Data = OZ80_TOKEN_DATA.TOKEN_Z80_DEC Then '................. `dec` ...
+    'DEC : Decrement _
+     ----------------------------------------------------------------------------------
+    ElseIf Token.Data = OZ80_TOKEN_DATA.TOKEN_Z80_DEC Then
         'DEC a|b|c|d|e|h|l
         'DEC (hl|ix+$8|iy+$8)
         'DEC bc|de|hl|sp|ix|iy
     
-    ElseIf Token.Data = OZ80_TOKEN_DATA.TOKEN_Z80_DI Then '................... `di` ...
+    'DI : Disable Interrupts _
+     ----------------------------------------------------------------------------------
+    ElseIf Token.Data = OZ80_TOKEN_DATA.TOKEN_Z80_DI Then
         'No parameters, add opcode $F3
         Call AddByte(&HF3)
         
-    ElseIf Token.Data = OZ80_TOKEN_DATA.TOKEN_Z80_DJNZ Then '............... `djnz` ...
+    'DJNZ : Decrement, Jump if Not Zero _
+     ----------------------------------------------------------------------------------
+    ElseIf Token.Data = OZ80_TOKEN_DATA.TOKEN_Z80_DJNZ Then
         'DJNZ $8
     
-    ElseIf Token.Data = OZ80_TOKEN_DATA.TOKEN_Z80_EI Then '................... `ei` ...
+    'EI : Enable Interrupts _
+     ----------------------------------------------------------------------------------
+    ElseIf Token.Data = OZ80_TOKEN_DATA.TOKEN_Z80_EI Then
         'No parameters, add opcode $FB
         Call AddByte(&HFB)
     
-    ElseIf Token.Data = OZ80_TOKEN_DATA.TOKEN_Z80_EX Then '................... `ex` ...
+    'EX : Exchange registers _
+     ----------------------------------------------------------------------------------
+    ElseIf Token.Data = OZ80_TOKEN_DATA.TOKEN_Z80_EX Then
         'EX (sp), hl|ix|iy
         'EX af, af'
         'EX de, hl
     
-    ElseIf Token.Data = OZ80_TOKEN_DATA.TOKEN_Z80_EXX Then '................. `exx` ...
+    'EXX : Swap the registers with their shadow values _
+     ----------------------------------------------------------------------------------
+    ElseIf Token.Data = OZ80_TOKEN_DATA.TOKEN_Z80_EXX Then
         'No parameters, add opcode $D9
         Call AddByte(&HD9)
     
-    ElseIf Token.Data = OZ80_TOKEN_DATA.TOKEN_Z80_HALT Then '............... `halt` ...
+    'HALT : Stop the processor until the next interrupt _
+     ----------------------------------------------------------------------------------
+    ElseIf Token.Data = OZ80_TOKEN_DATA.TOKEN_Z80_HALT Then
         'No parameters, add opcode $76
         Call AddByte(&H76)
         
-    ElseIf Token.Data = OZ80_TOKEN_DATA.TOKEN_Z80_IM Then '................... `im` ...
+    'IM : Interrupt Mode _
+     ----------------------------------------------------------------------------------
+    ElseIf Token.Data = OZ80_TOKEN_DATA.TOKEN_Z80_IM Then
         'IM 0-2
     
-    ElseIf Token.Data = OZ80_TOKEN_DATA.TOKEN_Z80_IN Then '................... `in` ...
+    'IN : Input from port _
+     ----------------------------------------------------------------------------------
+    ElseIf Token.Data = OZ80_TOKEN_DATA.TOKEN_Z80_IN Then
         'IN a, ($8)
         'IN (c)
         'IN a|b|c|d|e|h|l, (c)
     
-    ElseIf Token.Data = OZ80_TOKEN_DATA.TOKEN_Z80_INC Then '................. `inc` ...
+    'INC : Increment _
+     ----------------------------------------------------------------------------------
+    ElseIf Token.Data = OZ80_TOKEN_DATA.TOKEN_Z80_INC Then
         'INC a|b|c|d|e|h|l
         'INC bc|de|hl|sp|ix|iy
         'INC (hl|ix+$8|iy+$8)
         
-    ElseIf Token.Data = OZ80_TOKEN_DATA.TOKEN_Z80_IND Then '................. `ind` ...
+    'IND : _
+     ----------------------------------------------------------------------------------
+    ElseIf Token.Data = OZ80_TOKEN_DATA.TOKEN_Z80_IND Then
         'No parameters, add opcodes $ED $AA
         Call AddByte(&HED): Call AddByte(&HAA)
     
-    ElseIf Token.Data = OZ80_TOKEN_DATA.TOKEN_Z80_INDR Then '............... `indr` ...
+    'INDR : _
+     ----------------------------------------------------------------------------------
+    ElseIf Token.Data = OZ80_TOKEN_DATA.TOKEN_Z80_INDR Then
         'No parameters, add opcodes $ED $BA
         Call AddByte(&HED): Call AddByte(&HBA)
     
-    ElseIf Token.Data = OZ80_TOKEN_DATA.TOKEN_Z80_INI Then '................. `ini` ...
+    'INI : _
+     ----------------------------------------------------------------------------------
+    ElseIf Token.Data = OZ80_TOKEN_DATA.TOKEN_Z80_INI Then
         'No parameters, add opcodes $ED $A2
         Call AddByte(&HED): Call AddByte(&HA2)
     
-    ElseIf Token.Data = OZ80_TOKEN_DATA.TOKEN_Z80_INIR Then '............... `inir` ...
+    'INIR : _
+     ----------------------------------------------------------------------------------
+    ElseIf Token.Data = OZ80_TOKEN_DATA.TOKEN_Z80_INIR Then
         'No parameters, add opcodes $ED $B2
         Call AddByte(&HED): Call AddByte(&HB2)
         
-    ElseIf Token.Data = OZ80_TOKEN_DATA.TOKEN_Z80_JP Then '................... `jp` ...
+    'JP : Jump to absolute address (within memory space) _
+     ----------------------------------------------------------------------------------
+    ElseIf Token.Data = OZ80_TOKEN_DATA.TOKEN_Z80_JP Then
         'JP $16
         'JP (hl|ix|iy)
         'JP c|nc|m|p|z|nz|pe|po, $16
     
-    ElseIf Token.Data = OZ80_TOKEN_DATA.TOKEN_Z80_JR Then '................... `jr` ...
+    'JR : Jump relatively, forwards or backwards _
+     ----------------------------------------------------------------------------------
+    ElseIf Token.Data = OZ80_TOKEN_DATA.TOKEN_Z80_JR Then
         'JR $8
         'JR c|nc|z|nz, $8
     
-    ElseIf Token.Data = OZ80_TOKEN_DATA.TOKEN_Z80_LD Then '................... `ld` ...
+    'LD : Load registers & values _
+     ----------------------------------------------------------------------------------
+    ElseIf Token.Data = OZ80_TOKEN_DATA.TOKEN_Z80_LD Then
         'LD i|r, a
         'LD a, i|r
         'LD a|b, b|c|d|e|h|l
@@ -611,155 +786,231 @@ Private Function ContextZ80() As OZ80_ERROR
         'LD (bc|de), a
         'LD ($16), a|bc|de|hl|ix|iy|sp
     
-    ElseIf Token.Data = OZ80_TOKEN_DATA.TOKEN_Z80_LDD Then '................. `ldd` ...
+    'LDD : _
+     ----------------------------------------------------------------------------------
+    ElseIf Token.Data = OZ80_TOKEN_DATA.TOKEN_Z80_LDD Then
         'No parameters, add opcodes $ED $A8
         Call AddByte(&HED): Call AddByte(&HA8)
     
-    ElseIf Token.Data = OZ80_TOKEN_DATA.TOKEN_Z80_LDDR Then '............... `lddr` ...
+    'LDDR : _
+     ----------------------------------------------------------------------------------
+    ElseIf Token.Data = OZ80_TOKEN_DATA.TOKEN_Z80_LDDR Then
         'No parameters, add opcodes $ED $B8
         Call AddByte(&HED): Call AddByte(&HB8)
     
-    ElseIf Token.Data = OZ80_TOKEN_DATA.TOKEN_Z80_LDI Then '................. `ldi` ...
+    'LDI : _
+     ----------------------------------------------------------------------------------
+    ElseIf Token.Data = OZ80_TOKEN_DATA.TOKEN_Z80_LDI Then
         'No parameters, add opcodes $ED $A0
         Call AddByte(&HED): Call AddByte(&HA0)
         
-    ElseIf Token.Data = OZ80_TOKEN_DATA.TOKEN_Z80_LDIR Then '............... `ldir` ...
+    'LDIR : _
+     ----------------------------------------------------------------------------------
+    ElseIf Token.Data = OZ80_TOKEN_DATA.TOKEN_Z80_LDIR Then
         'No parameters, add opcodes $ED $B0
         Call AddByte(&HED): Call AddByte(&HB0)
     
-    ElseIf Token.Data = OZ80_TOKEN_DATA.TOKEN_Z80_NEG Then '................. `neg` ...
+    'NEG : _
+     ----------------------------------------------------------------------------------
+    ElseIf Token.Data = OZ80_TOKEN_DATA.TOKEN_Z80_NEG Then
         'No parameters, add opcodes $ED $44
         Call AddByte(&HED): Call AddByte(&H44)
     
-    ElseIf Token.Data = OZ80_TOKEN_DATA.TOKEN_Z80_NOP Then '................. `nop` ...
+    'NOP : No Operation _
+     ----------------------------------------------------------------------------------
+    ElseIf Token.Data = OZ80_TOKEN_DATA.TOKEN_Z80_NOP Then
         'No parameters, add opcode $00
         Call AddByte(&H0)
     
-    ElseIf Token.Data = OZ80_TOKEN_DATA.TOKEN_Z80_OR Then '................... `or` ...
+    'OR : Bitwise Or _
+     ----------------------------------------------------------------------------------
+    ElseIf Token.Data = OZ80_TOKEN_DATA.TOKEN_Z80_OR Then
         'OR a|b|c|d|e|h|l|$8
         'OR (hl|ix+$8|iy+$8)
     
-    ElseIf Token.Data = OZ80_TOKEN_DATA.TOKEN_Z80_OUT Then '................. `out` ...
+    'OUT : _
+     ----------------------------------------------------------------------------------
+    ElseIf Token.Data = OZ80_TOKEN_DATA.TOKEN_Z80_OUT Then
         'OUT ($8), a
         'OUT (c), 0|a|b|c|d|e|h|l
     
-    ElseIf Token.Data = OZ80_TOKEN_DATA.TOKEN_Z80_OUTD Then '............... `outd` ...
+    'OUTD : _
+     ----------------------------------------------------------------------------------
+    ElseIf Token.Data = OZ80_TOKEN_DATA.TOKEN_Z80_OUTD Then
         'No parameters, add opcodes $ED $AB
         Call AddByte(&HED): Call AddByte(&HAB)
     
-    ElseIf Token.Data = OZ80_TOKEN_DATA.TOKEN_Z80_OTDR Then '............... `otdr` ...
+    'OTDR : _
+     ----------------------------------------------------------------------------------
+    ElseIf Token.Data = OZ80_TOKEN_DATA.TOKEN_Z80_OTDR Then
         'No parameters, add opcodes $ED $BB
         Call AddByte(&HED): Call AddByte(&HBB)
     
-    ElseIf Token.Data = OZ80_TOKEN_DATA.TOKEN_Z80_OUTI Then '............... `outi` ...
+    'OUTI : _
+     ----------------------------------------------------------------------------------
+    ElseIf Token.Data = OZ80_TOKEN_DATA.TOKEN_Z80_OUTI Then
         'No parameters, add opcodes $ED $A3
         Call AddByte(&HED): Call AddByte(&HA3)
     
-    ElseIf Token.Data = OZ80_TOKEN_DATA.TOKEN_Z80_OTIR Then '............... `otir` ...
+    'OTIR : _
+     ----------------------------------------------------------------------------------
+    ElseIf Token.Data = OZ80_TOKEN_DATA.TOKEN_Z80_OTIR Then
         'No parameters, add opcodes $ED $B3
         Call AddByte(&HED): Call AddByte(&HB3)
         
-    ElseIf Token.Data = OZ80_TOKEN_DATA.TOKEN_Z80_POP Then '................. `pop` ...
+    'POP : _
+     ----------------------------------------------------------------------------------
+    ElseIf Token.Data = OZ80_TOKEN_DATA.TOKEN_Z80_POP Then
         'POP af|bc|de|hl|ix|iy
     
-    ElseIf Token.Data = OZ80_TOKEN_DATA.TOKEN_Z80_PUSH Then '............... `push` ...
+    'PUSH : _
+     ----------------------------------------------------------------------------------
+    ElseIf Token.Data = OZ80_TOKEN_DATA.TOKEN_Z80_PUSH Then
         'PUSH af|bc|de|hl|ix|iy
     
-    ElseIf Token.Data = OZ80_TOKEN_DATA.TOKEN_Z80_RES Then '................. `res` ...
+    'RES : _
+     ----------------------------------------------------------------------------------
+    ElseIf Token.Data = OZ80_TOKEN_DATA.TOKEN_Z80_RES Then
         'RES 0-7, a|b|c|d|e|h|l
         'RES 0-7, (hl|ix+$8|iy+$8)
     
-    ElseIf Token.Data = OZ80_TOKEN_DATA.TOKEN_Z80_RET Then '................. `ret` ...
+    'RET : _
+     ----------------------------------------------------------------------------------
+    ElseIf Token.Data = OZ80_TOKEN_DATA.TOKEN_Z80_RET Then
         'RET
         'RET c|nc|m|p|z|nz|pe|po
     
-    ElseIf Token.Data = OZ80_TOKEN_DATA.TOKEN_Z80_RETI Then '............... `reti` ...
+    'RETI : _
+     ----------------------------------------------------------------------------------
+    ElseIf Token.Data = OZ80_TOKEN_DATA.TOKEN_Z80_RETI Then
         'No parameters, add opcodes $ED $4D
         Call AddByte(&HED): Call AddByte(&H4D)
     
-    ElseIf Token.Data = OZ80_TOKEN_DATA.TOKEN_Z80_RETN Then '............... `retn` ...
+    'RETN : _
+     ----------------------------------------------------------------------------------
+    ElseIf Token.Data = OZ80_TOKEN_DATA.TOKEN_Z80_RETN Then
         'No parameters, add opcodes $ED $45
         Call AddByte(&HED): Call AddByte(&H45)
     
-    ElseIf Token.Data = OZ80_TOKEN_DATA.TOKEN_Z80_RLA Then '................. `rla` ...
+    'RLA : _
+     ----------------------------------------------------------------------------------
+    ElseIf Token.Data = OZ80_TOKEN_DATA.TOKEN_Z80_RLA Then
         'No parameters, add opcode $17
         Call AddByte(&H17)
     
-    ElseIf Token.Data = OZ80_TOKEN_DATA.TOKEN_Z80_RL Then '................... `rl` ...
+    'RL : _
+     ----------------------------------------------------------------------------------
+    ElseIf Token.Data = OZ80_TOKEN_DATA.TOKEN_Z80_RL Then
         'RL a|b|c|d|e|h|l
         'RL (hl|ix+$8|iy+$8)
     
-    ElseIf Token.Data = OZ80_TOKEN_DATA.TOKEN_Z80_RLCA Then '............... `rlca` ...
+    'RLCA : _
+     ----------------------------------------------------------------------------------
+    ElseIf Token.Data = OZ80_TOKEN_DATA.TOKEN_Z80_RLCA Then
         'No parameters, add opcode $07
         Call AddByte(&H7)
         
-    ElseIf Token.Data = OZ80_TOKEN_DATA.TOKEN_Z80_RLC Then '................. `rlc` ...
+    'RLC : _
+     ----------------------------------------------------------------------------------
+    ElseIf Token.Data = OZ80_TOKEN_DATA.TOKEN_Z80_RLC Then
         'RLC a|b|c|d|e|h|l
         'RLC (hl|ix+$8|iy+$8)
     
-    ElseIf Token.Data = OZ80_TOKEN_DATA.TOKEN_Z80_RLD Then '................. `rld` ...
+    'RLD : _
+     ----------------------------------------------------------------------------------
+    ElseIf Token.Data = OZ80_TOKEN_DATA.TOKEN_Z80_RLD Then
         'No parameters, add opcodes $ED $6F
         Call AddByte(&HED): Call AddByte(&H6F)
     
-    ElseIf Token.Data = OZ80_TOKEN_DATA.TOKEN_Z80_RRA Then '................. `rra` ...
+    'RRA : _
+     ----------------------------------------------------------------------------------
+    ElseIf Token.Data = OZ80_TOKEN_DATA.TOKEN_Z80_RRA Then
         'No parameters, add opcode $1F
         Call AddByte(&H1F)
     
-    ElseIf Token.Data = OZ80_TOKEN_DATA.TOKEN_Z80_RR Then '................... `rr` ...
+    'RR : _
+     ----------------------------------------------------------------------------------
+    ElseIf Token.Data = OZ80_TOKEN_DATA.TOKEN_Z80_RR Then
         'RR a|b|c|d|e|h|l
         'RR (hl|ix+$8|iy+$8)
     
-    ElseIf Token.Data = OZ80_TOKEN_DATA.TOKEN_Z80_RRCA Then '............... `rrca` ...
+    'RRCA : Rotate Accumulator Right (Circular) _
+     ----------------------------------------------------------------------------------
+    ElseIf Token.Data = OZ80_TOKEN_DATA.TOKEN_Z80_RRCA Then
         'No parameters, add opcode $0F
         Call AddByte(&HF)
     
-    ElseIf Token.Data = OZ80_TOKEN_DATA.TOKEN_Z80_RRC Then '................. `rrc` ...
+    'RRC : Rotate Right (Circular) _
+     ----------------------------------------------------------------------------------
+    ElseIf Token.Data = OZ80_TOKEN_DATA.TOKEN_Z80_RRC Then
         'RRC a|b|c|d|e|h|l
         'RRC (hl|ix+$8|iy+$8)
     
-    ElseIf Token.Data = OZ80_TOKEN_DATA.TOKEN_Z80_RRD Then '................. `rrd` ...
+    'RRD : 4-bit Rotate Right _
+     ----------------------------------------------------------------------------------
+    ElseIf Token.Data = OZ80_TOKEN_DATA.TOKEN_Z80_RRD Then
         'No parameters, add opcodes $ED $67
         Call AddByte(&HED): Call AddByte(&H67)
     
-    ElseIf Token.Data = OZ80_TOKEN_DATA.TOKEN_Z80_RST Then '................. `rst` ...
+    'RST : "Reset" - Jump into page 0 _
+     ----------------------------------------------------------------------------------
+    ElseIf Token.Data = OZ80_TOKEN_DATA.TOKEN_Z80_RST Then
         'RST $00|$08|$10|$18|$20|$28|$30|$38
     
-    ElseIf Token.Data = OZ80_TOKEN_DATA.TOKEN_Z80_SBC Then '................. `sbc` ...
+    'SBC : Subtract with Carry _
+     ----------------------------------------------------------------------------------
+    ElseIf Token.Data = OZ80_TOKEN_DATA.TOKEN_Z80_SBC Then
         'SBC a|b|c|d|e|h|l
         'SBC a, $8
         'SBC (hl)
         'SBC a, (ix+$8|iy+$8)
         'SBC hl, bc|de|hl|sp
     
-    ElseIf Token.Data = OZ80_TOKEN_DATA.TOKEN_Z80_SCF Then '................. `scf` ...
+    'SCF : Set the Carry Flag _
+     ----------------------------------------------------------------------------------
+    ElseIf Token.Data = OZ80_TOKEN_DATA.TOKEN_Z80_SCF Then
         'No parameters, add opcode $37
         Call AddByte(&H37)
     
-    ElseIf Token.Data = OZ80_TOKEN_DATA.TOKEN_Z80_SET Then '................. `set` ...
+    'SET : Set individual bit _
+     ----------------------------------------------------------------------------------
+    ElseIf Token.Data = OZ80_TOKEN_DATA.TOKEN_Z80_SET Then
         'SET 0-7, a|b|c|d|e|h|l
         'SET 0-7, (hl|ix+$8|iy+$8)
     
-    ElseIf Token.Data = OZ80_TOKEN_DATA.TOKEN_Z80_SLA Then '................. `sla` ...
+    'SLA : _
+     ----------------------------------------------------------------------------------
+    ElseIf Token.Data = OZ80_TOKEN_DATA.TOKEN_Z80_SLA Then
         'SLA a|b|c|d|e|h|l
         'SLA (hl|ix+$8|iy+$8)
     
-    ElseIf Token.Data = OZ80_TOKEN_DATA.TOKEN_Z80_SRA Then '................. `sra` ...
+    'SRA : Arithmetic Shift Right _
+     ----------------------------------------------------------------------------------
+    ElseIf Token.Data = OZ80_TOKEN_DATA.TOKEN_Z80_SRA Then
         'SRA a|b|c|d|e|h|l
         'SRA (hl|ix+$8|iy+$8)
     
-    ElseIf Token.Data = OZ80_TOKEN_DATA.TOKEN_Z80_SLL Then '................. `sll` ...
+    'SLL : Logical Shift Left (undocumented opcode) _
+     ----------------------------------------------------------------------------------
+    ElseIf Token.Data = OZ80_TOKEN_DATA.TOKEN_Z80_SLL Then
         'SLL a|b|c|d|e|h|l
         'SLL (hl|ix+$8|iy+$8)
     
-    ElseIf Token.Data = OZ80_TOKEN_DATA.TOKEN_Z80_SRL Then '................. `srl` ...
+    'SRL : Logical Shift Right _
+     ----------------------------------------------------------------------------------
+    ElseIf Token.Data = OZ80_TOKEN_DATA.TOKEN_Z80_SRL Then
         'SRL a|b|c|d|e|h|l
         'SRL (hl|ix+$8|iy+$8)
     
-    ElseIf Token.Data = OZ80_TOKEN_DATA.TOKEN_Z80_SUB Then '................. `sub` ...
+    'SUB : Subtract _
+     ----------------------------------------------------------------------------------
+    ElseIf Token.Data = OZ80_TOKEN_DATA.TOKEN_Z80_SUB Then
         'SUB a|b|c|d|e|h|l|$8
         'SUB (hl|ix+$8|iy+$8)
     
-    ElseIf Token.Data = OZ80_TOKEN_DATA.TOKEN_Z80_XOR Then '................. `xor` ...
+    'XOR : Exclusive bitwise Or _
+     ----------------------------------------------------------------------------------
+    ElseIf Token.Data = OZ80_TOKEN_DATA.TOKEN_Z80_XOR Then
         'XOR a|b|c|d|e|h|l|$8
         'XOR (hl|ix+$8|iy+$8)
     

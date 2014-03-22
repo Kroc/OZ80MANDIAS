@@ -241,6 +241,8 @@ End Sub
 
 '/// PUBLIC INTERFACE /////////////////////////////////////////////////////////////////
 
+'GetTokenArray : Allow the outside to read the token stream _
+ ======================================================================================
 Friend Sub GetTokenArray(ByRef TokenArray() As oz80Token)
     Let TokenArray = Tokens
 End Sub

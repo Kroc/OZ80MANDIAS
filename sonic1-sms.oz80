@@ -408,24 +408,24 @@ PROC :START AT $0000 {
 	im	1			`set the interrupt mode to 1 --
 					 `$0038 will be called at 50/60Hz 
 
--	`wait for the scanline to reach 176 (no idea why)
-	in	a, (#SMS_CURRENT_SCANLINE)
+	`wait for the scanline to reach 176 (no idea why)
+._1	in	a, (#SMS_CURRENT_SCANLINE)
 	cp	176
-	jr	nz, -
+	jr	nz, ._1
 	jp	:init
 }
 
 `______________________________________________________________________________________
 
-`the `rst $18` instruction jumps here
+`the `RST $18` instruction jumps here
 AT $0018
 	jp	:playMusic		`play a song specified by A
 
-`the `rst $20` instruction jumps here
+`the `RST $20` instruction jumps here
 AT $0020
 	jp	:muteSound
 
-`the `rst $28` instruction jumps here
+`the `RST $28` instruction jumps here
 AT $0028
 	jp	:playSFX		`play sound effect specified by A
 
@@ -441,13 +441,15 @@ DATA "Developed By (C) 1991 Ancient - S", $A5, "Hayashi.", $00
 
 AT $0066
 	di				`disable interrupts
-	push	af
+	push	af;stack
+	
 	`level time HUD / lightning flags
-	ld	a, (iy+#vars.timeLightningFlags)
+	ld	a;pauseStatus, (iy+#vars.timeLightningFlags)
 	xor	%00001000		`flip bit 3 (the pause bit)
 	`save it back
-	ld	(iy+#vars.timeLightningFlags), a
-	pop	af
+	ld	(iy+#vars.timeLightningFlags), a;pauseStatus
+	
+	pop	af;stack
 	ei				`enable interrupts
 	ret
 
@@ -466,10 +468,11 @@ PROC :interruptHandler {
 	      `trailing stack exchanges and save some cycles on the interrupt handler
 	push	af, hl, de, bc
 	
-	in	a, (#SMS_VDP_CONTROL)	`get the status of the VDP
+	`get the status of the VDP
+	in	a;vdpStatus, (#SMS_VDP_CONTROL)
 	
 	bit	7, (iy+#vars.flags6)	`check the underwater flag
-	jr	z, +			`if off, skip ahead
+	jr	z, ._1			`if off, skip ahead
 	
 	`the raster split is controlled across multiple interrupts,
 	 `a counter is used to remember at which step the procedure is at
@@ -483,10 +486,10 @@ PROC :interruptHandler {
 	`--- initialise raster split --------------------------------------------------
 	ld	a, (#RAM_WATERLINE)	`check the water line height
 	and	a
-	jr	z, +			`if it's zero (above the screen), skip
+	jr	z, ._1			`if it's zero (above the screen), skip
 	
 	cp	$FF			`or 255 (below the screen),
-	jr	z, +			`skip
+	jr	z, ._1			`skip
 	
 	`copy the water line position into the working space for the raster split.
 	 `this is to avoid the water line changing height between the multiple
@@ -513,7 +516,7 @@ PROC :interruptHandler {
 	
 	`------------------------------------------------------------------------------
 	
-+	push	ix, iy
+._1	push	ix, iy
 	
 	`remember the current page 1 & 2 banks
 	ld	hl, (#RAM_PAGE_1)
@@ -658,7 +661,7 @@ PROC :loadPaletteFromInterrupt
 	`if the level is underwater then skip loading the palette as the palettes
 	 `are handled by the code that does the raster split
 	bit	7, (iy+#vars.flags6)	`underwater flag
-	jr	nz, +
+	jr	nz, ._1
 	
 	`get the palette loading parameters that were assigned by the main thread
 	 `(i.e. `loadPaletteOnInterrupt`)
@@ -672,7 +675,7 @@ PROC :loadPaletteFromInterrupt
 	
 	`when the level is underwater, different logic controls loading the palette
 	 `as we have to deal with the water line
-+	call	:loadPaletteFromInterrupt_water
+._1	call	:loadPaletteFromInterrupt_water
 	ret
 }
 
@@ -694,8 +697,8 @@ PROC :_LABEL_1A0_18 {
 	`this seems quite pointless but could do with
 	 `killing a specific amount of time
 	ld	b, $00
--	nop
-	djnz	-
+.nop	nop
+	djnz	.nop
 }
 
 `----------------------------------------------------------------------------[$01BA]---
@@ -704,9 +707,9 @@ PROC :_LABEL_1A0_18 {
 PROC :loadPaletteFromInterrupt_water {
 	ld	a, (#RAM_WATERLINE)	`get the position of the water line on screen
 	and	a
-	jr	z, ++			`is it 0? (above the screen)
+	jr	z, ._2			`is it 0? (above the screen)
 	cp	$FF			`or $FF? (below the screen)
-	jr	nz, ++			`...skip ahead
+	jr	nz, ._2			`...skip ahead
 	
 	`--- below water --------------------------------------------------------------
 	`below the water line a fixed palette is used without cycles
@@ -718,15 +721,15 @@ PROC :loadPaletteFromInterrupt_water {
 	ld	hl, :S1_UnderwaterPalette
 	`underwater boss palette?
 	bit	4, (iy+#vars.timeLightningFlags)
-	jr	z, +			
+	jr	z, ._1			
 	ld	hl, :S1_UnderwaterPalette_Boss
 	
-+	ld	a, %00000011		`"load tile & sprite palettes"
+._1	ld	a, %00000011		`"load tile & sprite palettes"
 	call	:loadPalette		`load the relevant underwater palette
 	ret
 	
 	`--- above water --------------------------------------------------------------
-++	ld	a, (#RAM_CYCLEPALETTE_INDEX)
+._2	ld	a, (#RAM_CYCLEPALETTE_INDEX)
 	add	a, a			`x2
 	add	a, a			`x4
 	add	a, a			`x8
@@ -753,10 +756,10 @@ PROC :doRasterSplit
 {
 	`step 1?
 	cp	1
-	jr	z, ++
+	jr	z, ._2
 	`step 2?
 	cp	2
-	jr	z, +
+	jr	z, ._1
 	
 	`--- step 3 -------------------------------------------------------------------
 	`set counter at step 2
@@ -774,16 +777,16 @@ PROC :doRasterSplit
 	ld	a, #SMS_VDP_REGISTER_10
 	out	(#SMS_VDP_CONTROL), a
 	
-	jp	+++
+	jp	._3
 	
 	`--- step 2 -------------------------------------------------------------------
-+	`we don't do anything on this step
+._1	`we don't do anything on this step
 	dec	a
 	ld	(#RAM_RASTERSPLIT_STEP), a
-	jp	+++
+	jp	._3
 	
 	`--- step 1 -------------------------------------------------------------------
-++	dec	a
+._2	dec	a
 	ld	(#RAM_RASTERSPLIT_STEP), a
 	
 	`set the VDP to point at the palette
@@ -797,19 +800,18 @@ PROC :doRasterSplit
 	
 	`underwater boss palette?
 	bit	4, (iy+#vars.timeLightningFlags)
-	jr	z, ._
-	
+	jr	z, .loop
 	ld	hl, :S1_UnderwaterPalette_Boss
 
 	`copy the palette into the VDP
-._	ld   a, (hl)
+.loop	ld   a, (hl)
 	out	(#SMS_VDP_DATA), a
 	inc	hl
 	nop
 	ld	a, (hl)
 	out	(#SMS_VDP_DATA), a
 	inc	hl
-	djnz	._
+	djnz	.loop
 	
 	ld	a, (#RAM_VDPREGISTER_0)
 	and	%11101111		`remove bit 4 -- disable line interrupts
@@ -817,7 +819,7 @@ PROC :doRasterSplit
 	ld	a, #SMS_VDP_REGISTER_0
 	out	(#SMS_VDP_CONTROL), a
 
-+++	pop	bc, de, hl, af
+._3	pop	bc, de, hl, af
 	ei
 	ret
 }
@@ -862,7 +864,7 @@ PROC :init {
 	ld	b, 11
 	ld	c, $8B
 				
--	ld	a, (hl)			`read the lo-byte for the VDP
+.loop	ld	a, (hl)			`read the lo-byte for the VDP
 	ld	(de), a			`copy to RAM
 	inc	hl			`move to the next byte
 	inc	de				
@@ -871,7 +873,7 @@ PROC :init {
 	sub	b			`subtract B from A (B is decreasing),
 					 `so A will count from #$80 to #8A
 	out	(#SMS_VDP_CONTROL), a	`send the VDP hi-byte
-	djnz	-			`loop until B has reached 0
+	djnz	.loop			`loop until B has reached 0
 	
 	`move all sprites off the bottom of the screen!
 	 `(set 64 bytes of VRAM from $3F00 to 224)
@@ -1030,22 +1032,22 @@ PROC :updateVDPSprites {
 	
 	ld	a, b
 	and	a			`is sprite update count zero?
-	jr	z, +			`if so skip over setting the Y-positions
+	jr	z, ._1			`if so skip over setting the Y-positions
 
 	`set sprite Y-positions:
--	ld	a, (hl)			`get the sprite's Y-position from RAM
+.yLoop	ld	a, (hl)			`get the sprite's Y-position from RAM
 	out	(#SMS_VDP_DATA), a	`set the sprite's Y-position in the hardware
 	add	hl, de			`move to the next sprite
-	djnz	-
+	djnz	.yLoop
 	
 	`if the number of sprites to update is equal or greater than the existing
 	 `number of active sprites, skip ahead to setting the X-positions and indexes
-+	ld	a, (#RAM_ACTIVESPRITECOUNT)
+._1	ld	a, (#RAM_ACTIVESPRITECOUNT)
 	ld	b, a
 	ld	a, (iy+#vars.spriteUpdateCount)
 	ld	c, a
 	cp	b			`test spriteUpdateCount - RAM_ACTIVESPRITECOUNT	
-	jr	nc, +			`
+	jr	nc, ._2			`
 	
 	`if the number of active sprites is greater than the sprite update count, 
 	 `that is - there will be active sprites remaining, calculate the amount
@@ -1055,12 +1057,12 @@ PROC :updateVDPSprites {
 	ld	b, a
 
 	`move remaining sprites off screen
--	ld	a, 224
+.yOff	ld	a, 224
 	out	(#SMS_VDP_DATA), a
-	djnz	-
+	djnz	.yOff
 	
 	`--- sprite X positions / indexes ---------------------------------------------
-+	ld	a, c
+._2	ld	a, c
 	and	a
 	ret	z
 	
@@ -1074,15 +1076,15 @@ PROC :updateVDPSprites {
 	or	%01000000		`add bit 6 to mark an address being given
 	out	(#SMS_VDP_CONTROL), a
 	
--	ld	a, (hl)			`set the sprite X-position
+.xLoop	ld	a, (hl)			`set the sprite X-position
 	out	(#SMS_VDP_DATA), a
 	inc	l			`skip Y-position
 	inc	l				
 	ld	a, (hl)			`set the sprite index number
 	out	(#SMS_VDP_DATA), a
 	inc	l
-	djnz	-
-	
+	djnz	.xLoop
+
 	`set the new number of active sprites
 	ld	a, (iy+#vars.spriteUpdateCount)
 	ld	(#RAM_ACTIVESPRITECOUNT), a
@@ -1106,14 +1108,14 @@ AT $0397
 	out	(#SMS_VDP_CONTROL),a
 	ei	
 
--	ld	a,(hl)
+.loop	ld	a,(hl)
 	out	(#SMS_VDP_DATA),a
 	inc	hl
 	
 	dec	bc
 	ld	a,b
 	or	c
-	jp	nz,-
+	jp	nz,.loop
 	
 	ret
 	
@@ -1144,43 +1146,43 @@ AT $03AC
 	ld	(#RAM_PAGE_2),a
 	ei	
 
----	ld	a,(hl)
+._1	ld	a,(hl)
 	cpl	
 	ld	e,a
 
---	ld	a,(hl)
+._2	ld	a,(hl)
 	cp	e
-	jr	z,+
+	jr	z,._3
 	out	(#SMS_VDP_DATA),a
 	ld	e,a
 	inc	hl
 	dec	bc
 	ld	a,b
 	or	c
-	jp	nz,--
-	jr	++
+	jp	nz,._2
+	jr	._5
 
-+	ld	d,a
+._3	ld	d,a
 	inc	hl
 	dec	bc
 	ld	a,b
 	or	c
-	jr	z,++
+	jr	z,._5
 	ld	a,d
 	ld	e,(hl)
--
-	out	(#SMS_VDP_DATA),a
+
+._4	out	(#SMS_VDP_DATA),a
 	dec	e
 	nop	
 	nop	
-	jp	nz,-
+	jp	nz,._4
 	inc	hl
 	dec	bc
 	ld	a,b
 	or	c
-	jp	nz,---
+	jp	nz,._1
 
-++	di	
+._5	di	
 	`restore bank numbers
 	pop	de
 	ld	(#RAM_PAGE_1),de
@@ -1199,7 +1201,7 @@ PROC :decompressArt
 		a	`bank number for the relative address HL
 }
 	di				`disable interrupts
--	push	af			`remember the A parameter
+._1	push	af			`remember the A parameter
 	
 	`--- determine bank number ----------------------------------------------------
 	
@@ -1207,7 +1209,7 @@ PROC :decompressArt
 	 `--that is, does the relative address extend into the second page?
 	ld	a, h
 	cp	$40
-	jr	c, +
+	jr	c, ._2
 	
 	`remove #$40xx (e.g. so $562B becomes $162B)
 	sub	$40
@@ -1218,11 +1220,11 @@ PROC :decompressArt
 	 `that instead of paging in, for example, banks 9 & 10, we would get 10 & 11
 	pop	af
 	inc	a
-	jp	-
+	jp	._1
 	
 	`--- configure the VDP --------------------------------------------------------
 	
-+	ld	a, e			`load the second byte from the DE parameter
+._2	ld	a, e			`load the second byte from the DE parameter
 	out	(#SMS_VDP_CONTROL), a	`send as the value byte to the VDP
 	
 	ld	a, d
@@ -1252,10 +1254,10 @@ PROC :decompressArt
 	`--- read header --------------------------------------------------------------
 	
 	bit	1, (iy+#vars.flags9)
-	jr	nz, +
+	jr	nz, ._3
 	ei
 	
-+	ld	(#RAM_TEMP4), hl
+._3	ld	(#RAM_TEMP4), hl
 	
 	`begin reading the compressed art header:
 	 `see <info.sonicretro.org/SCHG:Sonic_the_Hedgehog_%288-bit%29#Header>
@@ -1393,7 +1395,7 @@ PROC :decompressArt
 	ld	a, b			`combine the high byte,
 	or	c			`with the low byte...
 	jp	nz, .processRow		`loop back if not zero
-	jp	++			`otherwise, skip to finalisation
+	jp	._5			`otherwise, skip to finalisation
 
 .duplicateRow
 	`--- duplicate row ------------------------------------------------------------
@@ -1415,7 +1417,7 @@ PROC :decompressArt
 	`check if the byte from the duplicate rows list begins with $F, i.e. $Fxxx
 	 `this is used as a marker to specify a two-byte number for indexes over 256
 	cp	$F0
-	jr	c, +			`if less than $F0, skip reading next byte
+	jr	c, ._4			`if less than $F0, skip reading next byte
 	sub	$F0			`strip the $F0, i.e $F3 = $03
 	ld	h, a			`and set as the hi-byte for the art data index
 	exx				`switch DE to DuplicateRows list abs. address
@@ -1424,7 +1426,7 @@ PROC :decompressArt
 	exx				`return BC/DE/HL to before
 	`multiply the duplicate row's index number to the art data by 4
 	 `--each row of art data is 4 bytes
-+	ld	l, a
+._4	ld	l, a
 	add	hl, hl			
 	add	hl, hl
 	
@@ -1459,10 +1461,10 @@ PROC :decompressArt
 	or	c
 	jp	nz, .processRow
 
-++	bit	1, (iy+#vars.flags9)
-	jr	nz, +
+._5	bit	1, (iy+#vars.flags9)
+	jr	nz, ._6
 	di
-+	`restore the pages to the original banks at the beginning of the procedure
+._6	`restore the pages to the original banks at the beginning of the procedure
 	pop	de
 	ld	(#RAM_PAGE_1), de
 	ld	(#SMS_PAGE_1), de
@@ -2193,15 +2195,15 @@ PROC :fillScrollTiles {
 	jp	z, ++
 	
 	exx
-	push	hl
-	push	de
-	push	bc
+	push	hl;stack
+	push	de;stack
+	push	bc;stack
 	
 	`------------------------------------------------------------------------------
 	`calculate the number of bytes to offset by to get to the correct row in the
 	 `screen table
 	
-	ld	a, (#RAM_VDPSCROLL_VERTICAL)
+	ld	a;scrollVert, (#RAM_VDPSCROLL_VERTICAL)
 	and	%11111000		`round the scroll to the nearest 8 pixels
 	
 	`multiply the vertical scroll offset by 8. since the scroll offset is already
@@ -2219,11 +2221,11 @@ PROC :fillScrollTiles {
 	`calculate the number of bytes to get from the beginning of a row to the 
 	 `horizontal scroll position
 	
-	ld	a, (#RAM_VDPSCROLL_HORIZONTAL)
+	ld	a;scrollHorz, (#RAM_VDPSCROLL_HORIZONTAL)
 	
 	bit	6, (iy+#vars.flags0)	`camera moved left?
 	jr	z, +
-	add	a, 8			`add 8 pixels (left screen border?)
+	add	a;scrollHorz, 8		`add 8 pixels (left screen border?)
 +	and	%11111000		`and then round to the nearest 8 pixels
 	
 	srl	a			`divide by 2 ...
@@ -2377,17 +2379,17 @@ PROC :getFloorLayoutRAMPosition
 	 `blocks wide, ergo have a FloorWidth of $0100, making the low-byte $00
 	ld	a,(#RAM_LEVEL_FLOORWIDTH)
 	rlca				`double it (x2)
-	jr	c,+			`>128?
+	jr	c,._1			`>128?
 	rlca				`double it again (x4)
-	jr	c,++			`>64?
+	jr	c,._2			`>64?
 	rlca				`double it again (x8)
-	jr	c,+++			`>32?
+	jr	c,._3			`>32?
 	rlca				`double it again (x16)
-	jr	c,++++			`>16?
-	jp	+++++			`255...?
+	jr	c,._4			`>16?
+	jp	._5			`255...?
 	
 	`------------------------------------------------------------------------------
-+	ld	a,(#RAM_BLOCK_Y)
+._1	ld	a,(#RAM_BLOCK_Y)
 	add	a,b
 	ld	e,$00
 	srl	a			`divide by 2
@@ -2404,7 +2406,7 @@ PROC :getFloorLayoutRAMPosition
 	ret
 	
 	`------------------------------------------------------------------------------
-++	ld	a,(#RAM_BLOCK_Y)
+._2	ld	a,(#RAM_BLOCK_Y)
 	add	a,b
 	ld	e,$00
 	srl	a
@@ -2423,7 +2425,7 @@ PROC :getFloorLayoutRAMPosition
 	ret
 	
 	`------------------------------------------------------------------------------
-+++	ld	a,(#RAM_BLOCK_Y)
+._3	ld	a,(#RAM_BLOCK_Y)
 	add	a,b
 	ld	e,$00
 	srl	a
@@ -2443,7 +2445,7 @@ PROC :getFloorLayoutRAMPosition
 	ret
 	
 	`------------------------------------------------------------------------------
-++++	ld	a,(#RAM_BLOCK_Y)
+._4	ld	a,(#RAM_BLOCK_Y)
 	add	a,b
 	ld	e,$00
 	srl	a
@@ -2465,7 +2467,7 @@ PROC :getFloorLayoutRAMPosition
 	ret
 	
 	`------------------------------------------------------------------------------
-+++++	ld	a,(#RAM_BLOCK_Y)
+._5	ld	a,(#RAM_BLOCK_Y)
 	add	a,b
 	ld	d,a
 	ld	a,(#RAM_BLOCK_X)
@@ -2501,12 +2503,12 @@ PROC :fillScreenWithFloorLayout {
 	 `in 224-line mode it's 7 blocks tall
 	ld	b,#SMS_SCREENHEIGHT_BLOCKS
 	
----	push	bc
+._1	push	bc
 	push	hl
 	push	de
 	ld	b,8			`the screen is 8 blocks wide
 	
---	push	bc
+._2	push	bc
 	push	hl
 	push	de
 	
@@ -2562,7 +2564,7 @@ PROC :fillScreenWithFloorLayout {
 	ld	b,4			`4 rows of the block mapping
 	
 	`set the screen name address
--	ld	a,l
+._3	ld	a,l
 	out	(#SMS_VDP_CONTROL),a
 	ld	a,h
 	or	%01000000
@@ -2606,7 +2608,7 @@ PROC :fillScreenWithFloorLayout {
 	ld	bc,64
 	add	hl,bc
 	ld	b,a
-	djnz	-
+	djnz	._3
 	
 	pop	de
 	pop	hl
@@ -2616,7 +2618,7 @@ PROC :fillScreenWithFloorLayout {
 	add	hl,bc
 	ex	de,hl
 	pop	bc
-	djnz	--
+	djnz	._2
 	
 	pop	de
 	pop	hl
@@ -2628,7 +2630,7 @@ PROC :fillScreenWithFloorLayout {
 	ex	de,hl
 	pop	bc
 	dec	b
-	jp	nz,---
+	jp	nz,._1
 	
 	ei				`enable interrupts
 	ret
@@ -2637,55 +2639,56 @@ PROC :fillScreenWithFloorLayout {
 `____________________________________________________________________________[$0A10]___
 
 PROC :loadFloorLayout
-	PARAMS	hl,	`address of Floor Layout data
+	PARAMS	hl	`address of Floor Layout data
 		bc	`length of compressed data
 }
 	ld	de,#RAM_FLOORLAYOUT	`where in RAM the floor layout will go
 
---	`RLE decompress floor layout:
+	`RLE decompress floor layout:
 	`------------------------------------------------------------------------------
-	ld	a,(hl)			`read the first byte of the floor layout
-	cpl				`flip it to avoid first byte comparison
-	ld	(iy+$01),a		`this is the comparison byte
+._1	ld	a,(hl)		`read the first byte of the floor layout
+	cpl			`flip it to avoid first byte comparison
+	ld	(iy+$01),a	`this is the comparison byte
 
--	ld	a,(hl)			`read the current byte
-	cp	(iy+$01)		`is it the same as the comparison byte?
-	jr	z,+			`if so, decompress it
+._2	ld	a,(hl)		`read the current byte
+	cp	(iy+$01)	`is it the same as the comparison byte?
+	jr	z,._3		`if so, decompress it
 	
 	`copy byte as normal:
-	ld	(de),a			`write it to RAM	
-	ld	(iy+$01),a		`update the comparison byte
-	inc	hl			`move forward
+	ld	(de),a		`write it to RAM	
+	ld	(iy+$01),a	`update the comparison byte
+	inc	hl		`move forward
 	inc	de
-	dec	bc			`count count of remaining bytes
-	ld	a,b			`are there remaining bytes?
+	dec	bc		`count count of remaining bytes
+	ld	a,b		`are there remaining bytes?
 	or	c
-	jp	nz,-			`if so continue
-	ret				`otherwise, finish
-	
+	jp	nz,._2		`if so continue
+	ret 			`otherwise, finish
+
 	`if the last two bytes of the data are duplicates, don't try decompress
 	 `further when there is no more data to be read!
-+	dec	bc			`reduce count of remaining bytes
-	ld	a,b			`are there remaining bytes?
+._3	dec	bc		`reduce count of remaining bytes
+	ld	a,b		`are there remaining bytes?
 	or	c
-	ret	z			`if not, finish
+	ret	z		`if not, finish
 	
-	ld	a,(hl)			`read the value to repeat
-	inc	hl			`move to the next byte (the repeat count)
-	push	bc			`put BC (length of compressed data) to the side
-	ld	b,(hl)			`get the repeat count
--	ld	(de),a			`write value to RAM
-	inc	de			`move forward in RAM
-	djnz	-			`continue until repeating value is complete
+	ld	a,(hl)		`read the value to repeat
+	inc	hl		`move to the next byte (the repeat count)
+	push	bc		`put BC (length of compressed data) to the side
+	ld	b,(hl)		`get the repeat count
 	
-	pop	bc			`retrieve the data length
-	inc	hl			`move forward in the compressed data
+._4	ld	(de),a		`write value to RAM
+	inc	de		`move forward in RAM
+	djnz	._4		`continue until repeating is complete
+	
+	pop	bc		`retrieve the data length
+	inc	hl		`move forward in the compressed data
 	
 	`check if bytes remain
 	dec	bc
 	ld	a,b
 	or	c
-	jp	nz,--
+	jp	nz,._1
 	ret
 }
 
@@ -2708,8 +2711,8 @@ PROC :fadeOut {
 	ld	(iy+#vars.spriteUpdateCount), a
 	ld	b, $04
 	
---	push	bc			`put aside the loop counter
-	
+._1	push	bc			`put aside the loop counter
+		
 	`fade out the tile palette one step
 	ld	hl, (#RAM_LOADPALETTE_TILE)
 	ld	de, #RAM_PALETTE
@@ -2728,16 +2731,16 @@ PROC :fadeOut {
 	
 	`wait 10 frames
 	ld	b, $0A
--	ld	a, (iy+#vars.spriteUpdateCount)
-	
+._2 	ld	a, (iy+#vars.spriteUpdateCount)
+		
 	res	0, (iy+#vars.flags0)
 	call	:waitForInterrupt
 	
 	ld	(iy+#vars.spriteUpdateCount), a
-	djnz	-
-	
+	djnz	._2
+
 	pop	bc			`retrieve the loop counter
-	djnz	--			 `before looping back
+	djnz	._1			 `before looping back
 	
 	ret
 }
@@ -2754,23 +2757,23 @@ PROC :darkenPalette
 	
 	ld	a, (hl)			`read the colour
 	and	%00000011		`does it have any red component?
-	jr	z, +			`if not, skip ahead			
+	jr	z, ._1			`if not, skip ahead			
 	dec	a			`reduce the red brightness by 1
 	
-+	ld	c, a
+._1	ld	c, a
 	ld	a, (hl)
 	and	%00001100		`does it have any green component?
-	jr	z, +			`if not, skip ahead
+	jr	z, ._2			`if not, skip ahead
 	sub	%00000100		`reduce the green brightness by 1
 	
-+	or	c			`merge the green component back in
+._2	or	c			`merge the green component back in
 	ld	c, a			`put aside the current colour code
 	ld	a, (hl)			`fetch the original colour code again
 	and	%00110000		`does it have any blue component?
-	jr	z, +			`if not, skip ahead
+	jr	z, ._3			`if not, skip ahead
 	sub	%00010000		`reduce the blue brightness by 1
 	
-+	or	c			`merge the blue component back in
+._3	or	c			`merge the blue component back in
 	ld	(de), a			`update the palette colour
 	
 	`move to the next palette colour and repeat
@@ -11414,11 +11417,11 @@ PROC :_56d6 {
 	add	hl,de
 	adc	a,$00
 	and	a
-	jp	p,+
+	jp	p,._
 	ld	de,$ffc8
 	add	hl,de
 	adc	a,$ff
-+	ld	(#RAM_SONIC.Yspeed),hl
+._	ld	(#RAM_SONIC.Yspeed),hl
 	ld	(#RAM_SONIC.Ydirection),a
 	ld	bc,$000c
 	ld	hl,(#RAM_SONIC.X)
@@ -11576,11 +11579,11 @@ PROC :_57cd {
 	add	hl,de
 	adc	a,$00
 	and	a
-	jp	p,+
+	jp	p,._
 	ld	de,$ffc8
 	add	hl,de
 	adc	a,$ff
-+	ld	(#RAM_SONIC.Yspeed),hl
+._	ld	(#RAM_SONIC.Yspeed),hl
 	ld	(#RAM_SONIC.Ydirection),a
 	jp	:_5791._57be
 }
@@ -19519,12 +19522,12 @@ PROC :doObjectCode_badnick_caterkiller {
 	ld	(ix+#object.height),$10
 	ld	a,(#RAM_FRAMECOUNT)
 	and	$01
-	jr	nz,+++
+	jr	nz,._5
 	ld	hl,:_a6b9
 	bit	1,(ix+$18)
-	jr	z,+
+	jr	z,._1
 	ld	hl,:_a769
-+	ld	e,(ix+$11)
+._1	ld	e,(ix+$11)
 	sla	e
 	ld	d,$00
 	add	hl,de
@@ -19536,12 +19539,12 @@ PROC :doObjectCode_badnick_caterkiller {
 	ld	a,(ix+#object.X+1)
 	add	hl,bc
 	bit	7,b
-	jr	z,+
+	jr	z,._2
 	adc	a,$ff
-	jr	++
+	jr	._3
 	
-+	adc	a,$00
-++	ld	(ix+$01),l
+._2	adc	a,$00
+._3	ld	(ix+$01),l
 	ld	(ix+#object.X+0),h
 	ld	(ix+#object.X+1),a
 	ld	hl,:_a6e5
@@ -19556,17 +19559,17 @@ PROC :doObjectCode_badnick_caterkiller {
 	ld	(ix+$13),h
 	ld	c,$00
 	bit	7,h
-	jr	z,+
+	jr	z,._4
 	ld	c,$ff
-+	ld	(ix+$14),c
-+++	ld	l,(ix+#object.X+0)
+._4	ld	(ix+$14),c
+._5	ld	l,(ix+#object.X+0)
 	ld	h,(ix+#object.X+1)
 	ld	(#RAM_TEMP1),hl
 	ld	l,(ix+#object.Y+0)
 	ld	h,(ix+#object.Y+1)
 	ld	(#RAM_TEMP3),hl
 	bit	1,(ix+$18)
-	jr	nz,++
+	jr	nz,._7
 	ld	hl,:_a711
 	ld	e,(ix+$11)
 	ld	d,$00
@@ -19585,18 +19588,18 @@ PROC :doObjectCode_badnick_caterkiller {
 	call	:_LABEL_3956_11
 	ld	hl,$0000
 	ld	(#RAM_TEMP1),hl
-	jr	c,+
+	jr	c,._6
 	call	:_35e5
-	jr	+++
+	jr	._9
 	
-+	ld	(ix+#object.width),$16
+._6	ld	(ix+#object.width),$16
 	ld	hl,$0806
 	ld	(#RAM_TEMP6),hl
 	call	:_LABEL_3956_11
 	call	nc,:_35fd
-	jr	+++
+	jr	._9
 	
-++	ld	hl,:_a795
+._7	ld	hl,:_a795
 	ld	e,(ix+$11)
 	ld	d,$00
 	add	hl,de
@@ -19612,18 +19615,18 @@ PROC :doObjectCode_badnick_caterkiller {
 	ld	hl,$0401
 	ld	(#RAM_TEMP6),hl
 	call	:_LABEL_3956_11
-	jr	c,+
+	jr	c,._8
 	call	:_35fd
-	jr	+++
+	jr	._9
 	
-+	ld	(ix+#object.width),$16
+._8	ld	(ix+#object.width),$16
 	ld	hl,$0410
 	ld	(#RAM_TEMP6),hl
 	call	:_LABEL_3956_11
 	ld	hl,$0000
 	ld	(#RAM_TEMP1),hl
 	call	nc,:_35e5
-+++	ld	(ix+#object.Yspeed+1),$01
+._9	ld	(ix+#object.Yspeed+1),$01
 	ld	a,(#RAM_FRAMECOUNT)
 	and	$01
 	ret	nz

@@ -19,6 +19,8 @@ Public Enum OZ80_ERROR
     OZ80_ERROR_BADNUMBER_DEC = 6        'Not a valid decimal number
     OZ80_ERROR_OVERFLOW = 7             'A number overflowed the maximum
     OZ80_ERROR_Z80_PARAMETER = 8        'An unexpected parameter for a z80 instruction
+    OZ80_ERROR_OPERAND = 9              'Not a valid operand for an expression
+    OZ80_ERROR_EXPRESSION = 10          'Not a valid expression
 End Enum
 
 Public Enum OZ80_TOKEN
@@ -45,9 +47,11 @@ Public Enum OZ80_TOKEN
     
     TOKEN_QUOTE = &HE0
     
-    TOKEN_LABEL = &HA0
-    TOKEN_VARIABLE = &HA1
-    TOKEN_PROPERTY = &HA2
+    TOKEN_LABELDEF = &HA0
+    TOKEN_LABEL = &HA1
+    TOKEN_PROPERTYDEF = &HA2
+    TOKEN_PROPERTY = &HA3
+    TOKEN_VARIABLE = &HA4
 End Enum
 
 Public Enum OZ80_TOKEN_DATA

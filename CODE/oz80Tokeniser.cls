@@ -260,6 +260,7 @@ Public Function Tokenise(ByRef FilePath As String) As OZ80_ERROR
     'Just a loop counter
     Dim ii As Long
     
+    'Clean out any previous string data
     Call Quotes.RemoveAll
     Call Labels.RemoveAll
     Call Variables.RemoveAll
@@ -520,9 +521,6 @@ TokenWord:
     If WordLen > 2 Then Let Asc4 = LowCase(Text(WordBegin + 3))
     If WordLen > 1 Then Let Asc3 = LowCase(Text(WordBegin + 2))
     If WordLen > 0 Then Let Asc2 = LowCase(Text(WordBegin + 1))
-    
-'    GoSub GetWord
-'    Debug.Print "= " & Word
     
     'Check the first letter of the word to find the right kind of token:
     
@@ -851,8 +849,7 @@ TokenWord:
             Else
                 'Convert the number from ASCII codes into a value
                 On Error GoTo ErrorOverflow
-                'I've tried putting this into a lookup table and it's exactly the _
-                 same speed
+                'I've tried a lookup table here and it's exactly the same speed
                 Let Number = Number + (Text(ii) - NUM0) * Multiplier
                 'Don't allow the multiplier to overflow when the number doesn't
                 If ii > WordBegin Then Let Multiplier = Multiplier * 10
@@ -1041,7 +1038,10 @@ End Function
 
 'Add : Add a token (any) to the stream _
  ======================================================================================
-Private Sub Add(ByRef Kind As OZ80_TOKEN, ByRef Data As OZ80_TOKEN_DATA, ByRef Line As Long, ByRef Col As Long)
+Private Sub Add( _
+    ByRef Kind As OZ80_TOKEN, ByRef Data As OZ80_TOKEN_DATA, _
+    ByRef Line As Long, ByRef Col As Long _
+)
     'The param MUST be 0-255, but is given as long for speed reasons; _
      the rest of this class will ensure that this is never out of bounds
     With Tokens(TokenCount)
@@ -1065,7 +1065,9 @@ End Sub
 
 'AddLabel : Register a label name for index <> string access _
  ======================================================================================
-Private Sub AddLabel(ByRef LabelName As String, ByRef Line As Long, ByRef Col As Long)
+Private Sub AddLabel( _
+    ByRef LabelName As String, ByRef Line As Long, ByRef Col As Long _
+)
     If Labels.Exists(LabelName) = False Then
         Call Labels.Add(LabelName, TokenCount)
         Call Add(TOKEN_LABEL, TokenCount, Line, Col)
@@ -1087,7 +1089,9 @@ End Sub
 
 'AddProperty : Register a property name for index <> string access _
  ======================================================================================
-Private Sub AddProperty(ByRef PropertyName As String, ByRef Line As Long, ByRef Col As Long)
+Private Sub AddProperty( _
+    ByRef PropertyName As String, ByRef Line As Long, ByRef Col As Long _
+)
     If Properties.Exists(PropertyName) = False Then
         Call Properties.Add(PropertyName, TokenCount)
         Call Add(TOKEN_PROPERTY, TokenCount, Line, Col)

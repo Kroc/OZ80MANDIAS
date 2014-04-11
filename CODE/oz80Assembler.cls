@@ -875,16 +875,20 @@ With1Parameter:
         Stop
     
     ElseIf Instruction = OZ80_TOKEN_DATA.TOKEN_Z80_CALL Then '................ CALL ...
-        'CALL $16
+        If TestOpcode(&HCD, Param1, MASK_16) Then Exit Function
+        Stop
     
     ElseIf Instruction = OZ80_TOKEN_DATA.TOKEN_Z80_CP Then '.................... CP ...
-        'CP a|b|c|d|e|h|l|$8
-        'CP (hl|ix+$8|iy+$8)
+        If TestOpcode(&HB8, Param1, MASK_ABCDEHL) Then Exit Function
+        If TestOpcode(&HBE, Param1, MASK_MEM_HL_IXY8) Then Exit Function
+        If TestOpcode(&HFE, Param1, MASK_8) Then Exit Function
+        Stop
     
     ElseIf Instruction = OZ80_TOKEN_DATA.TOKEN_Z80_DEC Then '.................. DEC ...
-        'DEC a|b|c|d|e|h|l
-        'DEC (hl|ix+$8|iy+$8)
-        'DEC bc|de|hl|sp|ix|iy
+        If TestOpcode(&H5, Param1, MASK_ABCDEHL) Then Exit Function
+        If TestOpcode(&HB, Param1, MASK_BC_DE_HL Or MASK_SP) Then Exit Function
+        If TestOpcode(&H2B, Param1, MASK_IXY) Then Exit Function
+        If TestOpcode(&H35, Param1, MASK_MEM_HL_IXY8) Then Exit Function
         
     ElseIf Instruction = OZ80_TOKEN_DATA.TOKEN_Z80_DJNZ Then '................ DJNZ ...
         'DJNZ $8
@@ -1237,20 +1241,6 @@ Private Function GetParameter(ByRef Result As oz80Param) As OZ80_ERROR
         'Now move beyond the register token
         Call NextToken
     
-    'If it's a straight number, capture it and check for overflow
-    ElseIf Token.Kind = OZ80_TOKEN.TOKEN_NUMBER Then '.................................
-        'This is an easy one
-        'TODO: Check for overflow
-        Let Result.Kind = PARAM_NUMBER
-        Let Result.Value = Token.Data
-        'Check if it's in 8-bit range and 16-bit range
-        If (Result.Value And &HFF) = Result.Value Then _
-            Let Result.Mask = Result.Mask Or MASK_8
-        If (Result.Value And &HFF00) = Result.Value Then _
-            Let Result.Mask = Result.Mask Or MASK_16
-        'Now move beyond the number token
-        Call NextToken
-    
     'If the token is a memory reference, such as `(ix+$8)`, _
      then get the associated register and value
     ElseIf Token.Kind = OZ80_TOKEN.TOKEN_PARENOPEN Then '..............................
@@ -1274,6 +1264,11 @@ Private Function GetParameter(ByRef Result As oz80Param) As OZ80_ERROR
     ElseIf IsExpression() Then '........................................................
         Let Result.Kind = PARAM_NUMBER
         Let GetParameter = ScopeExpression(Result.Value, Result.ValueUnknown)
+        'Check if it's in 8-bit range and 16-bit range
+        If (Result.Value And &HFF) = Result.Value Then _
+            Let Result.Mask = Result.Mask Or MASK_8
+        If (Result.Value And &HFF00) = Result.Value Then _
+            Let Result.Mask = Result.Mask Or MASK_16
         'TODO: Error - the expression is invalid
         If GetParameter <> OZ80_ERROR_NONE Then Stop
     
@@ -1292,12 +1287,14 @@ End Function
 Private Function IsParameter() As Boolean
     'A parameter can be a number, label/variable/property, register or memory reference
     If Token.Kind = OZ80_TOKEN.TOKEN_LABEL Then
+        'A label on a new line is a definition, not a parameter
         If Token.Line = PrevLine Then Let IsParameter = True
     ElseIf Token.Kind = OZ80_TOKEN.TOKEN_NUMBER Then
         Let IsParameter = True
     ElseIf Token.Kind = OZ80_TOKEN.TOKEN_PARENOPEN Then
         Let IsParameter = True
     ElseIf Token.Kind = OZ80_TOKEN.TOKEN_PROPERTY Then
+        'A property on a new line is a definition, not a parameter
         If Token.Line = PrevLine Then Let IsParameter = True
     ElseIf Token.Kind = OZ80_TOKEN.TOKEN_REGISTER Then
         Let IsParameter = True

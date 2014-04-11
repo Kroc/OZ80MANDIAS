@@ -542,7 +542,7 @@ PROC :interruptHandler {
 	
 	call	:readJoypad
 	bit	4, (iy+#vars.joypad)	`joypad button A?
-	call	z, #setJoypadButtonB	`set joypad button B too
+	call	z, :setJoypadButtonB	`set joypad button B too
 	
 	call	:_LABEL_625_57
 	

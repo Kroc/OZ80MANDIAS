@@ -122,6 +122,10 @@ Private Tokens() As oz80Token
 Private TokenCount As Long
 Private Token As oz80Token
 
+'The line number of the previous token, so that we can tell when a label/property _
+ definition occurs on a new line and isn't therefore part of a list
+Private PrevLine As Long
+
 Private Bank As Long
 Private Slot As Long
 Private At As Long
@@ -130,6 +134,8 @@ Private ROM() As Byte
 Private ROMSize As Long
 
 '/// EVENTS ///////////////////////////////////////////////////////////////////////////
+
+Event Error(ByRef Err As ErrObject)
 
 Private Sub Class_Initialize()
     'NOTE:
@@ -845,6 +851,7 @@ Private Function ScopeZ80() As OZ80_ERROR
     ElseIf Instruction = OZ80_TOKEN_DATA.TOKEN_Z80_SCF Then
         Call AddByte(&H37)
     Else
+        Debug.Print Token.Line, Token.Col
         Stop
     End If
     Exit Function
@@ -1123,13 +1130,14 @@ End Sub
 'AddOpcode : Write out an assembled Z80 instruction _
  ======================================================================================
 Private Sub AddOpcode( _
-    ByRef Opcode As Integer, ByRef Kind As OZ80_MASK, ByRef Value As Long _
+    ByRef Opcode As Integer, ByRef Kind As OZ80_MASK, _
+    Optional ByRef Value As Long = 0 _
 )
     'Before anything else, handle opcodes that assign 8/16-bit direct or 16-bit _
      indirect values since these include a number/memory reference AND register. _
      (8-bit memory references are handled in the next case)
     If Kind And (MASK_8 Or MASK_16 Or MASK_MEM16) Then
-        
+        'TODO
         
     'Opcodes that accept registers add an offset to the given opcode; _
      this offset is provided for us in the `Value` parameter
@@ -1284,13 +1292,13 @@ End Function
 Private Function IsParameter() As Boolean
     'A parameter can be a number, label/variable/property, register or memory reference
     If Token.Kind = OZ80_TOKEN.TOKEN_LABEL Then
-        Let IsParameter = True
+        If Token.Line = PrevLine Then Let IsParameter = True
     ElseIf Token.Kind = OZ80_TOKEN.TOKEN_NUMBER Then
         Let IsParameter = True
     ElseIf Token.Kind = OZ80_TOKEN.TOKEN_PARENOPEN Then
         Let IsParameter = True
     ElseIf Token.Kind = OZ80_TOKEN.TOKEN_PROPERTY Then
-        Let IsParameter = True
+        If Token.Line = PrevLine Then Let IsParameter = True
     ElseIf Token.Kind = OZ80_TOKEN.TOKEN_REGISTER Then
         Let IsParameter = True
     ElseIf Token.Kind = OZ80_TOKEN.TOKEN_VARIABLE Then
@@ -1316,6 +1324,7 @@ End Function
 'NextToken : Move to the next token in the token stream _
  ======================================================================================
 Private Function NextToken() As Boolean
+    Let PrevLine = Token.Line
     Let TokenIndex = TokenIndex + 1
     'If we run out of tokens, return false
     If TokenIndex > TokenCount Then Exit Function
@@ -1343,7 +1352,7 @@ Private Sub RaiseError( _
     Let Err.Description = Description
     Let Err.Source = "Line #" & Line & " Col #" & Col
     
-'    RaiseEvent Error(Err)
+    RaiseEvent Error(Err)
 End Sub
 
 'TestOpcode : Outputs an opcode if the parameter has values within the given mask _

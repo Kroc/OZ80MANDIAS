@@ -12130,7 +12130,7 @@ PROC :doObjectCode_powerUp_continue {
 	ld	hl,$0003
 	ld	(#RAM_TEMP6),hl
 	call	:_LABEL_3956_11
-	jr	c,+
+	jr	c,._1
 	call	:_5deb
 	jr	c,._1
 	set	3,(iy+#vars.flags9)
@@ -12783,13 +12783,13 @@ PROC :doObjectCode_badnick_crabMeat {
 	
 ._5	ld	a,(ix+$11)
 	cp	$20
-	jp	nz,+
+	jp	nz,._6
 	ld	hl,$ffff
 	ld	(#RAM_TEMP4),hl
 	ld	hl,$fffc
 	ld	(#RAM_TEMP6),hl
 	call	:_7c7b
-	jp	c,+
+	jp	c,._6
 	ld	de,$0000
 	ld	c,e
 	ld	b,d
@@ -12799,7 +12799,7 @@ PROC :doObjectCode_badnick_crabMeat {
 	ld	hl,$fffc
 	ld	(#RAM_TEMP6),hl
 	call	:_7c7b
-	jr	c,+
+	jr	c,._6
 	ld	de,$000e
 	ld	bc,$0000
 	call	:_ac96
@@ -12946,7 +12946,7 @@ PROC :doObjectCode_platform_swinging {
 	ld	hl,$0806
 	ld	(#RAM_TEMP6),hl
 	call	:_LABEL_3956_11
-	jr	c,+
+	jr	c,._4
 	ld	hl,(#RAM_SONIC.X)
 	ld	de,(#RAM_TEMP1)
 	add	hl,de
@@ -18528,7 +18528,7 @@ PROC :_9b75 {
 	ld	hl,$0000
 	ld	(#RAM_TEMP6),hl
 	call	:_LABEL_3956_11
-	jr	c,++
+	jr	c,._2
 	ld	l,(ix+#object.X+0)
 	ld	h,(ix+#object.X+1)
 	ld	a,l
@@ -18779,7 +18779,7 @@ PROC :doObjectCode_door_left {
 	ld	hl,$0005
 	ld	(#RAM_TEMP6),hl
 	call	:_LABEL_3956_11
-	jr	c,++
+	jr	c,._2
 	ld	de,$0005
 	ld	a,(#RAM_SONIC.Xdirection)
 	and	a
@@ -19428,7 +19428,7 @@ PROC :doObjectCode_switch {
 	ld	de,$0000
 	call	:_LABEL_7CC1_12
 	bit	1,(ix+$18)
-	jr	nz,+
+	jr	nz,._4
 	set	1,(ix+$18)
 	ld	hl,$D317
 	call	:getLevelBitFlag
@@ -19444,7 +19444,7 @@ PROC :doObjectCode_switch {
 	ld	(ix+#object.spriteLayout+1),:_a493.hi
 	ld	a,(#RAM_LEVEL_SOLIDITY)
 	cp	$03
-	jr	nz,+
+	jr	nz,._4
 	ld	(ix+#object.spriteLayout+0),$a3
 	ld	(ix+#object.spriteLayout+1),$a4
 ._4	xor	a
@@ -19507,7 +19507,7 @@ PROC :doObjectCode_door_switchActivated {
 	jr	z,._5
 ._4	ld	a,(ix+$11)
 	cp	$30
-	jr	nc,+
+	jr	nc,._6
 	inc	a
 	inc	a
 	ld	(ix+$11),a

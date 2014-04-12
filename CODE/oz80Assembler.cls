@@ -29,12 +29,13 @@ Private Declare Function kernel32_GetTickCount Lib "kernel32" Alias "GetTickCoun
 
 '/// CONSTANTS ////////////////////////////////////////////////////////////////////////
 
+'This structure is used when parsing parameters of Z80 instructions
 Private Type oz80Param
-    Register As OZ80_TOKEN_DATA
-    Value As Long
-    ValueUnknown As Boolean
-    Kind As OZ80_PARAM
-    Mask As OZ80_MASK
+    Register As OZ80_TOKEN_DATA         'If a register, which one
+    Value As Long                       'The numerical value of the parameter
+    ValueUnknown As Boolean             'If the parameter has unknown values (labels)
+    Kind As OZ80_PARAM                  'As below, a brief hint a the parameter type
+    Mask As OZ80_MASK                   'A detailed bit-mask of parameter features
 End Type
 
 Private Enum OZ80_PARAM
@@ -43,8 +44,10 @@ Private Enum OZ80_PARAM
     PARAM_MEMORY = 3
 End Enum
 
+'Specific values used with opcodes for various instruction features: _
+ E.g. the use of IX/IY often requires extra bytes to denote these
 Private Enum OZ80_OPCODE
-    'Opcodes that accept registers usually use these offsets added to the opcode
+    'Opcodes that accept registers usually add these offsets to the opcode
     OPCODE_A = 7
     OPCODE_B = 0
     OPCODE_C = 1
@@ -53,6 +56,7 @@ Private Enum OZ80_OPCODE
     OPCODE_H = 4
     OPCODE_L = 5
     
+    'Register-pairs work in the same manner
     OPCODE_BC = &H0
     OPCODE_DE = &H10
     OPCODE_HL = &H20: OPCODE_IX = OPCODE_HL: OPCODE_IY = OPCODE_IX
@@ -63,17 +67,21 @@ Private Enum OZ80_OPCODE
     OPCODE_IY8 = &HFD
     
     'The flags add these offsets to the base opcode
-    OPCODE_FLAG_NZ = 0
-    OPCODE_FLAG_Z = &H8
-    OPCODE_FLAG_NC = &H10
-    OPCODE_FLAG_C = &H18
-    OPCODE_FLAG_PO = &H20
-    OPCODE_FLAG_PE = &H28
-    OPCODE_FLAG_P = &H30
-    OPCODE_FLAG_M = &H38
+    OPCODE_FLAG_NZ = 0                  '........
+    OPCODE_FLAG_Z = &H8                 '....x...
+    OPCODE_FLAG_NC = &H10               '...x....
+    OPCODE_FLAG_C = &H18                '...xx...
+    OPCODE_FLAG_PO = &H20               '..x.....
+    OPCODE_FLAG_PE = &H28               '..x.x...
+    OPCODE_FLAG_P = &H30                '..xx....
+    OPCODE_FLAG_M = &H38                '..xxx...
 End Enum
 
+'When fetching parameters for Z80 instructions a bit-pattern is used to relay the _
+ type and features of the paramter, i.e. whether it's a register or memory reference, _
+ what register it is and if it has an associated value e.g. `(ix+$8)`
 Private Enum OZ80_MASK
+    'Single registers
     MASK_A = 2 ^ 0
     MASK_B = 2 ^ 1
     MASK_C = 2 ^ 2
@@ -81,6 +89,8 @@ Private Enum OZ80_MASK
     MASK_E = 2 ^ 4
     MASK_H = 2 ^ 5
     MASK_L = 2 ^ 6
+    
+    'Register pairs
     MASK_AF = 2 ^ 7
     MASK_BC = 2 ^ 8
     MASK_DE = 2 ^ 9
@@ -88,22 +98,29 @@ Private Enum OZ80_MASK
     MASK_IX = 2 ^ 11
     MASK_IY = 2 ^ 12
     MASK_SP = 2 ^ 13
-    MASK_8 = 2 ^ 14
-    MASK_16 = 2 ^ 15
-    MASK_MEM8 = 2 ^ 16
-    MASK_MEM16 = 2 ^ 17
-    MASK_MEMHL = 2 ^ 18
-    MASK_MEMIX8 = 2 ^ 19
-    MASK_MEMIY8 = 2 ^ 20
-    MASK_MEMSP = 2 ^ 21
     
-    MASK_FLAGS_CZ = 2 ^ 22              'Flags c, nc, z or nz
-    MASK_FLAGS_MP = 2 ^ 23              'Flags m, p, pe or po
+    'Values
+    MASK_8 = 2 ^ 14                     'An 8-bit number
+    MASK_16 = 2 ^ 15                    'A 16-bit number
+    
+    'Memory reference
+    MASK_MEM8 = 2 ^ 16                  '`in ($8)`
+    MASK_MEM16 = 2 ^ 17                 '`jp ($16)`
+    MASK_MEMHL = 2 ^ 18                 '`ld a, (hl)`
+    MASK_MEMIX8 = 2 ^ 19                '`ld a, (ix+$8)`
+    MASK_MEMIY8 = 2 ^ 20                '`ld a, (iy+$8)`
+    MASK_MEMSP = 2 ^ 21                 '`ld a, (sp)`
+    MASK_MEMC = 2 ^ 22                  '`in (c)`
+    
+    'Condition flags (e.g. `ret`, `call`)
+    MASK_FLAGS_CZ = 2 ^ 23              'Flags c, nc, z or nz
+    MASK_FLAGS_MP = 2 ^ 24              'Flags m, p, pe or po
     MASK_FLAGS = MASK_FLAGS_CZ Or MASK_FLAGS_MP
     
-    MASK_7 = 2 ^ 24                     '0-7, e.g. `BIT` instruction
-    MASK_2 = 2 ^ 25                     '0-2, e.g. `IM` instruction
+    MASK_7 = 2 ^ 25                     '0-7, e.g. `BIT` instruction
+    MASK_2 = 2 ^ 26                     '0-2, e.g. `IM` instruction
     
+    'Some shorthand:
     MASK_IXY = MASK_IX Or MASK_IY
     MASK_IXY8 = MASK_MEMIX8 Or MASK_MEMIY8
     
@@ -117,10 +134,10 @@ End Enum
 
 '/// CLASS VARIABLES //////////////////////////////////////////////////////////////////
 
-Private TokenIndex As Long
-Private Tokens() As oz80Token
-Private TokenCount As Long
-Private Token As oz80Token
+Private Tokens() As oz80Token           'Token stream of the file we're reading from
+Private TokenIndex As Long              'current position in the token stream
+Private TokenCount As Long              'Length of the token stream
+Private Token As oz80Token              'Data of the current token
 
 'The line number of the previous token, so that we can tell when a label/property _
  definition occurs on a new line and isn't therefore part of a list
@@ -221,8 +238,8 @@ Private Sub Class_Initialize()
     '       a|b|c|d|e|h|l           (c)                 ED 40+r
     
     'INC    a|b|c|d|e|h|l                               04+r*8
-    '       bc|de|hl|sp                                 03+rr
-    '       ix|iy                                       rr 03+rr
+    '       bc|de|hl|sp|ix|iy                           rr 03+rr
+    '       (hl|ix+$8|iy+$8)                            rr 34 ??
     
     'IND                                                ED AA
     'INDR                                               ED BA
@@ -337,13 +354,14 @@ Private Sub Class_Initialize()
     'RRCA                                               0F
     
     'RRC    a|b|c|d|e|h|l                               CB 08+r
+    '       (hl|ix+$8|iy+$8)                            rr CB ?? 0E
     
     'RRD                                                ED 67
     
     'RST    0|08|10|18|20|28|30|38                      C7+num
     
     'SBC    a|b|c|d|e|h|l                               98+r
-    '                               (hl|ix+$8|iy+S8)    rr 9E ??
+    '       (hl|ix+$8|iy+S8)                            rr 9E ??
     '       a                       $8                  DE ??
     '       hl                      bc|de|hl|sp         ED+rr
     
@@ -499,7 +517,7 @@ Private Function ScopeRoot() As OZ80_ERROR
     'When a file begins, it is at the top-most scope. Certain keywords are only _
      allowed here. Once all nested scopes are exhausted, we return here
     
-    If Token.Kind = OZ80_TOKEN.TOKEN_LABELDEF Then
+    If Token.Kind = OZ80_TOKEN.TOKEN_LABEL Then
         'TODO: Define the label at the current assembly point
         Exit Function
         
@@ -773,13 +791,14 @@ Private Function ScopeZ80() As OZ80_ERROR
     'Remember the line number of this since a label or property on a different line _
      will be a definition, not a parameter
     Dim Line As Long: Let Line = Token.Line
-    'Skip over the Z80 instruction
+    'Skip over the Z80 instruction token now that we know it
     If NextToken() = False Then Stop
     'If there appears to be a parameter, skip over the parameterless instructions
     If IsParameter() = True Then GoTo With1Parameter
     
     '----------------------------------------------------------------------------------
     
+    'Z80 instructions without parameters:
     If Instruction = OZ80_TOKEN_DATA.TOKEN_Z80_CCF Then
         Call AddByte(&H3F)
     ElseIf Instruction = OZ80_TOKEN_DATA.TOKEN_Z80_CPD Then
@@ -891,79 +910,109 @@ With1Parameter:
         If TestOpcode(&H35, Param1, MASK_MEM_HL_IXY8) Then Exit Function
         
     ElseIf Instruction = OZ80_TOKEN_DATA.TOKEN_Z80_DJNZ Then '................ DJNZ ...
-        'DJNZ $8
+        If TestOpcode(&H10, Param1, MASK_8) Then Exit Function
+        Stop
         
     ElseIf Instruction = OZ80_TOKEN_DATA.TOKEN_Z80_IM Then '.................... IM ...
         'IM 0-2
     
     ElseIf Instruction = OZ80_TOKEN_DATA.TOKEN_Z80_IN Then '.................... IN ...
-        'IN (c)
+        If TestOpcode(&HED70, Param1, MASK_MEMC) Then Exit Function
+        Stop
     
     ElseIf Instruction = OZ80_TOKEN_DATA.TOKEN_Z80_INC Then '.................. INC ...
-        'INC a|b|c|d|e|h|l
-        'INC bc|de|hl|sp|ix|iy
-        'INC (hl|ix+$8|iy+$8)
+        If TestOpcode(&H4, Param1, MASK_ABCDEHL) Then Exit Function
+        If TestOpcode(&H3, Param1, MASK_BC_DE_HL Or MASK_SP Or MASK_IXY) Then Exit Function
+        If TestOpcode(&H34, Param1, MASK_MEM_HL_IXY8) Then Exit Function
+        Stop
         
     ElseIf Instruction = OZ80_TOKEN_DATA.TOKEN_Z80_JP Then '.................... JP ...
-        'JP $16
-        'JP (hl|ix|iy)
-    
+        If TestOpcode(&HC3, Param1, MASK_16) Then Exit Function
+        'NOTE: Opcode does not support a value for IX/IY. _
+               Need to get `AddOpcode` to handle this
+        If TestOpcode(&HE9, Param1, MASK_MEM_HL_IXY8) Then Exit Function
+        Stop
+        
     ElseIf Instruction = OZ80_TOKEN_DATA.TOKEN_Z80_JR Then '.................... JR ...
-        'JR $8
+        If TestOpcode(&H18, Param1, MASK_8) Then Exit Function
+        Stop
     
     ElseIf Instruction = OZ80_TOKEN_DATA.TOKEN_Z80_OR Then '.................... OR ...
-        'OR a|b|c|d|e|h|l|$8
-        'OR (hl|ix+$8|iy+$8)
+        If TestOpcode(&HB0, Param1, MASK_ABCDEHL) Then Exit Function
+        If TestOpcode(&HB6, Param1, MASK_MEM_HL_IXY8) Then Exit Function
+        If TestOpcode(&HF6, Param1, MASK_8) Then Exit Function
+        Stop
         
     ElseIf Instruction = OZ80_TOKEN_DATA.TOKEN_Z80_POP Then '.................. POP ...
-        'This is handled further down
+        'This is handled further down because `pop` may appear as having more than _
+         one paramater as OZ80 allows concatenation of `pop` instructions
         GoTo pop
         
     ElseIf Instruction = OZ80_TOKEN_DATA.TOKEN_Z80_PUSH Then '................ PUSH ...
-        'This is handled further down
+        'This is handled further down because `push` may appear as having more than _
+         one paramater as OZ80 allows concatenation of `push` instructions
         GoTo push
         
     ElseIf Instruction = OZ80_TOKEN_DATA.TOKEN_Z80_RET Then '.................. RET ...
-        'RET c|nc|m|p|z|nz|pe|po
+        'Of instructions with 1 parameter, only `ret` uses flags. _
+         Since we cannot tell when parsing the text if "c" is a register or a flag, _
+         we check for the `c` flag here and provide the correct opcode offset
+        If Param1.Kind = PARAM_REGISTER And Param1.Value = OZ80_OPCODE.OPCODE_C Then
+            'Change register C to flag C
+            Let Param1.Value = OZ80_OPCODE.OPCODE_FLAG_C
+            Let Param1.Mask = Param1.Mask Or MASK_FLAGS_CZ
+            Let Param1.Mask = Param1.Mask And Not MASK_C
+        End If
+        If TestOpcode(&HC0, Param1, MASK_FLAGS) Then Exit Function
+        Stop
     
     ElseIf Instruction = OZ80_TOKEN_DATA.TOKEN_Z80_RL Then '.................... RL ...
-        'RL a|b|c|d|e|h|l
-        'RL (hl|ix+$8|iy+$8)
+        If TestOpcode(&HCB10, Param1, MASK_ABCDEHL) Then Exit Function
+        If TestOpcode(&HCB16, Param1, MASK_MEM_HL_IXY8) Then Exit Function
+        Stop
         
     ElseIf Instruction = OZ80_TOKEN_DATA.TOKEN_Z80_RLC Then '.................. RLC ...
-        'RLC a|b|c|d|e|h|l
-        'RLC (hl|ix+$8|iy+$8)
-    
+        If TestOpcode(&HCB00, Param1, MASK_ABCDEHL) Then Exit Function
+        If TestOpcode(&HCB06, Param1, MASK_MEM_HL_IXY8) Then Exit Function
+        Stop
+        
     ElseIf Instruction = OZ80_TOKEN_DATA.TOKEN_Z80_RR Then '.................... RR ...
-        'RR a|b|c|d|e|h|l
-        'RR (hl|ix+$8|iy+$8)
+        If TestOpcode(&HCB18, Param1, MASK_ABCDEHL) Then Exit Function
+        If TestOpcode(&HCB1E, Param1, MASK_MEM_HL_IXY8) Then Exit Function
+        Stop
     
     ElseIf Instruction = OZ80_TOKEN_DATA.TOKEN_Z80_RRC Then '.................. RRC ...
-        'RRC a|b|c|d|e|h|l
-        'RRC (hl|ix+$8|iy+$8)
+        If TestOpcode(&HCB08, Param1, MASK_ABCDEHL) Then Exit Function
+        If TestOpcode(&HCB0E, Param1, MASK_MEM_HL_IXY8) Then Exit Function
+        Stop
     
     ElseIf Instruction = OZ80_TOKEN_DATA.TOKEN_Z80_RST Then '.................. RST ...
         'RST $00|$08|$10|$18|$20|$28|$30|$38
     
     ElseIf Instruction = OZ80_TOKEN_DATA.TOKEN_Z80_SBC Then '.................. SBC ...
-        'SBC a|b|c|d|e|h|l
-        'SBC (hl)
+        If TestOpcode(&H98, Param1, MASK_ABCDEHL) Then Exit Function
+        If TestOpcode(&H9E, Param1, MASK_MEM_HL_IXY8) Then Exit Function
+        Stop
     
     ElseIf Instruction = OZ80_TOKEN_DATA.TOKEN_Z80_SLA Then '.................. SLA ...
-        'SLA a|b|c|d|e|h|l
-        'SLA (hl|ix+$8|iy+$8)
+        If TestOpcode(&HCB20, Param1, MASK_ABCDEHL) Then Exit Function
+        If TestOpcode(&HCB26, Param1, MASK_MEM_HL_IXY8) Then Exit Function
+        Stop
     
     ElseIf Instruction = OZ80_TOKEN_DATA.TOKEN_Z80_SRA Then '.................. SRA ...
-        'SRA a|b|c|d|e|h|l
-        'SRA (hl|ix+$8|iy+$8)
+        If TestOpcode(&HCB28, Param1, MASK_ABCDEHL) Then Exit Function
+        If TestOpcode(&HCB2E, Param1, MASK_MEM_HL_IXY8) Then Exit Function
+        Stop
     
     ElseIf Instruction = OZ80_TOKEN_DATA.TOKEN_Z80_SLL Then '.................. SLL ...
-        'SLL a|b|c|d|e|h|l
-        'SLL (hl|ix+$8|iy+$8)
+        If TestOpcode(&HCB30, Param1, MASK_ABCDEHL) Then Exit Function
+        If TestOpcode(&HCB36, Param1, MASK_MEM_HL_IXY8) Then Exit Function
+        Stop
     
     ElseIf Instruction = OZ80_TOKEN_DATA.TOKEN_Z80_SRL Then '.................. SRL ...
-        'SRL a|b|c|d|e|h|l
-        'SRL (hl|ix+$8|iy+$8)
+        If TestOpcode(&HCB38, Param1, MASK_ABCDEHL) Then Exit Function
+        If TestOpcode(&HCB3E, Param1, MASK_MEM_HL_IXY8) Then Exit Function
+        Stop
     
     ElseIf Instruction = OZ80_TOKEN_DATA.TOKEN_Z80_SUB Then '.................. SUB ...
         If TestOpcode(&H90, Param1, MASK_ABCDEHL) Then Exit Function
@@ -1121,6 +1170,8 @@ End Function
 'AddByte : Add a byte to the assembled output and move along _
  ======================================================================================
 Private Sub AddByte(ByRef Value As Byte)
+    'Add the byte to the ROM and move to the next byte
+    'TODO: Handle banking overflows
     Let ROM(At) = Value
     Let At = At + 1
     'Handle ROM overflowing
@@ -1137,57 +1188,49 @@ Private Sub AddOpcode( _
     ByRef Opcode As Integer, ByRef Kind As OZ80_MASK, _
     Optional ByRef Value As Long = 0 _
 )
-    'Before anything else, handle opcodes that assign 8/16-bit direct or 16-bit _
-     indirect values since these include a number/memory reference AND register. _
-     (8-bit memory references are handled in the next case)
-    If Kind And (MASK_8 Or MASK_16 Or MASK_MEM16) Then
-        'TODO
-        
-    'Opcodes that accept registers add an offset to the given opcode; _
+    'Opcodes that accept registers/flags add an offset to the given opcode; _
      this offset is provided for us in the `Value` parameter
+    'NOTE: `inc` is unlike other instructions and multiplies the register offset by 8
+    If Opcode = &H4 Then
+        Let Opcode = Opcode + Value * 8
     ElseIf Kind And ( _
-        MASK_ABCDEHL Or MASK_AF Or MASK_BC_DE_HL Or MASK_SP Or MASK_IXY _
-    ) Then '...........................................................................
-        'If IX or IY are used, markers are added for these
-        If Kind And MASK_IX Then Call AddByte(OZ80_OPCODE.OPCODE_IX8)
-        If Kind And MASK_IY Then Call AddByte(OZ80_OPCODE.OPCODE_IY8)
+        MASK_ABCDEHL Or MASK_AF Or MASK_BC_DE_HL Or MASK_SP Or MASK_IXY Or _
+        MASK_FLAGS _
+    ) Then
         Let Opcode = Opcode + Value
-        GoSub Opcode
-        
-    'Instructions using memory references, i.e. `(ix+$8)`, begin with an opcode for _
-     the register if IX or IY (omitted for HL), then the instruction's opcode, and _
-     then the 8-bit value
-    ElseIf Kind And MASK_MEM_HL_IXY8 Then '............................................
-        If Kind And MASK_MEMIX8 Then
-            'IX register
-            Call AddByte(OZ80_OPCODE.OPCODE_IX8)
-            GoSub Opcode: Call AddByte(Value And &HFF)
-        ElseIf Kind And MASK_MEMIY8 Then
-            'IY register
-            Call AddByte(OZ80_OPCODE.OPCODE_IY8)
-            GoSub Opcode: Call AddByte(Value And &HFF)
-        Else
-            'HL register
-            GoSub Opcode
-        End If
-    
-    ElseIf Kind And (MASK_AF Or MASK_BC_DE_HL Or MASK_SP Or MASK_IXY) Then
-        'If IX or IY are used, markers are added for these
-        If Kind And MASK_IX Then Call AddByte(OZ80_OPCODE.OPCODE_IX8)
-        If Kind And MASK_IY Then Call AddByte(OZ80_OPCODE.OPCODE_IY8)
-        Let Opcode = Opcode + Value
-        GoSub Opcode
-        
-    Else
-        GoSub Opcode
     End If
-    Exit Sub
     
-Opcode:
+    'TODO: Bits
+    
+    'IX/IY have their own opcodes that proceed the main one
+    If Kind And (MASK_IX Or MASK_MEMIX8) Then Call AddByte(OZ80_OPCODE.OPCODE_IX8)
+    If Kind And (MASK_IY Or MASK_MEMIY8) Then Call AddByte(OZ80_OPCODE.OPCODE_IY8)
     'Are we using a pair of opcodes?
-    If (Opcode And &HFF) <> Opcode Then Call AddByte((Opcode And &HFF00&) \ &H100)
-    Call AddByte(Opcode And &HFF)
-    Return
+    If (Opcode And &HFF) <> Opcode Then
+        'Add the first opcode (hi-byte of our parameter)
+        Call AddByte((Opcode And &HFF00&) \ &H100)
+        'When a pair of opcodes are used, the presence of IX/IY causes the value to _
+         be placed between the pair of opcodes, e.g. `IX CB ?? 0E`
+        If Kind And (MASK_MEMIY8) Then
+            'TODO: Check for overflow
+            'Add the value in between
+            Call AddByte(Value And &HFF)
+            'Add the second opcode
+            Call AddByte(Opcode And &HFF)
+        Else
+            'Add the second opcode
+            Call AddByte(Opcode And &HFF)
+        End If
+    'Using a single opcode
+    Else
+        'Add the opcode
+        Call AddByte(Opcode And &HFF)
+        'Then the value (low-byte first)
+        Call AddByte(Value And &HFF)
+        'If a 16-bit value the high-byte comes next
+        'TODO: Overflow checking
+        If Kind And MASK_16 Then Call AddByte((Value And &HFF00&) \ &H100)
+    End If
 End Sub
 
 'GetParameter : Fetch the type / value of a Z80 instruction parameter _
@@ -1237,6 +1280,24 @@ Private Function GetParameter(ByRef Result As oz80Param) As OZ80_ERROR
             Let Result.Mask = MASK_IX: Let Result.Value = OPCODE_IX
         ElseIf Result.Register = TOKEN_REGISTER_IY Then
             Let Result.Mask = MASK_IY: Let Result.Value = OPCODE_IY
+        
+        'Condition flags:
+        ElseIf Result.Register = TOKEN_FLAG_NZ Then
+            Let Result.Mask = MASK_FLAGS_CZ: Let Result.Value = OPCODE_FLAG_NZ
+        ElseIf Result.Register = TOKEN_FLAG_Z Then
+            Let Result.Mask = MASK_FLAGS_CZ: Let Result.Value = OPCODE_FLAG_Z
+        ElseIf Result.Register = TOKEN_FLAG_NC Then
+            Let Result.Mask = MASK_FLAGS_CZ: Let Result.Value = OPCODE_FLAG_NC
+        'NOTE: Flag C is not included because it cannot be diferentiated from _
+               Register C. The parent will fix this limitation for us
+        ElseIf Result.Register = TOKEN_FLAG_PO Then
+            Let Result.Mask = MASK_FLAGS_MP: Let Result.Value = OPCODE_FLAG_PO
+        ElseIf Result.Register = TOKEN_FLAG_PE Then
+            Let Result.Mask = MASK_FLAGS_MP: Let Result.Value = OPCODE_FLAG_PE
+        ElseIf Result.Register = TOKEN_FLAG_P Then
+            Let Result.Mask = MASK_FLAGS_MP: Let Result.Value = OPCODE_FLAG_P
+        ElseIf Result.Register = TOKEN_FLAG_M Then
+            Let Result.Mask = MASK_FLAGS_MP: Let Result.Value = OPCODE_FLAG_M
         End If
         'Now move beyond the register token
         Call NextToken
@@ -1259,6 +1320,8 @@ Private Function GetParameter(ByRef Result As oz80Param) As OZ80_ERROR
             Let Result.Mask = MASK_MEMIY8
         ElseIf Result.Register = TOKEN_REGISTER_SP Then
             Let Result.Mask = MASK_MEMSP
+        ElseIf Result.Register = TOKEN_REGISTER_C Then
+            Let Result.Mask = MASK_MEMC
         End If
         
     ElseIf IsExpression() Then '........................................................

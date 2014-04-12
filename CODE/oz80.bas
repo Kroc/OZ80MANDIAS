@@ -28,30 +28,28 @@ Public Enum OZ80_TOKEN
     TOKEN_REGISTER = &H2                'Z80 register
     TOKEN_FLAG = &H2                    'Z80 flag condition (used on JP, CALL &  RET)
                                          '(part of registers, due to shared "C")
-    TOKEN_OPERATOR = &H3                'Operator (e.g. "+ - * /")
-    TOKEN_KEYWORD = &H4                 'Keyword (IF/DATA/ECHO &c.)
     
     'The parser automatically converts hexadecimal/binary numbers, so we only store
      'a 32-bit long (data field) in the token stream
-    TOKEN_NUMBER = &H70
+    TOKEN_NUMBER = &H10
     'Number prefixes ("K", "KB" & "Kbit")
-    TOKEN_PREFIX_K = &H7A               'x1000
-    TOKEN_PREFIX_KB = &H7B              'x1024
-    TOKEN_PREFIX_KBIT = &H7C            'x128 (1024 bits)
+    TOKEN_PREFIX_K = &H11               'x1000
+    TOKEN_PREFIX_KB = &H12              'x1024
+    TOKEN_PREFIX_KBIT = &H13            'x128 (1024 bits)
     
     'Grouping: (i.e. parenthesis, braces)
-    TOKEN_PARENOPEN = &HD0
-    TOKEN_PARENCLOSE = &HD1
-    TOKEN_BLOCKOPEN = &HD2
-    TOKEN_BLOCKCLOSE = &HD3
+    TOKEN_PARENOPEN = &H20
+    TOKEN_PARENCLOSE = &H21
+    TOKEN_BLOCKOPEN = &H22
+    TOKEN_BLOCKCLOSE = &H23
     
-    TOKEN_QUOTE = &HE0
+    TOKEN_OPERATOR = &H30               'Operator (e.g. "+ - * /")
     
-    TOKEN_LABELDEF = &HA0
-    TOKEN_LABEL = &HA1
-    TOKEN_PROPERTYDEF = &HA2
-    TOKEN_PROPERTY = &HA3
-    TOKEN_VARIABLE = &HA4
+    TOKEN_KEYWORD = &H41                'Keyword (IF/DATA/ECHO &c.)
+    TOKEN_QUOTE = &H42
+    TOKEN_LABEL = &H43
+    TOKEN_PROPERTY = &H44
+    TOKEN_VARIABLE = &H45
 End Enum
 
 Public Enum OZ80_TOKEN_DATA

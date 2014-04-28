@@ -17,7 +17,7 @@ Option Explicit
 'Licenced under a Creative Commons 3.0 Attribution Licence
 '--You may use and modify this code how you see fit as long as you give credit
 '======================================================================================
-'CLASS :: oz80Assembler
+'CLASS :: oz80_Assembler
 
 'This class will take a token stream and do the actual assembling into a Z80 binary
 
@@ -134,6 +134,8 @@ End Enum
 
 '/// CLASS VARIABLES //////////////////////////////////////////////////////////////////
 
+Private CurrentTokenFile As oz80_TokenStream
+
 Private Tokens() As oz80Token           'Token stream of the file we're reading from
 Private TokenIndex As Long              'current position in the token stream
 Private TokenCount As Long              'Length of the token stream
@@ -152,7 +154,9 @@ Private ROMSize As Long                 'Size of the ROM (32/64/128/256/512/1024
 
 'Label data will be stored here, along with the label's properties, _
  e.g. `:here`, `:here.bank`, `:here.slot`
-Private Labels() As Long
+Private Labels As Scripting.Dictionary
+'This class will caclulate the string hashes for fast lookups of the strings
+Private CRC As oz80_CRC32
 
 '/// EVENTS ///////////////////////////////////////////////////////////////////////////
 
@@ -162,6 +166,9 @@ Event Error(ByRef Err As ErrObject)
 'CLASS Initialize _
  ======================================================================================
 Private Sub Class_Initialize()
+    Set Labels = New Scripting.Dictionary
+    Set CRC = New oz80_CRC32
+    
     'NOTE:
     '   +rr     BC = +00
     '           DE = +10
@@ -401,6 +408,8 @@ End Sub
 'CLASS Terminate _
  ======================================================================================
 Private Sub Class_Terminate()
+    Set CRC = Nothing
+    Set Labels = Nothing
     Erase ROM
 End Sub
 
@@ -420,6 +429,8 @@ Public Function Process(ByRef TokenStream As oz80_TokenStream) As OZ80_ERROR
     Call TokenStream.GetTokenArray(Tokens)
     Let TokenCount = UBound(Tokens)
     
+    Set CurrentTokenFile = TokenStream
+    
     'Set the assembly point to the beginning
     Let Bank = 0
     Let Slot = 0
@@ -431,9 +442,7 @@ Public Function Process(ByRef TokenStream As oz80_TokenStream) As OZ80_ERROR
     
     'Phase 1 : Determine the size of the assembly and remember all label positions _
      ----------------------------------------------------------------------------------
-    Do
-        Call ScopeRoot
-    Loop While NextToken()
+    Let Process = ScopeRoot()
     
     'Phase 2 : 'Fill in the blanks' -- go back and evaluate the unknowns _
      ----------------------------------------------------------------------------------
@@ -526,38 +535,46 @@ Private Function ScopeRoot() As OZ80_ERROR
     'When a file begins, it is at the top-most scope. Certain keywords are only _
      allowed here. Once all nested scopes are exhausted, we return here
     
+Continue:
     If Token.Kind = OZ80_TOKEN.TOKEN_LABEL Then
-        'TODO: Define the label at the current assembly point
-        Exit Function
+        Debug.Print Token.Line & "," & Token.Col & ": " _
+            & CurrentTokenFile.StringData(Token.Data)
+        
+        'If the label is already defined, we have a problem
+        If Labels.Exists(Token.Data) = True Then
+            'TODO: Error - label already defined
+            Stop
+        Else
+            'Add a label using the token's data value for an index key as this will _
+             be the string hash generated in the token stream
+            Call Labels.Add(Token.Data, At)
+        End If
         
     ElseIf Token.Kind = OZ80_TOKEN.TOKEN_KEYWORD Then
         'Check allowed keywords at this Scope
         If Token.Data = OZ80_TOKEN_DATA.TOKEN_KEYWORD_FILL Then
             'TODO
-            Exit Function
             
         ElseIf Token.Data = OZ80_TOKEN_DATA.TOKEN_KEYWORD_INCLUDE Then
             'TODO
-            Exit Function
             
         ElseIf Token.Data = OZ80_TOKEN_DATA.TOKEN_KEYWORD_TABLE Then
             'TODO
-            Exit Function
             
         ElseIf Token.Data = OZ80_TOKEN_DATA.TOKEN_KEYWORD_STRUCT Then
             'TODO
-            Exit Function
             
         ElseIf Token.Data = OZ80_TOKEN_DATA.TOKEN_KEYWORD_PROC Then
             'TODO
-            Exit Function
             
         End If
+    Else
+        'The root Scope also allows for source code, a Scope shared by blocks
+        Let ScopeRoot = ScopeCode()
+        GoTo Continue
     End If
     
-    'The root Scope also allows for source code, which is a Scope shared by blocks
-    Call ScopeCode
-    
+    If NextToken() = True Then GoTo Continue
 End Function
 
 'ScopeCode : Process areas where source code is allowed _
@@ -583,11 +600,14 @@ Private Function ScopeCode() As OZ80_ERROR
     ElseIf Token.Kind = OZ80_TOKEN.TOKEN_Z80 Then
         'Process a Z80 instruction ...
         Let ScopeCode = ScopeZ80()
+        Exit Function
     
     Else
         'TODO: Error - unexpected content at this point
 '        Stop
     End If
+    
+    Call NextToken
 End Function
 
 'ScopeExpression: Evaluate a calculation into a value _
@@ -610,6 +630,7 @@ Private Function ScopeExpression( _
 '     token stream comes to an end since the expression is valid. The parent scopes _
 '     will handle an unexpected end error
 '    If NextToken() = False Then Exit Function
+    
     'If next token is not an operator assume the expression has finished, _
       the parent will handle whatever the next token is used for
     If Token.Kind <> OZ80_TOKEN.TOKEN_OPERATOR Then Exit Function
@@ -1337,6 +1358,7 @@ Private Function GetParameter(ByRef Result As oz80Param) As OZ80_ERROR
             Let Result.Mask = MASK_MEMC
         End If
         
+    'Anything else classes as an expression (number / labels / variables / operators)
     ElseIf IsExpression() Then '........................................................
         Let Result.Kind = PARAM_NUMBER
         Let GetParameter = ScopeExpression(Result.Value, Result.ValueUnknown)
@@ -1438,12 +1460,4 @@ Private Function TestOpcode( _
         Call AddOpcode(Opcode, Param.Mask, Param.Value)
         Let TestOpcode = True
     End If
-End Function
-
-'ValueExists : Check if a value already exists in a dictionary object _
- ======================================================================================
-Private Function ValueExists( _
-    ByRef Dict As Scripting.Dictionary, ByRef Value As Long _
-) As Boolean
-    '
 End Function

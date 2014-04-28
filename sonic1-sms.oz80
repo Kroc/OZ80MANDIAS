@@ -466,7 +466,7 @@ PROC :interruptHandler {
 	      `if we ensure that interrupts are disabled during routines that use the
 	      `shadow registers, we might conceivably do away with these leading /
 	      `trailing stack exchanges and save some cycles on the interrupt handler
-	push	af, hl, de, bc
+	push	af', hl', de', bc'
 	
 	`get the status of the VDP
 	in	a;vdpStatus, (#SMS_VDP_CONTROL)
@@ -3528,24 +3528,24 @@ DATA $2B, $20, $35, $1B, $16, $2A, $00, $3F, $03, $0F, $01, $15, $07, $2D, $00, 
 `----------------------------------------------------------------------------[$0F4E]---
 
 :_f4e
-DATA :_0f84, $00				`Green Hill Act 1
-DATA :_0f93, $00				`Green Hill Act 2
-DATA :_0fde, $01				`Green Hill Act 3
-DATA :_0fa2, $00				`Bridge Act 1
-DATA :_0fb1, $00				`Bridge Act 2
-DATA :_107e, $02				`Bridge Act 3
-DATA :_0fc0, $00				`Jungle Act 1
-DATA :_0fcf, $00				`Jungle Act 2
-DATA :_1088, $03				`Jungle Act 3
-DATA :_100b, $00				`Labyrinth Act 1
-DATA :_101a, $00				`Labyrinth Act 2
-DATA :_1092, $00				`Labyrinth Act 3
-DATA :_1029, $00				`Scrap Brain Act 1
-DATA :_1038, $00				`Scrap Brain Act 2
-DATA :_109c, $00				`Scrap Brain Act 3
-DATA :_1047, $00				`Sky Base Act 1
-DATA :_1056, $00				`Sky Base Act 2
-DATA :_1056, $00				`Sky Base Act 3
+DATA :_0f84, $00			`Green Hill Act 1
+DATA :_0f93, $00			`Green Hill Act 2
+DATA :_0fde, $01			`Green Hill Act 3
+DATA :_0fa2, $00			`Bridge Act 1
+DATA :_0fb1, $00			`Bridge Act 2
+DATA :_107e, $02			`Bridge Act 3
+DATA :_0fc0, $00			`Jungle Act 1
+DATA :_0fcf, $00			`Jungle Act 2
+DATA :_1088, $03			`Jungle Act 3
+DATA :_100b, $00			`Labyrinth Act 1
+DATA :_101a, $00			`Labyrinth Act 2
+DATA :_1092, $00			`Labyrinth Act 3
+DATA :_1029, $00			`Scrap Brain Act 1
+DATA :_1038, $00			`Scrap Brain Act 2
+DATA :_109c, $00			`Scrap Brain Act 3
+DATA :_1047, $00			`Sky Base Act 1
+DATA :_1056, $00			`Sky Base Act 2
+DATA :_1056, $00			`Sky Base Act 3
 
 `----------------------------------------------------------------------------[$0F84]---
 

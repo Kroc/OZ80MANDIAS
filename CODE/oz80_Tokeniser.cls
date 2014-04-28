@@ -18,21 +18,13 @@ Option Compare Text
 'Licenced under a Creative Commons 3.0 Attribution Licence
 '--You may use and modify this code how you see fit as long as you give credit
 '======================================================================================
-'CLASS:: oz80TokenStream
+'CLASS:: oz80_TokenStream
 
 'A Token stream is machine-readable representation of the original source code that _
  does away for the need to refer to the source text files again. This class handles _
  parsing the source code text into tokens; the assembler only works with tokens
 
 '/// API //////////////////////////////////////////////////////////////////////////////
-
-'Copy raw memory from one place to another _
- <msdn.microsoft.com/en-us/library/windows/desktop/aa366535%28v=vs.85%29.aspx>
-Private Declare Sub kernel32_RtlMoveMemory Lib "kernel32" Alias "RtlMoveMemory" ( _
-    ByRef ptrDestination As Any, _
-    ByRef ptrSource As Any, _
-    ByVal Length As Long _
-)
 
 '<msdn.microsoft.com/en-us/library/windows/desktop/ms724408%28v=vs.85%29.aspx>
 Private Declare Function kernel32_GetTickCount Lib "kernel32" Alias "GetTickCount" ( _
@@ -88,7 +80,7 @@ Private Enum ASCII
     F = 102
     G = 103
     H = 104
-    I = 105
+    i = 105
     J = 106
     K = 107
     L = 108
@@ -119,7 +111,7 @@ End Enum
 Private Enum SYNTAX
     SYNTAX_COMMENT = 96         ' ` - Comment marker. "``" for multi-line comment
     SYNTAX_HINT1 = 59           ' ; - register hint, e.g. `a;index`
-    SYNTAX_HINT2 = 59           ' ' - shadow register hint, e.g. `ex af 'af`
+    SYNTAX_HINT2 = 39           ' ' - shadow register hint, e.g. `ex af 'af`
     SYNTAX_QUOTE = 34           ' " - string identifier
     SYNTAX_LABEL = 58           ' : - label identifier
     SYNTAX_PROPERTY = 46        ' . - property identifier
@@ -129,18 +121,18 @@ Private Enum SYNTAX
     SYNTAX_NUMBER_HEX = 36      ' $ - hexadecimal number, e.g. `$FFFF`
     SYNTAX_NUMBER_BIN = 37      ' % - binary number, e.g. `%10101011`
     SYNTAX_NEXT = 44            ' , - item seperator, optional
-    SYNTAX_PAREN_OPEN = 40      '(
-    SYNTAX_PAREN_CLOSE = 41     ')
-    SYNTAX_BLOCK_OPEN = 123     '{
-    SYNTAX_BLOCK_CLOSE = 125    '}
-    SYNTAX_OPERATOR_ADD = 43    '+
-    SYNTAX_OPERATOR_SUB = 45    '-
-    SYNTAX_OPERATOR_MUL = 42    '*
-    SYNTAX_OPERATOR_DIV = 47    '/
-    SYNTAX_OPERATOR_POW = 94    '^
-    SYNTAX_OPERATOR_MOD = 92    '\
-    SYNTAX_OPERATOR_OR = 124    '|
-    SYNTAX_OPERATOR_AND = 38    '&
+    SYNTAX_PAREN_OPEN = 40      ' (
+    SYNTAX_PAREN_CLOSE = 41     ' )
+    SYNTAX_BLOCK_OPEN = 123     ' {
+    SYNTAX_BLOCK_CLOSE = 125    ' }
+    SYNTAX_OPERATOR_ADD = 43    ' +
+    SYNTAX_OPERATOR_SUB = 45    ' -
+    SYNTAX_OPERATOR_MUL = 42    ' *
+    SYNTAX_OPERATOR_DIV = 47    ' /
+    SYNTAX_OPERATOR_POW = 94    ' ^
+    SYNTAX_OPERATOR_MOD = 92    ' \
+    SYNTAX_OPERATOR_OR = 124    ' |
+    SYNTAX_OPERATOR_AND = 38    ' &
 End Enum
 
 'Use a 100'000 item initial buffer for the token stream
@@ -158,6 +150,8 @@ Private TokenCount As Long              'The current amount of space used in the
 'String content will be held here; the token stream will be given an index number _
  associated with the string entry here
 Private Strings As Scripting.Dictionary
+'This class will caclulate the string hashes for fast lookups of the strings
+Private CRC As oz80_CRC32
 
 'A look up table of ASCII codes from upper-case to lower-case
 Private LowCase(0 To 255) As Long
@@ -204,6 +198,8 @@ Private Sub Class_Initialize()
     
     'Initialise the string database
     Set Strings = New Scripting.Dictionary
+    'and the class to hash strings into index keys
+    Set CRC = New oz80_CRC32
     
     'Initialise the array used within the `CompStr` function
     With CompStrSA1D
@@ -223,6 +219,8 @@ End Sub
 Private Sub Class_Terminate()
     'Clear the string database
     Set Strings = Nothing
+    'Clean up the string hashing class
+    Set CRC = Nothing
     'Clean up the look up tables
     Erase LowCase, IsNumber
     'The `Tokenise` method will clean this up, but just be doubly sure
@@ -240,6 +238,13 @@ End Sub
 Friend Sub GetTokenArray(ByRef TokenArray() As oz80Token)
     Let TokenArray = Tokens
 End Sub
+
+'PROPERTY StringData : Expose the string data associated with the tokens _
+ ======================================================================================
+Public Property Get StringData(ByRef Key As Long) As String
+    On Error Resume Next
+    Let StringData = Strings(Key)
+End Property
 
 'Tokenise : Break a file into all its individual words and convert to machine tokens _
  ======================================================================================
@@ -662,7 +667,7 @@ TokenWord:
         'Z80 instructions
         If CompStr(WordBegin, WordLen, "halt") Then Call Add(TOKEN_Z80, TOKEN_Z80_HALT, LineBegin, ColBegin): GoTo NextWord
         
-    ElseIf Asc1 = I Then '..................................................... `i` ...
+    ElseIf Asc1 = i Then '..................................................... `i` ...
         'Z80 instructions
         If CompStr(WordBegin, WordLen, "im") Then Call Add(TOKEN_Z80, TOKEN_Z80_IM, LineBegin, ColBegin): GoTo NextWord
         If CompStr(WordBegin, WordLen, "in") Then Call Add(TOKEN_Z80, TOKEN_Z80_IN, LineBegin, ColBegin): GoTo NextWord
@@ -922,7 +927,7 @@ OneLetter:
     If Asc1 = D Then Call Add(TOKEN_REGISTER, TOKEN_REGISTER_D, LineBegin, ColBegin): GoTo NextWord
     If Asc1 = E Then Call Add(TOKEN_REGISTER, TOKEN_REGISTER_E, LineBegin, ColBegin): GoTo NextWord
     If Asc1 = H Then Call Add(TOKEN_REGISTER, TOKEN_REGISTER_H, LineBegin, ColBegin): GoTo NextWord
-    If Asc1 = I Then Call Add(TOKEN_REGISTER, TOKEN_REGISTER_I, LineBegin, ColBegin): GoTo NextWord
+    If Asc1 = i Then Call Add(TOKEN_REGISTER, TOKEN_REGISTER_I, LineBegin, ColBegin): GoTo NextWord
     If Asc1 = L Then Call Add(TOKEN_REGISTER, TOKEN_REGISTER_L, LineBegin, ColBegin): GoTo NextWord
     If Asc1 = R Then Call Add(TOKEN_REGISTER, TOKEN_REGISTER_R, LineBegin, ColBegin): GoTo NextWord
     GoTo WordError
@@ -936,7 +941,7 @@ TwoLetters:
         If Asc2 = E Then Call Add(TOKEN_REGISTER, TOKEN_REGISTER_DE, LineBegin, ColBegin): GoTo NextWord
     ElseIf Asc1 = H Then  '"hl"
         If Asc2 = L Then Call Add(TOKEN_REGISTER, TOKEN_REGISTER_HL, LineBegin, ColBegin): GoTo NextWord
-    ElseIf Asc1 = I Then  '"ix"/"iy"
+    ElseIf Asc1 = i Then  '"ix"/"iy"
         If Asc2 = X Then Call Add(TOKEN_REGISTER, TOKEN_REGISTER_IX, LineBegin, ColBegin): GoTo NextWord
         If Asc2 = Y Then Call Add(TOKEN_REGISTER, TOKEN_REGISTER_IY, LineBegin, ColBegin): GoTo NextWord
     ElseIf Asc1 = P Then  '"pc"
@@ -1031,7 +1036,7 @@ Private Sub Add( _
     ByRef Kind As OZ80_TOKEN, ByRef Data As OZ80_TOKEN_DATA, _
     ByRef Line As Long, ByRef Col As Long _
 )
-    'The param MUST be 0-255, but is given as long for speed reasons; _
+    'The `Kind` param MUST be 0-255, but is given as long for speed reasons; _
      the rest of this class will ensure that this is never out of bounds
     With Tokens(TokenCount)
         Let .Kind = Kind
@@ -1058,12 +1063,14 @@ Private Sub AddString( _
     ByRef TokenType As OZ80_TOKEN, ByRef Data As String, _
     ByRef Line As Long, ByRef Col As Long _
 )
-    If Strings.Exists(Data) = False Then
-        Call Strings.Add(Data, TokenCount)
-        Call Add(TokenType, TokenCount, Line, Col)
-    Else
-        Call Add(TokenType, Strings.Item(Data), Line, Col)
-    End If
+    'Hash the string to get its unique index key
+    Dim Key As Long
+    Let Key = CRC.HashASCIIString(Data)
+    
+    'If the string hasn't been added yet, do so
+    If Strings.Exists(Key) = False Then Call Strings.Add(Key, Data)
+    'Add the index key to the token so that we can retrieve the string later
+    Call Add(TokenType, Key, Line, Col)
 End Sub
 
 'CompStr : Compare a word from the byte array to a string _

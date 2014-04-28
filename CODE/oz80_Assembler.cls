@@ -6,7 +6,7 @@ BEGIN
   DataSourceBehavior  = 0  'vbNone
   MTSTransactionMode  = 0  'NotAnMTSObject
 END
-Attribute VB_Name = "oz80Assembler"
+Attribute VB_Name = "oz80_Assembler"
 Attribute VB_GlobalNameSpace = False
 Attribute VB_Creatable = True
 Attribute VB_PredeclaredId = False
@@ -143,17 +143,24 @@ Private Token As oz80Token              'Data of the current token
  definition occurs on a new line and isn't therefore part of a list
 Private PrevLine As Long
 
-Private Bank As Long
-Private Slot As Long
-Private At As Long
+Private At As Long                      'Current position within the ROM (absolute)
+Private Bank As Long                    'Current bank number
+Private Slot As Long                    'Current slot number the bank applies to
 
-Private ROM() As Byte
-Private ROMSize As Long
+Private ROM() As Byte                   'The output!
+Private ROMSize As Long                 'Size of the ROM (32/64/128/256/512/1024 KB)
+
+'Label data will be stored here, along with the label's properties, _
+ e.g. `:here`, `:here.bank`, `:here.slot`
+Private Labels() As Long
 
 '/// EVENTS ///////////////////////////////////////////////////////////////////////////
 
+'A class event is used to communicate error details beyond a simple error number
 Event Error(ByRef Err As ErrObject)
 
+'CLASS Initialize _
+ ======================================================================================
 Private Sub Class_Initialize()
     'NOTE:
     '   +rr     BC = +00
@@ -351,36 +358,36 @@ Private Sub Class_Initialize()
     'RR     a|b|c|d|e|h|l                               CB 18+r
     '       (hl|ix+$8|iy+$8)                            rr CB ?? 1E
     
-    'RRCA                                               0F
+    'RRCA                                               0F              ---     x
     
-    'RRC    a|b|c|d|e|h|l                               CB 08+r
-    '       (hl|ix+$8|iy+$8)                            rr CB ?? 0E
+    'RRC    a|b|c|d|e|h|l                               CB 08+r         reg     x
+    '       (hl|ix+$8|iy+$8)                            rr CB ?? 0E     mem     x
     
-    'RRD                                                ED 67
+    'RRD                                                ED 67           ---     x
     
     'RST    0|08|10|18|20|28|30|38                      C7+num
     
-    'SBC    a|b|c|d|e|h|l                               98+r
-    '       (hl|ix+$8|iy+S8)                            rr 9E ??
+    'SBC    a|b|c|d|e|h|l                               98+r            reg     x
+    '       (hl|ix+$8|iy+S8)                            rr 9E ??        mem     x
     '       a                       $8                  DE ??
     '       hl                      bc|de|hl|sp         ED+rr
     
-    'SCF                                                37
+    'SCF                                                37              ---     x
     
     'SET    0-7                     a|b|c|d|e|h|l       CB C0+b+r
     '                               (hl|ix+$8|iy+$8)    rr CB ?? C6+b+r
     
-    'SLA    a|b|c|d|e|h|l                               CB 20+r
-    '       (hl|ix+$8|iy+$8)                            rr CB ?? 26
+    'SLA    a|b|c|d|e|h|l                               CB 20+r         reg     x
+    '       (hl|ix+$8|iy+$8)                            rr CB ?? 26     mem     x
     
-    'SRA    a|b|c|d|e|h|l                               CB 28+r
-    '       (hl|ix+$8|iy+$8)                            rr CB ?? 2E
+    'SRA    a|b|c|d|e|h|l                               CB 28+r         reg     x
+    '       (hl|ix+$8|iy+$8)                            rr CB ?? 2E     mem     x
     
-    'SLL    a|b|c|d|e|h|l                               CB 30+r
-    '       (hl|ix+$8|iy+$8)                            rr CB ?? 36
+    'SLL    a|b|c|d|e|h|l                               CB 30+r         reg     x
+    '       (hl|ix+$8|iy+$8)                            rr CB ?? 36     mem     x
     
-    'SRL    a|b|c|d|e|h|l                               CB 38+r
-    '       (hl|ix+$8|iy+$8)                            rr CB ?? 3E
+    'SRL    a|b|c|d|e|h|l                               CB 38+r         reg     x
+    '       (hl|ix+$8|iy+$8)                            rr CB ?? 3E     mem     x
     
     'SUB    a|b|c|d|e|h|l                               90+r            reg     x
     '       (hl|ix+$8|iy+$8)                            rr 96 ??        mem     x
@@ -391,6 +398,8 @@ Private Sub Class_Initialize()
     '       $8                                          EE ??           val     x
 End Sub
 
+'CLASS Terminate _
+ ======================================================================================
 Private Sub Class_Terminate()
     Erase ROM
 End Sub
@@ -399,7 +408,7 @@ End Sub
 
 'Process : Assemble a Z80 binary from a given token stream _
  ======================================================================================
-Public Function Process(ByRef TokenStream As oz80Tokeniser) As OZ80_ERROR
+Public Function Process(ByRef TokenStream As oz80_TokenStream) As OZ80_ERROR
     Debug.Print
     Debug.Print "* Assembling token stream"
     
@@ -987,7 +996,11 @@ With1Parameter:
         Stop
     
     ElseIf Instruction = OZ80_TOKEN_DATA.TOKEN_Z80_RST Then '.................. RST ...
-        'RST $00|$08|$10|$18|$20|$28|$30|$38
+        'For `rst` the values allowed are $00, $08, $10, $18, $20, $28, $30 & $38
+        If (Param1.Value And &H38) = Param1.Value Then
+            If TestOpcode(&HC7 + Param1.Value, Param1, MASK_8) Then Exit Function
+        End If
+        Stop
     
     ElseIf Instruction = OZ80_TOKEN_DATA.TOKEN_Z80_SBC Then '.................. SBC ...
         If TestOpcode(&H98, Param1, MASK_ABCDEHL) Then Exit Function
@@ -1226,7 +1239,7 @@ Private Sub AddOpcode( _
         'Add the opcode
         Call AddByte(Opcode And &HFF)
         'Then the value (low-byte first)
-        Call AddByte(Value And &HFF)
+        If Kind And (MASK_16 Or MASK_8) Then Call AddByte(Value And &HFF)
         'If a 16-bit value the high-byte comes next
         'TODO: Overflow checking
         If Kind And MASK_16 Then Call AddByte((Value And &HFF00&) \ &H100)
@@ -1348,7 +1361,8 @@ End Function
 'IsParameter : Check if the current token would be considered a Z80 parameter _
  ======================================================================================
 Private Function IsParameter() As Boolean
-    'A parameter can be a number, label/variable/property, register or memory reference
+    'A parameter can be a number, label/variable/property, register _
+     or memory reference
     If Token.Kind = OZ80_TOKEN.TOKEN_LABEL Then
         'A label on a new line is a definition, not a parameter
         If Token.Line = PrevLine Then Let IsParameter = True
@@ -1426,3 +1440,10 @@ Private Function TestOpcode( _
     End If
 End Function
 
+'ValueExists : Check if a value already exists in a dictionary object _
+ ======================================================================================
+Private Function ValueExists( _
+    ByRef Dict As Scripting.Dictionary, ByRef Value As Long _
+) As Boolean
+    '
+End Function

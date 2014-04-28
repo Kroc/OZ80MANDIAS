@@ -6,7 +6,7 @@ BEGIN
   DataSourceBehavior  = 0  'vbNone
   MTSTransactionMode  = 0  'NotAnMTSObject
 END
-Attribute VB_Name = "oz80Tokeniser"
+Attribute VB_Name = "oz80_TokenStream"
 Attribute VB_GlobalNameSpace = False
 Attribute VB_Creatable = True
 Attribute VB_PredeclaredId = False
@@ -38,7 +38,7 @@ Private Declare Sub kernel32_RtlMoveMemory Lib "kernel32" Alias "RtlMoveMemory" 
 Private Declare Function kernel32_GetTickCount Lib "kernel32" Alias "GetTickCount" ( _
 ) As Long
 
-'API support for CompStr function _
+'API support for `CompStr` function _
  --------------------------------------------------------------------------------------
 '<www.vbforums.com/showthread.php?729385-VB6-clsStrToIntArray-cls-Cast-String-To-Integer-Array>
 Private Type SAFEARRAY1D    'Represents a safe array. (One Dimensional)
@@ -106,7 +106,7 @@ Private Enum ASCII
     X = 120
     Y = 121
     Z = 122
-
+    
     aSPC = 32
     aTAB = 9
     aCR = 10
@@ -117,18 +117,18 @@ End Enum
 
 'These define the various punctiation marks (in ASCII codes) for the language syntax
 Private Enum SYNTAX
-    SYNTAX_COMMENT = 96         '`
-    SYNTAX_HINT1 = 59           ';
-    SYNTAX_HINT2 = 59           ''
-    SYNTAX_QUOTE = 34           '"
-    SYNTAX_LABEL = 58           ':
-    SYNTAX_PROPERTY = 46        '.
-    SYNTAX_VARIABLE = 35        '#
-    SYNTAX_MACRO = 64           '@
-    SYNTAX_FUNCT = 63           '?
-    SYNTAX_NUMBER_HEX = 36      '$
-    SYNTAX_NUMBER_BIN = 37      '%
-    SYNTAX_NEXT = 44            ',
+    SYNTAX_COMMENT = 96         ' ` - Comment marker. "``" for multi-line comment
+    SYNTAX_HINT1 = 59           ' ; - register hint, e.g. `a;index`
+    SYNTAX_HINT2 = 59           ' ' - shadow register hint, e.g. `ex af 'af`
+    SYNTAX_QUOTE = 34           ' " - string identifier
+    SYNTAX_LABEL = 58           ' : - label identifier
+    SYNTAX_PROPERTY = 46        ' . - property identifier
+    SYNTAX_VARIABLE = 35        ' # - variable identifier
+    SYNTAX_MACRO = 64           ' @ - macro identifier
+    SYNTAX_FUNCT = 63           ' ? - function identifier
+    SYNTAX_NUMBER_HEX = 36      ' $ - hexadecimal number, e.g. `$FFFF`
+    SYNTAX_NUMBER_BIN = 37      ' % - binary number, e.g. `%10101011`
+    SYNTAX_NEXT = 44            ' , - item seperator, optional
     SYNTAX_PAREN_OPEN = 40      '(
     SYNTAX_PAREN_CLOSE = 41     ')
     SYNTAX_BLOCK_OPEN = 123     '{
@@ -157,10 +157,7 @@ Private TokenCount As Long              'The current amount of space used in the
 
 'String content will be held here; the token stream will be given an index number _
  associated with the string entry here
-Private Quotes As Scripting.Dictionary
-Private Labels As Scripting.Dictionary
-Private Variables As Scripting.Dictionary
-Private Properties As Scripting.Dictionary
+Private Strings As Scripting.Dictionary
 
 'A look up table of ASCII codes from upper-case to lower-case
 Private LowCase(0 To 255) As Long
@@ -175,15 +172,16 @@ Private IsAlphaNumeric(0 To 255) As Boolean
 
 '/// EVENTS ///////////////////////////////////////////////////////////////////////////
 
+'A class event is used to communicate error details beyond a simple error number
 Event Error(ByRef Err As ErrObject)
 
 'CLASS Initialize _
  ======================================================================================
 Private Sub Class_Initialize()
+    'Save time doing and/or comparisons by compiling a look up tables of ASCII _
+     codes that count as numeric / hex / alpha and alphanumeric
     Dim ii As Long
     For ii = 0 To 255
-        'Save time doing and/or comparisons by compiling a look up tables of ASCII _
-         codes that count as numeric / hex / alpha and alphanumeric
         If ii >= NUM0 And ii <= NUM9 Then
             Let LowCase(ii) = ii
             Let IsNumber(ii) = True
@@ -204,11 +202,10 @@ Private Sub Class_Initialize()
         End If
     Next ii
     
-    Set Quotes = New Scripting.Dictionary
-    Set Labels = New Scripting.Dictionary
-    Set Variables = New Scripting.Dictionary
-    Set Properties = New Scripting.Dictionary
+    'Initialise the string database
+    Set Strings = New Scripting.Dictionary
     
+    'Initialise the array used within the `CompStr` function
     With CompStrSA1D
         .cDims = 1
         .fFeatures = FADF_AUTO Or FADF_FIXEDSIZE
@@ -224,11 +221,8 @@ End Sub
 'CLASS Terminate _
  ======================================================================================
 Private Sub Class_Terminate()
-    Set Quotes = Nothing
-    Set Labels = Nothing
-    Set Variables = Nothing
-    Set Properties = Nothing
-    
+    'Clear the string database
+    Set Strings = Nothing
     'Clean up the look up tables
     Erase LowCase, IsNumber
     'The `Tokenise` method will clean this up, but just be doubly sure
@@ -261,10 +255,7 @@ Public Function Tokenise(ByRef FilePath As String) As OZ80_ERROR
     Dim ii As Long
     
     'Clean out any previous string data
-    Call Quotes.RemoveAll
-    Call Labels.RemoveAll
-    Call Variables.RemoveAll
-    Call Properties.RemoveAll
+    Call Strings.RemoveAll
     
     'Prepare a large buffer to accept the token stream (using `ReDim` for every token _
      added is *incredibly* slow). If the tokens overflow this buffer, we'll increase _
@@ -466,7 +457,7 @@ ReadChar:
             
         End If
         
-    'Quotes: ..........................................................................
+    'Strings: .........................................................................
     Else
         'TODO: skip tabs and line breaks -- not possible yet due to the memcopy! _
                -- will need to copy into a second byte array? filter array?
@@ -570,7 +561,7 @@ TokenWord:
             GoTo ErrorInvalidName
         Else
             GoSub GetWord
-            Call AddLabel(Word, LineBegin, ColBegin)
+            Call AddString(TOKEN_LABEL, Word, LineBegin, ColBegin)
             GoTo NextWord
         End If
     
@@ -591,7 +582,7 @@ TokenWord:
             GoTo ErrorInvalidName
         Else
             GoSub GetWord
-            Call AddProperty(Word, LineBegin, ColBegin)
+            Call AddString(TOKEN_PROPERTY, Word, LineBegin, ColBegin)
             GoTo NextWord
         End If
     
@@ -605,7 +596,7 @@ TokenWord:
             GoTo ErrorInvalidName
         Else
             GoSub GetWord
-            Call AddVariable(Word, LineBegin, ColBegin)
+            Call AddString(TOKEN_VARIABLE, Word, LineBegin, ColBegin)
             GoTo NextWord
         End If
         
@@ -881,7 +872,7 @@ TokenWord:
     'String (quote)
     ElseIf Asc1 = SYNTAX_QUOTE Then '.......................................... `"` ...
         GoSub GetWord
-        Call AddQuote(Mid$(Word, 2), LineBegin, ColBegin)
+        Call AddString(TOKEN_QUOTE, Mid$(Word, 2), LineBegin, ColBegin)
         GoTo NextWord
         
     ElseIf Asc1 = SYNTAX_OPERATOR_ADD Then '................................... `+` ...
@@ -1025,10 +1016,8 @@ Finish:
         Debug.Print "- Words: " & Format$(WordCount, "#,#")
         Debug.Print "- Time: " & Format$((kernel32_GetTickCount() - Start) / 1000, "0.000") & "s"
     Else
-        Call Quotes.RemoveAll
-        Call Labels.RemoveAll
-        Call Variables.RemoveAll
-        Call Properties.RemoveAll
+        'When there's an error, clean up
+        Call Strings.RemoveAll
         Erase Text, Tokens
         Let TokenCount = 0
     End If
@@ -1063,51 +1052,17 @@ Private Sub Add( _
     End If
 End Sub
 
-'AddLabel : Register a label name for index <> string access _
+'AddString : Strings are stored outside of the token stream and referenced by number _
  ======================================================================================
-Private Sub AddLabel( _
-    ByRef LabelName As String, ByRef Line As Long, ByRef Col As Long _
+Private Sub AddString( _
+    ByRef TokenType As OZ80_TOKEN, ByRef Data As String, _
+    ByRef Line As Long, ByRef Col As Long _
 )
-    If Labels.Exists(LabelName) = False Then
-        Call Labels.Add(LabelName, TokenCount)
-        Call Add(TOKEN_LABEL, TokenCount, Line, Col)
+    If Strings.Exists(Data) = False Then
+        Call Strings.Add(Data, TokenCount)
+        Call Add(TokenType, TokenCount, Line, Col)
     Else
-        Call Add(TOKEN_LABEL, Labels.Item(LabelName), Line, Col)
-    End If
-End Sub
-
-'AddVariable : Register a variable name for index <> string access _
- ======================================================================================
-Private Sub AddVariable(ByRef VariableName As String, ByRef Line As Long, ByRef Col As Long)
-    If Variables.Exists(VariableName) = False Then
-        Call Variables.Add(VariableName, TokenCount)
-        Call Add(TOKEN_VARIABLE, TokenCount, Line, Col)
-    Else
-        Call Add(TOKEN_VARIABLE, Variables.Item(VariableName), Line, Col)
-    End If
-End Sub
-
-'AddProperty : Register a property name for index <> string access _
- ======================================================================================
-Private Sub AddProperty( _
-    ByRef PropertyName As String, ByRef Line As Long, ByRef Col As Long _
-)
-    If Properties.Exists(PropertyName) = False Then
-        Call Properties.Add(PropertyName, TokenCount)
-        Call Add(TOKEN_PROPERTY, TokenCount, Line, Col)
-    Else
-        Call Add(TOKEN_PROPERTY, Properties.Item(PropertyName), Line, Col)
-    End If
-End Sub
-
-'AddQuote : Strings are stored outside of the token stream and referenced by number _
- ======================================================================================
-Private Sub AddQuote(ByRef QuoteString As String, ByRef Line As Long, ByRef Col As Long)
-    If Quotes.Exists(QuoteString) = False Then
-        Call Quotes.Add(QuoteString, TokenCount)
-        Call Add(TOKEN_QUOTE, TokenCount, Line, Col)
-    Else
-        Call Add(TOKEN_QUOTE, Quotes.Item(QuoteString), Line, Col)
+        Call Add(TokenType, Strings.Item(Data), Line, Col)
     End If
 End Sub
 

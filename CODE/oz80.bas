@@ -23,6 +23,8 @@ Public Enum OZ80_ERROR
     OZ80_ERROR_EXPRESSION = 10          'Not a valid expression
 End Enum
 
+'--------------------------------------------------------------------------------------
+
 Public Enum OZ80_TOKEN
     TOKEN_Z80 = &H1                     'Z80 instruction
     TOKEN_REGISTER = &H2                'Z80 register
@@ -217,7 +219,7 @@ End Type
 'Assemble : Take a source file and produce a binary _
  ======================================================================================
 Public Function Assemble(ByVal FilePath As String) As OZ80_ERROR
-    Dim Tokeniser As oz80Tokeniser
+    Dim Tokeniser As oz80_TokenStream
     
     Debug.Print
     Debug.Print "OZ80MANDIAS v" & App.Major & "." & App.Minor & "," & App.Revision
@@ -229,15 +231,15 @@ Public Function Assemble(ByVal FilePath As String) As OZ80_ERROR
      ----------------------------------------------------------------------------------
     'Create a tokeniser object to hold the machine representation of the text files; _
      the assembler doesn't work with the original text directly
-    Set Tokeniser = New oz80Tokeniser
+    Set Tokeniser = New oz80_TokenStream
     'Explode the source code file into tokens
     Let Assemble = Tokeniser.Tokenise(FilePath)
     If Assemble <> OZ80_ERROR_NONE Then GoTo Finish
     
     'Stage 2: Assemble _
      ----------------------------------------------------------------------------------
-    Dim Assembler As oz80Assembler
-    Set Assembler = New oz80Assembler
+    Dim Assembler As oz80_Assembler
+    Set Assembler = New oz80_Assembler
     Let Assemble = Assembler.Process(Tokeniser)
     If Assemble <> OZ80_ERROR_NONE Then GoTo Finish
     

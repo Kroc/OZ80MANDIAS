@@ -2,7 +2,6 @@ Type=Exe
 Reference=*\G{420B2830-E718-11CF-893D-00A0C9054228}#1.0#0#C:\Windows\system32\scrrun.dll#Microsoft Scripting Runtime
 Module=Run; CODE\Run.bas
 RelatedDoc=SYNTAX.txt
-Module=oz80; CODE\oz80.bas
 Class=oz80_Assembler; CODE\oz80_Assembler.cls
 Class=oz80_TokenStream; CODE\oz80_Tokeniser.cls
 Class=oz80_CRC32; CODE\oz80_CRC32.cls

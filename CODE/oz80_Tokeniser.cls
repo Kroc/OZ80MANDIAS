@@ -23,6 +23,9 @@ Option Compare Text
 'A Token stream is machine-readable representation of the original source code that _
  does away for the need to refer to the source text files again. This class handles _
  parsing the source code text into tokens; the assembler only works with tokens
+ 
+'This class only represents one source code file. The assembler handles the specifics _
+ of including additional source code files and spawns more TokenStream instances
 
 'TODO: When facing a variable+property combination (e.g. `#var.prop`), we could split _
        it into the component parts, CRC each, combine and CRC together. Why? _
@@ -30,10 +33,6 @@ Option Compare Text
        variable, without having to access the string information!
 
 '/// API //////////////////////////////////////////////////////////////////////////////
-
-'<msdn.microsoft.com/en-us/library/windows/desktop/ms724408%28v=vs.85%29.aspx>
-Private Declare Function kernel32_GetTickCount Lib "kernel32" Alias "GetTickCount" ( _
-) As Long
 
 'API support for `CompStr` function _
  --------------------------------------------------------------------------------------
@@ -143,18 +142,11 @@ End Enum
 'Use a 100'000 item initial buffer for the token stream
 Private Const TOKEN_BUFFER As Long = 100000
 
-'/// DEFS /////////////////////////////////////////////////////////////////////////////
+'/// PRIVATE DEFS /////////////////////////////////////////////////////////////////////
 
-'The source text file is held here as a byte-array whilst it gets parsed
-Private Text() As Byte
+'Used for time measurement
+Private Stopwatch As PerformanceCounter
 
-Private Tokens() As oz80Token           'The token stream will live here
-Private TokenLimit As Long              'The length of the buffer used for above
-Private TokenCount As Long              'The current amount of space used in the array
-
-'String content will be held here; the token stream will be given an index number _
- associated with the string entry here
-Private Strings As Scripting.Dictionary
 'This class will caclulate the string hashes for fast lookups of the strings
 Private CRC As oz80_CRC32
 
@@ -169,6 +161,27 @@ Private IsAlpha(0 To 255) As Boolean
 'A look up table of ASCII codes to validate alphanumeric characters (both cases)
 Private IsAlphaNumeric(0 To 255) As Boolean
 
+'/// CLASS STORAGE ////////////////////////////////////////////////////////////////////
+
+'The source text file is held here as a byte-array whilst it gets parsed
+Private Text() As Byte
+
+Private Tokens() As oz80Token           'The token stream will live here
+Private TokenLimit As Long              'The length of the buffer used for above
+Private TokenCount As Long              'The current amount of space used in the array
+Private TokenIndex As Long              'The current place within the tokenStream
+
+Private Type oz80Token
+    Kind As Byte                        '=OZ80_TOKEN, but use 1-byte instead of 4
+    Data As OZ80_TOKEN_DATA             'Associated value
+    Line As Long                        'Line number in the original source text
+    Col As Long                         'Column number in the original source text
+End Type
+
+'String content will be held here; the token stream will be given an index number _
+ associated with the string entry here
+Private Strings As Scripting.Dictionary
+
 '/// EVENTS ///////////////////////////////////////////////////////////////////////////
 
 'A class event is used to communicate error details beyond a simple error number
@@ -177,7 +190,9 @@ Event Error(ByRef Err As ErrObject)
 'CLASS Initialize _
  ======================================================================================
 Private Sub Class_Initialize()
-    'Save time doing and/or comparisons by compiling a look up tables of ASCII _
+    Set Stopwatch = New PerformanceCounter
+    
+    'Save time doing and/or comparisons by compiling look up tables of ASCII _
      codes that count as numeric / hex / alpha and alphanumeric
     Dim ii As Long
     For ii = 0 To 255
@@ -222,6 +237,7 @@ End Sub
 'CLASS Terminate _
  ======================================================================================
 Private Sub Class_Terminate()
+    Set Stopwatch = Nothing
     'Clear the string database
     Set Strings = Nothing
     'Clean up the string hashing class
@@ -238,11 +254,29 @@ End Sub
 
 '/// PUBLIC INTERFACE /////////////////////////////////////////////////////////////////
 
-'GetTokenArray : Allow the outside to read the token stream _
+'PROPERTY Count : Number of tokens _
  ======================================================================================
-Friend Sub GetTokenArray(ByRef TokenArray() As oz80Token)
-    Let TokenArray = Tokens
-End Sub
+Public Property Get Count() As Long: Let Count = TokenCount: End Property
+
+'PROPERTY Index : Current location within the tokenStream _
+ ======================================================================================
+Public Property Get Index() As Long: Let Index = TokenIndex: End Property
+Public Property Let Index(ByVal Value As Long)
+    'Out of bounds?
+    If Value < 0 Or Value > (TokenCount - 1) Then
+        Call Err.Raise(9)
+    Else
+        Let TokenIndex = Value
+    End If
+End Property
+
+'Forward : Move onto the next token, returns false if the tokenStream hit the end _
+ ======================================================================================
+Public Function Forward() As Boolean
+    If (TokenIndex + 1) > (TokenCount - 1) Then Exit Function
+    Let TokenIndex = TokenIndex + 1
+    Let Forward = True
+End Function
 
 'PROPERTY StringData : Expose the string data associated with the tokens _
  ======================================================================================
@@ -251,15 +285,30 @@ Public Property Get StringData(ByRef Key As Long) As String
     Let StringData = Strings(Key)
 End Property
 
-'Tokenise : Break a file into all its individual words and convert to machine tokens _
+'PROPERTY Kind : Token Kind of current token _
  ======================================================================================
-Public Function Tokenise(ByRef FilePath As String) As OZ80_ERROR
+Public Property Get Kind() As OZ80_TOKEN: Let Kind = Tokens(TokenIndex).Kind: End Property
+
+'PROPERTY Data : Data value of current token _
+ ======================================================================================
+Public Property Get Data() As OZ80_TOKEN_DATA: Let Data = Tokens(TokenIndex).Data: End Property
+
+'PROPERTY Line : Line number in the source of the current token _
+ ======================================================================================
+Public Property Get Line() As Long: Let Line = Tokens(TokenIndex).Line: End Property
+
+'PROPERTY Col : Column number in the source of the current token _
+ ======================================================================================
+Public Property Get Col() As Long: Let Col = Tokens(TokenIndex).Col: End Property
+
+'TokeniseFile : Break a file into individual words and convert to machine tokens _
+ ======================================================================================
+Public Function TokeniseFile(ByRef FilePath As String) As OZ80_ERROR
     'This function is tuned for speed -- it does not conform to "best practices", _
      or even structured code; GOTOs are fast, deal with it
     
     'Measure the time this takes
-    Dim Start As Long
-    Let Start = kernel32_GetTickCount()
+    Call Stopwatch.Reset
     
     'Just a loop counter
     Dim ii As Long
@@ -270,7 +319,7 @@ Public Function Tokenise(ByRef FilePath As String) As OZ80_ERROR
     'Prepare a large buffer to accept the token stream (using `ReDim` for every token _
      added is *incredibly* slow). If the tokens overflow this buffer, we'll increase _
      it by another chunk there and then
-    Let TokenLimit = TOKEN_BUFFER: Let TokenCount = 0
+    Let TokenLimit = TOKEN_BUFFER: Let TokenCount = 0: Let TokenIndex = 0
     ReDim Tokens(0 To TokenLimit) As oz80Token
     Erase Text
     
@@ -281,13 +330,9 @@ Public Function Tokenise(ByRef FilePath As String) As OZ80_ERROR
     
     'Check the file even exists first...
     If FileExists(FilePath) = False Then
-        Let Tokenise = OZ80_ERROR_FILENOTFOUND
-        Call Err.Raise( _
-            Number:=vbObjectError + OZ80_ERROR_FILENOTFOUND, _
-            Source:="oz80Tokeniser", _
-            Description:="The file '" & FilePath & "' could not be found." _
-        )
-        Exit Function
+        Let TokeniseFile = RaiseError(OZ80_ERROR_FILENOTFOUND, _
+            "The file '" & FilePath & "' could not be found." _
+        ): Exit Function
     End If
     
     Debug.Print "* Parsing file: " & FilePath
@@ -541,7 +586,7 @@ TokenWord:
             If IsHex(Text(ii)) = False Then
                 'ERROR: Invalid hexadecimal number!
                 GoSub GetWord
-                Let Tokenise = RaiseError(OZ80_ERROR_BADNUMBER_DEC, _
+                Let TokeniseFile = RaiseError(OZ80_ERROR_BADNUMBER_DEC, _
                     "Not a valid hexadecimal number! '" & Word & "'", _
                     LineBegin, ColBegin _
                 ): GoTo Finish
@@ -839,7 +884,7 @@ TokenWord:
             If IsNumber(Text(ii)) = False Then
                 'ERROR: Invalid number!
                 GoSub GetWord
-                Let Tokenise = RaiseError(OZ80_ERROR_BADNUMBER_DEC, _
+                Let TokeniseFile = RaiseError(OZ80_ERROR_BADNUMBER_DEC, _
                     "Not a valid decimal number! '" & Word & "'", _
                     LineBegin, ColBegin _
                 ): GoTo Finish
@@ -971,7 +1016,7 @@ ErrorOpenFile:
     'If an error occured during file reading, ensure the file handle is closed
     On Error GoTo 0
     Close #FileNumber
-    Let Tokenise = RaiseError(OZ80_ERROR_FILEREAD, _
+    Let TokeniseFile = RaiseError(OZ80_ERROR_FILEREAD, _
         "A problem occured when reading the file '" & FilePath & "', " & _
         "the system says: " & vbCrLf & vbCrLf & _
         "Err #" & Err.Number & ": " & Err.Description _
@@ -980,7 +1025,7 @@ ErrorOpenFile:
 ErrorInvalidName: '....................................................................
     On Error GoTo 0
     GoSub GetWord
-    Let Tokenise = RaiseError(OZ80_ERROR_INVALIDNAME, _
+    Let TokeniseFile = RaiseError(OZ80_ERROR_INVALIDNAME, _
         "Failure parsing '" & Word & "'; " & _
         "Variable, label and property names can contain A-Z, 0-9 underscore and dot " & _
         "with the exceptions that the first letter cannot be a number or a dot, " & _
@@ -992,7 +1037,7 @@ ErrorInvalidName: '.............................................................
 ErrorOverflow: '.......................................................................
     On Error GoTo 0
     GoSub GetWord
-    Let Tokenise = RaiseError(OZ80_ERROR_OVERFLOW, _
+    Let TokeniseFile = RaiseError(OZ80_ERROR_OVERFLOW, _
         "Number too large! ('" & Word & "') Numbers are limited to a maximum of " & _
         "31-bits (" & Format$((2 ^ 31) - 1, "#,#") & ").", LineBegin, ColBegin _
     )
@@ -1000,7 +1045,7 @@ ErrorOverflow: '................................................................
     
 WordError: '...........................................................................
     GoSub GetWord
-    Let Tokenise = RaiseError(OZ80_ERROR_BADWORD, _
+    Let TokeniseFile = RaiseError(OZ80_ERROR_BADWORD, _
         "Faliure parsing '" & Word & "'; " & _
         "Not a known keyword, Z80 instruction, register or other known word. " & _
         "Typo, perhaps?", LineBegin, ColBegin _
@@ -1009,18 +1054,22 @@ WordError: '....................................................................
     
     '----------------------------------------------------------------------------------
 Finish:
-    If Tokenise = OZ80_ERROR_NONE Then
+    If TokeniseFile = OZ80_ERROR_NONE Then
        'Reduce the buffers to the final size
         ReDim Preserve Tokens(0 To TokenCount - 1) As oz80Token
+        'Move the cursor back to the start of the stream
+        Let TokenIndex = 0
         
         Erase Text
         Debug.Print "- Words: " & Format$(WordCount, "#,#")
-        Debug.Print "- Time: " & Format$((kernel32_GetTickCount() - Start) / 1000, "0.000") & "s"
+        Debug.Print "- Tokens: " & Format$(TokenCount, "#,#")
+        Debug.Print "- Time: " & Format$(Stopwatch.Elapsed / 1000, "0.000") & "s"
     Else
         'When there's an error, clean up
         Call Strings.RemoveAll
         Erase Text, Tokens
         Let TokenCount = 0
+        Let TokenIndex = 0
     End If
 End Function
 
@@ -1034,7 +1083,7 @@ Private Sub Add( _
 )
     'The `Kind` param MUST be 0-255, but is given as long for speed reasons; _
      the rest of this class will ensure that this is never out of bounds
-    With Tokens(TokenCount)
+    With Tokens(TokenIndex)
         Let .Kind = Kind
         Let .Data = Data
         Let .Line = Line
@@ -1042,7 +1091,9 @@ Private Sub Add( _
     End With
     
     'Move to the next token number
-    Let TokenCount = TokenCount + 1
+    Let TokenIndex = TokenIndex + 1
+    'This will also likely increase the total number of tokens
+    If TokenIndex > TokenCount Then Let TokenCount = TokenIndex
     
     'Note that the tokens array is given a large size to begin with as ReDimming it _
      with every token added is *incredibly* slow. If we go over this buffer size, _
@@ -1165,5 +1216,6 @@ Private Function RaiseError( _
     RaiseEvent Error(Err)
     
     'We return the same error number we were given only to make the tail recursion _
-     simpler, e.g. `let ScopeRoot = RaiseError(OZ80_ERROR_...`
+     simpler, e.g. `let TokeniseFile = RaiseError(OZ80_ERROR_...`
+    Let RaiseError = Number
 End Function

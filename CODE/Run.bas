@@ -17,13 +17,18 @@ Public Sub Main()
     Dim StartTime As Single
     Let StartTime = Timer
     
+    Dim Assembler As oz80_Assembler
+    Set Assembler = New oz80_Assembler
+        
     'TODO: This will obviously be converted to use the command arguments
-    Call oz80.Assemble(App.Path & "\sonic1-sms.oz80")
+    Call Assembler.Assemble(App.Path & "\sonic1-sms.oz80")
     
     'Do something that only faults in the IDE
     On Error GoTo Err_True
     Debug.Print 1 \ 0
     MsgBox Format$(Timer - StartTime, "0.000")
 Err_True:
+
+    Set Assembler = Nothing
 End Sub
 

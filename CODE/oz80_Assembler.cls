@@ -21,12 +21,6 @@ Option Explicit
 
 'This class will take a token stream and do the actual assembling into a Z80 binary
 
-'/// API //////////////////////////////////////////////////////////////////////////////
-
-'<msdn.microsoft.com/en-us/library/windows/desktop/ms724408%28v=vs.85%29.aspx>
-Private Declare Function kernel32_GetTickCount Lib "kernel32" Alias "GetTickCount" ( _
-) As Long
-
 '/// CONSTANTS ////////////////////////////////////////////////////////////////////////
 
 'This structure is used when parsing parameters of Z80 instructions
@@ -34,7 +28,7 @@ Private Type oz80Param
     Register As OZ80_TOKEN_DATA         'If a register, which one
     Value As Long                       'The numerical value of the parameter
     ValueUnknown As Boolean             'If the parameter has unknown values (labels)
-    Kind As OZ80_PARAM                  'As below, a brief hint a the parameter type
+    Kind As OZ80_PARAM                  'As below, a brief hint at the parameter type
     Mask As OZ80_MASK                   'A detailed bit-mask of parameter features
 End Type
 
@@ -67,13 +61,13 @@ Private Enum OZ80_OPCODE
     OPCODE_IY8 = &HFD
     
     'The flags add these offsets to the base opcode
-    OPCODE_FLAG_NZ = 0                  '........
-    OPCODE_FLAG_Z = &H8                 '....x...
-    OPCODE_FLAG_NC = &H10               '...x....
-    OPCODE_FLAG_C = &H18                '...xx...
-    OPCODE_FLAG_PO = &H20               '..x.....
-    OPCODE_FLAG_PE = &H28               '..x.x...
-    OPCODE_FLAG_P = &H30                '..xx....
+    OPCODE_FLAG_NZ = 0                  '..---...
+    OPCODE_FLAG_Z = &H8                 '..--x...
+    OPCODE_FLAG_NC = &H10               '..-x-...
+    OPCODE_FLAG_C = &H18                '..-xx...
+    OPCODE_FLAG_PO = &H20               '..x--...
+    OPCODE_FLAG_PE = &H28               '..x-x...
+    OPCODE_FLAG_P = &H30                '..xx-...
     OPCODE_FLAG_M = &H38                '..xxx...
 End Enum
 
@@ -134,6 +128,8 @@ End Enum
 
 '/// CLASS VARIABLES //////////////////////////////////////////////////////////////////
 
+Private Stopwatch As PerformanceCounter
+
 Private CurrentTokenFile As oz80_TokenStream
 
 Private Tokens() As oz80Token           'Token stream of the file we're reading from
@@ -166,6 +162,7 @@ Event Error(ByRef Err As ErrObject)
 'CLASS Initialize _
  ======================================================================================
 Private Sub Class_Initialize()
+    Set Stopwatch = New PerformanceCounter
     Set Labels = New Scripting.Dictionary
     Set CRC = New oz80_CRC32
     
@@ -410,6 +407,7 @@ End Sub
 Private Sub Class_Terminate()
     Set CRC = Nothing
     Set Labels = Nothing
+    Set Stopwatch = Nothing
     Erase ROM
 End Sub
 
@@ -421,9 +419,8 @@ Public Function Process(ByRef TokenStream As oz80_TokenStream) As OZ80_ERROR
     Debug.Print
     Debug.Print "* Assembling token stream"
     
-    'Measure the time this takes
-    Dim Start As Long
-    Let Start = kernel32_GetTickCount()
+    'We'll measure the time this takes
+    Call Stopwatch.Reset
     
     Let TokenIndex = 0
     Call TokenStream.GetTokenArray(Tokens)
@@ -437,19 +434,17 @@ Public Function Process(ByRef TokenStream As oz80_TokenStream) As OZ80_ERROR
     Let At = 0
     
     'Default to 32 KB ROM (the ROM size will double each time it overflows)
-    Let ROMSize = 32768
+    Let ROMSize = 2 ^ 15
     ReDim ROM(0 To ROMSize - 1) As Byte
     
-    'Phase 1 : Determine the size of the assembly and remember all label positions _
-     ----------------------------------------------------------------------------------
+    'Phase 1 : Determine the size of the assembly and remember all label positions
     Let Process = ScopeRoot()
     
-    'Phase 2 : 'Fill in the blanks' -- go back and evaluate the unknowns _
-     ----------------------------------------------------------------------------------
+    'Phase 2 : 'Fill in the blanks' -- go back and evaluate the unknowns
     'TODO
     
     Debug.Print "- Final ROM size is " & (ROMSize \ 1024) & " KB"
-    Debug.Print "- Time: " & Format$((kernel32_GetTickCount() - Start) / 1000, "0.000") & "s"
+    Debug.Print "- Time: " & Format$(Stopwatch.Elapsed / 1000, "0.000") & "s"
 End Function
 
 '/// SCOPE HANDLERS ///////////////////////////////////////////////////////////////////
@@ -482,7 +477,7 @@ End Function
 '<expr>     <str>
 '           <number>    [{operator} <expr>]
 '           #var        [{operator} <expr>]
-'           : Label     [{operator} <expr>]
+'           :label      [{operator} <expr>]
 '           {           <expr>      }
 '
 '
@@ -537,13 +532,17 @@ Private Function ScopeRoot() As OZ80_ERROR
     
 Continue:
     If Token.Kind = OZ80_TOKEN.TOKEN_LABEL Then
-        Debug.Print Token.Line & "," & Token.Col & ": " _
-            & CurrentTokenFile.StringData(Token.Data)
+'        Debug.Print Token.Line & "," & Token.Col & ": " _
+'            & CurrentTokenFile.StringData(Token.Data)
         
         'If the label is already defined, we have a problem
         If Labels.Exists(Token.Data) = True Then
             'TODO: Error - label already defined
-            Stop
+            Let ScopeRoot = RaiseError(OZ80_ERROR_DUPLICATE, _
+                "Duplicate label definition! '" & _
+                CurrentTokenFile.StringData(Token.Data) & "' is already defined.", _
+                Token.Line, Token.Col _
+            ): Exit Function
         Else
             'Add a label using the token's data value for an index key as this will _
              be the string hash generated in the token stream
@@ -1372,8 +1371,7 @@ Private Function GetParameter(ByRef Result As oz80Param) As OZ80_ERROR
     
     Else
         'ERROR: Not an expression
-        Let GetParameter = OZ80_ERROR_EXPRESSION
-        Call RaiseError(GetParameter, _
+        Let GetParameter = RaiseError(OZ80_ERROR_EXPRESSION, _
             "Z80 instruction parameter expected. Not a valid parameter expression.", _
             Token.Line, Token.Col _
         )
@@ -1430,11 +1428,11 @@ End Function
 
 'RiaseError : provide error details through an event _
  ======================================================================================
-Private Sub RaiseError( _
+Private Function RaiseError( _
     ByRef Number As OZ80_ERROR, _
     ByRef Description As String, _
     Optional ByRef Line As Long = 0, Optional ByRef Col As Long = 0 _
-)
+) As OZ80_ERROR
     Debug.Print
     Debug.Print "! ERROR: #" & Number
     If Line > 0 And Col > 0 Then
@@ -1449,7 +1447,11 @@ Private Sub RaiseError( _
     Let Err.Source = "Line #" & Line & " Col #" & Col
     
     RaiseEvent Error(Err)
-End Sub
+    
+    'We return the same error number we were given only to make the tail recursion _
+     simpler, e.g. `let ScopeRoot = RaiseError(OZ80_ERROR_...`
+    Let RaiseError = Number
+End Function
 
 'TestOpcode : Outputs an opcode if the parameter has values within the given mask _
  ======================================================================================

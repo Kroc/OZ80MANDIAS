@@ -21,6 +21,7 @@ Public Enum OZ80_ERROR
     OZ80_ERROR_Z80_PARAMETER = 8        'An unexpected parameter for a z80 instruction
     OZ80_ERROR_OPERAND = 9              'Not a valid operand for an expression
     OZ80_ERROR_EXPRESSION = 10          'Not a valid expression
+    OZ80_ERROR_DUPLICATE = 11           'A label has been defined twice
 End Enum
 
 '--------------------------------------------------------------------------------------
@@ -226,6 +227,9 @@ Public Function Assemble(ByVal FilePath As String) As OZ80_ERROR
     
     Dim StartTime As Single
     Let StartTime = Timer
+    
+    'TODO: This needs rearchitecting -- the token stream objects will be created by _
+           the assembler as it reaches `INCLUDE` statements
     
     'Stage 1: Parse Source _
      ----------------------------------------------------------------------------------

@@ -24,6 +24,11 @@ Option Compare Text
  does away for the need to refer to the source text files again. This class handles _
  parsing the source code text into tokens; the assembler only works with tokens
 
+'TODO: When facing a variable+property combination (e.g. `#var.prop`), we could split _
+       it into the component parts, CRC each, combine and CRC together. Why? _
+       When the assembler reads a property, it can combine it with the parent _
+       variable, without having to access the string information!
+
 '/// API //////////////////////////////////////////////////////////////////////////////
 
 '<msdn.microsoft.com/en-us/library/windows/desktop/ms724408%28v=vs.85%29.aspx>
@@ -534,14 +539,12 @@ TokenWord:
         For ii = WordBegin + WordLen To WordBegin + 1 Step -1
             'Check the digits are 0-9, A-F
             If IsHex(Text(ii)) = False Then
-                'Error, invalid hexadecimal number!
+                'ERROR: Invalid hexadecimal number!
                 GoSub GetWord
-                Let Tokenise = OZ80_ERROR_BADNUMBER_DEC
-                Call RaiseError(Tokenise, _
+                Let Tokenise = RaiseError(OZ80_ERROR_BADNUMBER_DEC, _
                     "Not a valid hexadecimal number! '" & Word & "'", _
                     LineBegin, ColBegin _
-                )
-                GoTo Finish
+                ): GoTo Finish
             End If
         Next ii
         'The digits are valid, but it could be an overflow
@@ -834,14 +837,12 @@ TokenWord:
         For ii = WordBegin + WordLen To WordBegin Step -1
             'If not a 0-9 digit then this is not a decimal number!
             If IsNumber(Text(ii)) = False Then
-                'Error, invalid number!
+                'ERROR: Invalid number!
                 GoSub GetWord
-                Let Tokenise = OZ80_ERROR_BADNUMBER_DEC
-                Call RaiseError(Tokenise, _
+                Let Tokenise = RaiseError(OZ80_ERROR_BADNUMBER_DEC, _
                     "Not a valid decimal number! '" & Word & "'", _
                     LineBegin, ColBegin _
-                )
-                GoTo Finish
+                ): GoTo Finish
             Else
                 'Convert the number from ASCII codes into a value
                 On Error GoTo ErrorOverflow
@@ -970,19 +971,16 @@ ErrorOpenFile:
     'If an error occured during file reading, ensure the file handle is closed
     On Error GoTo 0
     Close #FileNumber
-    Let Tokenise = OZ80_ERROR_FILEREAD
-    Call RaiseError(Tokenise, _
+    Let Tokenise = RaiseError(OZ80_ERROR_FILEREAD, _
         "A problem occured when reading the file '" & FilePath & "', " & _
         "the system says: " & vbCrLf & vbCrLf & _
         "Err #" & Err.Number & ": " & Err.Description _
-    )
-    GoTo Finish
+    ): GoTo Finish
 
 ErrorInvalidName: '....................................................................
     On Error GoTo 0
     GoSub GetWord
-    Let Tokenise = OZ80_ERROR_INVALIDNAME
-    Call RaiseError(Tokenise, _
+    Let Tokenise = RaiseError(OZ80_ERROR_INVALIDNAME, _
         "Failure parsing '" & Word & "'; " & _
         "Variable, label and property names can contain A-Z, 0-9 underscore and dot " & _
         "with the exceptions that the first letter cannot be a number or a dot, " & _
@@ -994,8 +992,7 @@ ErrorInvalidName: '.............................................................
 ErrorOverflow: '.......................................................................
     On Error GoTo 0
     GoSub GetWord
-    Let Tokenise = OZ80_ERROR_OVERFLOW
-    Call RaiseError(Tokenise, _
+    Let Tokenise = RaiseError(OZ80_ERROR_OVERFLOW, _
         "Number too large! ('" & Word & "') Numbers are limited to a maximum of " & _
         "31-bits (" & Format$((2 ^ 31) - 1, "#,#") & ").", LineBegin, ColBegin _
     )
@@ -1003,8 +1000,7 @@ ErrorOverflow: '................................................................
     
 WordError: '...........................................................................
     GoSub GetWord
-    Let Tokenise = OZ80_ERROR_BADWORD
-    Call RaiseError(Tokenise, _
+    Let Tokenise = RaiseError(OZ80_ERROR_BADWORD, _
         "Faliure parsing '" & Word & "'; " & _
         "Not a known keyword, Z80 instruction, register or other known word. " & _
         "Typo, perhaps?", LineBegin, ColBegin _
@@ -1148,11 +1144,11 @@ End Function
 
 'RiaseError : provide error details through an event _
  ======================================================================================
-Private Sub RaiseError( _
+Private Function RaiseError( _
     ByRef Number As OZ80_ERROR, _
     ByRef Description As String, _
     Optional ByRef Line As Long = 0, Optional ByRef Col As Long = 0 _
-)
+) As OZ80_ERROR
     Debug.Print
     Debug.Print "! ERROR: #" & Number
     If Line > 0 And Col > 0 Then
@@ -1167,4 +1163,7 @@ Private Sub RaiseError( _
     Let Err.Source = "Line #" & Line & " Col #" & Col
     
     RaiseEvent Error(Err)
-End Sub
+    
+    'We return the same error number we were given only to make the tail recursion _
+     simpler, e.g. `let ScopeRoot = RaiseError(OZ80_ERROR_...`
+End Function

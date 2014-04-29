@@ -344,8 +344,6 @@ Private ROMSize As Long                 'Size of the ROM (32/64/128/256/512/1024
 'Label data will be stored here, along with the label's properties, _
  e.g. `:here`, `:here.bank`, `:here.slot`
 Private Labels As Scripting.Dictionary
-'This class will caclulate the string hashes for fast lookups of the strings
-Private CRC As oz80_CRC32
 
 '/// EVENTS ///////////////////////////////////////////////////////////////////////////
 
@@ -357,7 +355,6 @@ Event Error(ByRef Err As ErrObject)
 Private Sub Class_Initialize()
     Set Stopwatch = New PerformanceCounter
     Set Labels = New Scripting.Dictionary
-    Set CRC = New oz80_CRC32
     
     'NOTE:
     '   +rr     BC = +00
@@ -598,7 +595,6 @@ End Sub
 'CLASS Terminate _
  ======================================================================================
 Private Sub Class_Terminate()
-    Set CRC = Nothing
     Set Labels = Nothing
     Set Stopwatch = Nothing
     Erase ROM

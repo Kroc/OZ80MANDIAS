@@ -27,6 +27,10 @@ Option Compare Text
 'This class only represents one source code file. The assembler handles the specifics _
  of including additional source code files and spawns more TokenStream instances
 
+'The CRC function of this class is from "Calculating CRC32 With VB" by Steve McMahon _
+ <www.vbaccelerator.com/home/VB/Code/Libraries/CRC32/article.asp> which was _
+ derived from from the VB.NET CRC32 algorithm by Paul Caton
+
 'TODO: When facing a variable+property combination (e.g. `#var.prop`), we could split _
        it into the component parts, CRC each, combine and CRC together. Why? _
        When the assembler reads a property, it can combine it with the parent _
@@ -67,6 +71,10 @@ Private CompStrSA1D As SAFEARRAY1D
 Dim CompStrArr() As Integer
 
 '/// CONSTANTS ////////////////////////////////////////////////////////////////////////
+
+'This is the official polynomial used by CRC32 in PKZip. _
+ Often the polynomial is shown reversed (04C11DB7)
+Private Const CRC_POLYNOMIAL As Long = &HEDB88320
 
 'This makes life a whole lot easier
 Private Enum ASCII
@@ -147,8 +155,8 @@ Private Const TOKEN_BUFFER As Long = 100000
 'Used for time measurement
 Private Stopwatch As PerformanceCounter
 
-'This class will caclulate the string hashes for fast lookups of the strings
-Private CRC As oz80_CRC32
+'Store a look up table for the CRC calculations
+Private CRCTable(0 To 255) As Long
 
 'A look up table of ASCII codes from upper-case to lower-case
 Private LowCase(0 To 255) As Long
@@ -190,11 +198,12 @@ Event Error(ByRef Err As ErrObject)
 'CLASS Initialize _
  ======================================================================================
 Private Sub Class_Initialize()
+    Dim i As Long, ii As Long
+    
     Set Stopwatch = New PerformanceCounter
     
     'Save time doing and/or comparisons by compiling look up tables of ASCII _
      codes that count as numeric / hex / alpha and alphanumeric
-    Dim ii As Long
     For ii = 0 To 255
         If ii >= NUM0 And ii <= NUM9 Then
             Let LowCase(ii) = ii
@@ -218,8 +227,23 @@ Private Sub Class_Initialize()
     
     'Initialise the string database
     Set Strings = New Scripting.Dictionary
-    'and the class to hash strings into index keys
-    Set CRC = New oz80_CRC32
+    
+    'Create the CRC look-up table _
+     (I will not pretend to understand how this works other than it goes through _
+      shifting and flipping bits, make of that what you will)
+    Dim Value As Long
+    For i = 0 To 255
+        Value = i
+        For ii = 8 To 1 Step -1
+            If (Value And 1) Then
+                Let Value = ((Value And &HFFFFFFFE) \ 2&) And &H7FFFFFFF
+                Let Value = Value Xor CRC_POLYNOMIAL
+            Else
+                Let Value = ((Value And &HFFFFFFFE) \ 2&) And &H7FFFFFFF
+            End If
+        Next
+        Let CRCTable(i) = Value
+    Next
     
     'Initialise the array used within the `CompStr` function
     With CompStrSA1D
@@ -240,10 +264,8 @@ Private Sub Class_Terminate()
     Set Stopwatch = Nothing
     'Clear the string database
     Set Strings = Nothing
-    'Clean up the string hashing class
-    Set CRC = Nothing
     'Clean up the look up tables
-    Erase LowCase, IsNumber
+    Erase LowCase, IsNumber, CRCTable
     'The `Tokenise` method will clean this up, but just be doubly sure
     Erase Text
     'Empty the token stream
@@ -270,14 +292,6 @@ Public Property Let Index(ByVal Value As Long)
     End If
 End Property
 
-'Forward : Move onto the next token, returns false if the tokenStream hit the end _
- ======================================================================================
-Public Function Forward() As Boolean
-    If (TokenIndex + 1) > (TokenCount - 1) Then Exit Function
-    Let TokenIndex = TokenIndex + 1
-    Let Forward = True
-End Function
-
 'PROPERTY StringData : Expose the string data associated with the tokens _
  ======================================================================================
 Public Property Get StringData(ByRef Key As Long) As String
@@ -300,6 +314,39 @@ Public Property Get Line() As Long: Let Line = Tokens(TokenIndex).Line: End Prop
 'PROPERTY Col : Column number in the source of the current token _
  ======================================================================================
 Public Property Get Col() As Long: Let Col = Tokens(TokenIndex).Col: End Property
+
+'CRCString : Calculate a unique hash for a string _
+ ======================================================================================
+Public Function CRCString(ByRef Data As String) As Long
+    Dim Length As Long
+    
+    With CompStrSA1D
+       Let .pvData = StrPtr(Data)
+       Let .cElements = Len(Data)
+       Let Length = .cElements
+    End With
+
+    Dim i As Long
+    Dim iLookup As Integer
+
+    Let CRCString = &HFFFFFFFF
+    Let Length = Length - 1
+    For i = 0 To Length
+        Let iLookup = (CRCString And &HFF) Xor (CompStrArr(i) And &HFF)
+        Let CRCString = ((CRCString And &HFFFFFF00) \ &H100) And 16777215
+        Let CRCString = CRCString Xor CRCTable(iLookup)
+    Next
+
+   Let CRCString = Not (CRCString)
+End Function
+
+'Forward : Move onto the next token, returns false if the tokenStream hit the end _
+ ======================================================================================
+Public Function Forward() As Boolean
+    If (TokenIndex + 1) > (TokenCount - 1) Then Exit Function
+    Let TokenIndex = TokenIndex + 1
+    Let Forward = True
+End Function
 
 'TokeniseFile : Break a file into individual words and convert to machine tokens _
  ======================================================================================
@@ -1112,7 +1159,7 @@ Private Sub AddString( _
 )
     'Hash the string to get its unique index key
     Dim Key As Long
-    Let Key = CRC.HashASCIIString(Data)
+    Let Key = CRCString(Data)
     
     'If the string hasn't been added yet, do so
     If Strings.Exists(Key) = False Then Call Strings.Add(Key, Data)

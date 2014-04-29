@@ -4,7 +4,6 @@ Module=Run; CODE\Run.bas
 RelatedDoc=SYNTAX.txt
 Class=oz80_Assembler; CODE\oz80_Assembler.cls
 Class=oz80_TokenStream; CODE\oz80_Tokeniser.cls
-Class=oz80_CRC32; CODE\oz80_CRC32.cls
 Class=PerformanceCounter; CODE\PerformanceCounter.cls
 Startup="Sub Main"
 HelpFile=""

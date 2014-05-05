@@ -147,7 +147,7 @@ Private ROMSize As Long                 'Size of the ROM (32/64/128/256/512/1024
 'The token stream doesn't store the text of named items, merely a reference to the _
  string stored here. We use this for error messages and concatenating properties to _
  their parent variable / label
-Private Names As Scripting.Dictionary
+Private Strings As Scripting.Dictionary
 
 'Label data will be stored here, along with the label's properties, _
  e.g. `:here`, `:here.bank`, `:here.slot`
@@ -411,6 +411,7 @@ End Sub
  ======================================================================================
 Private Sub Class_Terminate()
     Set Labels = Nothing
+    Set Strings = Nothing
     Set Stopwatch = Nothing
     Erase ROM
 End Sub
@@ -430,6 +431,15 @@ Private Sub TokenFile_Message(Text As String)
     RaiseEvent Message(Text)
 End Sub
 
+'EVENT <TokenFile> StringAdded : While parsing a source file, a string name was read _
+ ======================================================================================
+Private Sub TokenFile_StringAdded(ByRef Key As Long, ByRef StringData As String)
+    'Add the label/variable/property name to the string storage. _
+     The key is a CRC32 of the string so that we can easily find it again
+    If Strings.Exists(Key) = False Then Call Strings.Add(Key, StringData): _
+        RaiseEvent Message(StringData)
+End Sub
+
 '/// PUBLIC INTERFACE /////////////////////////////////////////////////////////////////
 
 'Process : Assemble a Z80 binary from a given token stream _
@@ -440,6 +450,9 @@ Public Function Assemble(ByVal FilePath As String) As OZ80_ERROR
     
     'We'll measure the time this takes
     Call Stopwatch.Reset
+    
+    'Initialise the storage for label/variable/property names
+    Set Strings = New Scripting.Dictionary
     
     'Stage 1: Parse Source _
      ----------------------------------------------------------------------------------
@@ -469,6 +482,9 @@ Public Function Assemble(ByVal FilePath As String) As OZ80_ERROR
     
     RaiseEvent Message("- Final ROM size is " & (ROMSize \ 1024) & " KB")
     RaiseEvent Message("- Time: " & Format$(Stopwatch.Elapsed / 1000, "0.000") & "s")
+    
+    'Clean up
+    Call Class_Terminate
 End Function
 
 '/// SCOPE HANDLERS ///////////////////////////////////////////////////////////////////
@@ -492,7 +508,7 @@ End Function
  but not both. `INCLUDE <list>` cannot be followed by `START` &c.
 
 'NOTES: *   You can take `{ASCII}` to mean any ASCII code 0-127 _
-        *   `{operator}` can be any one of `+ - * / ^ \`
+        *   `{operator}` can be any one of `+ - * / ^ \ | &`
 
 'Scope:     1           2           3       4       5       6       7       8 _
  --------------------------------------------------------------------------------------
@@ -556,18 +572,16 @@ Private Function ScopeRoot() As OZ80_ERROR
      allowed here. Once all nested scopes are exhausted, we return here
     
 Continue:
-    If TokenFile.Kind = OZ80_TOKEN.TOKEN_LABEL Then
-'        Debug.Print TokenFile.Line & "," & TokenFile.Col & ": " _
-'            & TokenFile.StringData(TokenFile.Data)
-        
+    If TokenFile.Kind = OZ80_TOKEN.TOKEN_LABEL Then '----------------------------------
         'If the label is already defined, we have a problem
         If Labels.Exists(TokenFile.Data) = True Then
-            'TODO: Error - label already defined
-'            Let ScopeRoot = RaiseError(OZ80_ERROR_DUPLICATE, _
-'                "Duplicate label definition! '" & _
-'                TokenFile.StringData(TokenFile.Data) & "' is already defined.", _
-'                TokenFile.Line, TokenFile.Col _
-'            ): Exit Function
+            'TODO: Handle Section scope
+            'Error - label already defined
+            Let ScopeRoot = RaiseError(OZ80_ERROR_DUPLICATE, _
+                "Duplicate label definition! '" & _
+                Strings(TokenFile.Data) & "' is already defined.", _
+                TokenFile.Line, TokenFile.Col _
+            ): Exit Function
             Stop
         Else
             'Add a label using the token's data value for an index key as this will _
@@ -575,7 +589,7 @@ Continue:
             Call Labels.Add(TokenFile.Data, At)
         End If
         
-    ElseIf TokenFile.Kind = OZ80_TOKEN.TOKEN_KEYWORD Then
+    ElseIf TokenFile.Kind = OZ80_TOKEN.TOKEN_KEYWORD Then '----------------------------
         'Check allowed keywords at this Scope
         If TokenFile.Data = OZ80_TOKEN_DATA.TOKEN_KEYWORD_DEF Then
             'TODO
@@ -596,9 +610,11 @@ Continue:
             'TODO
             
         End If
-    Else
+        
+    Else '-----------------------------------------------------------------------------
         'The root Scope also allows for source code, a Scope shared by blocks
         Let ScopeRoot = ScopeCode()
+        If ScopeRoot <> OZ80_ERROR_NONE Then Exit Function
         GoTo Continue
     End If
     
@@ -631,8 +647,11 @@ Private Function ScopeCode() As OZ80_ERROR
         Exit Function
     
     Else
-        'TODO: Error - unexpected content at this point
-        Stop
+        'ERROR: Unexpected content at this point
+        Let ScopeCode = RaiseError(OZ80_ERROR_UNEXPECTED, _
+            "Unexpected content at this scope. Only `BYTE/DATA/DEF/WORD` keywords " & _
+            "or Z80 instructions allowed here.", TokenFile.Line, TokenFile.Col _
+        ): Exit Function
     End If
     
     Call NextToken

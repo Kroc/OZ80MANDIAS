@@ -86,6 +86,7 @@ Public Enum OZ80_ERROR
     OZ80_ERROR_OPERAND = 9              'Not a valid operand for an expression
     OZ80_ERROR_EXPRESSION = 10          'Not a valid expression
     OZ80_ERROR_DUPLICATE = 11           'A label has been defined twice
+    OZ80_ERROR_UNEXPECTED = 12          'Incorrect tokens at the current scope
 End Enum
 
 '--------------------------------------------------------------------------------------
@@ -1147,6 +1148,7 @@ TokenWord:
     'String (quote)
     ElseIf Asc1 = SYNTAX_QUOTE Then '.......................................... `"` ...
         GoSub GetWord
+        'TODO: Break the string into individual number tokens so it's an inline list
         Call AddString(TOKEN_QUOTE, Mid$(Word, 2), LineBegin, ColBegin)
         GoTo NextWord
         
@@ -1221,6 +1223,7 @@ TwoLetters:
     End If
     GoTo WordError
     
+    '----------------------------------------------------------------------------------
 NextWord:
     Dim WordCount As Long
     Let WordCount = WordCount + 1
@@ -1255,8 +1258,7 @@ ErrorInvalidName: '.............................................................
         "with the exceptions that the first letter cannot be a number or a dot, " & _
         "two dots cannot occur in a row nor can a number follow a dot and the name " & _
         "cannot end in a dot", LineBegin, ColBegin _
-    )
-    GoTo Finish
+    ): GoTo Finish
 
 ErrorOverflow: '.......................................................................
     On Error GoTo 0
@@ -1264,8 +1266,7 @@ ErrorOverflow: '................................................................
     Let TokeniseFile = RaiseError(OZ80_ERROR_OVERFLOW, _
         "Number too large! ('" & Word & "') Numbers are limited to a maximum of " & _
         "31-bits (" & Format$((2 ^ 31) - 1, "#,#") & ").", LineBegin, ColBegin _
-    )
-    GoTo Finish
+    ): GoTo Finish
     
 WordError: '...........................................................................
     GoSub GetWord
@@ -1273,8 +1274,7 @@ WordError: '....................................................................
         "Faliure parsing '" & Word & "'; " & _
         "Not a known keyword, Z80 instruction, register or other known word. " & _
         "Typo, perhaps?", LineBegin, ColBegin _
-    )
-    GoTo Finish
+    ): GoTo Finish
     
     '----------------------------------------------------------------------------------
 Finish:

@@ -41,6 +41,7 @@ Option Compare Text
 'API support for `CompStr` function _
  --------------------------------------------------------------------------------------
 '<www.vbforums.com/showthread.php?729385-VB6-clsStrToIntArray-cls-Cast-String-To-Integer-Array>
+
 Private Type SAFEARRAY1D    'Represents a safe array. (One Dimensional)
     cDims      As Integer   'The count of dimensions.
     fFeatures  As Integer   'Flags used by the SafeArray.
@@ -70,11 +71,209 @@ Private CompStrSA1D As SAFEARRAY1D
 
 Dim CompStrArr() As Integer
 
-'/// CONSTANTS ////////////////////////////////////////////////////////////////////////
+'/// PUBLIC CONSTANTS /////////////////////////////////////////////////////////////////
+'These are defined here (instead of in 'oz80_Assembler') to avoid circular references
 
-'This is the official polynomial used by CRC32 in PKZip. _
- Often the polynomial is shown reversed (04C11DB7)
-Private Const CRC_POLYNOMIAL As Long = &HEDB88320
+Public Enum OZ80_ERROR
+    OZ80_ERROR_NONE = 0                 'Assembly completed successfully
+    OZ80_ERROR_FILENOTFOUND = 2         'Requested file does not exist
+    OZ80_ERROR_FILEREAD = 3             'Some kind of problem with file handle open
+    OZ80_ERROR_INVALIDNAME = 4          'Invalid label/property/variable name
+    OZ80_ERROR_BADWORD = 5              'Couldn't parse a word
+    OZ80_ERROR_BADNUMBER_DEC = 6        'Not a valid decimal number
+    OZ80_ERROR_OVERFLOW = 7             'A number overflowed the maximum
+    OZ80_ERROR_Z80_PARAMETER = 8        'An unexpected parameter for a z80 instruction
+    OZ80_ERROR_OPERAND = 9              'Not a valid operand for an expression
+    OZ80_ERROR_EXPRESSION = 10          'Not a valid expression
+    OZ80_ERROR_DUPLICATE = 11           'A label has been defined twice
+End Enum
+
+'--------------------------------------------------------------------------------------
+
+Public Enum OZ80_TOKEN
+    TOKEN_Z80 = &H1                     'Z80 instruction
+    TOKEN_REGISTER = &H2                'Z80 register
+    TOKEN_FLAG = &H2                    'Z80 flag condition (used on JP, CALL &  RET)
+                                         '(part of registers, due to shared "C")
+    
+    'The parser automatically converts hexadecimal/binary numbers, so we only store
+     'a 32-bit long (data field) in the token stream
+    TOKEN_NUMBER = &H10
+    'Number prefixes ("K", "KB" & "Kbit")
+    TOKEN_PREFIX_K = &H11               'x1000
+    TOKEN_PREFIX_KB = &H12              'x1024
+    TOKEN_PREFIX_KBIT = &H13            'x128 (1024 bits)
+    
+    'Grouping: (i.e. parenthesis, braces)
+    TOKEN_PARENOPEN = &H20
+    TOKEN_PARENCLOSE = &H21
+    TOKEN_BLOCKOPEN = &H22
+    TOKEN_BLOCKCLOSE = &H23
+    
+    TOKEN_OPERATOR = &H30               'Operator (e.g. "+ - * /")
+    
+    TOKEN_KEYWORD = &H41                'Keyword (IF/DATA/ECHO &c.)
+    TOKEN_QUOTE = &H42
+    TOKEN_LABEL = &H43
+    TOKEN_PROPERTY = &H44
+    TOKEN_VARIABLE = &H45
+End Enum
+
+Public Enum OZ80_TOKEN_DATA
+    'These are just the mnemonic tokens -- the assembler itself checks the
+     'parameters and determines which opcode should be used
+    TOKEN_Z80_ADC = &H1                 'Add with Carry
+    TOKEN_Z80_ADD = &H2                 'Add
+    TOKEN_Z80_AND = &H3                 'Bitwise AND
+    TOKEN_Z80_BIT = &H4                 'Bit test
+    TOKEN_Z80_CALL = &H5                'Call routine
+    TOKEN_Z80_CCF = &H6                 'Clear Carry Flag
+    TOKEN_Z80_CP = &H7                  'Compare
+    TOKEN_Z80_CPD = &H8                 'Compare and Decrement
+    TOKEN_Z80_CPDR = &H9                'Compare, Decrement and Repeat
+    TOKEN_Z80_CPI = &HA                 'Compare and Increment
+    TOKEN_Z80_CPIR = &HB                'Compare, Increment and Repeat
+    TOKEN_Z80_CPL = &HC                 'Complement (bitwise NOT)
+    TOKEN_Z80_DAA = &HD                 'Decimal Adjust Accumulator
+    TOKEN_Z80_DEC = &HE                 'Decrement
+    TOKEN_Z80_DI = &HF                  'Disable Interrupts
+    TOKEN_Z80_DJNZ = &H10               'Decrement and Jump if Not Zero
+    TOKEN_Z80_EI = &H11                 'Enable Inettupts
+    TOKEN_Z80_EX = &H12                 'Exchange
+    TOKEN_Z80_EXX = &H13                'Exchange shadow registers
+    TOKEN_Z80_HALT = &H14               'Stop CPU (wait for interrupt)
+    TOKEN_Z80_IM = &H15                 'Interrupt Mode
+    TOKEN_Z80_IN = &H16                 'Input from port
+    TOKEN_Z80_INC = &H17                'Increment
+    TOKEN_Z80_IND = &H18                'Input and Decrement
+    TOKEN_Z80_INDR = &H19               'Input, Decrement and Repeat
+    TOKEN_Z80_INI = &H1A                'Input and Increment
+    TOKEN_Z80_INIR = &H1B               'Input, Increment and Repeat
+    TOKEN_Z80_JP = &H1C                 'Jump
+    TOKEN_Z80_JR = &H1D                 'Jump Relative
+    TOKEN_Z80_LD = &H1E                 'Load
+    TOKEN_Z80_LDD = &H1F                'Load and Decrement
+    TOKEN_Z80_LDDR = &H20               'Load, Decrement and Repeat
+    TOKEN_Z80_LDI = &H21                'Load and Increment
+    TOKEN_Z80_LDIR = &H22               'Load, Increment and Repeat
+    TOKEN_Z80_NEG = &H23                'Negate (flip the sign)
+    TOKEN_Z80_NOP = &H24                'No Operation (do nothing)
+    TOKEN_Z80_OR = &H25                 'Bitwise OR
+    TOKEN_Z80_OUT = &H26                'Output to port
+    TOKEN_Z80_OUTD = &H27               'Output and Decrement
+    TOKEN_Z80_OTDR = &H28               'Output, Decrement and Repeat
+    TOKEN_Z80_OUTI = &H29               'Output and Increment
+    TOKEN_Z80_OTIR = &H2A               'Output, Increment and Repeat
+    TOKEN_Z80_POP = &H2B                'Pull from stack
+    TOKEN_Z80_PUSH = &H2C               'Push onto stack
+    TOKEN_Z80_RES = &H2D                'Reset bit
+    TOKEN_Z80_RET = &H2E                'Return from routine
+    TOKEN_Z80_RETI = &H2F               'Return from Interrupt
+    TOKEN_Z80_RETN = &H30               'Return from NMI
+    TOKEN_Z80_RLA = &H31                'Rotate Left (Accumulator)
+    TOKEN_Z80_RL = &H32                 'Rotate Left
+    TOKEN_Z80_RLCA = &H33               'Rotate Left Circular (Accumulator)
+    TOKEN_Z80_RLC = &H34                'Rotate Left Circular
+    TOKEN_Z80_RLD = &H35                'Rotate Left 4-bits
+    TOKEN_Z80_RRA = &H36                'Rotate Right (Accumulator)
+    TOKEN_Z80_RR = &H37                 'Rotate Right
+    TOKEN_Z80_RRCA = &H38               'Rotate Right Circular (Accumulator)
+    TOKEN_Z80_RRC = &H39                'Rotate Right Circular
+    TOKEN_Z80_RRD = &H3A                'Rotate Right 4-bits
+    TOKEN_Z80_RST = &H3B                '"Restart" -- Call a page 0 routine
+    TOKEN_Z80_SBC = &H3C                'Subtract with Carry
+    TOKEN_Z80_SCF = &H3D                'Set Carry Flag
+    TOKEN_Z80_SET = &H3E                'Set bit
+    TOKEN_Z80_SLA = &H3F                'Shift Left Arithmetic
+    TOKEN_Z80_SRA = &H40                'Shift Right Arithmetic
+    TOKEN_Z80_SLL = &H41                'Shift Left Logical
+    TOKEN_Z80_SRL = &H42                'Shift Right Logical
+    TOKEN_Z80_SUB = &H43                'Subtract
+    TOKEN_Z80_XOR = &H44                'Bitwise XOR
+    
+    'Z80 Registers ....................................................................
+    TOKEN_REGISTER_A = &H1              'Accumulator
+    TOKEN_REGISTER_F = &H2              'Flags register
+    TOKEN_REGISTER_B = &H4
+    TOKEN_REGISTER_C = &H8
+    TOKEN_REGISTER_D = &H10
+    TOKEN_REGISTER_E = &H20
+    TOKEN_REGISTER_H = &H40
+    TOKEN_REGISTER_L = &H80
+    
+    TOKEN_REGISTER_I = &H100            'Interrupt - not to be confused with IX & IY
+    TOKEN_REGISTER_R = &H101            'Refresh register (pseudo-random)
+    
+    TOKEN_REGISTER_SP = &H104           'Stack pointer
+    TOKEN_REGISTER_PC = &H108           'Program counter
+    
+    TOKEN_REGISTER_AF = TOKEN_REGISTER_A Or TOKEN_REGISTER_F
+    TOKEN_REGISTER_BC = TOKEN_REGISTER_B Or TOKEN_REGISTER_C
+    TOKEN_REGISTER_DE = TOKEN_REGISTER_D Or TOKEN_REGISTER_E
+    TOKEN_REGISTER_HL = TOKEN_REGISTER_H Or TOKEN_REGISTER_L
+    
+    'Undocumented Z80 instructions can access the 8-bit halves of IX & IY
+    TOKEN_REGISTER_IXL = &H201
+    TOKEN_REGISTER_IXH = &H202
+    TOKEN_REGISTER_IYL = &H211
+    TOKEN_REGISTER_IYH = &H212
+    TOKEN_REGISTER_IX = TOKEN_REGISTER_IXL Or TOKEN_REGISTER_IXH
+    TOKEN_REGISTER_IY = TOKEN_REGISTER_IYL Or TOKEN_REGISTER_IYH
+    
+    'Z80 Flag Conditions ..............................................................
+    'The flags share the same space as the registers since they share the "C"
+     'register/flag and it's not possible to deterime which is implied early on
+    TOKEN_FLAG_C = &H8                  'Carry set
+    TOKEN_FLAG_NC = &H301               'Carry not set
+    TOKEN_FLAG_Z = &H302                'Zero set
+    TOKEN_FLAG_NZ = &H303               'Zero not set
+    TOKEN_FLAG_M = &H304                'Sign is set
+    TOKEN_FLAG_P = &H305                'Sign is not set
+    TOKEN_FLAG_PE = &H306               'Parity/Overflow is set
+    TOKEN_FLAG_PO = &H307               'Parity/Overflow is not set
+    
+    'Operators ........................................................................
+    TOKEN_OPERATOR_ADD = &H1            'Add "+"
+    TOKEN_OPERATOR_SUB = &H2            'Subtract "-"
+    TOKEN_OPERATOR_MUL = &H3            'Multiply "*"
+    TOKEN_OPERATOR_DIV = &H4            'Divide "/"
+    TOKEN_OPERATOR_POW = &H5            'Power "^"
+    TOKEN_OPERATOR_MOD = &H6            'Modulus "\"
+    TOKEN_OPERATOR_REP = &H7            'Repeat "x"
+    TOKEN_OPERATOR_OR = &H8             'Bitwise Or "|"
+    TOKEN_OPERATOR_AND = &H9            'Bitwise And "&"
+    
+    'Keywords .........................................................................
+    TOKEN_KEYWORD_AT = &H1
+    TOKEN_KEYWORD_AS = &H2
+    TOKEN_KEYWORD_BANK = &H3
+    TOKEN_KEYWORD_BINARY = &H4
+    TOKEN_KEYWORD_BYTE = &H5
+    TOKEN_KEYWORD_DATA = &H6
+    TOKEN_KEYWORD_DEF = &H7
+    TOKEN_KEYWORD_DEFAULT = &H8
+    TOKEN_KEYWORD_ECHO = &H9
+    TOKEN_KEYWORD_ELSE = &HA
+    TOKEN_KEYWORD_EXISTS = &HB
+    TOKEN_KEYWORD_FAIL = &HC
+    TOKEN_KEYWORD_FILL = &HD
+    TOKEN_KEYWORD_IF = &HE
+    TOKEN_KEYWORD_INCLUDE = &HF
+    TOKEN_KEYWORD_LENGTH = &H10
+    TOKEN_KEYWORD_OBJECT = &H11
+    TOKEN_KEYWORD_PARAMS = &H12
+    TOKEN_KEYWORD_PROC = &H13
+    TOKEN_KEYWORD_RETURN = &H14
+    TOKEN_KEYWORD_SECTION = &H15
+    TOKEN_KEYWORD_SLOT = &H16
+    TOKEN_KEYWORD_START = &H17
+    TOKEN_KEYWORD_STOP = &H18
+    TOKEN_KEYWORD_STRUCT = &H19
+    TOKEN_KEYWORD_TABLE = &H1A
+    TOKEN_KEYWORD_WORD = &H1B
+End Enum
+
+'/// PRIVATE DEFS /////////////////////////////////////////////////////////////////////
 
 'This makes life a whole lot easier
 Private Enum ASCII
@@ -84,32 +283,11 @@ Private Enum ASCII
     NUM1 = 49
     NUM9 = 57
     
-    A = 97
-    B = 98
-    C = 99
-    D = 100
-    E = 101
-    F = 102
-    G = 103
-    H = 104
-    i = 105
-    J = 106
-    K = 107
-    L = 108
-    M = 109
-    N = 110
-    O = 111
-    P = 112
-    Q = 113
-    R = 114
-    S = 115
-    T = 116
-    U = 117
-    V = 118
-    W = 119
-    X = 120
-    Y = 121
-    Z = 122
+    A = 97:     B = 98:     C = 99:     D = 100:    E = 101:    F = 102
+    G = 103:    H = 104:    i = 105:    J = 106:    K = 107:    L = 108
+    M = 109:    N = 110:    O = 111:    P = 112:    Q = 113:    R = 114
+    S = 115:    T = 116:    U = 117:    V = 118:    W = 119:    X = 120
+    Y = 121:    Z = 122
     
     aSPC = 32
     aTAB = 9
@@ -150,7 +328,9 @@ End Enum
 'Use a 100'000 item initial buffer for the token stream
 Private Const TOKEN_BUFFER As Long = 100000
 
-'/// PRIVATE DEFS /////////////////////////////////////////////////////////////////////
+'This is the official polynomial used by CRC32 in PKZip. _
+ Often the polynomial is shown reversed (04C11DB7)
+Private Const CRC_POLYNOMIAL As Long = &HEDB88320
 
 'Used for time measurement
 Private Stopwatch As PerformanceCounter
@@ -186,14 +366,23 @@ Private Type oz80Token
     Col As Long                         'Column number in the original source text
 End Type
 
-'String content will be held here; the token stream will be given an index number _
- associated with the string entry here
-Private Strings As Scripting.Dictionary
-
 '/// EVENTS ///////////////////////////////////////////////////////////////////////////
 
+'Progress messages are passed through an event, the handler can choose to show them _
+ or not. I didn't want to spam `Debug.Print` output
+Event Message(ByRef Text As String)
+
 'A class event is used to communicate error details beyond a simple error number
-Event Error(ByRef Err As ErrObject)
+Event Error( _
+    ByVal Number As OZ80_ERROR, ByRef Description As String, _
+    ByVal Line As Long, ByVal Col As Long _
+)
+
+'To avoid the assembler having to keep a duplicate copy of the variable / label _
+ names (otherwise it'd have to remember which string is defined in which TokenStream) _
+ we raise an event each time we come across a string so that the assembler can pool _
+ together all strings across all source files
+Event StringAdded(ByRef Key As Long, ByRef StringData As String)
 
 'CLASS Initialize _
  ======================================================================================
@@ -224,9 +413,6 @@ Private Sub Class_Initialize()
             Let LowCase(ii) = ii
         End If
     Next ii
-    
-    'Initialise the string database
-    Set Strings = New Scripting.Dictionary
     
     'Create the CRC look-up table _
      (I will not pretend to understand how this works other than it goes through _
@@ -261,9 +447,8 @@ End Sub
 'CLASS Terminate _
  ======================================================================================
 Private Sub Class_Terminate()
+    'Clean up the timing class
     Set Stopwatch = Nothing
-    'Clear the string database
-    Set Strings = Nothing
     'Clean up the look up tables
     Erase LowCase, IsNumber, CRCTable
     'The `Tokenise` method will clean this up, but just be doubly sure
@@ -290,13 +475,6 @@ Public Property Let Index(ByVal Value As Long)
     Else
         Let TokenIndex = Value
     End If
-End Property
-
-'PROPERTY StringData : Expose the string data associated with the tokens _
- ======================================================================================
-Public Property Get StringData(ByRef Key As Long) As String
-    On Error Resume Next
-    Let StringData = Strings(Key)
 End Property
 
 'PROPERTY Kind : Token Kind of current token _
@@ -360,9 +538,6 @@ Public Function TokeniseFile(ByRef FilePath As String) As OZ80_ERROR
     'Just a loop counter
     Dim ii As Long
     
-    'Clean out any previous string data
-    Call Strings.RemoveAll
-    
     'Prepare a large buffer to accept the token stream (using `ReDim` for every token _
      added is *incredibly* slow). If the tokens overflow this buffer, we'll increase _
      it by another chunk there and then
@@ -382,7 +557,8 @@ Public Function TokeniseFile(ByRef FilePath As String) As OZ80_ERROR
         ): Exit Function
     End If
     
-    Debug.Print "* Parsing file: " & FilePath
+    RaiseEvent Message("* Parsing file: " & FilePath)
+    
     'Once the file is open, ensure it's closed upon error
     On Error GoTo ErrorOpenFile
     Open FilePath For Input Access Read Lock Write As #FileNumber
@@ -396,7 +572,7 @@ Public Function TokeniseFile(ByRef FilePath As String) As OZ80_ERROR
     
     'Cache this for speed, we'll be referring to it every loop
     Dim TextLen As Long: Let TextLen = UBound(Text)
-    Debug.Print "- Length: " & Format$(TextLen, "#,#") & " bytes"
+    RaiseEvent Message("- Length: " & Format$(TextLen, "#,#") & " bytes")
     
     'Continue error handling normally
     Close #FileNumber
@@ -882,6 +1058,7 @@ TokenWord:
         If CompStr(WordBegin, WordLen, "srl") Then Call Add(TOKEN_Z80, TOKEN_Z80_SRL, LineBegin, ColBegin): GoTo NextWord
         If CompStr(WordBegin, WordLen, "sub") Then Call Add(TOKEN_Z80, TOKEN_Z80_SUB, LineBegin, ColBegin): GoTo NextWord
         'Keywords
+        If CompStr(WordBegin, WordLen, "section") Then Call Add(TOKEN_KEYWORD, TOKEN_KEYWORD_SECTION, LineBegin, ColBegin): GoTo NextWord
         If CompStr(WordBegin, WordLen, "slot") Then Call Add(TOKEN_KEYWORD, TOKEN_KEYWORD_SLOT, LineBegin, ColBegin): GoTo NextWord
         If CompStr(WordBegin, WordLen, "start") Then Call Add(TOKEN_KEYWORD, TOKEN_KEYWORD_START, LineBegin, ColBegin): GoTo NextWord
         If CompStr(WordBegin, WordLen, "stop") Then Call Add(TOKEN_KEYWORD, TOKEN_KEYWORD_STOP, LineBegin, ColBegin): GoTo NextWord
@@ -1108,12 +1285,11 @@ Finish:
         Let TokenIndex = 0
         
         Erase Text
-        Debug.Print "- Words: " & Format$(WordCount, "#,#")
-        Debug.Print "- Tokens: " & Format$(TokenCount, "#,#")
-        Debug.Print "- Time: " & Format$(Stopwatch.Elapsed / 1000, "0.000") & "s"
+        RaiseEvent Message("- Words: " & Format$(WordCount, "#,#"))
+        RaiseEvent Message("- Tokens: " & Format$(TokenCount, "#,#"))
+        RaiseEvent Message("- Time: " & Format$(Stopwatch.Elapsed / 1000, "0.000") & "s")
     Else
         'When there's an error, clean up
-        Call Strings.RemoveAll
         Erase Text, Tokens
         Let TokenCount = 0
         Let TokenIndex = 0
@@ -1161,8 +1337,11 @@ Private Sub AddString( _
     Dim Key As Long
     Let Key = CRCString(Data)
     
-    'If the string hasn't been added yet, do so
-    If Strings.Exists(Key) = False Then Call Strings.Add(Key, Data)
+    'Pass the string back to the assembler. It'll want to pool together all of the _
+     strings used across all files for the purpose of label lookups
+    'TODO
+    RaiseEvent StringAdded(Key, Data)
+    
     'Add the index key to the token so that we can retrieve the string later
     Call Add(TokenType, Key, Line, Col)
 End Sub
@@ -1247,20 +1426,8 @@ Private Function RaiseError( _
     ByRef Description As String, _
     Optional ByRef Line As Long = 0, Optional ByRef Col As Long = 0 _
 ) As OZ80_ERROR
-    Debug.Print
-    Debug.Print "! ERROR: #" & Number
-    If Line > 0 And Col > 0 Then
-        Debug.Print "- Line: " & Format$(Line, "#,#") & " Col: " & Col
-    End If
-    Debug.Print "- " & Description
-    Debug.Print
     
-    Call Err.Clear
-    Let Err.Number = vbObjectError + Number
-    Let Err.Description = Description
-    Let Err.Source = "Line #" & Line & " Col #" & Col
-    
-    RaiseEvent Error(Err)
+    RaiseEvent Error(Number, Description, Line, Col)
     
     'We return the same error number we were given only to make the tail recursion _
      simpler, e.g. `let TokeniseFile = RaiseError(OZ80_ERROR_...`

@@ -1,0 +1,9445 @@
+`` Sonic 1 Master System Disassembly
+   created by Kroc Camen <kroc@camendesign.com>
+   for MaSS1VE: The Master System Sonic 1 Visual Editor <github.com/Kroc/MaSS1VE>
+   ================================================================================= ``
+
+OBJECT #object {
+	.type			AS BYTE	`IX+$00 - the object type index number
+	.unknown1		AS BYTE	`related to X somehow?
+	.X			AS WORD	`IX+$02/03 - in px
+	.unknown4		AS BYTE	`related to Y somehow?
+	.Y			AS WORD	`IX+$05/06 - in px
+	.Xspeed			AS WORD	`IX+$07/08 - in px, signed (i.e. $F??? = left)
+	.Xdirection		AS BYTE	`IX+$09 - $FF for left, else $00
+	.Yspeed			AS WORD	`IX+$0A/0B - in px, signed  (i.e. $F??? = left)
+	.Ydirection		AS BYTE	`IX+$0C - $FF for left, else $00
+	.width			AS BYTE	`IX+$0D - in px
+	.height			AS BYTE	`IX+$0E - in px
+	.spriteLayout		AS WORD	`IX+$0F/10 - address to current sprite layout
+	.unknown11		AS BYTE
+	.unknown12		AS BYTE
+	.unknown13		AS BYTE
+	.unknown14		AS BYTE
+	.unknown15		AS BYTE
+	.unknown16		AS BYTE
+	.unknown17		AS BYTE
+	.unknown18		AS BYTE
+	.unknown19		AS BYTE	`unused?
+}
+
+`the player is an object like any other and has reserved object parameters in memory
+DEF #RAM_SONIC		$D3FC	AS #object
+	`type			$D3FC
+	`unknown1		$D3FD
+	`X			$D3FE/F
+	`unknown4		$D400
+	`Y			$D401/2
+	`Xspeed			$D403/4
+	`Xdirection		$D405
+	`Yspeed			$D406/7
+	`Ydirecton		$D408
+	`width			$D409
+	`height			$D40A
+	`spriteLayout		$D40B/C
+
+`--------------------------------------------------------------------------------------
+   
+INCLUDE "sonic.oz80"
+
+INCLUDE "powerUps.oz80"
+INCLUDE "boss_endSign.oz80"
+
+`and for whatever reason, the original ROM wedges the level palettes right here!
+INCLUDE "..\palettes.oz80"
+
+INCLUDE "badnick_crabmeat.oz80"
+
+`____________________________________________________________________________[$673C]___
+`OBJECT: wooden platform - swinging (Green Hill)
+
+PROC :doObjectCode_platform_swinging {
+	set	5,(ix+$18)
+	ld	hl,$0020
+	ld	($D267),hl
+	ld	hl,$0048
+	ld	($D269),hl
+	ld	hl,$0030
+	ld	($D26B),hl
+	ld	hl,$0030
+	ld	($D26D),hl
+	bit	0,(ix+$18)
+	jr	nz,._1
+	ld	l,(ix+#object.X+0)
+	ld	h,(ix+#object.X+1)
+	ld	(ix+$12),l
+	ld	(ix+$13),h
+	ld	l,(ix+#object.Y+0)
+	ld	h,(ix+#object.Y+1)
+	ld	(ix+$14),l
+	ld	(ix+$15),h
+	ld	(ix+$11),$e0
+	set	0,(ix+$18)
+	set	1,(ix+$18)
+._1	ld	(ix+#object.width),$1a
+	ld	(ix+#object.height),$10
+	ld	l,(ix+#object.X+0)
+	ld	h,(ix+#object.X+1)
+	ld	(#RAM_TEMP1),hl
+	ld	hl,._682f
+	ld	e,(ix+$11)
+	ld	d,$00
+	add	hl,de
+	ld	c,l
+	ld	b,h
+	ld	a,(bc)
+	and	a
+	jp	p,._2
+	dec	d
+._2	ld	e,a
+	ld	l,(ix+$12)
+	ld	h,(ix+$13)
+	add	hl,de
+	ld	(ix+#object.X+0),l
+	ld	(ix+#object.X+1),h
+	ld	de,(#RAM_TEMP1)
+	and	a
+	sbc	hl,de
+	ld	(#RAM_TEMP1),hl
+	inc	bc
+	ld	d,$00
+	ld	a,(bc)
+	and	a
+	jp	p,._3
+	dec	d
+._3	ld	e,a
+	ld	l,(ix+$14)
+	ld	h,(ix+$15)
+	add	hl,de
+	ld	(ix+#object.Y+0),l
+	ld	(ix+#object.Y+1),h
+	
+	ld	a,(#RAM_SONIC.Ydirection)
+	and	a
+	jp	m,._4
+	
+	ld	hl,$0806
+	ld	(#RAM_TEMP6),hl
+	call	:_LABEL_3956_11
+	jr	c,._4
+	ld	hl,(#RAM_SONIC.X)
+	ld	de,(#RAM_TEMP1)
+	add	hl,de
+	ld	(#RAM_SONIC.X),hl
+	ld	bc,$0010
+	ld	de,$0000
+	call	:_LABEL_7CC1_12
+._4	ld	hl,:_6911
+	ld	a,(#RAM_LEVEL_SOLIDITY)
+	and	a
+	jr	z,._5
+	ld	hl,:_6923
+._5	ld	(ix+#object.spriteLayout+0),l
+	ld	(ix+#object.spriteLayout+1),h
+	bit	1,(ix+$18)
+	jr	nz,._6
+	ld	a,(ix+$11)
+	inc	a
+	inc	a
+	ld	(ix+$11),a
+	cp	$e0
+	ret	c
+	set	1,(ix+$18)
+	ret
+	
+._6	ld	a,(ix+$11)
+	dec	a
+	dec	a
+	ld	(ix+$11),a
+	ret	nz
+	res	1,(ix+$18)
+	ret
+        
+._682f  `this is swinging position data
+        DATA $B3, $00
+        DATA $B3, $01
+        DATA $B3, $02
+        DATA $B3, $02
+        DATA $B3, $03
+        DATA $B3, $04
+        DATA $B3, $05
+        DATA $B3, $06
+        DATA $B4, $07
+        DATA $B4, $08
+        DATA $B4, $09
+        DATA $B4, $0B
+        DATA $B4, $0C
+        DATA $B4, $0D
+        DATA $B5, $0E
+        DATA $B5, $0F
+        DATA $B5, $11
+        DATA $B5, $12
+        DATA $B6, $13
+        DATA $B6, $15
+        DATA $B7, $16
+        DATA $B7, $18
+        DATA $B8, $19
+        DATA $B8, $1B
+        DATA $B9, $1D
+        DATA $B9, $1E
+        DATA $BA, $20
+        DATA $BB, $22
+        DATA $BC, $23
+        DATA $BD, $25
+        DATA $BE, $27
+        DATA $BF, $29
+        DATA $C0, $2B
+        DATA $C2, $2D
+        DATA $C3, $2F
+        DATA $C4, $31
+        DATA $C6, $32
+        DATA $C8, $34
+        DATA $CA, $36
+        DATA $CC, $38
+        DATA $CE, $3A
+        DATA $D0, $3C
+        DATA $D2, $3E
+        DATA $D4, $3F
+        DATA $D7, $41
+        DATA $DA, $43
+        DATA $DC, $44
+        DATA $DF, $45
+        DATA $E2, $47
+        DATA $E5, $48
+        DATA $E8, $49
+        DATA $EC, $4A
+        DATA $EF, $4B
+        DATA $F2, $4C
+        DATA $F6, $4C
+        DATA $F9, $4C
+        DATA $FC, $4D
+        DATA $00, $4D
+        DATA $03, $4D
+        DATA $07, $4C
+        DATA $0A, $4C
+        DATA $0E, $4C
+        DATA $11, $4B
+        DATA $14, $4A
+        DATA $18, $49
+        DATA $1B, $48
+        DATA $1E, $47
+        DATA $21, $45
+        DATA $24, $44
+        DATA $27, $42
+        DATA $29, $41
+        DATA $2C, $3F
+        DATA $2E, $3D
+        DATA $31, $3B
+        DATA $33, $3A
+        DATA $35, $38
+        DATA $37, $36
+        DATA $39, $34
+        DATA $3A, $32
+        DATA $3C, $30
+        DATA $3E, $2E
+        DATA $3F, $2C
+        DATA $40, $2A
+        DATA $41, $28
+        DATA $43, $26
+        DATA $44, $24
+        DATA $45, $23
+        DATA $45, $21
+        DATA $46, $1F
+        DATA $47, $1D
+        DATA $48, $1C
+        DATA $48, $1A
+        DATA $49, $18
+        DATA $49, $17
+        DATA $4A, $15
+        DATA $4A, $14
+        DATA $4B, $12
+        DATA $4B, $11
+        DATA $4B, $0F
+        DATA $4B, $0E
+        DATA $4C, $0D
+        DATA $4C, $0C
+        DATA $4C, $0A
+        DATA $4C, $09
+        DATA $4C, $08
+        DATA $4C, $07
+        DATA $4D, $06
+        DATA $4D, $05
+        DATA $4D, $04
+        DATA $4D, $03
+        DATA $4D, $02
+        DATA $4D, $01
+        DATA $4D, $00
+}
+
+`sprite layout (other platform objects share this)
+:_6911
+DATA $FE, $FF, $FF, $FF, $FF, $FF
+DATA $18, $1A, $18, $1A, $FF, $FF
+DATA $FF, $FF, $FF, $FF, $FF, $FF
+:_6923
+DATA $FE, $FF, $FF, $FF, $FF, $FF
+DATA $6C, $6E, $6E, $48, $FF, $FF
+DATA $FF, $FF
+
+:_6931
+DATA $FE, $FF, $FF, $FF
+DATA $FF, $FF
+
+DATA $6C, $6E, $6C, $6E, $FF, $FF
+DATA $FF, $FF
+
+`____________________________________________________________________________[$693F]___
+`OBJECT: Explosion
+
+PROC :doObjectCode_explosion {
+	set	5,(ix+$18)
+	ld	a,(ix+$15)
+	cp	$aa
+	jr	z,._1
+	xor	a
+	ld	(ix+$11),a
+	ld	(ix+$15),$aa
+	ld	(ix+$16),a
+	ld	(ix+$17),a
+	bit	5,(iy+#vars.flags0)
+	jr	z,._1
+	ld	a,(#RAM_CURRENT_LEVEL)
+	cp	$12
+	jr	z,._1
+	ld	a,($D414)
+	rlca	
+	jr	c,._1
+	ld	a,($D2E8)
+	ld	de,($D2E6)
+	inc	de
+	ld	c,a
+	ld	hl,(#RAM_SONIC.Yspeed)
+	ld	a,l
+	cpl	
+	ld	l,a
+	ld	a,h
+	cpl	
+	ld	h,a
+	
+	ld	a,(#RAM_SONIC.Ydirection)
+	and	a
+	jp	m,._1
+	
+	cpl	
+	add	hl,de
+	adc	a,c
+	ld	(#RAM_SONIC.Yspeed),hl
+	ld	(#RAM_SONIC.Ydirection),a
+	
+._1	xor	a			`set A to 0
+	ld	(ix+#object.Xspeed+0),a
+	ld	(ix+#object.Xspeed+1),a
+	ld	(ix+#object.Xdirection),a
+	ld	(ix+#object.Yspeed+0),a
+	ld	(ix+#object.Yspeed+1),a
+	ld	(ix+#object.Ydirection),a
+	ld	de,._69be
+	ld	bc,._69b7
+	call	:_7c41
+	inc	(ix+$11)
+	ld	a,(ix+$11)
+	cp	$18
+	ret	c
+	ld	(ix+#object.type),$FF	`remove object?
+	ret
+        
+._69b7  DATA $00, $08, $01, $08, $02, $08, $ff
+._69be  `sprite layout
+        DATA $74, $76, $FF, $FF, $FF, $FF
+        DATA $FF, $FF, $FF, $FF, $FF, $FF
+        DATA $FF, $FF, $FF, $FF, $FF, $FF
+
+        DATA $78, $7A, $FF, $FF, $FF, $FF
+        DATA $FF, $FF, $FF, $FF, $FF, $FF
+        DATA $FF, $FF, $FF, $FF, $FF, $FF
+
+        DATA $7C, $7E, $FF, $FF, $FF, $FF
+        DATA $FF
+}
+
+`____________________________________________________________________________[$69E9]___
+`OBJECT: wooden platform (Green Hill)
+
+PROC :doObjectCode_platform {
+	set	5,(ix+$18)
+	
+	ld	(ix+#object.width),$1A
+	ld	(ix+#object.height),$10
+	ld	(ix+#object.spriteLayout+0),:_6911.lo
+	ld	(ix+#object.spriteLayout+1),:_6911.hi
+	
+	ld	a,(#RAM_SONIC.Ydirection)
+	and	a
+	jp	m,._2
+	
+	ld	hl,$0806
+	ld	(#RAM_TEMP6),hl
+	call	:_LABEL_3956_11
+	jr	c,._2
+	
+	ld	de,$0000
+	
+	ld	a,(ix+#object.Y+0)
+	and	%00011111		`MOD 32
+	cp	$10
+	jr	nc,._1
+	
+	ld	e,$80
+._1	ld	(ix+#object.Yspeed+0),e
+	ld	(ix+#object.Yspeed+1),d
+	ld	(ix+#object.Ydirection),$00
+	ld	bc,$0010
+	call	:_LABEL_7CC1_12
+	ret
+	
+._2	ld	c,$00
+	ld	l,c
+	ld	h,c
+	ld	a,(ix+#object.Y+0)
+	and	%00011111
+	jr	z,._3
+	
+	ld	hl,$ffc0
+	dec	c
+._3	ld	(ix+#object.Yspeed+0),l
+	ld	(ix+#object.Yspeed+1),h
+	ld	(ix+#object.Ydirection),c
+	ret
+}
+
+`____________________________________________________________________________[$6A47]___
+`OBJECT: wooden platform - falling (Green Hill)
+
+PROC :doObjectCode_platform_weight {
+	set	5,(ix+$18)
+	ld	a,(ix+$16)
+	add	a,(ix+$17)
+	ld	(ix+$17),a
+	cp	$18
+	jr	c,._1
+	ld	l,(ix+#object.Yspeed+0)
+	ld	h,(ix+#object.Yspeed+1)
+	ld	a,(ix+#object.Ydirection)
+	ld	de,$0040
+	add	hl,de
+	adc	a,d
+	ld	(ix+#object.Yspeed+0),l
+	ld	(ix+#object.Yspeed+1),h
+	ld	(ix+#object.Ydirection),a
+._1	ld	(ix+#object.width),$1a		`this can't mean `_101a`?
+	ld	(ix+#object.height),$10
+	
+	ld	a,(#RAM_SONIC.Ydirection)
+	and	a
+	jp	m,._2
+	
+	ld	hl,$0806
+	ld	(#RAM_TEMP6),hl
+	call	:_LABEL_3956_11
+	jr	c,._2
+	ld	(ix+$16),$01
+	ld	bc,$0010
+	ld	e,(ix+#object.Yspeed+0)
+	ld	d,(ix+#object.Yspeed+1)
+	call	:_LABEL_7CC1_12
+._2	ld	hl,:_6911
+	ld	a,(#RAM_LEVEL_SOLIDITY)
+	and	a
+	jr	z,._3
+	ld	hl,:_6923
+._3	ld	(ix+#object.spriteLayout+0),l
+	ld	(ix+#object.spriteLayout+1),h
+	ld	hl,(#RAM_CAMERA_Y)
+	ld	de,$00c0
+	add	hl,de
+	ld	e,(ix+#object.Y+0)
+	ld	d,(ix+#object.Y+1)
+	and	a
+	sbc	hl,de
+	ret	nc
+	ld	(ix+#object.type),$FF	`remove object?
+	ret
+}
+
+`____________________________________________________________________________[$6AC1]___
+`OBJECT: UNKNOWN
+
+PROC :_6ac1 {
+	set	5,(ix+$18)
+	ld	(ix+#object.width),$02
+	ld	(ix+#object.height),$02
+	ld	hl,$0303
+	ld	(#RAM_TEMP6),hl
+	call	:_LABEL_3956_11
+	call	nc,:_35fd
+	ld	l,(ix+#object.Yspeed+0)
+	ld	h,(ix+#object.Yspeed+1)
+	ld	a,(ix+#object.Ydirection)
+	ld	e,(ix+$13)
+	ld	d,(ix+$14)
+	add	hl,de
+	adc	a,$00
+	ld	(ix+#object.Yspeed+0),l
+	ld	(ix+#object.Yspeed+1),h
+	ld	(ix+#object.Ydirection),a
+	ld	l,(ix+#object.X+0)
+	ld	h,(ix+#object.X+1)
+	ld	(#RAM_TEMP1),hl
+	ld	l,(ix+#object.Y+0)
+	ld	h,(ix+#object.Y+1)
+	ld	(#RAM_TEMP3),hl
+	ld	hl,$0000
+	ld	(#RAM_TEMP4),hl
+	ld	(#RAM_TEMP6),hl
+	ld	(ix+#object.spriteLayout+0),l
+	ld	(ix+#object.spriteLayout+1),h
+	ld	hl,:_6b72
+	ld	a,(#RAM_CURRENT_LEVEL)
+	cp	$05
+	jr	z,._1
+	cp	$0b
+	jr	z,._1
+	ld	hl,:_6b70
+._1	ld	a,(#RAM_FRAMECOUNT)
+	and	$01
+	ld	e,a
+	ld	d,$00
+	add	hl,de
+	ld	a,(hl)
+	call	:_3581
+	ld	c,(ix+#object.X+0)
+	ld	b,(ix+#object.X+1)
+	ld	l,c
+	ld	h,b
+	ld	de,$fff8
+	add	hl,de
+	ld	de,(#RAM_CAMERA_X)
+	and	a
+	sbc	hl,de
+	jr	c,._2
+	inc	d
+	ex	de,hl
+	sbc	hl,bc
+	jr	c,._2
+	ld	c,(ix+#object.Y+0)
+	ld	b,(ix+#object.Y+1)
+	ld	l,c
+	ld	h,b
+	ld	de,$0010
+	add	hl,de
+	ld	de,(#RAM_CAMERA_Y)
+	and	a
+	sbc	hl,de
+	jr	c,._2
+	ld	hl,$00c0
+	add	hl,de
+	and	a
+	sbc	hl,bc
+	ret	nc
+._2	ld	(ix+#object.type),$FF	`remove object?
+	ret	
+}
+
+:_6b70
+DATA $06, $08
+:_6b72
+DATA $34, $36
+
+`____________________________________________________________________________[$6B74]___
+`OBJECT: badnick - buzz bomber
+
+PROC :doObjectCode_badnick_buzzBomber {
+	set	5,(ix+$18)
+	bit	0,(ix+$18)
+	jr	nz,._1
+	ld	e,(ix+#object.X+0)
+	ld	d,(ix+#object.X+1)
+	ld	(ix+$14),e
+	ld	(ix+$15),d
+	xor	a
+	ld	(ix+#object.spriteLayout+0),a
+	ld	(ix+#object.spriteLayout+1),a
+	ld	(ix+$12),a
+	ld	(ix+#object.Xspeed+0),a
+	ld	(ix+#object.Xspeed+1),a
+	ld	(ix+#object.Xdirection),a
+	ld	hl,(#RAM_CAMERA_X)
+	ld	bc,$0100
+	add	hl,bc
+	sbc	hl,de
+	ret	nc
+	set	0,(ix+$18)
+._1	ld	(ix+#object.width),$14
+	ld	(ix+#object.height),$20
+	ld	l,(ix+#object.X+0)
+	ld	h,(ix+#object.X+1)
+	ld	de,(#RAM_SONIC.X)
+	and	a
+	sbc	hl,de
+	jr	c,._2
+	ld	de,$0040
+	sbc	hl,de
+	jr	nc,._2
+	ld	a,(ix+$12)
+	cp	$05
+	jr	nc,._2
+	ld	(ix+$12),$05
+._2	ld	e,(ix+$12)
+	ld	d,$00
+	
+._3	ld	hl,$6cd7
+	add	hl,de
+	ld	(#RAM_TEMP6),hl
+	ld	a,(hl)
+	and	a
+	jr	nz,._4
+	ld	(ix+$12),a
+	ld	e,a
+	jp	._3
+	
+._4	dec	a
+	jr	nz,._6
+	ld	l,(ix+#object.X+0)
+	ld	h,(ix+#object.X+1)
+	ld	de,$0030
+	add	hl,de
+	ld	de,(#RAM_CAMERA_X)
+	xor	a
+	sbc	hl,de
+	jr	nc,._5
+	ld	(ix+#object.spriteLayout+0),a
+	ld	(ix+#object.spriteLayout+1),a
+	ld	a,(ix+$14)
+	ld	(ix+#object.X+0),a
+	ld	a,(ix+$15)
+	ld	(ix+#object.X+1),a
+	res	0,(ix+$18)
+	ret
+	
+._5	ld	c,$ff
+	ld	hl,$fe00
+	jp	._8
+	
+._6	dec	a
+	jr	nz,._7
+	ld	c,$00
+	ld	l,c
+	ld	h,c
+	jp	._8
+	
+._7	ld	a,(ix+$11)
+	cp	$20
+	jp	nz,._9
+	call	:_7c7b
+	jp	c,._9
+	push	bc
+	ld	e,(ix+#object.X+0)
+	ld	d,(ix+#object.X+1)
+	ld	c,(ix+#object.Y+0)
+	ld	b,(ix+#object.Y+1)
+	push	ix
+	push	hl
+	pop	ix
+	xor	a			`set A to 0
+	ld	(ix+#object.type),$0D	`unknown object
+	ld	(ix+$01),a
+	ld	(ix+#object.X+0),e
+	ld	(ix+#object.X+1),d
+	ld	(ix+$04),a
+	ld	hl,$0020
+	add	hl,bc
+	ld	(ix+#object.Y+0),l
+	ld	(ix+#object.Y+1),h
+	ld	(ix+$11),a
+	ld	(ix+$13),a
+	ld	(ix+$14),a
+	ld	(ix+$15),a
+	ld	(ix+$16),a
+	ld	(ix+$17),a
+	ld	(ix+#object.Xspeed+0),$00
+	ld	(ix+#object.Xspeed+1),$ff
+	ld	(ix+#object.Xdirection),$ff
+	ld	(ix+#object.Yspeed+0),$80
+	ld	(ix+#object.Yspeed+1),$01
+	ld	(ix+#object.Ydirection),a
+	pop	ix, bc
+	ld	a,$0a
+	rst	::playSFX
+	ld	c,$00
+	ld	l,c
+	ld	h,c
+	
+._8	ld	(ix+#object.Xspeed+0),l
+	ld	(ix+#object.Xspeed+1),h
+	ld	(ix+#object.Xdirection),c
+._9	ld	l,(ix+$11)
+	ld	h,(ix+$12)
+	ld	de,$0008
+	add	hl,de
+	ld	(ix+$11),l
+	ld	(ix+$12),h
+	ld	hl,(#RAM_TEMP6)
+	ld	a,(hl)
+	add	a,a
+	ld	e,a
+	ld	hl,:_6ce2
+	add	hl,de
+	ld	c,(hl)
+	inc	hl
+	ld	b,(hl)
+	ld	de,:_6cf9
+	call	:_7c41
+	ld	hl,$1000
+	ld	(#RAM_TEMP6),hl
+	call	:_LABEL_3956_11
+	ld	hl,$1004
+	ld	(#RAM_TEMP1),hl
+	call	nc,:_35e5
+	ret
+}
+
+:_6cd7
+DATA $01, $01, $01, $01, $00, $02, $02, $03, $01, $01, $00
+:_6ce2
+DATA :_6cea, :_6cea, :_6cef, :_6cf4
+:_6cea
+DATA $00, $02, $01, $02, $FF
+:_6cef
+DATA $02, $02, $03, $02, $FF
+:_6cf4
+DATA $04, $02, $05, $02, $FF
+
+`sprite layout
+:_6cf9
+DATA $FE, $0A, $FF, $FF, $FF, $FF
+DATA $0C, $0E, $10, $FF, $FF, $FF
+DATA $FF, $FF, $FF, $FF, $FF, $FF
+
+DATA $FE, $FF, $FF, $FF, $FF, $FF
+DATA $0C, $0E, $2C, $FF, $FF, $FF
+DATA $FF, $FF, $FF, $FF, $FF, $FF
+
+DATA $FE, $0A, $FF, $FF, $FF, $FF
+DATA $12, $14, $16, $FF, $FF, $FF
+DATA $32, $34, $FF, $FF, $FF, $FF
+
+DATA $FE, $FF, $FF, $FF, $FF, $FF
+DATA $12, $14, $16, $FF, $FF, $FF
+DATA $32, $34, $FF, $FF, $FF, $FF
+
+DATA $FE, $0A, $FF, $FF, $FF, $FF
+DATA $12, $14, $16, $FF, $FF, $FF
+DATA $30, $34, $FF, $FF, $FF, $FF
+
+DATA $FE, $FF, $FF, $FF, $FF, $FF
+DATA $12, $14, $16, $FF, $FF, $FF
+DATA $30, $34, $FF, $FF, $FF, $FF
+
+`____________________________________________________________________________[$6D65]___
+`OBJECT: wooden platform - moving (Green Hill)
+
+PROC :doObjectCode_platform_leftRight {
+	set	5,(ix+$18)
+	
+	ld	a,(#RAM_CURRENT_LEVEL)
+	cp	$07			`Jungle act 2?
+	jr	z,._1
+	
+	ld	hl,$0020
+	ld	($D267),hl
+	
+	ld	hl,$0048
+	ld	($D269),hl
+	
+	ld	hl,$0030
+	ld	($D26B),hl
+	
+	ld	hl,$0030
+	ld	($D26D),hl
+	
+._1	ld	(ix+#object.width),$1a
+	ld	(ix+#object.height),$10
+	ld	c,$00
+	
+	ld	a,(#RAM_SONIC.Ydirection)
+	and	a
+	jp	m,._2
+	
+	ld	hl,$0806
+	ld	(#RAM_TEMP6),hl
+	call	:_LABEL_3956_11
+	
+	ld	c,$00
+	jr	c,._2
+	
+	ld	bc,$0010
+	ld	de,$0000
+	call	:_LABEL_7CC1_12
+	ld	c,$01
+	
+	`move right 1px
+._2	ld	l,(ix+$12)
+	ld	h,(ix+$13)
+	inc	hl
+	ld	(ix+$12),l
+	ld	(ix+$13),h
+	
+	ld	de,$00A0
+	xor	a			`set A to 0
+	sbc	hl,de
+	jr	c,._3
+	
+	ld	(ix+$12),a
+	ld	(ix+$13),a
+	inc	(ix+$14)
+	
+._3	ld	de,$0001
+	bit	0,(ix+$14)
+	jr	z,._4
+	
+	`move left 1px?
+	ld	de,$FFFF
+._4	ld	l,(ix+#object.X+0)
+	ld	h,(ix+#object.X+1)
+	add	hl,de
+	ld	(ix+#object.X+0),l
+	ld	(ix+#object.X+1),h
+	ld	a,c
+	and	a
+	jr	z,._5
+	
+	ld	hl,(#RAM_SONIC.X)
+	add	hl,de
+	ld	(#RAM_SONIC.X),hl
+	
+._5	ld	hl,:_6911
+	ld	a,(#RAM_LEVEL_SOLIDITY)
+	and	a
+	jr	z,._6
+	
+	ld	hl,:_6931
+	dec	a
+	jr	z,._6
+	
+	ld	hl,:_6923
+._6	ld	(ix+#object.spriteLayout+0),l
+	ld	(ix+#object.spriteLayout+1),h
+	ret
+}
+
+`____________________________________________________________________________[$6E0C]___
+`OBJECT: badnick - motobug
+
+PROC :doObjectCode_badnick_motobug {
+	res	5,(ix+$18)
+	ld	(ix+#object.width),$0a
+	ld	(ix+#object.height),$10
+	ld	e,(ix+$12)
+	ld	d,$00
+._1	ld	hl,:_6e96
+	add	hl,de
+	ld	(#RAM_TEMP6),hl
+	ld	a,(hl)
+	and	a
+	jr	nz,._2
+	ld	(ix+$12),a
+	ld	e,a
+	jp	._1
+	
+._2	dec	a
+	jr	nz,._3
+	ld	c,$ff
+	ld	hl,$ff00
+	jp	._5
+	
+._3	dec	a
+	jr	nz,._4
+	ld	c,$00
+	ld	hl,$0100
+	jp	._5
+._4	ld	c,$00
+	ld	l,c
+	ld	h,c
+._5	ld	(ix+#object.Xspeed+0),l
+	ld	(ix+#object.Xspeed+1),h
+	ld	(ix+#object.Xdirection),c
+	ld	l,(ix+$11)
+	ld	h,(ix+$12)
+	ld	de,$0008
+	add	hl,de
+	ld	(ix+$11),l
+	ld	(ix+$12),h
+	ld	(ix+#object.Yspeed+0),$00
+	ld	(ix+#object.Yspeed+1),$02
+	ld	(ix+#object.Ydirection),$00
+	ld	hl,(#RAM_TEMP6)
+	ld	a,(hl)
+	add	a,a
+	ld	e,a
+	ld	d,$00
+	ld	hl,:_6eb1
+	add	hl,de
+	ld	c,(hl)
+	inc	hl
+	ld	b,(hl)
+	ld	de,:_6ecb
+	call	:_7c41
+	ld	hl,$0203
+	ld	(#RAM_TEMP6),hl
+	call	:_LABEL_3956_11
+	ld	hl,$0000
+	ld	(#RAM_TEMP1),hl
+	call	nc,:_35e5
+	ret
+}
+
+:_6e96
+DATA $01, $01, $01, $01, $01, $01, $01, $01, $01
+DATA $03, $03, $03, $03, $02, $02, $02, $02, $02
+DATA $02, $02, $02, $02, $04, $04, $04, $04, $00
+
+:_6eb1
+DATA :_6ebb, :_6ebb, :_6ec0, :_6ec5, :_6ec8
+:_6ebb
+DATA $00, $08, $01, $08, $FF
+:_6ec0
+DATA $02, $08, $03, $08, $FF
+:_6ec5
+DATA $00, $FF, $FF
+:_6ec8
+DATA $02, $FF, $FF
+
+`sprite layout
+:_6ecb
+DATA $60, $62, $FF, $FF, $FF, $FF
+DATA $FF, $FF, $FF, $FF, $FF, $FF
+DATA $FF, $FF, $FF, $FF, $FF, $FF
+
+DATA $64, $66, $FF, $FF, $FF, $FF
+DATA $FF, $FF, $FF, $FF, $FF, $FF
+DATA $FF, $FF, $FF, $FF, $FF, $FF
+
+DATA $68, $6A, $FF, $FF, $FF, $FF
+DATA $FF, $FF, $FF, $FF, $FF, $FF
+DATA $FF, $FF, $FF, $FF, $FF, $FF
+
+DATA $6C, $6E, $FF, $FF, $FF, $FF
+DATA $FF
+
+`____________________________________________________________________________[$6F08]___
+`OBJECT: badnick - newtron
+
+PROC :doObjectCode_badnick_newtron {
+	set	5,(ix+$18)
+	ld	(ix+#object.width),$0c
+	ld	(ix+#object.height),$14
+	ld	a,(ix+$11)
+	cp	$02
+	jr	z,._1
+	and	a
+	jr	nz,._4
+._1	ld	a,(#RAM_FRAMECOUNT)
+	and	$01
+	jr	z,._2
+	ld	bc,$0000
+	jr	._3
+._2	ld	bc,:_6fed
+._3	inc	(ix+$17)
+	ld	a,(ix+$17)
+	cp	$3c
+	jp	c,._7
+	ld	(ix+$17),$00
+	inc	(ix+$11)
+	jp	._7
+	
+._4	cp	$01
+	jp	nz,._6
+	inc	(ix+$17)
+	ld	a,(ix+$17)
+	cp	$64
+	jr	nz,._5
+	call	:_7c7b
+	jp	c,._5
+	push	bc
+	ld	e,(ix+#object.X+0)
+	ld	d,(ix+#object.X+1)
+	ld	c,(ix+#object.Y+0)
+	ld	b,(ix+#object.Y+1)
+	push	ix
+	push	hl
+	pop	ix
+	xor	a			`set A to 0
+	ld	(ix+#object.type),$0D	`unknown object
+	ld	(ix+$01),a
+	ld	(ix+#object.X+0),e
+	ld	(ix+#object.X+1),d
+	ld	(ix+$04),a
+	ld	hl,$0006
+	add	hl,bc
+	ld	(ix+#object.Y+0),l
+	ld	(ix+#object.Y+1),h
+	ld	(ix+$11),a
+	ld	(ix+$13),a
+	ld	(ix+$14),a
+	ld	(ix+$15),a
+	ld	(ix+$16),a
+	ld	(ix+$17),a
+	ld	(ix+#object.Xspeed+0),$00
+	ld	(ix+#object.Xspeed+1),$fe
+	ld	(ix+#object.Xdirection),$ff
+	ld	(ix+#object.Yspeed+0),a
+	ld	(ix+#object.Yspeed+1),a
+	ld	(ix+#object.Ydirection),a
+	pop	ix
+	pop	bc
+	ld	a,$0a
+	rst	::playSFX
+._5	ld	bc,:_6fed
+	cp	$78
+	jr	c,._7
+	ld	(ix+$17),$00
+	inc	(ix+$11)
+	jr	._7
+	
+._6	cp	$03
+	jr	nz,._7
+	ld	bc,$0000
+	inc	(ix+$17)
+	ld	a,(ix+$17)
+	and	a
+	jr	nz,._7
+	ld	(ix+$11),c
+	
+._7	ld	(ix+#object.spriteLayout+0),c
+	ld	(ix+#object.spriteLayout+1),b
+	ld	hl,$0202
+	ld	(#RAM_TEMP6),hl
+	call	:_LABEL_3956_11
+	ld	hl,$0000
+	ld	(#RAM_TEMP1),hl
+	call	nc,:_35e5
+	ret	
+}
+
+`sprite layout
+:_6fed
+DATA $1C, $1E, $FF, $FF, $FF, $FF
+DATA $FE, $3E, $FF, $FF, $FF, $FF
+DATA $FF, $FF, $FF, $FF, $FF, $FF
+DATA $40					`odd?
+:_7000
+DATA $42, $FF, $FF, $FF, $FF, $FE
+DATA $62, $FF, $FF, $FF, $FF, $FF
+
+`____________________________________________________________________________[$700C]___
+`OBJECT: boss (Green Hill)
+
+PROC :doObjectCode_boss_greenHill {
+	set	5,(ix+$18)
+	ld	(ix+#object.width),$20
+	ld	(ix+#object.height),$1c
+	call	:_7ca6
+	bit	0,(ix+$11)
+	jr	nz,._1
+	ld	l,(ix+#object.Y+0)
+	ld	h,(ix+#object.Y+1)
+	ld	de,$fff8
+	add	hl,de
+	ld	(ix+#object.Y+0),l
+	ld	(ix+#object.Y+1),h
+	
+	`boss sprite set
+	ld	hl,$aeb1
+	ld	de,$2000
+	ld	a,9
+	call	:decompressArt
+	
+	ld	hl,:S1_BossPalette
+	ld	a,%00000010
+	call	:loadPaletteOnInterrupt
+	
+	ld	a,#index_music_boss1
+	rst	::playMusic
+	
+	xor	a
+	ld	($D2EC),a
+	ld	(ix+$12),a
+	ld	(ix+$14),$a1
+	ld	(ix+$15),$72
+	
+	ld	hl,$0760
+	ld	de,$00e8
+	call	:_7c8c
+	
+	set	0,(ix+$11)
+._1	ld	a,(ix+$13)
+	and	$3f
+	ld	e,a
+	ld	d,$00
+	ld	hl,$7261
+	add	hl,de
+	ld	a,(hl)
+	and	a
+	jp	p,._2
+	ld	c,$ff
+	jr	._3
+._2	ld	c,$00
+._3	ld	(ix+#object.Yspeed+0),a
+	ld	(ix+#object.Yspeed+1),c
+	ld	(ix+#object.Ydirection),c
+._4	ld	e,(ix+$12)
+	ld	d,$00
+	ld	l,(ix+$14)
+	ld	h,(ix+$15)
+	add	hl,de
+	ld	(#RAM_TEMP6),hl
+	ld	a,(hl)
+	and	a
+	jr	nz,._5
+	inc	hl
+	ld	a,(hl)
+	ld	(ix+$12),a
+	jp	._4
+	
+._5	dec	a
+	add	a,a
+	ld	e,a
+	ld	d,$00
+	ld	hl,:_724b
+	add	hl,de
+	ld	a,(hl)
+	inc	hl
+	ld	h,(hl)
+	ld	l,a
+	jp	(hl)
+	ld	hl,(#RAM_LEVEL_LEFT)
+	ld	de,$0006
+	add	hl,de
+	ld	e,(ix+#object.X+0)
+	ld	d,(ix+#object.X+1)
+	and	a
+	sbc	hl,de
+	ld	c,$ff
+	ld	hl,$ff00
+	jp	c,._9
+	
+	ld	(ix+$12),$00
+	bit	1,(ix+$11)
+	jr	nz,._6
+	ld	(ix+$14),$a4
+	ld	(ix+$15),$72
+	set	1,(ix+$11)
+	jp	._9
+	
+._6	ld	(ix+$14),$a7
+	ld	(ix+$15),$72
+	res	1,(ix+$11)
+	jp	._9
+	
+	ld	hl,(#RAM_LEVEL_LEFT)
+	ld	de,$00e0
+	add	hl,de
+	ld	e,(ix+#object.X+0)
+	ld	d,(ix+#object.X+1)
+	and	a
+	sbc	hl,de
+	ld	c,$00
+	ld	hl,$0100
+	jp	nc,._9
+	ld	(ix+$12),$00
+	bit	2,(ix+$11)
+	jr	nz,._7
+	ld	(ix+$14),$a1
+	ld	(ix+$15),$72
+	set	2,(ix+$11)
+	jp	._9
+	
+._7	ld	(ix+$14),$aa
+	ld	(ix+$15),$72
+	res	2,(ix+$11)
+	jp	._9
+	
+	ld	(ix+#object.Yspeed+0),$60
+	ld	(ix+#object.Yspeed+1),$00
+	ld	(ix+#object.Ydirection),$00
+	ld	hl,(#RAM_CAMERA_Y)
+	ld	de,$0074
+	add	hl,de
+	ld	e,(ix+#object.Y+0)
+	ld	d,(ix+#object.Y+1)
+	xor	a
+	sbc	hl,de
+	ld	c,a
+	ld	l,c
+	ld	h,c
+	jp	nc,._9
+	ld	(ix+$12),$00
+	ld	(ix+$14),$b0
+	ld	(ix+$15),$72
+	jp	._9
+	
+	ld	c,$00
+	ld	hl,$0400
+	jp	._9
+	
+	ld	(ix+#object.Yspeed+0),$60
+	ld	(ix+#object.Yspeed+1),$00
+	ld	(ix+#object.Ydirection),$00
+	ld	hl,(#RAM_CAMERA_Y)
+	ld	de,$0074
+	add	hl,de
+	ld	e,(ix+#object.Y+0)
+	ld	d,(ix+#object.Y+1)
+	xor	a
+	sbc	hl,de
+	ld	c,a
+	ld	l,c
+	ld	h,c
+	jp	nc,._9
+	ld	(ix+$12),$00
+	ld	(ix+$14),$bc
+	ld	(ix+$15),$72
+	jp	._9
+	
+	ld	c,$ff
+	ld	hl,$fc00
+	jr	._9
+	
+	ld	c,$00
+	ld	l,c
+	ld	h,c
+	jr	._9
+	
+	ld	c,$00
+	ld	l,c
+	ld	h,c
+	ld	(ix+$14),$ad
+	ld	(ix+$15),$72
+	ld	(ix+$12),c
+	ld	(ix+$13),c
+	jr	._9
+	
+	ld	(ix+#object.Yspeed+0),$00
+	ld	(ix+#object.Yspeed+1),$ff
+	ld	(ix+#object.Ydirection),$ff
+	ld	hl,(#RAM_CAMERA_Y)
+	ld	de,$001a
+	add	hl,de
+	ld	e,(ix+#object.Y+0)
+	ld	d,(ix+#object.Y+1)
+	xor	a
+	sbc	hl,de
+	ld	c,a
+	ld	l,c
+	ld	h,c
+	jp	c,._9
+	ld	l,(ix+#object.X+0)
+	ld	h,(ix+#object.X+1)
+	ld	de,(#RAM_LEVEL_LEFT)
+	xor	a
+	sbc	hl,de
+	ld	c,a
+	ld	l,c
+	ld	h,c
+	jr	c,._8
+	ld	(ix+$14),$a1
+	ld	(ix+$15),$72
+	ld	(ix+$12),a
+	jr	._9
+	
+._8	ld	(ix+$14),$a4
+	ld	(ix+$15),$72
+	ld	(ix+$12),a
+	jr	._9
+	
+._9	ld	(ix+#object.Xspeed+0),l
+	ld	(ix+#object.Xspeed+1),h
+	ld	(ix+#object.Xdirection),c
+	ld	hl,(#RAM_TEMP6)
+	ld	e,(hl)
+	ld	d,$00
+	ld	hl,:_72c8
+	add	hl,de
+	ld	a,(hl)
+	ld	hl,:_72f8
+	and	a
+	jr	z,._10
+	ld	hl,:_730a
+._10	ld	e,a
+	ld	a,(ix+$18)
+	and	$fd
+	or	e
+	ld	(ix+$18),a
+	ld	(ix+#object.spriteLayout+0),l
+	ld	(ix+#object.spriteLayout+1),h
+	ld	hl,$0012
+	ld	($D216),hl
+	call	:_77be
+	call	:_79fa
+	inc	(ix+$13)
+	ld	a,(ix+$13)
+	and	$0f
+	ret	nz
+	inc	(ix+$12)
+	ret	
+}
+
+:_724b
+DATA $AC, $70, $EC, $70, $2C, $71, $5D, $71, $65, $71, $96, $71, $9D, $71, $A3, $71
+DATA $B7, $71, $00, $00, $9D, $71, $00, $14, $28, $28, $3C, $3C, $3C, $50, $50, $50
+DATA $50, $64, $64, $64, $64, $64, $64, $64, $64, $64, $64, $50, $50, $50, $50, $3C
+DATA $3C, $3C, $28, $28, $14, $00, $00, $EC, $D8, $D8, $C4, $C4, $C4, $B0, $B0, $B0
+DATA $B0, $9C, $9C, $9C, $9C, $9C, $9C, $9C, $9C, $9C, $9C, $B0, $B0, $B0, $B0, $C4
+DATA $C4, $C4, $D8, $D8, $EC, $00, $01, $00, $00, $02, $00, $00, $03, $00, $00, $05
+DATA $00, $00, $09, $00, $00, $07, $07, $07, $07, $04, $04, $04, $04, $04, $08, $00
+DATA $00, $0B, $0B, $0B, $0B, $06, $06, $06, $06, $06, $08, $00, $00
+:_72c8
+DATA $00, $00, $02, $02, $02, $00, $00, $02, $02, $00, $02, $00, $00, $00, $01, $04
+DATA $01, $00, $01, $04, $01, $01, $01, $04, $01, $01, $01, $04, $01, $FF, $02, $02
+DATA $01, $05, $01, $02, $01, $05, $01, $03, $01, $05, $01, $03, $01, $05, $01, $FF
+
+`sprite layout
+:_72f8
+DATA $20, $22, $24, $26, $28, $FF
+DATA $40, $42, $44, $46, $48, $FF
+DATA $60, $62, $64, $66, $68, $FF
+:_730a
+DATA $2A, $2C, $2E, $30, $32, $FF
+DATA $4A, $4C, $4E, $50, $52, $FF
+DATA $6A, $6C, $6E, $70, $72, $FF
+
+:S1_BossPalette				`[$731C]
+DATA $38, $20, $35, $1B, $16, $2A, $00, $3F, $15, $3A, $0F, $03, $01, $02, $3E, $00   
+
+`____________________________________________________________________________[$732C]___
+`OBJECT: capsule
+
+PROC :doObjectCode_boss_capsule {
+	set	5,(ix+$18)
+	bit	0,(ix+$18)
+	jr	nz,._1
+	ld	l,(ix+#object.Y+0)
+	ld	h,(ix+#object.Y+1)
+	ld	de,$0010
+	add	hl,de
+	ld	(ix+#object.Y+0),l
+	ld	(ix+#object.Y+1),h
+	set	0,(ix+$18)
+._1	ld	(ix+#object.width),$1c
+	ld	(ix+#object.height),$40
+	ld	hl,:_7564
+	bit	1,(ix+$18)
+	jr	z,._2
+	ld	hl,:_757c
+._2	ld	a,(#RAM_FRAMECOUNT)
+	rrca	
+	jr	nc,._3
+	ld	de,$000c
+	add	hl,de
+._3	ld	c,(hl)
+	inc	hl
+	ld	b,(hl)
+	inc	hl
+	ex	de,hl
+	ld	l,(ix+#object.X+0)
+	ld	h,(ix+#object.X+1)
+	add	hl,bc
+	ld	($D2AB),hl
+	ex	de,hl
+	ld	c,(hl)
+	inc	hl
+	ld	b,(hl)
+	inc	hl
+	ld	($D2AF),hl
+	ld	l,(ix+#object.Y+0)
+	ld	h,(ix+#object.Y+1)
+	add	hl,bc
+	ld	($D2AD),hl
+	ld	hl,:_752e
+	ld	a,(#RAM_FRAMECOUNT)
+	and	$10
+	jr	z,._4
+	ld	hl,:_7552
+._4	ld	(ix+#object.spriteLayout+0),l
+	ld	(ix+#object.spriteLayout+1),h
+	ld	hl,(#RAM_CAMERA_X)
+	ld	(#RAM_LEVEL_LEFT),hl
+	
+	`something to do with scrolling
+	ld	l,(ix+#object.X+0)
+	ld	h,(ix+#object.X+1)
+	ld	de,$FF90
+	add	hl,de
+	ld	(#RAM_LEVEL_RIGHT),hl
+	
+	ld	hl,$0002
+	ld	(#RAM_TEMP6),hl
+	call	:_LABEL_3956_11
+	jp	c,._8
+	
+	ld	a,(#RAM_SONIC.Ydirection)
+	and	a
+	jp	m,._8
+	
+	ld	e,(ix+#object.Y+0)
+	ld	d,(ix+#object.Y+1)
+	ld	hl,(#RAM_SONIC.Y+0)
+	and	a
+	sbc	hl,de
+	jr	c,._6
+	ld	l,(ix+#object.X+0)
+	ld	h,(ix+#object.X+1)
+	ld	de,$0010
+	add	hl,de
+	ld	de,$ffea
+	ld	bc,(#RAM_SONIC.X)
+	and	a
+	sbc	hl,bc
+	jr	nc,._5
+	ld	de,$001d
+._5	ld	l,(ix+#object.X+0)
+	ld	h,(ix+#object.X+1)
+	add	hl,de
+	ld	(#RAM_SONIC.X),hl
+	jp	._7
+	
+._6	ld	hl,(#RAM_SONIC.X)
+	ld	bc,$000c
+	add	hl,bc
+	ld	c,l
+	ld	b,h
+	ld	e,(ix+#object.X+0)
+	ld	d,(ix+#object.X+1)
+	and	a
+	sbc	hl,de
+	ret	c
+	ex	de,hl
+	ld	de,$0020
+	add	hl,de
+	and	a
+	sbc	hl,bc
+	ret	c
+	ld	a,c
+	and	$1f
+	ld	c,a
+	ld	b,$00
+	ld	hl,:_750e
+	add	hl,bc
+	ld	c,(hl)
+	ld	l,(ix+#object.Y+0)
+	ld	h,(ix+#object.Y+1)
+	ld	de,$ffe0
+	add	hl,de
+	add	hl,bc
+	ld	(#RAM_SONIC.Y+0),hl
+	ld	a,($D2E8)
+	ld	hl,($D2E6)
+	ld	(#RAM_SONIC.Yspeed),hl
+	ld	(#RAM_SONIC.Ydirection),a
+	ld	hl,$D414
+	set	7,(hl)
+	ld	a,c
+	cp	$03
+	ret	nz
+	ld	(ix+#object.spriteLayout+0),:_7540.lo
+	ld	(ix+#object.spriteLayout+1),:_7540.hi
+	bit	1,(iy+#vars.flags6)
+	jr	nz,._9
+	set	1,(iy+#vars.flags6)
+._7	xor	a
+	ld	l,a
+	ld	h,a
+	ld	(#RAM_SONIC.Xspeed),hl
+	ld	(#RAM_SONIC.Xdirection),a
+._8	bit	1,(iy+#vars.flags6)
+	ret	z
+._9	ld	a,(ix+$12)
+	cp	$08
+	jr	nc,._10
+	inc	(ix+$11)
+	ld	a,(ix+$11)
+	cp	$14
+	ret	c
+	ld	(ix+$11),$00
+	call	:_7a3a
+	inc	(ix+$12)
+	ret
+	
+._10	bit	1,(ix+$18)
+	jr	nz,._11
+	ld	a,$a0
+	ld	($D289),a
+	
+	ld	a,#index_music_actComplete
+	rst	::playMusic
+	
+	set	1,(ix+$18)
+._11	xor	a
+	ld	(ix+#object.spriteLayout+0),a
+	ld	(ix+#object.spriteLayout+1),a
+	res	5,(iy+#vars.flags0)
+	ld	a,(#RAM_FRAMECOUNT)
+	and	$0f
+	ret	nz
+	call	:_LABEL_625_57
+	and	$01
+	add	a,$23
+	call	:_74b6
+	inc	(ix+$16)
+	ld	a,(ix+$16)
+	cp	$0c
+	ret	c
+	ld	(ix+#object.type),$FF	`unknown object
+	ret
+}
+
+`____________________________________________________________________________[$74B6]___
+`Called only by `doObjectCode_boss_capsule`
+
+PROC :_74b6 {
+	ld	($D216),a
+	call	:_7c7b
+	ret	c
+	ld	e,(ix+#object.X+0)
+	ld	d,(ix+#object.X+1)
+	ld	c,(ix+#object.Y+0)
+	ld	b,(ix+#object.Y+1)
+	push	ix
+	push	hl
+	pop	ix
+	ld	a,($D216)
+	ld	(ix+#object.type),a
+	xor	a			`set A to 0
+	ld	(ix+$16),a
+	ld	(ix+$17),a
+	ld	(ix+$01),a
+	ld	hl,$0008
+	add	hl,de
+	ld	(ix+#object.X+0),l
+	ld	(ix+#object.X+1),h
+	ld	(ix+$04),a
+	ld	hl,$001a
+	add	hl,bc
+	ld	(ix+#object.Y+0),l
+	ld	(ix+#object.Y+1),h
+	call	:_LABEL_625_57
+	ld	(ix+#object.Yspeed+0),a
+	call	:_LABEL_625_57
+	and	$01
+	inc	a
+	inc	a
+	neg	
+	ld	(ix+#object.Yspeed+1),a
+	ld	(ix+#object.Ydirection),$ff
+	pop	ix
+	ret
+}
+
+:_750e
+DATA $15, $12, $11, $10, $10, $0F, $0E, $0D, $03, $03, $03, $03, $03, $03, $03, $03
+DATA $03, $03, $03, $03, $03, $03, $03, $03, $0D, $0E, $0F, $10, $10, $11, $12, $15
+
+`sprite layout
+:_752e
+DATA $00, $02, $04, $06, $FF, $FF
+DATA $20, $22, $24, $26, $FF, $FF
+DATA $40, $42, $44, $46, $FF, $FF
+:_7540
+DATA $00, $08, $0A, $06, $FF, $FF
+DATA $20, $22, $24, $26, $FF, $FF
+DATA $40, $42, $44, $46, $FF, $FF
+:_7552
+DATA $00, $68, $6A, $06, $FF, $FF
+DATA $20, $22, $24, $26, $FF, $FF
+DATA $40, $42, $44, $46, $FF, $FF
+
+:_7564
+DATA $00, $00, $30, $00, $60, $19, $62, $19, $61, $19, $63, $19, $10, $00, $30, $00
+DATA $64, $19, $66, $19, $65, $19, $67, $19
+:_757c
+DATA $00, $00, $20, $00, $00, $00, $00, $00, $49, $19, $4B, $19, $10, $00, $20, $00
+DATA $00, $00, $00, $00, $4D, $19, $4F, $19
+
+`____________________________________________________________________________[$7594]___
+`OBJECT: free animal - bird
+
+PROC :doObjectCode_boss_freeBird {
+	res	5,(ix+$18)
+	ld	(ix+#object.width),$0c
+	ld	(ix+#object.height),$10
+	bit	7,(ix+$18)
+	jr	z,._1
+	ld	(ix+#object.Yspeed+0),$00
+	ld	(ix+#object.Yspeed+1),$fd
+	ld	(ix+#object.Ydirection),$ff
+._1	ld	de,$0012
+	ld	a,(#RAM_LEVEL_SOLIDITY)
+	cp	$03
+	jr	nz,._2
+	ld	de,$0038
+._2	ld	l,(ix+#object.Yspeed+0)
+	ld	h,(ix+#object.Yspeed+1)
+	ld	a,(ix+#object.Ydirection)
+	add	hl,de
+	adc	a,$00
+	ld	c,a
+	jp	m,._3
+	ld	a,h
+	cp	$02
+	jr	c,._3
+	ld	hl,$0200
+	ld	c,$00
+._3	ld	(ix+#object.Yspeed+0),l
+	ld	(ix+#object.Yspeed+1),h
+	ld	(ix+#object.Ydirection),c
+	ld	hl,$fe00
+	ld	a,(#RAM_LEVEL_SOLIDITY)
+	cp	$03
+	jr	nz,._4
+	ld	hl,$fe80
+._4	ld	(ix+#object.Xspeed+0),l
+	ld	(ix+#object.Xspeed+1),h
+	ld	(ix+#object.Xdirection),$ff
+	ld	bc,:_7629
+	ld	a,(#RAM_LEVEL_SOLIDITY)
+	and	a
+	jr	z,._5
+	ld	bc,:_762e
+	cp	$03
+	jr	nz,._5
+	ld	bc,:_7633
+._5	ld	de,:_7638
+	call	:_7c41
+._7612	ld	l,(ix+#object.X+0)
+	ld	h,(ix+#object.X+1)
+	ld	de,$0010
+	add	hl,de
+	ld	de,(#RAM_CAMERA_X)
+	and	a
+	sbc	hl,de
+	ret	nc
+	ld	(ix+#object.type),$FF	`remove object?
+	ret
+}
+
+:_7629
+DATA $00, $02, $01, $02, $ff
+:_762e
+DATA $02, $04, $03, $04, $ff
+:_7633
+DATA $04, $03, $05, $03, $ff
+
+`sprite layout
+:_7638
+DATA $10, $12, $FF, $FF, $FF, $FF
+DATA $FF, $FF, $FF, $FF, $FF, $FF
+DATA $FF, $FF, $FF, $FF, $FF, $FF
+
+DATA $6E, $0E, $FF, $FF, $FF, $FF
+DATA $FF, $FF, $FF, $FF, $FF, $FF
+DATA $FF, $FF, $FF, $FF, $FF, $FF
+
+DATA $28, $2A, $FF, $FF, $FF, $FF
+DATA $FF, $FF, $FF, $FF, $FF, $FF
+DATA $FF, $FF, $FF, $FF, $FF, $FF
+
+DATA $2C, $2E, $FF, $FF, $FF, $FF
+DATA $FF, $FF, $FF, $FF, $FF, $FF
+DATA $FF, $FF, $FF, $FF, $FF, $FF
+
+DATA $30, $32, $FF, $FF, $FF, $FF
+DATA $FF, $FF, $FF, $FF, $FF, $FF
+DATA $FF, $FF, $FF, $FF, $FF, $FF
+
+DATA $50, $52, $FF, $FF, $FF, $FF
+DATA $FF
+
+`____________________________________________________________________________[$7699]___
+`OBJECT: free animal - rabbit
+
+PROC :doObjectCode_boss_freeRabbit {
+	res	5,(ix+$18)
+	ld	(ix+#object.width),$0c
+	ld	(ix+#object.height),$20
+	ld	hl,:_7760
+	ld	a,(#RAM_LEVEL_SOLIDITY)
+	and	a
+	jr	z,._1
+	ld	hl,:_777b
+	dec	a
+	jr	z,._1
+	ld	hl,:_7796
+	dec	a
+	jr	z,._1
+	ld	hl,:_77b1
+._1	ld	(ix+#object.spriteLayout+0),l
+	ld	(ix+#object.spriteLayout+1),h
+	bit	7,(ix+$18)
+	jr	z,._4
+	xor	a
+	ld	(ix+#object.Yspeed+0),a
+	ld	(ix+#object.Yspeed+1),$01
+	ld	(ix+#object.Ydirection),a
+	ld	(ix+#object.Xspeed+0),a
+	ld	(ix+#object.Xspeed+1),a
+	ld	(ix+#object.Xdirection),a
+	ld	hl,:_7752
+	ld	a,(#RAM_LEVEL_SOLIDITY)
+	ld	c,a
+	and	a
+	jr	z,._2
+	ld	hl,:_776d
+	dec	a
+	jr	z,._2
+	ld	hl,:_7788
+	dec	a
+	jr	z,._2
+	ld	hl,:_77a3
+._2	ld	(ix+#object.spriteLayout+0),l
+	ld	(ix+#object.spriteLayout+1),h
+	inc	(ix+$11)
+	ld	a,(ix+$11)
+	cp	$08
+	ret	c
+	ld	hl,$fffc
+	ld	a,c
+	and	a
+	jr	z,._3
+	ld	hl,$fffe
+._3	ld	(ix+#object.Yspeed+0),$00
+	ld	(ix+#object.Yspeed+1),l
+	ld	(ix+#object.Ydirection),h
+._4	ld	l,(ix+#object.Yspeed+0)
+	ld	h,(ix+#object.Yspeed+1)
+	ld	a,(ix+#object.Ydirection)
+	ld	de,$0028
+	add	hl,de
+	adc	a,$00
+	ld	c,a
+	jp	m,._5
+	ld	a,h
+	cp	$02
+	jr	c,._5
+	ld	hl,$0200
+	ld	c,$00
+._5	ld	(ix+#object.Yspeed+0),l
+	ld	(ix+#object.Yspeed+1),h
+	ld	(ix+#object.Ydirection),c
+	ld	(ix+#object.Xspeed+0),$80
+	ld	(ix+#object.Xspeed+1),$fe
+	ld	(ix+#object.Xdirection),$ff
+	ld	(ix+$11),$00
+	jp	:doObjectCode_boss_freeBird._7612
+}
+
+`sprite layout
+:_7752
+DATA $70, $72, $FF, $FF, $FF, $FF
+DATA $54, $56, $FF, $FF, $FF, $FF
+DATA $FF, $FF
+:_7760
+DATA $5C, $5E, $FF, $FF, $FF, $FF
+DATA $58, $5A, $FF, $FF, $FF, $FF
+DATA $FF
+:_776d
+DATA $FE, $FF, $FF, $FF, $FF, $FF
+DATA $34, $36, $FF, $FF, $FF, $FF
+DATA $FF, $FF
+:_777b
+DATA $FE, $FF, $FF, $FF, $FF, $FF
+DATA $38, $3A, $FF, $FF, $FF, $FF
+DATA $FF
+:_7788
+DATA $FE, $FF, $FF, $FF, $FF, $FF
+DATA $3C, $3E, $FF, $FF, $FF, $FF
+DATA $FF, $FF
+:_7796
+DATA $FE, $FF, $FF, $FF, $FF, $FF
+DATA $1C, $1E, $FF, $FF, $FF, $FF
+DATA $FF
+:_77a3
+DATA $FE, $FF, $FF, $FF, $FF, $FF
+DATA $14, $16, $FF, $FF, $FF, $FF
+DATA $FF, $FF
+:_77b1
+DATA $FE, $FF, $FF, $FF, $FF, $FF
+DATA $18, $1A, $FF, $FF, $FF, $FF
+DATA $FF
+
+`____________________________________________________________________________[$77BE]___
+`called by the boss object code -- probably the exploded egg ship
+
+PROC :_77be {
+	ld	a,($D2EC)
+	cp	$08
+	jr	nc,._4
+	ld	a,($D2B1)
+	and	a
+	jp	nz,._2
+	ld	hl,$0c08
+	ld	(#RAM_TEMP6),hl
+	call	:_LABEL_3956_11
+	ret	c
+	bit	0,(iy+#vars.scrollRingFlags)
+	ret	nz
+	ld	a,($D414)
+	rrca	
+	jr	c,._1
+	and	$02
+	jp	z,:_35fd
+._1	ld	de,$0001
+	ld	hl,(#RAM_SONIC.Yspeed)
+	ld	a,l
+	cpl	
+	ld	l,a
+	ld	a,h
+	cpl	
+	ld	h,a
+	ld	a,(#RAM_SONIC.Ydirection)
+	cpl	
+	add	hl,de
+	adc	a,$00
+	ld	(#RAM_SONIC.Yspeed),hl
+	ld	(#RAM_SONIC.Ydirection),a
+	
+	xor	a			`set A to 0
+	ld	l,a
+	ld	h,a
+	ld	(#RAM_SONIC.Xspeed),hl
+	ld	(#RAM_SONIC.Xdirection),a
+	ld	a,$18
+	ld	($D2B1),a
+	ld	a,$8f
+	ld	($D2B2),a
+	ld	a,$3f
+	ld	($D2B3),a
+	ld	a,$01
+	rst	::playSFX
+	ld	a,($D2EC)
+	inc	a
+	ld	($D2EC),a
+._2	ld	hl,($D216)
+	ld	de,:_7922
+	add	hl,de
+	bit	1,(ix+$18)
+	jr	z,._3
+	ld	de,$0012
+	add	hl,de
+._3	ld	(ix+#object.spriteLayout+0),l
+	ld	(ix+#object.spriteLayout+1),h
+	ld	hl,$D2ED
+	ld	(hl),$18
+	inc	hl
+	ld	(hl),$00
+	ret
+	
+._4	xor	a
+	ld	(ix+#object.Xspeed+0),a
+	ld	(ix+#object.Xspeed+1),a
+	ld	(ix+#object.Xdirection),a
+	ld	(ix+#object.Yspeed+0),a
+	ld	(ix+#object.Yspeed+1),a
+	ld	(ix+#object.Ydirection),a
+	ld	de,$0024
+	ld	hl,($D216)
+	bit	1,(ix+$18)
+	jr	z,._5
+	ld	de,$0036
+._5	add	hl,de
+	ld	de,:_7922
+	add	hl,de
+	ld	(ix+#object.spriteLayout+0),l
+	ld	(ix+#object.spriteLayout+1),h
+	ld	hl,$D2EE
+	ld	a,(hl)
+	cp	$0a
+	jp	nc,._6
+	dec	hl
+	dec	(hl)
+	ret	nz
+	ld	(hl),$18
+	inc	hl
+	inc	(hl)
+	call	:_7a3a
+	ret
+	
+._6	ld	a,($D2EE)
+	cp	$3a
+	jr	nc,._7
+	ld	l,(ix+$04)
+	ld	h,(ix+#object.Y+0)
+	ld	a,(ix+#object.Y+1)
+	ld	de,$0020
+	add	hl,de
+	adc	a,$00
+	ld	(ix+$04),l
+	ld	(ix+#object.Y+0),h
+	ld	(ix+#object.Y+1),a
+._7	ld	hl,$D2EE
+	ld	a,(hl)
+	cp	$5a
+	jr	nc,._8
+	inc	(hl)
+	ret
+	
+._8	jr	nz,._9
+	ld	(hl),$5b
+	
+	ld	a,(#RAM_LEVEL_MUSIC)
+	rst	::playMusic
+	
+	ld	a,(iy+#vars.spriteUpdateCount)
+	res	0,(iy+#vars.flags0)
+	call	:waitForInterrupt
+	ld	(iy+#vars.spriteUpdateCount),a
+._9	ld	(ix+#object.Xspeed+0),$00
+	ld	(ix+#object.Xspeed+1),$03
+	ld	(ix+#object.Xdirection),$00
+	ld	(ix+#object.Yspeed+0),$60
+	ld	(ix+#object.Yspeed+1),$ff
+	ld	(ix+#object.Ydirection),$ff
+	ld	(ix+#object.spriteLayout+0),:_7922.lo
+	ld	(ix+#object.spriteLayout+1),:_7922.hi
+	ld	l,(ix+#object.X+0)
+	ld	h,(ix+#object.X+1)
+	ld	de,(#RAM_CAMERA_X)
+	inc	d
+	and	a
+	sbc	hl,de
+	ret	c
+	
+	`unlocks the screen?
+	ld	(ix+#object.type),$FF	`remove object?
+	ld	hl,$2000		`8192 -- max width of a level in pixels
+	ld	(#RAM_LEVEL_RIGHT),hl
+	ld	hl,$0000
+	ld	(#RAM_CAMERA_X_GOTO),hl
+	
+	set	5,(iy+#vars.flags0)
+	set	0,(iy+#vars.flags2)
+	res	1,(iy+#vars.flags2)
+	
+	ld	a,(#RAM_CURRENT_LEVEL)
+	cp	$0b
+	jr	nz,._10
+	
+	set	1,(iy+#vars.flags9)
+	
+._11	`UNKNOWN
+	ld	hl,$DA28
+	ld	de,$2000
+	ld	a,12
+	call	:decompressArt
+	ret
+}
+
+`sprite layout
+:_7922
+DATA $2A, $2C, $2E, $30, $32, $FF
+DATA $4A, $4C, $4E, $50, $52, $FF
+DATA $6A, $6C, $6E, $70, $72, $FF
+
+DATA $20, $10, $12, $14, $28, $FF
+DATA $40, $42, $44, $46, $48, $FF
+DATA $60, $62, $64, $66, $68, $FF
+
+DATA $2A, $16, $18, $1A, $32, $FF
+DATA $4A, $4C, $4E, $50, $52, $FF
+DATA $6A, $6C, $6E, $70, $72, $FF
+
+DATA $20, $3A, $3C, $3E, $28, $FF
+DATA $40, $42, $44, $46, $48, $FF
+DATA $60, $62, $64, $66, $68, $FF
+
+DATA $2A, $34, $36, $38, $32, $FF
+DATA $4A, $4C, $4E, $50, $52, $FF
+DATA $6A, $6C, $6E, $70, $72, $FF
+
+DATA $20, $10, $12, $14, $28, $FF
+DATA $40, $42, $44, $46, $48, $FF
+DATA $60, $54, $56, $66, $68, $FF
+
+DATA $2A, $16, $18, $1A, $32, $FF
+DATA $4A, $4C, $4E, $50, $52, $FF
+DATA $6A, $5A, $5C, $70, $72, $FF
+
+DATA $20, $3A, $3C, $3E, $28, $FF
+DATA $40, $42, $44, $46, $48, $FF
+DATA $60, $54, $56, $66, $68, $FF
+
+DATA $2A, $34, $36, $38, $32, $FF
+DATA $4A, $4C, $4E, $50, $52, $FF
+DATA $6A, $5A, $5C, $70, $72, $FF
+
+DATA $20, $06, $08, $0A, $28, $FF
+DATA $40, $42, $44, $46, $48, $FF
+DATA $60, $62, $64, $66, $68, $FF
+
+DATA $20, $06, $08, $0A, $28, $FF
+DATA $40, $42, $44, $46, $48, $FF
+DATA $60, $62, $64, $66, $68, $FF
+
+DATA $0E, $10, $12, $14, $16, $FF
+DATA $40, $42, $44, $46, $48, $FF
+DATA $60, $62, $64, $66, $68, $FF
+
+`____________________________________________________________________________[$79FA]___
+
+PROC :_79fa {
+	ld	a,(ix+#object.Xspeed+0)
+	or	(ix+#object.Xspeed+1)
+	ret	z
+	ld	a,(#RAM_FRAMECOUNT)
+	bit	0,a
+	ret	nz
+	and	$02
+	ld	l,(ix+#object.X+0)
+	ld	h,(ix+#object.X+1)
+	ld	(#RAM_TEMP1),hl
+	ld	l,(ix+#object.Y+0)
+	ld	h,(ix+#object.Y+1)
+	ld	(#RAM_TEMP3),hl
+	ld	hl,$fff8
+	ld	de,$0010
+	ld	c,$04
+	bit	7,(ix+#object.Xdirection)
+	jr	z,._1
+	ld	hl,$0028
+	ld	c,$00
+._1	ld	(#RAM_TEMP4),hl
+	ld	(#RAM_TEMP6),de
+	add	a,c
+	call	:_3581
+	ret
+}
+
+`____________________________________________________________________________[$7A3A]___
+
+PROC :_7a3a {
+	call	:_7c7b
+	ret	c
+	push	hl
+	call	:_LABEL_625_57
+	and	$1f
+	ld	l,a
+	ld	h,$00
+	ld	(#RAM_TEMP1),hl
+	call	:_LABEL_625_57
+	and	$1f
+	ld	l,a
+	ld	h,$00
+	ld	(#RAM_TEMP3),hl
+	pop	hl
+	ld	e,(ix+#object.X+0)
+	ld	d,(ix+#object.X+1)
+	ld	c,(ix+#object.Y+0)
+	ld	b,(ix+#object.Y+1)
+	push	ix
+	push	hl
+	pop	ix
+	xor	a			`set A to 0
+	ld	(ix+#object.type),$0A	`explosion
+	ld	(ix+$01),a
+	ld	hl,(#RAM_TEMP1)
+	add	hl,de
+	ld	(ix+#object.X+0),l
+	ld	(ix+#object.X+1),h
+	ld	(ix+$04),a
+	ld	hl,(#RAM_TEMP3)
+	add	hl,bc
+	ld	(ix+#object.Y+0),l
+	ld	(ix+#object.Y+1),h
+	ld	(ix+$11),a
+	ld	(ix+$16),a
+	ld	(ix+$17),a
+	ld	(ix+#object.Xspeed+0),a
+	ld	(ix+#object.Xspeed+1),a
+	ld	(ix+#object.Xdirection),a
+	ld	(ix+#object.Yspeed+0),a
+	ld	(ix+#object.Yspeed+1),a
+	ld	(ix+#object.Ydirection),a
+	pop	ix
+	ld	a,$01
+	rst	::playSFX
+	ret
+}
+	
+`____________________________________________________________________________[$7AA7]___
+`OBJECT: trip zone (Green Hill)
+
+PROC :doObjectCode_meta_trip {
+	set	5,(ix+$18)
+	ld	(ix+#object.width),$40
+	ld	(ix+#object.height),$40
+	ld	hl,$0000
+	ld	(#RAM_TEMP6),hl
+	call	:_LABEL_3956_11
+	ret	c
+	bit	6,(iy+#vars.flags6)
+	ret	nz
+	ld	a,($D414)
+	and	$80
+	ret	z
+	ld	hl,$fffb
+	xor	a
+	ld	(#RAM_SONIC.Yspeed+0),a
+	ld	(#RAM_SONIC.Yspeed+1),hl
+	ld	hl,$0003
+	xor	a
+	ld	(#RAM_SONIC.Xspeed+0),a
+	ld	(#RAM_SONIC.Xspeed+1),hl
+	ld	hl,$D414
+	res	1,(hl)
+	set	6,(iy+#vars.flags6)
+	ld	(iy+#vars.joypad),$ff
+	ld	a,$11
+	rst	::playSFX
+	ret
+}
+
+`____________________________________________________________________________[$7AED]___
+`OBJECT: flower (Green Hill)
+
+PROC :doObjectCode_flower {
+	set	5,(ix+$18)
+	bit	0,(ix+$18)
+	jr	nz,._1
+	ld	(ix+$11),$32
+	ld	(ix+$12),$00
+	set	0,(ix+$18)
+._1	ld	bc,$0000
+	ld	l,(ix+#object.X+0)
+	ld	h,(ix+#object.X+1)
+	ld	($D2AB),hl
+	ld	l,(ix+#object.Y+0)
+	ld	h,(ix+#object.Y+1)
+	ld	a,(#RAM_FRAMECOUNT)
+	rrca	
+	jr	nc,._2
+	ld	de,$0010
+	add	hl,de
+	inc	bc
+._2	ld	($D2AD),hl
+	ld	a,(ix+$12)
+	add	a,a
+	add	a,a
+	ld	e,a
+	ld	d,$00
+	ld	hl,:_7b85
+	add	hl,de
+	push	hl
+	add	hl,bc
+	ld	a,(hl)
+	add	a,a
+	add	a,a
+	add	a,a
+	ld	e,a
+	ld	d,$00
+	ld	hl,:_7b5d
+	add	hl,de
+	ld	($D2AF),hl
+	pop	hl
+	inc	hl
+	inc	hl
+	ld	a,(#RAM_FRAMECOUNT)
+	rrca	
+	ret	c
+	dec	(ix+$11)
+	ret	nz
+	ld	a,(hl)
+	ld	(ix+$11),a
+	inc	(ix+$12)
+	ld	a,(ix+$12)
+	cp	$04
+	ret	c
+	ld	(ix+$12),$00
+	ret
+}
+
+:_7b5d
+DATA $00, $00, $00, $00, $00, $00, $00, $00, $F0, $00, $F1, $00, $E2, $00, $F2, $00
+DATA $00, $00, $00, $00, $F0, $00, $F1, $00, $E2, $00, $F2, $00, $2E, $00, $2F, $00
+DATA $2E, $00, $2F, $00, $2E, $00, $2F, $00  
+:_7b85
+DATA $00, $01, $08, $00, $02, $03, $78, $00, $01, $04, $08, $00, $02, $03, $78, $00
+
+`____________________________________________________________________________[$7B95]___
+`OBJECT: "make Sonic blink"
+
+PROC :_7b95 {
+	set	5,(ix+$18)
+	set	0,(iy+#vars.flags9)
+	ld	a,(#RAM_FRAMECOUNT)
+	and	$01
+	jp	z,._1
+	ld	a,(ix+$12)
+	ld	c,a
+	add	a,a
+	add	a,c
+	ld	c,a
+	ld	b,$00
+	ld	hl,:_7c17
+	add	hl,bc
+	ld	e,(hl)
+	inc	hl
+	ld	d,(hl)
+	inc	hl
+	ld	a,(hl)
+	ld	(ix+#object.spriteLayout+0),e
+	ld	(ix+#object.spriteLayout+1),d
+	ld	($D302),a
+	jr	._2
+	
+._1	ld	(ix+#object.spriteLayout+0),a
+	ld	(ix+#object.spriteLayout+1),a
+._2	ld	l,(ix+#object.Yspeed+0)
+	ld	h,(ix+#object.Yspeed+1)
+	ld	a,(ix+#object.Ydirection)
+	ld	de,$0020
+	add	hl,de
+	adc	a,$00
+	ld	(ix+#object.Yspeed+0),l
+	ld	(ix+#object.Yspeed+1),h
+	ld	(ix+#object.Ydirection),a
+	ld	e,(ix+#object.Y+0)
+	ld	d,(ix+#object.Y+1)
+	ld	hl,(#RAM_CAMERA_Y)
+	inc	h
+	xor	a
+	sbc	hl,de
+	jr	nc,._3
+	ld	(ix+#object.type),$FF	`remove object?
+	res	0,(iy+#vars.flags9)
+	ret
+	
+._3	ld	(ix+#object.Xspeed+0),a
+	ld	(ix+#object.Xspeed+1),a
+	ld	(ix+#object.Xdirection),a
+	dec	(ix+$11)
+	ret	nz
+	ld	(ix+$11),$06
+	inc	(ix+$12)
+	ld	a,(ix+$12)
+	cp	$06
+	ret	c
+	ld	(ix+$12),$00
+	ret
+}
+
+:_7c17
+DATA :_7c29, $1C
+DATA :_7c31, $1C
+DATA :_7c39, $1C
+DATA :_7c29, $1D
+DATA :_7c31, $1D
+DATA :_7c39, $1D
+
+`sprite layout
+:_7c29
+DATA $B4, $B6, $FF, $FF, $FF, $FF
+DATA $FF, $FF
+:_7c31
+DATA $B8, $BA, $FF, $FF, $FF, $FF
+DATA $FF, $FF
+:_7c39
+DATA $BC, $BE, $FF, $FF, $FF, $FF
+DATA $FF, $FF
+
+`____________________________________________________________________________[$7C41]___
+
+`DE : e.g. $7de1
+`BC : e.g. $7ddc
+PROC :_7c41 {
+	ld	l,(ix+$17)
+
+._1	ld	h,$00
+	add	hl,bc
+	ld	a,(hl)
+	cp	$ff
+	jr	nz,._2
+	ld	l,$00
+	ld	(ix+$17),l
+	jp	._1
+	
+._2	inc	hl
+	push	hl
+	ld	l,a
+	ld	h,$00
+	add	hl,hl
+	ld	c,l
+	ld	b,h
+	add	hl,hl
+	add	hl,hl
+	add	hl,hl
+	add	hl,bc
+	add	hl,de
+	ld	(ix+#object.spriteLayout+0),l
+	ld	(ix+#object.spriteLayout+1),h
+	pop	hl
+	inc	(ix+$16)
+	ld	a,(hl)
+	cp	(ix+$16)
+	ret	nc
+	ld	(ix+$16),$00
+	inc	(ix+$17)
+	inc	(ix+$17)
+	ret
+}
+
+`____________________________________________________________________________[$7C7B]___	
+
+PROC :_7c7b {
+	ld	hl,$D416
+	ld	de,$001a
+	ld	b,$1f
+	
+.loop	ld	a,(hl)
+	cp	$ff
+	ret	z
+	add	hl,de
+	djnz	.loop
+	
+	scf	
+	ret
+}
+
+`____________________________________________________________________________[$7C8C]___
+`used by bosses to lock the screen?
+
+PROC :_7c8c {
+`HL : ?
+`DE : ?
+	ld	(#RAM_CAMERA_X_GOTO),hl
+	ld	(#RAM_CAMERA_Y_GOTO),de
+	
+	ld	hl,(#RAM_CAMERA_X)
+	ld	(#RAM_LEVEL_LEFT),hl
+	ld	(#RAM_LEVEL_RIGHT),hl
+	
+	ld	hl,(#RAM_CAMERA_Y)
+	ld	(#RAM_LEVEL_TOP),hl
+	ld	(#RAM_LEVEL_BOTTOM),hl
+	ret
+}
+
+`____________________________________________________________________________[$7CA6]___
+
+PROC :_7ca6 {
+	ld	hl,(#RAM_CAMERA_X_GOTO)
+	ld	de,(#RAM_CAMERA_X)
+	and	a
+	sbc	hl,de
+	ret	nz
+	ld	hl,(#RAM_CAMERA_Y_GOTO)
+	ld	de,(#RAM_CAMERA_Y)
+	and	a
+	sbc	hl,de
+	ret	nz
+	res	5,(iy+#vars.flags0)
+	ret
+}
+
+`____________________________________________________________________________[$7CC1]___
+
+PROC :_LABEL_7CC1_12 {
+`D  : bit 7 sets A to $FF instead of $00
+	bit	6, (iy+#vars.flags6)
+	ret	nz
+	
+	ld	l, (ix+$04)
+	ld	h, (ix+#object.Y+0)
+	
+	xor	a			`set A to 0
+	
+	bit	7, d
+	jr	z, ._1
+	dec	a
+._1	add	hl, de
+	adc	a, (ix+#object.Y+1)
+	ld	l, h
+	ld	h, a
+	add	hl, bc
+	ld	a, ($D40A)
+	ld	c, a
+	xor	a
+	ld	b, a
+	sbc	hl, bc
+	ld	(#RAM_SONIC.Y+0), hl
+	ld	a, ($D2E8)
+	ld	hl, ($D2E6)
+	ld	(#RAM_SONIC.Yspeed), hl
+	ld	(#RAM_SONIC.Ydirection), a
+	
+	ld	hl, $D414
+	set	7, (hl)
+	
+	ret
+}
+
+`____________________________________________________________________________[$7CF6]___
+`OBJECT: badnick - chopper
+
+PROC :doObjectCode_badnick_chopper {
+	set	5,(ix+$18)
+	ld	(ix+#object.width),$08
+	ld	(ix+#object.height),$0c
+	ld	a,(ix+$14)
+	and	a
+	jr	z,._1
+	dec	(ix+$14)
+	xor	a
+	ld	(ix+#object.spriteLayout+0),a
+	ld	(ix+#object.spriteLayout+1),a
+	ret
+	
+._1	bit	0,(ix+$18)
+	jr	nz,._3
+	bit	1,(ix+$18)
+	jr	nz,._2
+	ld	l,(ix+#object.Y+0)
+	ld	h,(ix+#object.Y+1)
+	ld	de,$fff4
+	add	hl,de
+	ld	(ix+$12),l
+	ld	(ix+$13),h
+	ld	l,(ix+#object.X+0)
+	ld	h,(ix+#object.X+1)
+	ld	de,$0008
+	add	hl,de
+	ld	(ix+#object.X+0),l
+	ld	(ix+#object.X+1),h
+	set	1,(ix+$18)
+._2	ld	(ix+#object.Yspeed+0),$00
+	ld	(ix+#object.Yspeed+1),$fc
+	ld	(ix+#object.Ydirection),$ff
+	set	0,(ix+$18)
+	ld	a,$12
+	rst	::playSFX
+	ld	(ix+$11),$03
+	jr	._5
+	
+._3	ld	l,(ix+#object.Yspeed+0)
+	ld	h,(ix+#object.Yspeed+1)
+	ld	a,(ix+#object.Ydirection)
+	ld	de,$0010
+	add	hl,de
+	adc	a,$00
+	ex	de,hl
+	and	a
+	jp	m,._4
+	ld	hl,$0400
+	and	a
+	sbc	hl,de
+	jr	nc,._4
+	ld	de,$0400
+._4	ld	(ix+#object.Yspeed+0),e
+	ld	(ix+#object.Yspeed+1),d
+	ld	(ix+#object.Ydirection),a
+	ld	e,(ix+$12)
+	ld	d,(ix+$13)
+	ld	l,(ix+#object.Y+0)
+	ld	h,(ix+#object.Y+1)
+	xor	a
+	sbc	hl,de
+	jr	c,._5
+	ld	(ix+$04),a
+	ld	(ix+#object.Y+0),e
+	ld	(ix+#object.Y+1),d
+	ld	(ix+#object.Yspeed+0),a
+	ld	(ix+#object.Yspeed+1),a
+	ld	(ix+#object.Ydirection),a
+	ld	(ix+$14),$1e
+	res	0,(ix+$18)
+._5	ld	de,:_7de1
+	ld	bc,:_7ddc
+	call	:_7c41
+	ld	a,(ix+$11)
+	and	a
+	jr	z,._6
+	dec	(ix+$11)
+	ld	(ix+#object.spriteLayout+0),:_7df7.lo
+	ld	(ix+#object.spriteLayout+1),:_7df7.hi
+._6	ld	hl,$0204
+	ld	(#RAM_TEMP6),hl
+	call	:_LABEL_3956_11
+	ld	hl,$0000
+	ld	(#RAM_TEMP1),hl
+	call	nc,:_35e5
+	ret
+}
+
+:_7ddc
+DATA $00, $04, $01, $04, $FF
+
+`this looks like sprite layout data, but isn't quite normal
+:_7de1
+DATA $60, $62, $FF, $FF, $FF, $FF
+DATA $FF, $FF, $FF, $FF, $FF, $FF
+DATA $FF, $FF, $FF, $FF, $FF, $FF
+DATA $64, $66, $FF, $FF
+:_7df7
+DATA $FF, $FF, $FF, $FF, $68, $6A
+DATA $FF, $FF, $FF, $FF, $FF
+
+`____________________________________________________________________________[$7E02]___
+`OBJECT: log - vertical (Jungle)
+
+PROC :doObjectCode_platform_fallVert {
+	set	5,(ix+$18)
+	ld	hl,$0030
+	ld	($D267),hl
+	ld	hl,$0058
+	ld	($D269),hl
+	ld	(ix+#object.width),$0c
+	ld	(ix+#object.height),$10
+	ld	(ix+#object.spriteLayout+0),:_7e89.lo
+	ld	(ix+#object.spriteLayout+1),:_7e89.hi
+	bit	0,(ix+$18)
+	jr	nz,._7e3c
+	ld	a,(ix+#object.Y+0)
+	ld	(ix+$12),a
+	ld	a,(ix+#object.Y+1)
+	ld	(ix+$13),a
+	ld	(ix+$14),$c0
+	set	0,(ix+$18)
+._7e3c
+	ld	(ix+#object.Yspeed+0),$80
+	xor	a
+	ld	(ix+#object.Yspeed+1), a
+	ld	(ix+#object.Ydirection), a
+	
+	ld	a, (#RAM_SONIC.Ydirection)
+	and	a
+	jp	m, ._1
+	
+	ld	hl, $0806
+	ld	(#RAM_TEMP6), hl
+	call	:_LABEL_3956_11
+	jr	c, ._1
+	ld	bc, $0010
+	ld	e, (ix+#object.Yspeed+0)
+	ld	d, (ix+#object.Yspeed+1)
+	call	:_LABEL_7CC1_12
+._1	ld	a, (#RAM_FRAMECOUNT)
+	and	$03
+	ret	nz
+	inc	(ix+$11)
+	ld	a, (ix+$11)
+	cp	(ix+$14)
+	ret	c
+	xor	a			`set A to 0
+	ld	(ix+$11), a
+	ld	(ix+$04), a
+	ld	a, (ix+$12)
+	ld	(ix+#object.Y+0), a
+	ld	a, (ix+$13)
+	ld	(ix+#object.Y+1), a
+	ret
+}
+
+`sprite layout
+:_7e89
+DATA $FE, $FF, $FF, $FF, $FF, $FF
+DATA $18, $1A, $FF, $FF, $FF, $FF
+DATA $28, $2E, $FF, $FF, $FF, $FF
+
+`____________________________________________________________________________[$7E9B]___
+`OBJECT: log - horizontal (Jungle)
+
+PROC :doObjectCode_platform_fallHoriz {
+	set	5,(ix+$18)
+	ld	hl,$0030
+	ld	($D267),hl
+	ld	hl,$0058
+	ld	($D269),hl
+	ld	(ix+#object.width),$1a
+	ld	(ix+#object.height),$10
+	ld	(ix+#object.spriteLayout+0),:_7ed9.lo
+	ld	(ix+#object.spriteLayout+1),:_7ed9.hi
+	bit	0,(ix+$18)
+	jp	nz,:doObjectCode_platform_fallVert._7e3c
+	ld	a,(ix+#object.Y+0)
+	ld	(ix+$12),a
+	ld	a,(ix+#object.Y+1)
+	ld	(ix+$13),a
+	ld	(ix+$14),$c6
+	set	0,(ix+$18)
+	jp	:doObjectCode_platform_fallVert._7e3c
+}
+
+`sprite layout
+:_7ed9
+DATA $FE, $FF, $FF, $FF, $FF, $FF
+DATA $6C, $6E, $6E, $48, $FF, $FF
+DATA $FF
+
+`____________________________________________________________________________[$7EE6]___
+`OBJECT: log - floating (Jungle)
+
+PROC :doObjectCode_platform_roll {
+	set	5,(ix+$18)
+	ld	(ix+#object.width),$0a
+	ld	(ix+#object.height),$10
+	bit	0,(ix+$18)
+	jr	nz,._1
+	ld	l,(ix+#object.Y+0)
+	ld	h,(ix+#object.Y+1)
+	ld	de,$ffe8
+	add	hl,de
+	ld	(ix+#object.Y+0),l
+	ld	(ix+#object.Y+1),h
+	set	0,(ix+$18)
+._1	ld	(ix+#object.Yspeed+0),$40
+	xor	a
+	ld	(ix+#object.Yspeed+1),a
+	ld	(ix+#object.Ydirection),a
+	ld	a,(ix+$11)
+	cp	$14
+	jr	c,._2
+	ld	(ix+#object.Yspeed+0),$c0
+	ld	(ix+#object.Yspeed+1),$ff
+	ld	(ix+#object.Ydirection),$ff
+	
+._2	ld	a,(#RAM_SONIC.Ydirection)
+	and	a
+	jp	m,:_8003
+	
+	ld	hl,$0806
+	ld	(#RAM_TEMP6),hl
+	call	:_LABEL_3956_11
+	jp	c,:_8003
+	ld	bc,$0010
+	ld	e,(ix+#object.Yspeed+0)
+	ld	d,(ix+#object.Yspeed+1)
+	call	:_LABEL_7CC1_12
+	ld	hl,(#RAM_SONIC.Xspeed)
+	ld	a,l
+	or	h
+	jr	z,._4
+	ld	bc,$0012
+	bit	7,h
+	jr	z,._3
+	ld	bc,$fffe
+._3	ld	de,$0000
+	call	:getFloorLayoutRAMPositionForObject
+	ld	e,(hl)
+	ld	d,$00
+	ld	a,(#RAM_LEVEL_SOLIDITY)
+	add	a,a
+	ld	c,a
+	ld	b,d
+	ld	hl,:S1_SolidityPointers
+	add	hl,bc
+	ld	a,(hl)
+	inc	hl
+	ld	h,(hl)
+	ld	l,a
+	add	hl,de
+	ld	a,(hl)
+	and	$3f
+	ld	a,d
+	ld	e,d
+	jr	nz,._5
+._4	ld	a,(#RAM_SONIC.Xspeed+0)
+	ld	de,(#RAM_SONIC.Xspeed+1)
+	sra	d
+	rr	e
+	rra	
+._5	ld	l,(ix+#object.X+0)
+	ld	h,(ix+#object.X+1)
+	add	a,(ix+$01)
+	adc	hl,de
+	ld	(ix+$01),a
+	ld	(ix+#object.X+0),l
+	ld	(ix+#object.X+1),h
+	ld	($D3FD),a
+	ld	de,$fffc
+	add	hl,de
+	ld	(#RAM_SONIC.X),hl
+	ld	de,(#RAM_SONIC.Xspeed)
+	bit	7,d
+	jr	z,._6
+	ld	a,e
+	cpl	
+	ld	e,a
+	ld	a,d
+	cpl	
+	ld	d,a
+	inc	de
++._6	ld	l,(ix+$12)
+	ld	h,(ix+$13)
+	add	hl,de
+	ld	a,h
+	cp	$09
+	jr	c,._7
+	sub	$09
+	ld	h,a
+._7	ld	(ix+$12),l
+	ld	(ix+$13),h
+	ld	e,a
+	ld	d,$00
+	ld	hl,:_8019
+	add	hl,de
+	ld	e,(hl)
+	ld	hl,:_8022
+	add	hl,de
+	ld	(ix+#object.spriteLayout+0),l
+	ld	(ix+#object.spriteLayout+1),h
+	jr	:_800b
+}
+
+DATA $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00
+DATA $00, $00, $00, $00, $00
+
+`could someone explain why this isn't calculating the right checksum?
+ `the compiled output of this file is byte-for-byte the same as the original ROM!
+`.SMSTAG
+
+DATA "TMR SEGA"
+
+DATA $59, $59
+DATA $1B, $A5
+DATA $76, $70, $00
+DATA $40
+
+`======================================================================================
+
+BANK 2 SLOT 2 AT $0000
+
+DATA $00, $00, $00
+
+`jumped to by `doObjectCode_platform_roll`, OBJECT: log - floating (Jungle)
+:_8003   
+	ld	(ix+#object.spriteLayout+0),:_8022.lo
+	ld	(ix+#object.spriteLayout+1),:_8022.hi
+:_800b
+	inc	(ix+$11)
+	ld	a,(ix+$11)
+	cp	$28
+	ret	c
+	ld	(ix+$11),$00
+	ret
+
+:_8019
+DATA $00, $00, $00, $12, $12, $12, $24, $24, $24
+
+`sprite layout
+:_8022
+DATA $FE, $FF, $FF, $FF, $FF, $FF
+DATA $3A, $3C, $FF, $FF, $FF, $FF
+DATA $FF, $FF, $FF, $FF, $FF, $FF
+
+DATA $FE, $FF, $FF, $FF, $FF, $FF
+DATA $36, $38, $FF, $FF, $FF, $FF
+DATA $FF, $FF, $FF, $FF, $FF, $FF
+
+DATA $FE, $FF, $FF, $FF, $FF, $FF
+DATA $4C, $4E, $FF, $FF, $FF, $FF
+DATA $FF
+
+`____________________________________________________________________________[$8053]___
+`OBJECT: boss (Jungle)
+
+PROC :doObjectCode_boss_jungle {
+	set	5,(ix+$18)
+	ld	(ix+#object.width),$20
+	ld	(ix+#object.height),$1c
+	bit	0,(ix+$18)
+	jr	nz,._1
+	ld	hl,(#RAM_SONIC.Y+0)
+	ld	de,$00e0
+	and	a
+	sbc	hl,de
+	ret	nc
+	ld	a,($D414)
+	rlca	
+	ret	nc
+	`boss sprite set
+	ld	hl,$aeb1
+	ld	de,$2000
+	ld	a,9
+	call	:decompressArt
+	
+	ld	hl,:S1_BossPalette
+	ld	a,%00000010
+	call	:loadPaletteOnInterrupt
+	
+	ld	a,#index_music_boss1
+	rst	::playMusic
+	
+	xor	a
+	ld	($D2EC),a
+	
+	`there's a routine at `_7c8c` for setting the scroll positions that should
+	 `have been used here?
+	ld	hl,(#RAM_CAMERA_X)
+	ld	(#RAM_LEVEL_LEFT),hl
+	ld	(#RAM_LEVEL_RIGHT),hl
+	
+	ld	hl,(#RAM_CAMERA_Y)
+	ld	(#RAM_LEVEL_TOP),hl
+	ld	(#RAM_LEVEL_BOTTOM),hl
+	ld	hl,$01f0
+	ld	(#RAM_CAMERA_X_GOTO),hl
+	ld	hl,$0048
+	ld	(#RAM_CAMERA_Y_GOTO),hl
+	
+	set	0,(ix+$18)
+	
+._1	call	:_7ca6
+	bit	0,(ix+$11)
+	jr	nz,._2
+	ld	(ix+#object.spriteLayout+0),:_81f4.lo
+	ld	(ix+#object.spriteLayout+1),:_81f4.hi
+	ld	(ix+#object.Yspeed+0),$80
+	ld	(ix+#object.Yspeed+1),$00
+	ld	(ix+#object.Ydirection),$00
+	ld	l,(ix+#object.Y+0)
+	ld	h,(ix+#object.Y+1)
+	ld	de,$0058
+	xor	a
+	sbc	hl,de
+	ret	c
+	ld	(ix+#object.Yspeed+0),a
+	ld	(ix+#object.Yspeed+1),a
+	ld	(ix+#object.Ydirection),a
+	set	0,(ix+$11)
+._2	ld	a,(ix+$12)
+	and	a
+	jp	nz,._4
+	ld	l,(ix+#object.X+0)
+	ld	h,(ix+#object.X+1)
+	bit	1,(ix+$11)
+	jr	nz,._3
+	ld	(ix+#object.spriteLayout+0),:_81f4.lo
+	ld	(ix+#object.spriteLayout+1),:_81f4.hi
+	res	1,(ix+$18)
+	ld	(ix+#object.Xspeed+0),$00
+	ld	(ix+#object.Xspeed+1),$ff
+	ld	(ix+#object.Xdirection),$ff
+	ld	de,$021c
+	and	a
+	sbc	hl,de
+	jp	nc,._8
+	ld	(ix+$12),$67
+	jp	._8
+	
+._3	ld	(ix+#object.spriteLayout+0),:_8206.lo
+	ld	(ix+#object.spriteLayout+1),:_8206.hi
+	set	1,(ix+$18)
+	ld	(ix+#object.Xspeed+0),$00
+	ld	(ix+#object.Xspeed+1),$01
+	ld	(ix+#object.Xdirection),$00
+	ld	de,$02aa
+	and	a
+	sbc	hl,de
+	jp	c,._8
+	ld	(ix+$12),$67
+	jp	._8
+	
+._4	xor	a
+	ld	(ix+#object.Xspeed+0),a
+	ld	(ix+#object.Xspeed+1),a
+	ld	(ix+#object.Xdirection),a
+	ld	hl,$0001
+	dec	(ix+$12)
+	jr	z,._5
+	ld	a,(ix+$12)
+	cp	$40
+	jr	nc,._6
+	ld	hl,$ffff
+	cp	$28
+	jr	c,._6
+	cp	$34
+	jr	z,._7
+._5	ld	hl,$0000
+._6	ld	(ix+#object.Yspeed+0),$00
+	ld	(ix+#object.Yspeed+1),l
+	ld	(ix+#object.Ydirection),h
+	jr	._8
+	
+._7	ld	a,(ix+$11)
+	xor	$02
+	ld	(ix+$11),a
+	ld	a,($D2EC)
+	cp	$08
+	jr	nc,._8
+	call	:_7c7b
+	ret	c
+	ld	e,(ix+#object.X+0)
+	ld	d,(ix+#object.X+1)
+	ld	c,(ix+#object.Y+0)
+	ld	b,(ix+#object.Y+1)
+	push	ix
+	push	hl
+	pop	ix
+	ld	(ix+#object.type),$2B	`unknown object
+	xor	a			`set A to 0
+	ld	(ix+$01),a
+	ld	hl,$000b
+	add	hl,de
+	ld	(ix+#object.X+0),l
+	ld	(ix+#object.X+1),h
+	ld	(ix+$04),a
+	ld	hl,$0030
+	add	hl,bc
+	ld	(ix+#object.Y+0),l
+	ld	(ix+#object.Y+1),h
+	ld	(ix+#object.Xspeed+0),a
+	ld	(ix+#object.Xspeed+1),a
+	ld	(ix+#object.Xdirection),a
+	ld	(ix+#object.Yspeed+0),a
+	ld	(ix+#object.Yspeed+1),a
+	ld	(ix+#object.Ydirection),a
+	ld	(ix+$11),a
+	ld	(ix+$16),a
+	ld	(ix+$17),a
+	call	:_LABEL_625_57
+	and	$3f
+	add	a,$64
+	ld	(ix+$12),a
+	pop	ix
+._8	ld	hl,$005a
+	ld	($D216),hl
+	call	:_77be
+	call	:_79fa
+	ret
+
+`sprite layout
+:_81f4
+DATA $20, $22, $24, $26, $28, $FF
+DATA $40, $42, $44, $46, $48, $FF
+DATA $60, $54, $56, $58, $68, $FF
+:_8206
+DATA $2A, $2C, $2E, $30, $32, $FF
+DATA $4A, $4C, $4E, $50, $52, $FF
+DATA $6A, $5A, $5C, $5E, $72, $FF
+
+`____________________________________________________________________________[$8218]___
+`OBJECT: UNKNOWN
+
+PROC :_8218 {
+	res	5,(ix+$18)
+	ld	(ix+#object.width),$0c
+	ld	(ix+#object.height),$10
+	ld	hl,$0202
+	ld	(#RAM_TEMP6),hl
+	call	:_LABEL_3956_11
+	call	nc,:_35fd
+	ld	l,(ix+#object.Xspeed+0)
+	ld	h,(ix+#object.Xspeed+1)
+	ld	a,(ix+#object.Xdirection)
+	ld	de,$0002
+	ld	c,$00
+	and	a
+	jp	m,._1
+	dec	c
+	ld	de,$fffe
+._1	add	hl,de
+	adc	a,c
+	ld	(ix+#object.Xspeed+0),l
+	ld	(ix+#object.Xspeed+1),h
+	ld	(ix+#object.Xdirection),a
+	ld	l,(ix+#object.Yspeed+0)
+	ld	h,(ix+#object.Yspeed+1)
+	ld	a,(ix+#object.Ydirection)
+	ld	de,$0020
+	add	hl,de
+	adc	a,$00
+	ld	c,a
+	ld	a,h
+	cp	$03
+	jr	c,._2
+	ld	hl,$0300
+	ld	c,$00
+._2	ld	(ix+#object.Yspeed+0),l
+	ld	(ix+#object.Yspeed+1),h
+	ld	(ix+#object.Ydirection),c
+	ld	a,(#RAM_FRAMECOUNT)
+	and	$01
+	add	a,(ix+$11)
+	ld	(ix+$11),a
+	ld	a,(ix+$11)
+	cp	(ix+$12)
+	jr	nc,._3
+	ld	bc,:_82c1
+	ld	de,:_82cd
+	call	:_7c41
+	ret
+	
+._3	jr	nz,._4
+	ld	a,(#RAM_FRAMECOUNT)
+	and	$01
+	ret	z
+	ld	(ix+$16),$00
+	ld	a,$01
+	rst	::playSFX
+._4	xor	a
+	ld	(ix+#object.Xspeed+0),a
+	ld	(ix+#object.Xspeed+1),a
+	ld	(ix+#object.Xdirection),a
+	ld	bc,:_82c6
+	ld	de,:_a3bb
+	call	:_7c41
+	ld	a,(ix+$12)
+	add	a,$12
+	cp	(ix+$11)
+	ret	nc
+	ld	(ix+#object.type),$FF	`remove object?
+	ret
+}
+
+:_82c1
+DATA $00, $04, $01, $04, $FF
+:_82c6
+DATA $01, $0C, $02, $0C, $03, $0C, $FF
+
+`sprite layout
+:_82cd
+DATA $08, $0A, $FF, $FF, $FF, $FF
+DATA $FF, $FF, $FF, $FF, $FF, $FF
+DATA $FF, $FF, $FF, $FF, $FF, $FF
+
+DATA $0C, $0E, $FF, $FF, $FF, $FF
+DATA $FF
+
+`____________________________________________________________________________[$82E6]___
+`OBJECT: badnick - Yadrin (Bridge)
+
+PROC :doObjectCode_badnick_yadrin {
+	ld	(ix+#object.width),$10
+	ld	(ix+#object.height),$0f
+	ld	hl,$0408
+	ld	(#RAM_TEMP6),hl
+	call	:_LABEL_3956_11
+	call	nc,:_35fd
+	ld	(ix+#object.width),$14
+	ld	(ix+#object.height),$20
+	ld	hl,$1006
+	ld	(#RAM_TEMP6),hl
+	call	:_LABEL_3956_11
+	ld	hl,$0404
+	ld	(#RAM_TEMP1),hl
+	call	nc,:_35e5
+	ld	l,(ix+#object.Yspeed+0)
+	ld	h,(ix+#object.Yspeed+1)
+	ld	a,(ix+#object.Ydirection)
+	ld	de,$0020
+	add	hl,de
+	adc	a,$00
+	ld	(ix+#object.Yspeed+0),l
+	ld	(ix+#object.Yspeed+1),h
+	ld	(ix+#object.Ydirection),a
+	ld	a,(ix+$11)
+	cp	$50
+	jr	c,._1
+	ld	(ix+#object.Xspeed+0),$40
+	ld	(ix+#object.Xspeed+1),$00
+	ld	(ix+#object.Xdirection),$00
+	ld	de,:_837e
+	ld	bc,:_8379
+	call	:_7c41
+	jp	._2
+	
+._1	ld	(ix+#object.Xspeed+0),$c0
+	ld	(ix+#object.Xspeed+1),$ff
+	ld	(ix+#object.Xdirection),$ff
+	ld	de,:_837e
+	ld	bc,:_8374
+	call	:_7c41
+._2	ld	a,(#RAM_FRAMECOUNT)
+	and	$07
+	ret	nz
+	inc	(ix+$11)
+	ld	a,(ix+$11)
+	cp	$a0
+	ret	c
+	ld	(ix+$11),$00
+	ret
+}
+
+:_8374
+DATA $00, $06, $01, $06, $FF
+:_8379
+DATA $02, $06, $03, $06, $FF
+
+`sprite layout
+:_837e
+DATA $FE, $00, $02, $FF, $FF, $FF
+DATA $20, $22, $24, $FF, $FF, $FF
+DATA $FF, $FF, $FF, $FF, $FF, $FF
+
+DATA $FE, $00, $02, $FF, $FF, $FF
+DATA $26, $28, $2A, $FF, $FF, $FF
+DATA $FF, $FF, $FF, $FF, $FF, $FF
+
+DATA $40, $42, $FF, $FF, $FF, $FF
+DATA $4A, $4C, $4E, $FF, $FF, $FF
+DATA $FF, $FF, $FF, $FF, $FF, $FF
+
+DATA $40, $42, $FF, $FF, $FF, $FF
+DATA $44, $46, $48, $FF, $FF, $FF
+DATA $FF
+
+`____________________________________________________________________________[$83C1]___
+`OBJECT: falling bridge (Bridge)
+
+PROC :doObjectCode_platform_bridge {
+	set	5,(ix+$18)
+	ld	(ix+#object.width),$0e
+	ld	(ix+#object.height),$08
+	bit	0,(ix+$18)
+	jr	nz,._2
+	xor	a
+	ld	(ix+#object.spriteLayout+0),a
+	ld	(ix+#object.spriteLayout+1),a
+	ld	l,a
+	ld	h,a
+	ld	(#RAM_TEMP1),hl
+	bit	1,(ix+$18)
+	jr	nz,._1
+	call	:_LABEL_625_57
+	and	$1f
+	inc	a
+	ld	(ix+$11),a
+	set	1,(ix+$18)
+._1	dec	(ix+$11)
+	jp	nz,._
+	ld	(ix+$11),$01
+	ld	a,($D2AC)
+	and	$80
+	jp	z,._
+	ld	l,(ix+#object.X+0)
+	ld	h,(ix+#object.X+1)
+	ld	($D2AB),hl
+	ld	l,(ix+#object.Y+0)
+	ld	h,(ix+#object.Y+1)
+	ld	de,$000e
+	add	hl,de
+	ld	($D2AD),hl
+	ld	hl,:_848e
+	ld	($D2AF),hl
+	set	0,(ix+$18)
+	ld	a,$20
+	rst	::playSFX
+._2	ld	(ix+#object.spriteLayout+0),:_8481.lo
+	ld	(ix+#object.spriteLayout+1),:_8481.hi
+	ld	l,(ix+#object.Yspeed+0)
+	ld	h,(ix+#object.Yspeed+1)
+	ld	a,(ix+#object.Ydirection)
+	ld	de,$0020
+	add	hl,de
+	adc	a,$00
+	ld	c,a
+	ld	a,h
+	cp	$04
+	jr	c,._3
+	ld	h,$04
+._3	ld	(ix+#object.Yspeed+0),l
+	ld	(ix+#object.Yspeed+1),h
+	ld	(ix+#object.Ydirection),c
+	ld	(#RAM_TEMP1),hl
+	ld	de,(#RAM_CAMERA_Y)
+	inc	d
+	ld	l,(ix+#object.Y+0)
+	ld	h,(ix+#object.Y+1)
+	and	a
+	sbc	hl,de
+	jr	c,._
+	ld	(ix+#object.type),$FF	`remove object?
+	ret
+	
+._4	ld	hl,$0402
+	ld	(#RAM_TEMP6),hl
+	call	:_LABEL_3956_11
+	
+	ret	c
+	ld	a,(#RAM_SONIC.Ydirection)
+	and	a
+	ret	m
+	
+	ld	de,(#RAM_TEMP1)
+	ld	bc,$0010
+	call	:_LABEL_7CC1_12
+	ret
+
+`sprite layout
+:_8481
+DATA $FE, $FF, $FF, $FF, $FF, $FF
+DATA $70, $72, $FF, $FF, $FF, $FF
+DATA $FF
+:_848e
+DATA $00, $00, $00, $00, $00, $00, $00, $00
+
+`____________________________________________________________________________[$8496]___
+`OBJECT: boss (Bridge)
+
+PROC :doObjectCode_boss_bridge {
+	set	5,(ix+$18)
+	ld	(ix+#object.width),$1e
+	ld	(ix+#object.height),$1c
+	call	:_7ca6
+	ld	(ix+#object.spriteLayout+0),:_865a.lo
+	ld	(ix+#object.spriteLayout+1),:_865a.hi
+	bit	0,(ix+$18)
+	jr	nz,._1
+	
+	ld	hl,$03a0
+	ld	de,$0300
+	call	:_7c8c
+	
+	`UNKNOWN
+	ld	hl,$e508
+	ld	de,$2000
+	ld	a,12
+	call	:decompressArt
+	
+	ld	hl,:S1_BossPalette
+	ld	a,%00000010
+	call	:loadPaletteOnInterrupt
+	xor	a
+	ld	($D2EC),a
+	
+	ld	a,#index_music_boss1
+	rst	::playMusic
+	
+	set	0,(ix+$18)
+._1	ld	a,(ix+$11)
+	and	a
+	jr	nz,._2
+	call	:_LABEL_625_57
+	and	$01
+	add	a,a
+	add	a,a
+	ld	e,a
+	ld	d,$00
+	ld	hl,:_8632
+	add	hl,de
+	ld	a,(hl)
+	ld	(ix+#object.X+0),a
+	inc	hl
+	ld	a,(hl)
+	inc	hl
+	ld	(ix+#object.X+1),a
+	ld	a,(hl)
+	inc	hl
+	ld	(ix+#object.Y+0),a
+	ld	a,(hl)
+	inc	hl
+	ld	(ix+#object.Y+1),a
+	inc	(ix+$11)
+	jp	._6
+	
+._2	dec	a
+	jr	nz,._3
+	ld	(ix+#object.Yspeed+0),$80
+	ld	(ix+#object.Yspeed+1),$ff
+	ld	(ix+#object.Ydirection),$ff
+	ld	hl,$0380
+	ld	e,(ix+#object.Y+0)
+	ld	d,(ix+#object.Y+1)
+	xor	a
+	sbc	hl,de
+	jp	c,._6
+	inc	(ix+$11)
+	ld	(ix+$12),a
+	jp	._6
+	
+._3	dec	a
+	jr	nz,._5
+	xor	a
+	ld	(ix+#object.Yspeed+0),a
+	ld	(ix+#object.Yspeed+1),a
+	ld	(ix+#object.Ydirection),a
+	inc	(ix+$12)
+	ld	a,(ix+$12)
+	cp	$64
+	jp	nz,._6
+	inc	(ix+$11)
+	ld	a,($D2EC)
+	cp	$08
+	jr	nc,._6
+	ld	hl,(#RAM_SONIC.X)
+	ld	e,(ix+#object.X+0)
+	ld	d,(ix+#object.X+1)
+	and	a
+	sbc	hl,de
+	ld	hl,:_863a
+	jr	c,._4
+	ld	hl,:_864a
+._4	ld	e,(hl)
+	inc	hl
+	ld	d,(hl)
+	inc	hl
+	ld	c,(hl)
+	inc	hl
+	ld	b,(hl)
+	inc	hl
+	push	hl
+	ld	l,(ix+#object.X+0)
+	ld	h,(ix+#object.X+1)
+	add	hl,de
+	ld	(#RAM_TEMP1),hl
+	ld	l,(ix+#object.Y+0)
+	ld	h,(ix+#object.Y+1)
+	add	hl,bc
+	ld	(#RAM_TEMP3),hl
+	pop	hl
+	ld	b,$03
+	
+.loop	push	bc
+	ld	a,(hl)
+	ld	(#RAM_TEMP4),a
+	inc	hl
+	ld	a,(hl)
+	ld	(#RAM_TEMP5),a
+	inc	hl
+	ld	a,(hl)
+	ld	(#RAM_TEMP6),a
+	inc	hl
+	ld	a,(hl)
+	ld	(#RAM_TEMP7),a
+	inc	hl
+	push	hl
+	ld	c,$10
+	call	:_85d1
+	pop	hl
+	pop	bc
+	djnz	.loop
+	
+	ld	a,$01
+	rst	::playSFX
+	jp	._6
+	
+._5	ld	(ix+#object.Yspeed+0),$80
+	ld	(ix+#object.Yspeed+1),$00
+	ld	(ix+#object.Ydirection),$00
+	ld	hl,$03c0
+	ld	e,(ix+#object.Y+0)
+	ld	d,(ix+#object.Y+1)
+	xor	a
+	sbc	hl,de
+	jr	nc,._6
+	ld	(ix+$11),a
+	
+._6	ld	hl,$00a2
+	ld	($D216),hl
+	call	:_77be
+	ret
+}
+
+`____________________________________________________________________________[$85D1]___
+
+PROC :_85d1 {
+	push	bc
+	call	:_7c7b
+	pop	bc
+	ret	c
+	push	ix
+	push	hl
+	pop	ix
+	xor	a			`set A to 0
+	ld	(ix+#object.type),$0D	`unknown object
+	ld	hl,(#RAM_TEMP1)
+	ld	(ix+$01),a
+	ld	(ix+#object.X+0),l
+	ld	(ix+#object.X+1),h
+	ld	hl,(#RAM_TEMP3)
+	ld	(ix+$04),a
+	ld	(ix+#object.Y+0),l
+	ld	(ix+#object.Y+1),h
+	ld	(ix+$11),a
+	ld	(ix+$13),c
+	ld	(ix+$14),a
+	ld	(ix+$15),a
+	ld	(ix+$16),a
+	ld	(ix+$17),a
+	ld	hl,(#RAM_TEMP4)
+	xor	a
+	bit	7,h
+	jr	z,._1
+	dec	a
+._1	ld	(ix+#object.Xspeed+0),l
+	ld	(ix+#object.Xspeed+1),h
+	ld	(ix+#object.Xdirection),a
+	ld	hl,(#RAM_TEMP6)
+	xor	a
+	bit	7,h
+	jr	z,._2
+	dec	a
+._2	ld	(ix+#object.Yspeed+0),l
+	ld	(ix+#object.Yspeed+1),h
+	ld	(ix+#object.Ydirection),a
+	pop	ix
+	ret
+}
+
+:_8632
+DATA $D4, $03, $C0, $03, $44, $04, $C0, $03
+:_863a
+DATA $00, $00, $F6, $FF, $C0, $FE, $00, $FC, $60, $FE, $80, $FD, $C0, $FD, $00, $FF
+:_864a
+DATA $20, $00, $F6, $FF, $40, $01, $00, $FC, $A0, $01, $80, $FD, $40, $02, $00, $FF
+
+`sprite layout
+:_865a
+DATA $20, $22, $24, $26, $28, $FF
+DATA $40, $42, $44, $46, $48, $FF
+DATA $60, $62, $64, $66, $68, $FF
+
+`____________________________________________________________________________[$866C]___
+`OBJECT: balance (Bridge)
+
+PROC :doObjectCode_platform_balance {
+	set	5,(ix+$18)
+	bit	0,(ix+$18)
+	jr	nz,._1
+	ld	(ix+$11),$1c
+	ld	l,(ix+#object.X+0)
+	ld	h,(ix+#object.X+1)
+	ld	de,$fff0
+	add	hl,de
+	ld	(ix+#object.X+0),l
+	ld	(ix+#object.X+1),h
+	set	0,(ix+$18)
+._1	ld	l,(ix+$14)
+	ld	h,(ix+$15)
+	ld	a,(ix+$16)
+	ld	e,(ix+$12)
+	ld	d,(ix+$13)
+	ld	c,$00
+	bit	7,d
+	jr	z,._2
+	dec	c
+._2	add	hl,de
+	adc	a,c
+	ld	(ix+$14),l
+	ld	(ix+$15),h
+	ld	(ix+$16),a
+	ld	c,h
+	ld	b,a
+	ld	hl,$0038
+	add	hl,de
+	ld	(ix+$12),l
+	ld	(ix+$13),h
+	bit	7,h
+	jr	nz,._7
+	rlca	
+	jr	c,._7
+	ld	a,(ix+$11)
+	and	a
+	jr	z,._6
+	bit	1,(ix+$18)
+	jr	z,._4
+	ld	a,l
+	or	h
+	jr	nz,._3
+	ld	a,($D2E8)
+	ld	hl,($D2E6)
+	ld	(#RAM_SONIC.Yspeed),hl
+	ld	(#RAM_SONIC.Ydirection),a
+	jr	._4
+	
+._3	ld	a,l
+	cpl	
+	ld	l,a
+	ld	a,h
+	cpl	
+	ld	h,a
+	inc	hl
+	ld	de,($D2E6)
+	add	hl,de
+	ld	(#RAM_SONIC.Yspeed),hl
+	
+	ld	a,$FF
+	ld	(#RAM_SONIC.Ydirection),a	`set Sonic as currently jumping
+	
+._4	ld	a,$1c
+	sub	c
+	ld	(ix+$11),a
+	jr	z,._5
+	jr	nc,._7
+._5	bit	1,(ix+$18)
+	jr	z,._6
+	ld	a,$04
+	rst	::playSFX
+._6	xor	a
+	ld	(ix+$11),a
+	ld	(ix+$12),a
+	ld	(ix+$13),a
+	ld	(ix+$14),a
+	ld	(ix+$15),$1c
+	ld	(ix+$16),a
+._7	ld	l,(ix+#object.X+0)
+	ld	h,(ix+#object.X+1)
+	ld	(#RAM_TEMP1),hl
+	ld	l,(ix+#object.Y+0)
+	ld	h,(ix+#object.Y+1)
+	ld	(#RAM_TEMP3),hl
+	ld	hl,$0000
+	ld	(#RAM_TEMP4),hl
+	ld	l,(ix+$11)
+	ld	de,$0010
+	add	hl,de
+	ld	(#RAM_TEMP6),hl
+	ld	hl,:_8830
+	call	:_881a
+	ld	hl,$0028
+	ld	(#RAM_TEMP4),hl
+	ld	a,$1c
+	sub	(ix+$11)
+	ld	l,a
+	ld	h,$00
+	ld	de,$0010
+	add	hl,de
+	ld	(#RAM_TEMP6),hl
+	ld	hl,:_8830
+	call	:_881a
+	ld	hl,$002c
+	ld	(#RAM_TEMP4),hl
+	ld	l,(ix+$15)
+	ld	h,(ix+$16)
+	ld	(#RAM_TEMP6),hl
+	ld	hl,:_8834
+	call	:_881a
+	res	1,(ix+$18)
+	ld	(ix+#object.width),$14
+	ld	a,$02
+	ld	(#RAM_TEMP6),a
+	ld	a,(ix+$11)
+	ld	c,a
+	add	a,$08
+	ld	(ix+#object.height),a
+	ld	a,c
+	add	a,$04
+	ld	(#RAM_TEMP7),a
+	call	:_LABEL_3956_11
+	jr	nc,._8
+	
+	ld	a,(#RAM_SONIC.Ydirection)
+	and	a
+	ret	m
+	
+	ld	(ix+#object.width),$3c
+	ld	a,$2a
+	ld	(#RAM_TEMP6),a
+	ld	a,$1c
+	sub	(ix+$11)
+	add	a,$08
+	ld	(ix+#object.height),a
+	ld	a,$1c
+	sub	(ix+$11)
+	add	a,$04
+	ld	(#RAM_TEMP7),a
+	call	:_LABEL_3956_11
+	jr	nc,._9
+	ret
+	
+._8	set	1,(ix+$18)
+	
+	ld	a,(#RAM_SONIC.Ydirection)
+	and	a
+	ret	m
+	
+	ld	a,(ix+$11)
+	cp	$1c
+	jr	z,._9
+	ld	hl,(#RAM_SONIC.Yspeed)
+	ld	a,l
+	cpl	
+	ld	l,a
+	ld	a,h
+	cpl	
+	ld	h,a
+	inc	hl
+	ld	(ix+$12),l
+	ld	(ix+$13),h
+	ld	a,(#RAM_SONIC.Yspeed+1)
+	add	a,(ix+$11)
+	ld	(ix+$11),a
+	cp	$1c
+	jr	c,._10
+	ld	(ix+$11),$1c
+._9	ld	a,($D2E8)
+	ld	hl,($D2E6)
+	ld	(#RAM_SONIC.Yspeed),hl
+	ld	(#RAM_SONIC.Ydirection),a
+._10	ld	l,(ix+#object.Y+0)
+	ld	h,(ix+#object.Y+1)
+	ld	bc,$0010
+	add	hl,bc
+	ld	a,(#RAM_TEMP7)
+	sub	$04
+	ld	c,a
+	add	hl,bc
+	ld	a,($D40A)
+	ld	c,a
+	xor	a
+	sbc	hl,bc
+	ld	(#RAM_SONIC.Y+0),hl
+	ld	hl,$D414
+	set	7,(hl)
+	ret
+}
+
+`____________________________________________________________________________[$881A]___
+
+PROC :_881a {
+	ld	a,(hl)
+	and	a
+	ret	m
+	push	hl
+	call	:_3581
+	ld	hl,(#RAM_TEMP4)
+	ld	de,$0008
+	add	hl,de
+	ld	(#RAM_TEMP4),hl
+	pop	hl
+	inc	hl
+	jp	:_881a
+}
+
+:_8830
+DATA $36, $38, $3A, $FF
+:_8834
+DATA $3C, $3E, $FF
+
+`____________________________________________________________________________[$8837]___
+`OBJECT: badnick - Jaws (Labyrinth)
+
+PROC :doObjectCode_badnick_jaws {
+	set	5,(ix+$18)
+	ld	a,(ix+$11)
+	cp	$80
+	jr	nc,._1
+	ld	(ix+#object.Xspeed+0),$20
+	ld	(ix+#object.Xspeed+1),$00
+	ld	(ix+#object.Xdirection),$00
+	ld	(ix+#object.width),$14
+	ld	(ix+#object.height),$0c
+	ld	hl,$0a02
+	ld	(#RAM_TEMP6),hl
+	call	:_LABEL_3956_11
+	ld	hl,$0008
+	ld	(#RAM_TEMP1),hl
+	call	nc,:_35e5
+	ld	de,:_88be
+	ld	bc,:_88b4
+	call	:_7c41
+	jr	._2
+	
+._1	ld	(ix+#object.Xspeed+0),$e0
+	ld	(ix+#object.Xspeed+1),$ff
+	ld	(ix+#object.Xdirection),$ff
+	ld	(ix+#object.width),$0c
+	ld	(ix+#object.height),$0c
+	ld	hl,$0202
+	ld	(#RAM_TEMP6),hl
+	call	:_LABEL_3956_11
+	ld	hl,$0000
+	ld	(#RAM_TEMP1),hl
+	call	nc,:_35e5
+	ld	de,:_88be
+	ld	bc,:_88b9
+	call	:_7c41
+._2	ld	a,(#RAM_FRAMECOUNT)
+	and	$07
+	ret	nz
+	inc	(ix+$11)
+	call	:_LABEL_625_57
+	and	$1e
+	call	z,:_91eb
+	ret
+}
+
+:_88b4
+DATA $00, $04, $01, $04, $FF
+:_88b9
+DATA $02, $04, $03, $04, $FF
+
+`sprite layout
+:_88be
+DATA $04, $2A, $2C, $FF, $FF, $FF
+DATA $FF, $FF, $FF, $FF, $FF, $FF
+DATA $FF, $FF, $FF, $FF, $FF, $FF
+
+DATA $0C, $2A, $2C, $FF, $FF, $FF
+DATA $FF, $FF, $FF, $FF, $FF, $FF
+DATA $FF, $FF, $FF, $FF, $FF, $FF
+
+DATA $0E, $10, $0A, $FF, $FF, $FF
+DATA $FF, $FF, $FF, $FF, $FF, $FF
+DATA $FF, $FF, $FF, $FF, $FF, $FF
+
+DATA $0E, $10, $0C, $FF, $FF, $FF
+DATA $FF
+
+`____________________________________________________________________________[$88FB]___
+`OBJECT: spike ball (Labyrinth)
+
+PROC :doObjectCode_trap_spikeBall {
+	set	5,(ix+$18)
+	ld	(ix+#object.width),$08
+	ld	(ix+#object.height),$0c
+	bit	0,(ix+$18)
+	jr	nz,._1
+	ld	l,(ix+#object.X+0)
+	ld	h,(ix+#object.X+1)
+	ld	de,$0008
+	add	hl,de
+	ld	(ix+$12),l
+	ld	(ix+$13),h
+	ld	l,(ix+#object.Y+0)
+	ld	h,(ix+#object.Y+1)
+	ld	de,$0008
+	add	hl,de
+	ld	(ix+$14),l
+	ld	(ix+$15),h
+	set	0,(ix+$18)
+._1	ld	l,(ix+$11)
+	ld	h,$00
+	add	hl,hl
+	ld	de,:_898e
+	add	hl,de
+	ld	e,(hl)
+	inc	hl
+	ld	c,(hl)
+	ld	d,$00
+	ld	b,d
+	bit	7,e
+	jr	z,._2
+	dec	d
+._2	bit	7,c
+	jr	z,._3
+	dec	b
+._3	ld	l,(ix+$12)
+	ld	h,(ix+$13)
+	add	hl,de
+	ld	(ix+#object.X+0),l
+	ld	(ix+#object.X+1),h
+	ld	l,(ix+$14)
+	ld	h,(ix+$15)
+	add	hl,bc
+	ld	(ix+#object.Y+0),l
+	ld	(ix+#object.Y+1),h
+	ld	hl,$0204
+	ld	(#RAM_TEMP6),hl
+	call	:_LABEL_3956_11
+	call	nc,:_35fd
+	ld	(ix+#object.spriteLayout+0),:_8987.lo
+	ld	(ix+#object.spriteLayout+1),:_8987.hi
+	inc	(ix+$11)
+	ld	a,(ix+$11)
+	cp	$b4
+	ret	c
+	ld	(ix+$11),$00
+	ret
+}
+
+`sprite layout
+:_8987
+DATA $60, $62, $FF, $FF, $FF, $FF
+DATA $FF
+
+`I imagine this a set of X/Y positions to do the spiked-ball rotation
+:_898e
+`180 lines, ergo 2deg per frame?
+DATA $40, $00
+DATA $40, $02
+DATA $40, $04
+DATA $40, $07
+DATA $3F, $09
+DATA $3F, $0B
+DATA $3F, $0D
+DATA $3E, $0F
+DATA $3E, $12
+DATA $3D, $14
+DATA $3C, $16
+DATA $3B, $18
+DATA $3A, $1A
+DATA $3A, $1C
+DATA $39, $1E
+DATA $37, $20
+DATA $36, $22
+DATA $35, $24
+DATA $34, $26
+DATA $32, $27
+DATA $31, $29
+DATA $30, $2B
+DATA $2E, $2C
+DATA $2C, $2E
+DATA $2B, $30
+DATA $29, $31
+DATA $27, $32
+DATA $26, $34
+DATA $24, $35
+DATA $22, $36
+DATA $20, $37
+DATA $1E, $39
+DATA $1C, $3A
+DATA $1A, $3A
+DATA $18, $3B
+DATA $16, $3C
+DATA $14, $3D
+DATA $12, $3E
+DATA $0F, $3E
+DATA $0D, $3F
+DATA $0B, $3F
+DATA $09, $3F
+DATA $07, $40
+DATA $04, $40
+DATA $02, $40
+DATA $00, $40
+DATA $FE, $40
+DATA $FC, $40
+DATA $F9, $40
+DATA $F7, $3F
+DATA $F5, $3F
+DATA $F3, $3F
+DATA $F1, $3E
+DATA $EE, $3E
+DATA $EC, $3D
+DATA $EA, $3C
+DATA $E8, $3B
+DATA $E6, $3A
+DATA $E4, $3A
+DATA $E2, $39
+DATA $E0, $37
+DATA $DE, $36
+DATA $DC, $35
+DATA $DA, $34
+DATA $D9, $32
+DATA $D7, $31
+DATA $D5, $30
+DATA $D4, $2E
+DATA $D2, $2C
+DATA $D0, $2B
+DATA $CF, $29
+DATA $CE, $27
+DATA $CC, $26
+DATA $CB, $24
+DATA $CA, $22
+DATA $C9, $20
+DATA $C7, $1E
+DATA $C6, $1C
+DATA $C6, $1A
+DATA $C5, $18
+DATA $C4, $16
+DATA $C3, $14
+DATA $C2, $12
+DATA $C2, $0F
+DATA $C1, $0D
+DATA $C1, $0B
+DATA $C1, $09
+DATA $C0, $07
+DATA $C0, $04
+DATA $C0, $02
+DATA $C0, $00
+DATA $C0, $FE
+DATA $C0, $FC
+DATA $C0, $F9
+DATA $C1, $F7
+DATA $C1, $F5
+DATA $C1, $F3
+DATA $C2, $F1
+DATA $C2, $EE
+DATA $C3, $EC
+DATA $C4, $EA
+DATA $C5, $E8
+DATA $C6, $E6
+DATA $C6, $E4
+DATA $C7, $E2
+DATA $C9, $E0
+DATA $CA, $DE
+DATA $CB, $DC
+DATA $CC, $DA
+DATA $CE, $D9
+DATA $CF, $D7
+DATA $D0, $D5
+DATA $D2, $D4
+DATA $D4, $D2
+DATA $D5, $D0
+DATA $D7, $CF
+DATA $D9, $CE
+DATA $DA, $CC
+DATA $DC, $CB
+DATA $DE, $CA
+DATA $E0, $C9
+DATA $E2, $C7
+DATA $E4, $C6
+DATA $E6, $C6
+DATA $E8, $C5
+DATA $EA, $C4
+DATA $EC, $C3
+DATA $EE, $C2
+DATA $F1, $C2
+DATA $F3, $C1
+DATA $F5, $C1
+DATA $F7, $C1
+DATA $F9, $C0
+DATA $FC, $C0
+DATA $FE, $C0
+DATA $00, $C0
+DATA $02, $C0
+DATA $04, $C0
+DATA $07, $C0
+DATA $09, $C1
+DATA $0B, $C1
+DATA $0D, $C1
+DATA $0F, $C2
+DATA $12, $C2
+DATA $14, $C3
+DATA $16, $C4
+DATA $18, $C5
+DATA $1A, $C6
+DATA $1C, $C6
+DATA $1E, $C7
+DATA $20, $C9
+DATA $22, $CA
+DATA $24, $CB
+DATA $26, $CC
+DATA $27, $CE
+DATA $29, $CF
+DATA $2B, $D0
+DATA $2C, $D2
+DATA $2E, $D4
+DATA $30, $D5
+DATA $31, $D7
+DATA $32, $D9
+DATA $34, $DA
+DATA $35, $DC
+DATA $36, $DE
+DATA $37, $E0
+DATA $39, $E2
+DATA $3A, $E4
+DATA $3A, $E6
+DATA $3B, $E8
+DATA $3C, $EA
+DATA $3D, $EC
+DATA $3E, $EE
+DATA $3E, $F1
+DATA $3F, $F3
+DATA $3F, $F5
+DATA $3F, $F7
+DATA $40, $F9
+DATA $40, $FC
+DATA $40, $FE
+
+`____________________________________________________________________________[$8AF6]___
+`OBJECT: spear (Labyrinth)
+
+PROC :doObjectCode_trap_spear {
+	set	5,(ix+$18)
+	bit	0,(ix+$18)
+	jr	nz,._1
+	ld	l,(ix+#object.X+0)
+	ld	h,(ix+#object.X+1)
+	ld	de,$000c
+	add	hl,de
+	ld	(ix+#object.X+0),l
+	ld	(ix+#object.X+1),h
+	set	0,(ix+$18)
+._1	ld	l,(ix+#object.X+0)
+	ld	h,(ix+#object.X+1)
+	ld	(#RAM_TEMP1),hl
+	ld	l,(ix+#object.Y+0)
+	ld	h,(ix+#object.Y+1)
+	ld	(#RAM_TEMP3),hl
+	ld	hl,$0000
+	ld	(#RAM_TEMP4),hl
+	ld	a,(#RAM_FRAMECOUNT)
+	rlca	
+	rlca	
+	and	$03
+	jr	nz,._2
+	ld	hl,:_8bbc
+	ld	a,(#RAM_FRAMECOUNT)
+	and	$3f
+	ld	e,a
+	cp	$08
+	jr	c,._5
+	ld	hl,:_8bcd
+	ld	e,$00
+	jr	._5
+	
+._2	cp	$01
+	jr	nz,._3
+	ld	hl,:_8bcd
+	ld	e,$00
+	jr	._5
+	
+._3	cp	$02
+	jr	nz,._4
+	ld	hl,:_8bc4
+	ld	a,(#RAM_FRAMECOUNT)
+	and	$3f
+	ld	e,a
+	cp	$08
+	jr	c,._5
+	ld	hl,:_8bcc
+	ld	e,$00
+	jr	._5
+	
+._4	ld	hl,:_8bcc
+	ld	e,$00
+._5	ld	d,$00
+	add	hl,de
+	ld	a,(hl)
+	ld	hl,:_8bce
+	add	a,a
+	add	a,a
+	add	a,a
+	ld	e,a
+	add	hl,de
+	ld	b,$03
+	
+.loop	push	bc
+	ld	a,(hl)
+	inc	hl
+	ld	e,(hl)
+	inc	hl
+	and	a
+	jp	m,._6
+	push	hl
+	ld	d,$00
+	ld	(#RAM_TEMP6),de
+	call	:_3581
+	pop	hl
+._6	pop	bc
+	djnz	.loop
+	
+	ld	(ix+#object.spriteLayout+0),b
+	ld	(ix+#object.spriteLayout+1),b
+	ld	d,(hl)
+	ld	e,$04
+	ld	(#RAM_TEMP6),de
+	inc	hl
+	ld	a,(hl)
+	ld	(ix+#object.width),$01
+	ld	(ix+#object.height),a
+	call	:_LABEL_3956_11
+	call	nc,:_35fd
+	ld	a,(#RAM_FRAMECOUNT)
+	cp	$80
+	ret	nz
+	ld	a,$1d
+	rst	::playSFX
+	ret
+}
+
+:_8bbc
+DATA $00 $01 $02 $03 $04 $05 $06 $07
+:_8bc4
+DATA $07 $06 $05 $04 $03 $02 $01 $00
+:_8bcc
+DATA $00
+:_8bcd
+DATA $08
+:_8bce
+DATA $12, $00, $32, $10, $32, $20, $01, $30, $12, $04, $32, $14, $32, $20, $02, $30
+DATA $12, $08, $32, $18, $32, $20, $06, $30, $12, $0C, $32, $1C, $32, $20, $0A, $30
+DATA $12, $10, $32, $20, $FF, $00, $0E, $30, $12, $14, $32, $20, $FF, $00, $12, $30
+DATA $12, $18, $32, $20, $FF, $00, $16, $30, $12, $1C, $32, $20, $FF, $00, $1A, $30
+DATA $12, $20, $FF, $00, $FF, $00, $1E, $30
+
+`____________________________________________________________________________[$8C16]___
+`OBJECT: fireball head (Labyrinth)
+
+PROC :doObjectCode_trap_fireball {
+	res	5,(ix+$18)
+	ld	(ix+#object.width),$04
+	ld	(ix+#object.height),$0a
+	bit	0,(ix+$18)
+	jr	nz,._1
+	ld	l,(ix+#object.X+0)
+	ld	h,(ix+#object.X+1)
+	ld	de,$000a
+	add	hl,de
+	ld	(ix+#object.X+0),l
+	ld	(ix+#object.X+1),h
+	ld	(ix+$12),l
+	ld	(ix+$13),h
+	ld	l,(ix+#object.Y+0)
+	ld	h,(ix+#object.Y+1)
+	ld	de,$0008
+	add	hl,de
+	ld	(ix+#object.Y+0),l
+	ld	(ix+#object.Y+1),h
+	ld	(ix+$14),l
+	ld	(ix+$15),h
+	ld	(ix+$11),$96
+	set	0,(ix+$18)
+	ld	bc,$0000
+	ld	de,$0000
+	call	:getFloorLayoutRAMPositionForObject
+	ld	a,(hl)
+	cp	$52
+	jr	z,._3
+	set	1,(ix+$18)
+._1	ld	a,(ix+$11)
+	and	a
+	jr	z,._4
+	dec	(ix+$11)
+	jr	z,._3
+._2	xor	a
+	ld	(ix+#object.spriteLayout+0),a
+	ld	(ix+#object.spriteLayout+1),a
+	ld	(ix+#object.Xspeed+0),a
+	ld	(ix+#object.Xspeed+1),a
+	ld	(ix+#object.Xdirection),a
+	ret
+	
+._3	ld	a,$18
+	rst	::playSFX
+._4	xor	a
+	bit	1,(ix+$18)
+	jr	nz,._5
+	ld	(ix+#object.Xspeed+0),$00
+	ld	(ix+#object.Xspeed+1),$ff
+	ld	(ix+#object.Xdirection),$ff
+	ld	(ix+#object.spriteLayout+0),:_8d39.lo
+	ld	(ix+#object.spriteLayout+1),:_8d39.hi
+	jr	._6
+	
+._5	ld	(ix+#object.Xspeed+0),a
+	ld	(ix+#object.Xspeed+1),$01
+	ld	(ix+#object.Xdirection),a
+	ld	(ix+#object.spriteLayout+0),:_8d41.lo
+	ld	(ix+#object.spriteLayout+1),:_8d41.hi
+._6	ld	(ix+#object.Yspeed+0),a
+	ld	(ix+#object.Yspeed+1),a
+	ld	(ix+#object.Ydirection),a
+	bit	6,(ix+$18)
+	jr	nz,._7
+	bit	7,(ix+$18)
+	jr	nz,._7
+	ld	hl,$0402
+	ld	(#RAM_TEMP6),hl
+	call	:_LABEL_3956_11
+	call	nc,:_35fd
+	ld	e,(ix+#object.X+0)
+	ld	d,(ix+#object.X+1)
+	ld	hl,(#RAM_CAMERA_X)
+	ld	bc,$fff0
+	add	hl,bc
+	and	a
+	sbc	hl,de
+	jr	nc,._7
+	ld	hl,(#RAM_CAMERA_X)
+	ld	bc,$0110
+	add	hl,bc
+	and	a
+	sbc	hl,de
+	jr	c,._7
+	ld	e,(ix+#object.Y+0)
+	ld	d,(ix+#object.Y+1)
+	ld	hl,(#RAM_CAMERA_Y)
+	ld	bc,$fff0
+	add	hl,bc
+	and	a
+	sbc	hl,de
+	jr	nc,._7
+	ld	hl,(#RAM_CAMERA_Y)
+	ld	bc,$00d0
+	add	hl,bc
+	and	a
+	sbc	hl,de
+	jr	c,._7
+	ret
+	
+._7	ld	l,(ix+$12)
+	ld	h,(ix+$13)
+	ld	(ix+#object.X+0),l
+	ld	(ix+#object.X+1),h
+	ld	l,(ix+$14)
+	ld	h,(ix+$15)
+	ld	(ix+#object.Y+0),l
+	ld	(ix+#object.Y+1),h
+	ld	(ix+$11),$96
+	jp	._2
+}
+
+`sprite layout
+:_8d39
+DATA $2E, $FF, $FF, $FF, $FF, $FF
+DATA $FF, $FF
+:_8d41
+DATA $30, $FF, $FF, $FF, $FF, $FF
+DATA $FF
+
+`____________________________________________________________________________[$8D48]___
+`OBJECT: meta - water line position (Labyrinth)
+
+PROC :doObjectCode_meta_water {
+	set	5,(ix+$18)
+	ld	a,(ix+$11)
+	ld	e,a
+	ld	d,$00
+	ld	hl,:_8e36
+	add	hl,de
+	ld	e,(hl)
+	ld	a,d
+	bit	7,e
+	jr	z,._1
+	dec	a
+	dec	d
+._1	ld	l,(ix+$04)
+	ld	h,(ix+#object.Y+0)
+	add	hl,de
+	adc	a,(ix+#object.Y+1)
+	ld	(ix+$04),l
+	ld	(ix+#object.Y+0),h
+	ld	(ix+#object.Y+1),a
+	ld	l,h
+	ld	h,(ix+#object.Y+1)
+	ld	a,(#RAM_FRAMECOUNT)
+	and	$0f
+	jr	nz,._2
+	inc	(ix+$11)
+	ld	a,(ix+$11)
+	cp	$20
+	jr	c,._2
+	ld	(ix+$11),$00
+._2	ld	($D2DC),hl
+	ld	de,(#RAM_CAMERA_Y)
+	and	a
+	ld	a,$ff
+	sbc	hl,de
+	jr	c,._3
+	ex	de,hl
+	ld	hl,$000c
+	ld	a,$ff
+	sbc	hl,de
+	jr	nc,._3
+	ld	hl,$00b4
+	xor	a
+	sbc	hl,de
+	jr	c,._3
+	ld	a,e
+._3	ld	(#RAM_WATERLINE),a
+	and	a
+	ret	z
+	cp	$ff
+	ret	z
+	add	a,$09
+	ld	l,a
+	ld	h,$00
+	ld	(#RAM_TEMP6),hl
+	ld	hl,(#RAM_CAMERA_X)
+	ld	(#RAM_TEMP1),hl
+	ld	hl,(#RAM_CAMERA_Y)
+	ld	(#RAM_TEMP3),hl
+	ld	a,(iy+#vars.spriteUpdateCount)
+	ld	hl,(#RAM_SPRITETABLE_CURRENT)
+	push	af
+	push	hl
+	ld	hl,#RAM_SPRITETABLE
+	ld	(#RAM_SPRITETABLE_CURRENT),hl
+	ld	a,(#RAM_FRAMECOUNT)
+	and	$03
+	add	a,a
+	add	a,a
+	ld	c,a
+	ld	b,$00
+	ld	hl,:_8e16
+	add	hl,bc
+	ld	b,$04
+	
+.loop	push	bc
+	ld	c,(hl)
+	inc	hl
+	push	hl
+	ld	a,(#RAM_FRAMECOUNT)
+	and	$0f
+	add	a,c
+	ld	l,a
+	ld	h,$00
+	ld	(#RAM_TEMP4),hl
+	ld	a,$00
+	call	:_3581
+	ld	hl,(#RAM_TEMP4)
+	ld	de,$0008
+	add	hl,de
+	ld	(#RAM_TEMP4),hl
+	ld	a,$02
+	call	:_3581
+	pop	hl
+	pop	bc
+	djnz	.loop
+	
+	pop	hl
+	pop	af
+	ld	(#RAM_SPRITETABLE_CURRENT),hl
+	ld	(iy+#vars.spriteUpdateCount),a
+	ret
+}
+
+:_8e16
+DATA $00, $40, $80, $C0, $10, $50, $90, $D0, $20, $60, $A0, $E0, $30, $70, $B0, $F0
+DATA $08, $48, $88, $C8, $18, $58, $98, $D8, $28, $68, $A8, $E8, $38, $78, $B8, $F8
+:_8e36
+DATA $FE, $FC, $F8, $F0, $E8, $D8, $C8, $C8, $C8, $C8, $D8, $E8, $F0, $F8, $FC, $FE
+DATA $02, $04, $08, $10, $18, $28, $38, $38, $38, $38, $28, $18, $10, $08, $04, $02
+
+`____________________________________________________________________________[$8E56]___
+`OBJECT: bubbles (Labyrinth)
+
+PROC :doObjectCode_powerUp_bubbles {
+	set	5,(ix+$18)
+	ld	a,(ix+$12)
+	and	$7f
+	jr	nz,._1
+	call	:_LABEL_625_57
+	and	$07
+	ld	e,a
+	ld	d,$00
+	ld	hl,:_8ec2
+	add	hl,de
+	bit	0,(hl)
+	call	nz,:_91eb
+._1	ld	l,(ix+#object.X+0)
+	ld	h,(ix+#object.X+1)
+	ld	(#RAM_TEMP1),hl
+	ld	l,(ix+#object.Y+0)
+	ld	h,(ix+#object.Y+1)
+	ld	(#RAM_TEMP3),hl
+	ld	a,(ix+$11)
+	add	a,a
+	ld	e,a
+	ld	d,$00
+	ld	hl,:_8eb6
+	add	hl,de
+	ld	e,(hl)
+	ld	(#RAM_TEMP4),de
+	inc	hl
+	ld	e,(hl)
+	ld	(#RAM_TEMP6),de
+	ld	a,$0c
+	call	:_3581
+	inc	(ix+$12)
+	ld	a,(#RAM_FRAMECOUNT)
+	and	$07
+	ret	nz
+	inc	(ix+$11)
+	ld	a,(ix+$11)
+	cp	$06
+	ret	c
+	ld	(ix+$11),$00
+	ret
+}
+
+:_8eb6
+DATA $08, $05, $08, $04, $07, $03
+:_8ebc
+DATA $06, $02, $07, $01, $06, $00
+:_8ec2
+DATA $01, $00, $01, $01, $00, $01, $00, $01
+
+`____________________________________________________________________________[$8ECA]___
+`OBJECT: UNKNOWN
+
+PROC :_8eca {
+	set	5, (ix+$18)
+	xor	a
+	ld	(ix+#object.spriteLayout+0),a
+	ld	(ix+#object.spriteLayout+1),a
+	ld	a,(ix+$11)
+	and	$0f
+	jr	nz,._2
+	call	:_LABEL_625_57
+	ld	bc,$0020
+	ld	d,$00
+	and	$3f
+	cp	$20
+	jr	c,._1
+	ld	bc,$ffe0
+	ld	d,$ff
+._1	ld	(ix+#object.Xspeed+0),c
+	ld	(ix+#object.Xspeed+1),b
+	ld	(ix+#object.Xdirection),d
+._2	ld	(ix+#object.Yspeed+0),$a0
+	ld	(ix+#object.Yspeed+1),$ff
+	ld	(ix+#object.Ydirection),$ff
+	ld	l,(ix+#object.X+0)
+	ld	h,(ix+#object.X+1)
+	ld	(#RAM_TEMP1),hl
+	ex	de,hl
+	ld	hl,(#RAM_CAMERA_X)
+	ld	bc,$0008
+	xor	a
+	sbc	hl,bc
+	jr	nc,._3
+	ld	l,a
+	ld	h,a
+._3	and	a
+	sbc	hl,de
+	jr	nc,._4
+	ld	hl,(#RAM_CAMERA_X)
+	ld	bc,$0100
+	add	hl,bc
+	and	a
+	sbc	hl,de
+	jr	c,._4
+	ld	l,(ix+#object.Y+0)
+	ld	h,(ix+#object.Y+1)
+	ld	(#RAM_TEMP3),hl
+	ex	de,hl
+	ld	hl,($D2DC)
+	and	a
+	sbc	hl,de
+	jr	nc,._4
+	ld	hl,(#RAM_CAMERA_Y)
+	ld	bc,$fff0
+	add	hl,bc
+	and	a
+	sbc	hl,de
+	jr	nc,._4
+	ld	hl,(#RAM_CAMERA_Y)
+	ld	bc,$00c0
+	add	hl,bc
+	and	a
+	sbc	hl,de
+	jr	nc,._5
+._4	ld	(ix+#object.type),$FF	`remove object?
+._5	ld	hl,$0000
+	ld	(#RAM_TEMP4),hl
+	ld	(#RAM_TEMP6),hl
+	ld	a,$0c
+	call	:_3581
+	inc	(ix+$11)
+	ret
+}
+
+`____________________________________________________________________________[$8F6C]___
+`OBJECT: UNKNOWN
+
+PROC :doObjectCode_null {
+	ret				`object nullified!
+}
+
+`____________________________________________________________________________[$8F6D]___
+`OBJECT: badnick - Burrobot (Labyrinth)
+
+PROC :doObjectCode_badnick_burrobot {
+	ld	(ix+#object.width),$0c
+	ld	(ix+#object.height),$20
+	ld	hl,$0202
+	ld	(#RAM_TEMP6),hl
+	call	:_LABEL_3956_11
+	ld	hl,$0800
+	ld	(#RAM_TEMP1),hl
+	call	nc,:_35e5
+	ld	l,(ix+#object.Yspeed+0)
+	ld	h,(ix+#object.Yspeed+1)
+	ld	a,(ix+#object.Ydirection)
+	ld	de,$0010
+	add	hl,de
+	adc	a,$00
+	ld	c,a
+	jp	m,._1
+	ld	a,h
+	cp	$04
+	jr	c,._1
+	ld	hl,$0300
+	ld	c,$00
+._1	ld	(ix+#object.Yspeed+0),l
+	ld	(ix+#object.Yspeed+1),h
+	ld	(ix+#object.Ydirection),c
+	bit	0,(ix+$18)
+	jp	nz,._4
+	ld	de,$ffd0
+	ld	l,(ix+#object.X+0)
+	ld	h,(ix+#object.X+1)
+	add	hl,de
+	ld	de,(#RAM_SONIC.X)
+	and	a
+	sbc	hl,de
+	jr	nc,._2
+	ld	bc,$0030
+	ld	l,(ix+#object.X+0)
+	ld	h,(ix+#object.X+1)
+	add	hl,bc
+	and	a
+	sbc	hl,de
+	jr	c,._2
+	set	0,(ix+$18)
+	ld	(ix+#object.Yspeed+0),$80
+	ld	(ix+#object.Yspeed+1),$fd
+	ld	(ix+#object.Ydirection),$ff
+._2	ld	l,(ix+#object.X+0)
+	ld	h,(ix+#object.X+1)
+	ld	de,(#RAM_SONIC.X)
+	and	a
+	sbc	hl,de
+	jr	c,._3
+	ld	(ix+#object.Xspeed+0),$c0
+	ld	(ix+#object.Xspeed+1),$ff
+	ld	(ix+#object.Xdirection),$ff
+	ld	de,:_9059
+	ld	bc,:_904a
+	call	:_7c41
+	set	1,(ix+$18)
+	ret
+	
+._3	ld	(ix+#object.Xspeed+0),$40
+	ld	(ix+#object.Xspeed+1),$00
+	ld	(ix+#object.Xdirection),$00
+	ld	de,:_9059
+	ld	bc,:_9045
+	call	:_7c41
+	res	1,(ix+$18)
+	ret
+	
+._4	ld	bc,:_9054
+	bit	1,(ix+$18)
+	jr	nz,._5
+	ld	bc,:_904f
+._5	ld	de,:_9059
+	call	:_7c41
+	bit	7,(ix+$18)
+	ret	z
+	res	0,(ix+$18)
+	ret
+}
+
+:_9045
+DATA $00, $04, $01, $04, $FF
+:_904a
+DATA $02, $04, $03, $04, $FF
+:_904f
+DATA $04, $04, $04, $04, $FF
+:_9054
+DATA $05, $04, $05, $04, $FF
+
+`sprite layout
+:_9059
+DATA $44, $46, $FF, $FF, $FF, $FF
+DATA $64, $66, $FF, $FF, $FF, $FF
+DATA $FF, $FF, $FF, $FF, $FF, $FF
+
+DATA $44, $46, $FF, $FF, $FF, $FF
+DATA $48, $4A, $FF, $FF, $FF, $FF
+DATA $FF, $FF, $FF, $FF, $FF, $FF
+
+DATA $50, $52, $FF, $FF, $FF, $FF
+DATA $70, $72, $FF, $FF, $FF, $FF
+DATA $FF, $FF, $FF, $FF, $FF, $FF
+
+DATA $50, $52, $FF, $FF, $FF, $FF
+DATA $4C, $4E, $FF, $FF, $FF, $FF
+DATA $FF, $FF, $FF, $FF, $FF, $FF
+
+DATA $44, $46, $FF, $FF, $FF, $FF
+DATA $68, $6A, $FF, $FF, $FF, $FF
+DATA $FF, $FF, $FF, $FF, $FF, $FF
+
+DATA $50, $52, $FF, $FF, $FF, $FF
+DATA $6C, $6E, $FF, $FF, $FF, $FF
+DATA $FF
+
+`____________________________________________________________________________[$90C0]___
+`OBJECT: platform - float up (Labyrinth)
+
+PROC :doObjectCode_platform_float {
+	set	5,(ix+$18)
+	ld	(ix+#object.width),$1e
+	ld	(ix+#object.height),$1c
+	ld	(ix+#object.spriteLayout+0),:_91de.lo
+	ld	(ix+#object.spriteLayout+1),:_91de.hi
+	bit	1,(ix+$18)
+	jr	nz,._1
+	ld	l,(ix+#object.X+0)
+	ld	h,(ix+#object.X+1)
+	ld	(ix+$11),l
+	ld	(ix+$12),h
+	ld	l,(ix+#object.Y+0)
+	ld	h,(ix+#object.Y+1)
+	ld	de,$ffff
+	add	hl,de
+	ld	(ix+#object.Y+0),l
+	ld	(ix+#object.Y+1),h
+	ld	(ix+$13),l
+	ld	(ix+$14),h
+	set	1,(ix+$18)
+._1	ld	bc,$0010
+	ld	de,$0020
+	call	:getFloorLayoutRAMPositionForObject
+	ld	e,(hl)
+	ld	d,$00
+	ld	a,(#RAM_LEVEL_SOLIDITY)
+	add	a,a
+	ld	c,a
+	ld	b,d
+	ld	hl,:S1_SolidityPointers
+	add	hl,bc
+	ld	a,(hl)
+	inc	hl
+	ld	h,(hl)
+	ld	l,a
+	add	hl,de
+	ld	a,(hl)
+	and	$3f
+	ld	c,$00
+	ld	l,c
+	ld	h,c
+	cp	$1e
+	jr	z,._2
+	bit	0,(ix+$18)
+	jr	z,._3
+	ld	l,(ix+#object.Yspeed+0)
+	ld	h,(ix+#object.Yspeed+1)
+	ld	a,(ix+#object.Ydirection)
+	ld	de,$fff8
+	add	hl,de
+	adc	a,$ff
+	ld	c,a
+	ld	a,h
+	neg	
+	cp	$02
+	jr	c,._2
+	ld	hl,$ff00
+	ld	c,$ff
+._2	ld	(ix+#object.Yspeed+0),l
+	ld	(ix+#object.Yspeed+1),h
+	ld	(ix+#object.Ydirection),c
+._3	ld	e,(ix+#object.X+0)
+	ld	d,(ix+#object.X+1)
+	ld	hl,(#RAM_CAMERA_X)
+	ld	bc,$ffe0
+	add	hl,bc
+	and	a
+	sbc	hl,de
+	jr	nc,._4
+	ld	hl,(#RAM_CAMERA_X)
+	inc	h
+	and	a
+	sbc	hl,de
+	jr	c,._4
+	ld	e,(ix+#object.Y+0)
+	ld	d,(ix+#object.Y+1)
+	ld	hl,(#RAM_CAMERA_Y)
+	ld	bc,$ffe0
+	add	hl,bc
+	and	a
+	sbc	hl,de
+	jr	nc,._4
+	ld	hl,(#RAM_CAMERA_Y)
+	ld	bc,$00e0
+	add	hl,bc
+	and	a
+	sbc	hl,de
+	jr	nc,._5
+._4	ld	l,(ix+$11)
+	ld	h,(ix+$12)
+	ld	(ix+#object.X+0),l
+	ld	(ix+#object.X+1),h
+	ld	l,(ix+$13)
+	ld	h,(ix+$14)
+	ld	(ix+#object.Y+0),l
+	ld	(ix+#object.Y+1),h
+	xor	a			`set A to 0
+	ld	(ix+$01),a
+	ld	(ix+$04),a
+	ld	(ix+#object.Yspeed+0),a
+	ld	(ix+#object.Yspeed+1),a
+	ld	(ix+#object.Ydirection),a
+	res	0,(ix+$18)
+	ret
+	
+._5	ld	hl,$0e02
+	ld	(#RAM_TEMP6),hl
+	call	:_LABEL_3956_11
+	ret	c
+	set	0,(ix+$18)
+	ld	a,(#RAM_SONIC.Yspeed+1)
+	and	a
+	jp	p,._6
+	neg	
+	cp	$02
+	ret	nc
+	
+._6	ld	e,(ix+#object.Yspeed+0)
+	ld	d,(ix+#object.Yspeed+1)
+	ld	bc,$0010
+	call	:_LABEL_7CC1_12
+	ret
+}
+
+`sprite layout
+:_91de
+DATA $FE, $FF, $FF, $FF, $FF, $FF
+DATA $16, $18, $1A, $1C, $FF, $FF
+DATA $FF
+
+`____________________________________________________________________________[$91EB]___
+
+PROC :_91eb {
+	call	:_7c7b
+	ret	c
+	ld	c,$42
+	ld	a,(ix+#object.type)
+	cp	$41
+	jr	nz,._1
+	push	hl
+	call	:_LABEL_625_57
+	and	$0f
+	ld	e,a
+	ld	d,$00
+	ld	hl,:_9257
+	add	hl,de
+	ld	c,(hl)
+	pop	hl
+._1	ld	a,c
+	ld	e,(ix+#object.X+0)
+	ld	d,(ix+#object.X+1)
+	ld	c,(ix+#object.Y+0)
+	ld	b,(ix+#object.Y+1)
+	push	ix
+	push	hl
+	pop	ix
+	ld	(ix+#object.type),a
+	xor	a			`set A to 0
+	ld	(ix+$01),a
+	call	:_LABEL_625_57
+	and	$0f
+	ld	l,a
+	ld	h,$00
+	add	hl,de
+	ld	(ix+#object.X+0),l
+	ld	(ix+#object.X+1),h
+	ld	(ix+$04),$00
+	call	:_LABEL_625_57
+	and	$0f
+	ld	l,a
+	xor	a
+	ld	h,a
+	add	hl,bc
+	ld	(ix+#object.Y+0),l
+	ld	(ix+#object.Y+1),h
+	ld	(ix+$11),a
+	ld	(ix+$12),a
+	ld	(ix+$18),a
+	ld	(ix+#object.Xspeed+0),a
+	ld	(ix+#object.Xspeed+1),a
+	ld	(ix+#object.Xdirection),a
+	pop	ix
+	ret
+}
+
+:_9257
+DATA $42, $20, $20, $20, $42, $20, $20, $20, $42, $20, $20, $20, $42, $20, $20, $20
+
+`____________________________________________________________________________[$9267]___
+`OBJECT: boss (Labyrinth)
+
+PROC :doObjectCode_boss_labyrinth {
+	set	5, (ix+$18)
+	ld	(ix+#object.width), $20
+	ld	(ix+#object.height), $1C
+	call	:_7ca6
+	ld	(ix+#object.spriteLayout+0),:_9493.lo
+	ld	(ix+#object.spriteLayout+1),:_9493.hi
+	bit	0,(ix+$18)
+	jr	nz,._1
+	
+	ld	hl,$02d0
+	ld	de,$0290
+	call	:_7c8c
+	
+	set	1,(iy+#vars.flags9)
+	
+	`UNKNOWN
+	ld	hl,$e508
+	ld	de,$2000
+	ld	a,12
+	call	:decompressArt
+	
+	ld	hl,:S1_BossPalette
+	ld	a,%00000010
+	call	:loadPaletteOnInterrupt
+	xor	a
+	ld	($D2EC),a
+	
+	ld	a,#index_music_boss1
+	rst	::playMusic
+	
+	set	0,(ix+$18)
+._1	ld	a,(ix+$11)
+	and	a
+	jr	nz,._2
+	ld	a,(ix+$13)
+	add	a,a
+	add	a,a
+	ld	e,a
+	ld	d,$00
+	ld	hl,:_947b
+	add	hl,de
+	ld	a,(hl)
+	ld	(ix+#object.X+0),a
+	inc	hl
+	ld	a,(hl)
+	inc	hl
+	ld	(ix+#object.X+1),a
+	ld	a,(hl)
+	inc	hl
+	ld	(ix+#object.Y+0),a
+	ld	a,(hl)
+	inc	hl
+	ld	(ix+#object.Y+1),a
+	inc	(ix+$11)
+	jp	._
+	
+._2	dec	a
+	jr	nz,._5
+	ld	a,(ix+$13)
+	and	a
+	jr	nz,._3
+	ld	(ix+#object.Yspeed+0),$80
+	ld	(ix+#object.Yspeed+1),$ff
+	ld	(ix+#object.Ydirection),$ff
+	jp	._4
+	
+._3	ld	(ix+#object.Yspeed+0),$80
+	ld	(ix+#object.Yspeed+1),$00
+	ld	(ix+#object.Ydirection),$00
+._4	ld	hl,:_9487
+	ld	a,(ix+$13)
+	add	a,a
+	ld	e,a
+	ld	d,$00
+	add	hl,de
+	ld	a,(hl)
+	inc	hl
+	ld	h,(hl)
+	ld	l,a
+	ld	e,(ix+#object.Y+0)
+	ld	d,(ix+#object.Y+1)
+	and	a
+	sbc	hl,de
+	jp	nz,._
+	inc	(ix+$11)
+	ld	(ix+$12),$00
+	jp	._
+	
+._5	dec	a
+	jp	nz,._6
+	xor	a
+	ld	(ix+#object.Yspeed+0),a
+	ld	(ix+#object.Yspeed+1),a
+	ld	(ix+#object.Ydirection),a
+	inc	(ix+$12)
+	ld	a,(ix+$12)
+	cp	$64
+	jp	nz,._
+	inc	(ix+$11)
+	ld	l,(ix+#object.X+0)
+	ld	h,(ix+#object.X+1)
+	ld	de,$000f
+	add	hl,de
+	ld	(#RAM_TEMP1),hl
+	ld	l,(ix+#object.Y+0)
+	ld	h,(ix+#object.Y+1)
+	ld	bc,$0022
+	add	hl,bc
+	ld	(#RAM_TEMP3),hl
+	ld	a,(ix+$13)
+	and	a
+	jp	z,._9432
+	ld	a,($D2EC)
+	cp	$08
+	jp	nc,._
+	call	:_7c7b
+	jp	c,._
+	push	ix
+	push	hl
+	pop	ix
+	xor	a			`set A to 0
+	ld	(ix+#object.type),$2F	`unknown object
+	ld	hl,(#RAM_TEMP1)
+	ld	(ix+$01),a
+	ld	(ix+#object.X+0),l
+	ld	(ix+#object.X+1),h
+	ld	hl,(#RAM_TEMP3)
+	ld	(ix+$04),a
+	ld	(ix+#object.Y+0),l
+	ld	(ix+#object.Y+1),h
+	ld	(ix+$18),a
+	ld	(ix+#object.Xspeed+0),a
+	ld	(ix+#object.Xspeed+1),a
+	ld	(ix+#object.Xdirection),a
+	ld	(ix+#object.Yspeed+0),a
+	ld	(ix+#object.Yspeed+1),a
+	ld	(ix+#object.Ydirection),a
+	pop	ix
+	jp	._
+	
+._6	ld	a,(ix+$13)
+	and	a
+	jr	nz,._7
+	ld	(ix+#object.Yspeed+0),$80
+	ld	(ix+#object.Yspeed+1),$00
+	ld	(ix+#object.Ydirection),$00
+	jp	._8
+	
+._7	ld	(ix+#object.Yspeed+0),$80
+	ld	(ix+#object.Yspeed+1),$ff
+	ld	(ix+#object.Ydirection),$ff
+._8	ld	hl,$948d
+	ld	a,(ix+$13)
+	add	a,a
+	ld	e,a
+	ld	d,$00
+	add	hl,de
+	ld	a,(hl)
+	inc	hl
+	ld	h,(hl)
+	ld	l,a
+	ld	e,(ix+#object.Y+0)
+	ld	d,(ix+#object.Y+1)
+	xor	a
+	sbc	hl,de
+	jr	nz,._
+	ld	(ix+$11),a
+	inc	(ix+$13)
+	ld	a,(ix+$13)
+	cp	$03
+	jr	c,._
+	ld	(ix+$13),$00
+._	ld      hl,$00a2
+	ld	($D216),hl
+	call	:_77be
+	ld	a,($D2EC)
+	cp	$08
+	ret	nc
+	bit	7,(ix+#object.Ydirection)
+	ret	z
+	ld	l,(ix+#object.X+0)
+	ld	h,(ix+#object.X+1)
+	ld	(#RAM_TEMP1),hl
+	ld	l,(ix+#object.Y+0)
+	ld	h,(ix+#object.Y+1)
+	ld	(#RAM_TEMP3),hl
+	ld	hl,$0010
+	ld	(#RAM_TEMP4),hl
+	ld	hl,$0030
+	ld	(#RAM_TEMP6),hl
+	ld	a,(#RAM_FRAMECOUNT)
+	and	$02
+	call	:_3581
+	ret
+	
+._9432	ld	l,(ix+#object.X+0)
+	ld	h,(ix+#object.X+1)
+	ld	de,$0004
+	add	hl,de
+	ld	(#RAM_TEMP1),hl
+	ld	l,(ix+#object.Y+0)
+	ld	h,(ix+#object.Y+1)
+	ld	de,$fffa
+	add	hl,de
+	ld	(#RAM_TEMP3),hl
+	ld	hl,$ff00
+	ld	(#RAM_TEMP4),hl
+	ld	hl,$ff00
+	ld	(#RAM_TEMP6),hl
+	ld	c,$04
+	call	:_85d1
+	ld	l,(ix+#object.X+0)
+	ld	h,(ix+#object.X+1)
+	ld	de,$0020
+	add	hl,de
+	ld	(#RAM_TEMP1),hl
+	ld	hl,$0100
+	ld	(#RAM_TEMP4),hl
+	ld	c,$04
+	call	:_85d1
+	ld	a,$01
+	rst	::playSFX
+	jp	._
+}
+
+:_947b
+DATA $3C, $03, $60, $03, $EC, $02, $60, $02, $8C, $03, $60, $02
+:_9487
+DATA $28, $03, $B0, $02, $B0
+:_948c
+DATA $02, $60, $03, $60, $02, $60, $02
+
+`sprite layout
+:_9493
+DATA $20, $22, $24, $26, $28, $FF
+DATA $40, $42, $44, $46, $48, $FF
+DATA $60, $62, $64, $66, $68, $FF
+
+`____________________________________________________________________________[$94A5]___
+`OBJECT: UNKNOWN
+
+PROC :_94a5 {
+	set	5,(ix+$18)
+	ld	(ix+#object.width),$08
+	ld	(ix+#object.height),$0a
+	ld	hl,$0404
+	ld	(#RAM_TEMP6),hl
+	call	:_LABEL_3956_11
+	call	nc,:_35fd
+	bit	1,(ix+$18)
+	jr	nz,._1
+	set	1,(ix+$18)
+	ld	hl,(#RAM_SONIC.X)
+	ld	de,$000c
+	add	hl,de
+	ex	de,hl
+	ld	l,(ix+#object.X+0)
+	ld	h,(ix+#object.X+1)
+	ld	bc,$0008
+	add	hl,bc
+	and	a
+	sbc	hl,de
+	jr	nc,._1
+	set	2,(ix+$18)
+._1	bit	0,(ix+$18)
+	jr	nz,._3
+	ld	(ix+#object.Yspeed+0),$40
+	ld	(ix+#object.Yspeed+1),$00
+	ld	(ix+#object.Ydirection),$00
+	ld	hl,:_9698
+	bit	2,(ix+$18)
+	jr	z,._2
+	ld	hl,:_9688
+._2	ld	(ix+#object.spriteLayout+0),l
+	ld	(ix+#object.spriteLayout+1),h
+	ld	hl,(#RAM_SONIC.Y+0)
+	ld	e,(ix+#object.Y+0)
+	ld	d,(ix+#object.Y+1)
+	and	a
+	sbc	hl,de
+	ret	nc
+	set	0,(ix+$18)
+	ret
+	
+._3	ld	c,(ix+#object.X+0)
+	ld	b,(ix+#object.X+1)
+	ld	hl,$fff0
+	add	hl,bc
+	ld	de,(#RAM_CAMERA_X)
+	and	a
+	sbc	hl,de
+	jr	c,._4
+	ld	l,c
+	ld	h,b
+	inc	d
+	and	a
+	sbc	hl,de
+	jr	nc,._4
+	ld	c,(ix+#object.Y+0)
+	ld	b,(ix+#object.Y+1)
+	ld	hl,$fff0
+	add	hl,bc
+	ld	de,(#RAM_CAMERA_Y)
+	and	a
+	sbc	hl,de
+	jr	c,._4
+	ld	hl,$00c0
+	add	hl,de
+	and	a
+	sbc	hl,bc
+	jr	nc,._5
+._4	ld	(ix+#object.type),$FF	`unknown object
+._5	xor	a
+	ld	hl,$0002
+	bit	2,(ix+$18)
+	jr	nz,._6
+	dec	a
+	ld	hl,$fffe
+._6	ld	e,(ix+#object.Xspeed+0)
+	ld	d,(ix+#object.Xspeed+1)
+	add	hl,de
+	adc	a,(ix+#object.Xdirection)
+	ld	c,a
+	ld	a,h
+	ld	de,$0100
+	bit	7,c
+	jr	z,._7
+	ld	a,l
+	cpl	
+	ld	e,a
+	ld	a,h
+	cpl	
+	ld	d,a
+	inc	de
+	ld	a,d
+	ld	de,$ff00
+._7	and	a
+	jr	z,._8
+	ex	de,hl
+._8	ld	(ix+#object.Xspeed+0),l
+	ld	(ix+#object.Xspeed+1),h
+	ld	(ix+#object.Xdirection),c
+	ld	hl,(#RAM_SONIC.Y+0)
+	ld	de,$0010
+	add	hl,de
+	ex	de,hl
+	ld	l,(ix+#object.Y+0)
+	ld	h,(ix+#object.Y+1)
+	ld	bc,$0008
+	add	hl,bc
+	and	a
+	sbc	hl,de
+	ld	a,$ff
+	ld	hl,$fffe
+	bit	7,(ix+#object.Ydirection)
+	jr	nz,._9
+	ld	hl,$fffc
+._9	jr	nc,._10
+	inc	a
+	ld	hl,$0002
+	bit	7,(ix+#object.Ydirection)
+	jr	z,._10
+	ld	hl,$0004
+._10	ld	e,(ix+#object.Yspeed+0)
+	ld	d,(ix+#object.Yspeed+1)
+	add	hl,de
+	adc	a,(ix+#object.Ydirection)
+	ld	c,a
+	ld	a,h
+	ld	de,$0100
+	bit	7,c
+	jr	z,._11
+	ld	a,l
+	cpl	
+	ld	e,a
+	ld	a,h
+	cpl	
+	ld	d,a
+	inc	de
+	ld	a,d
+	ld	de,$ff00
+._11	and	a
+	jr	z,._12
+	ex	de,hl
+._12	ld	(ix+#object.Yspeed+0),l
+	ld	(ix+#object.Yspeed+1),h
+	ld	(ix+#object.Ydirection),c
+	ld	hl,:_9688
+	bit	7,(ix+#object.Xdirection)
+	jr	z,._13
+	ld	hl,:_9698
+._13	push	hl
+	ld	l,(ix+#object.Xspeed+0)
+	ld	h,(ix+#object.Xspeed+1)
+	bit	7,h
+	jr	z,._14
+	ld	a,l
+	cpl	
+	ld	l,a
+	ld	a,h
+	cpl	
+	ld	h,a
+	inc	hl
+._14	ld	e,(ix+$11)
+	ld	d,(ix+$12)
+	add	hl,de
+	ld	(ix+$11),l
+	ld	(ix+$12),h
+	ld	a,h
+	and	$08
+	ld	e,a
+	ld	d,$00
+	pop	hl
+	add	hl,de
+	ld	(ix+#object.spriteLayout+0),l
+	ld	(ix+#object.spriteLayout+1),h
+	ld	l,(ix+#object.X+0)
+	ld	h,(ix+#object.X+1)
+	ld	de,$fff9
+	bit	7,(ix+#object.Xdirection)
+	jr	z,._15
+	ld	de,$000f
+._15	add	hl,de
+	ld	(#RAM_TEMP1),hl
+	ld	l,(ix+#object.Y+0)
+	ld	h,(ix+#object.Y+1)
+	ld	(#RAM_TEMP3),hl
+	ld	a,(#RAM_FRAMECOUNT)
+	and	$0f
+	ret	nz
+	call	:_7c7b
+	ret	c
+	push	ix
+	push	hl
+	pop	ix
+	xor	a			`set A to 0
+	ld	(ix+#object.type),$2A	`unknown object
+	ld	hl,(#RAM_TEMP1)
+	ld	(ix+$01),a
+	ld	(ix+#object.X+0),l
+	ld	(ix+#object.X+1),h
+	ld	hl,(#RAM_TEMP3)
+	ld	(ix+$04),a
+	ld	(ix+#object.Y+0),l
+	ld	(ix+#object.Y+1),h
+	ld	(ix+$11),a
+	ld	(ix+$12),a
+	ld	(ix+#object.Xspeed+0),a
+	ld	(ix+#object.Xspeed+1),a
+	ld	(ix+#object.Xdirection),a
+	ld	(ix+#object.Yspeed+0),a
+	ld	(ix+#object.Yspeed+1),a
+	ld	(ix+#object.Ydirection),a
+	pop	ix
+	ret
+}
+
+`sprite layout
+:_9688
+DATA $3C, $3E, $FF, $FF, $FF, $FF
+DATA $FF, $FF, $38, $3A, $FF, $FF
+DATA $FF, $FF, $FF, $FF
+:_9698
+DATA $56, $58, $FF, $FF, $FF, $FF
+DATA $FF, $FF, $5A, $5C, $FF, $FF
+DATA $FF, $FF, $FF, $FF
+
+`____________________________________________________________________________[$96A8]___
+`OBJECT: UNKNOWN
+
+PROC :_96a8 {
+	set	5,(ix+$18)
+	xor	a
+	ld	(ix+#object.spriteLayout+0),a
+	ld	(ix+#object.spriteLayout+1),a
+	ld	l,(ix+#object.X+0)
+	ld	h,(ix+#object.X+1)
+	ld	(#RAM_TEMP1),hl
+	ld	l,(ix+#object.Y+0)
+	ld	h,(ix+#object.Y+1)
+	ld	(#RAM_TEMP3),hl
+	ld	l,a
+	ld	h,a
+	ld	(#RAM_TEMP4),hl
+	ld	(#RAM_TEMP6),hl
+	ld	e,(ix+$12)
+	ld	d,$00
+	ld	hl,:_96f5
+	add	hl,de
+	ld	a,(hl)
+	call	:_3581
+	inc	(ix+$11)
+	ld	a,(ix+$11)
+	cp	$0c
+	ret	c
+	ld	(ix+$11),$00
+	inc	(ix+$12)
+	ld	a,(ix+$12)
+	cp	$03
+	ret	c
+	ld	(ix+#object.type),$FF	`remove object?
+	ret
+}
+
+:_96f5
+DATA $1C, $1E, $5E
+
+`____________________________________________________________________________[$96F8]___
+`OBJECT: UNKNOWN
+
+PROC :_96f8 {
+	set	5,(ix+$18)
+	xor	a
+	ld	(ix+#object.spriteLayout+0),a
+	ld	(ix+#object.spriteLayout+1),a
+	ld	a,(iy+#vars.spriteUpdateCount)
+	ld	hl,(#RAM_SPRITETABLE_CURRENT)
+	push	af
+	push	hl
+	ld	a,($D2DE)
+	cp	$24
+	jr	nc,._3
+	ld	e,a
+	ld	d,$00
+	ld	hl,#RAM_SPRITETABLE
+	add	hl,de
+	ld	(#RAM_SPRITETABLE_CURRENT),hl
+	ld	l,(ix+#object.X+0)
+	ld	h,(ix+#object.X+1)
+	ld	(#RAM_TEMP1),hl
+	ld	l,(ix+#object.Y+0)
+	ld	h,(ix+#object.Y+1)
+	ld	(#RAM_TEMP3),hl
+	ld	hl,$0000
+	ld	(#RAM_TEMP4),hl
+	ld	(#RAM_TEMP6),hl
+	ld	a,(ix+$12)
+	and	a
+	jr	z,._1
+	cp	$08
+	jr	nc,._1
+	ld	hl,$0004
+	ld	(#RAM_TEMP4),hl
+	ld	a,$0c
+	jr	._2
+	
+._1	ld	a,$40
+	call	:_3581
+	ld	hl,(#RAM_TEMP4)
+	ld	de,$0008
+	add	hl,de
+	ld	(#RAM_TEMP4),hl
+	ld	a,$42
+._2	call	:_3581
+	ld	a,($D2DE)
+	add	a,$06
+	ld	($D2DE),a
+._3	pop	hl
+	pop	af
+	ld	(#RAM_SPRITETABLE_CURRENT),hl
+	ld	(iy+#vars.spriteUpdateCount),a
+	ld	(ix+#object.width),$0a
+	ld	(ix+#object.height),$0c
+	ld	a,(ix+$12)
+	and	a
+	jr	z,._4
+	ld	c,$00
+	ld	b,c
+	ld	d,c
+	ld	(ix+#object.Yspeed+0),c
+	ld	(ix+#object.Yspeed+1),c
+	ld	(ix+#object.Ydirection),c
+	dec	(ix+$12)
+	jp	nz,._6
+	ld	(ix+#object.type),$FF	`remove object
+	jp	._6
+	
+._4	ld	hl,$0206
+	ld	(#RAM_TEMP6),hl
+	call	:_LABEL_3956_11
+	jr	c,._5
+	ld	bc,(#RAM_SONIC.Y+0)
+	ld	e,(ix+#object.Y+0)
+	ld	d,(ix+#object.Y+1)
+	ld	hl,$fff8
+	add	hl,de
+	and	a
+	sbc	hl,bc
+	jr	nc,._5
+	ld	hl,$0006
+	add	hl,de
+	and	a
+	sbc	hl,bc
+	jr	c,._5
+	ld	a,(ix+$12)
+	and	a
+	jr	nz,._5
+	xor	a
+	ld	l,a
+	ld	h,a
+	ld	(#RAM_SONIC.Yspeed),hl
+	ld	(#RAM_SONIC.Ydirection),a
+	ld	($D28E),a
+	ld	($D29B),hl
+	set	2,(iy+#vars.unknown0)
+	ld	a,$20
+	ld	($D2FB),a
+	ld	(ix+$12),$10
+	ld	a,$22
+	rst	::playSFX
+._5	ld	(ix+#object.Yspeed+0),$98
+	ld	(ix+#object.Yspeed+1),$ff
+	ld	(ix+#object.Ydirection),$ff
+	ld	a,(ix+$11)
+	and	$0f
+	jr	nz,._7
+	call	:_LABEL_625_57
+	ld	bc,$0020
+	ld	d,$00
+	and	$3f
+	cp	$20
+	jr	c,._6
+	ld	bc,$ffe0
+	ld	d,$ff
+._6	ld	(ix+#object.Xspeed+0),c
+	ld	(ix+#object.Xspeed+1),b
+	ld	(ix+#object.Xdirection),d
+._7	ld	l,(ix+#object.X+0)
+	ld	h,(ix+#object.X+1)
+	ex	de,hl
+	ld	hl,(#RAM_CAMERA_X)
+	ld	bc,$0008
+	xor	a
+	sbc	hl,bc
+	jr	nc,._8
+	ld	l,a
+	ld	h,a
+._8	and	a
+	sbc	hl,de
+	jr	nc,._9
+	ld	hl,(#RAM_CAMERA_X)
+	ld	bc,$0100
+	add	hl,bc
+	and	a
+	sbc	hl,de
+	jr	c,9
+	ld	l,(ix+#object.Y+0)
+	ld	h,(ix+#object.Y+1)
+	ex	de,hl
+	ld	hl,($D2DC)
+	and	a
+	sbc	hl,de
+	jr	nc,9
+	ld	hl,(#RAM_CAMERA_Y)
+	ld	bc,$fff0
+	add	hl,bc
+	and	a
+	sbc	hl,de
+	jr	nc,9
+	ld	hl,(#RAM_CAMERA_Y)
+	ld	bc,$00c0
+	add	hl,bc
+	and	a
+	sbc	hl,de
+	jr	nc,._10
+._9	ld	(ix+#object.type),$FF	`remove object
+._10	inc	(ix+$11)
+	ret
+}
+
+`____________________________________________________________________________[$9866]___
+`OBJECT: flipper (Special Stage)
+
+PROC :doObjectCode_platform_flipper {
+	set	5,(ix+$18)
+	ld	(ix+#object.spriteLayout+0),:_9a7e.lo
+	ld	(ix+#object.spriteLayout+1),:_9a7e.hi
+	bit	5,(iy+#vars.joypad)
+	jr	nz,._1
+	ld	a,(ix+$11)
+	ld	(ix+$12),a
+	ld	a,(ix+$11)
+	cp	$05
+	jr	nc,._2
+	inc	(ix+$11)
+	jp	._2
+	
+._1	ld	a,(ix+$11)
+	and	a
+	jr	z,._2
+	dec	(ix+$11)
+._2	ld	a,(ix+$11)
+	cp	$01
+	jr	nc,._3
+	ld	hl,$140c
+	ld	(#RAM_TEMP6),hl
+	ld	(ix+#object.width),$1e
+	ld	(ix+#object.height),$16
+	call	:_LABEL_3956_11
+	ret	c
+	ld	bc,:_999e
+	call	:_9aaf
+	ret	nc
+	ld	a,($D2E8)
+	ld	hl,($D2E6)
+	ld	(#RAM_SONIC.Yspeed),hl
+	ld	(#RAM_SONIC.Ydirection),a
+	ld	de,$fffc
+	ld	hl,(#RAM_SONIC.Xspeed)
+	ld	a,(#RAM_SONIC.Xdirection)
+	add	hl,de
+	adc	a,$ff
+	ld	(#RAM_SONIC.Xspeed),hl
+	ld	(#RAM_SONIC.Xdirection),a
+	ret
+	
+._3	cp	$04
+	jp	nc,._4
+	ld	(ix+#object.spriteLayout+0),:_9a90.lo
+	ld	(ix+#object.spriteLayout+1),:_9a90.hi
+	ld	hl,$080f
+	ld	(#RAM_TEMP6),hl
+	ld	(ix+#object.width),$1e
+	ld	(ix+#object.height),$16
+	call	:_LABEL_3956_11
+	ret	c
+	ld	bc,:_99be
+	call	:_9aaf
+	ret	nc
+	ld	a,(ix+$12)
+	cp	(ix+$11)
+	ret	nc
+	ld	a,(#RAM_SONIC.X)
+	add	a,$0c
+	and	$1f
+	add	a,a
+	ld	c,a
+	ld	b,$00
+	ld	hl,:_99fe
+	add	hl,bc
+	ld	e,(hl)
+	inc	hl
+	ld	d,(hl)
+	ld	hl,(#RAM_SONIC.Xspeed)
+	ld	a,(#RAM_SONIC.Xdirection)
+	add	hl,de
+	adc	a,$ff
+	ld	(#RAM_SONIC.Xspeed),hl
+	ld	(#RAM_SONIC.Xdirection),a
+	ld	hl,:_9a3e
+	add	hl,bc
+	ld	e,(hl)
+	inc	hl
+	ld	d,(hl)
+	ld	hl,(#RAM_SONIC.Yspeed)
+	ld	a,l
+	cpl	
+	ld	l,a
+	ld	a,h
+	cpl	
+	ld	h,a
+	ld	a,(#RAM_SONIC.Ydirection)
+	cpl	
+	add	hl,de
+	adc	a,$ff
+	ld	(#RAM_SONIC.Yspeed),hl
+	ld	(#RAM_SONIC.Ydirection),a
+	ret
+
+	`unused section of code?
+	ld	a,($D2E8)
+	ld	hl,($D2E6)
+	ld	(#RAM_SONIC.Yspeed),hl
+	ld	(#RAM_SONIC.Ydirection),a
+	ld	de,$0008
+	ld	hl,(#RAM_SONIC.Xspeed)
+	ld	a,(#RAM_SONIC.Xdirection)
+	add	hl,de
+	adc	a,$00
+	ld	(#RAM_SONIC.Xspeed),hl
+	ld	(#RAM_SONIC.Xdirection),a
+	ret
+	
+._4	ld	(ix+#object.spriteLayout+0),:_9aa2.lo
+	ld	(ix+#object.spriteLayout+1),:_9aa2.hi
+	ld	hl,$021a
+	ld	(#RAM_TEMP6),hl
+	ld	(ix+#object.width),$1e
+	ld	(ix+#object.height),$16
+	call	:_LABEL_3956_11
+	ret	c
+	ld	bc,:_99de
+	call	:_9aaf
+	ret	nc
+	ld	a,($D2E8)
+	ld	hl,($D2E6)
+	ld	(#RAM_SONIC.Yspeed),hl
+	ld	(#RAM_SONIC.Ydirection),a
+	ld	de,$001a
+	ld	hl,(#RAM_SONIC.Xspeed)
+	ld	a,(#RAM_SONIC.Xdirection)
+	add	hl,de
+	adc	a,$00
+	ld	(#RAM_SONIC.Xspeed),hl
+	ld	(#RAM_SONIC.Xdirection),a
+	ret
+}
+
+:_999e
+DATA $FF, $FF, $FE, $FE, $FE, $FD, $FD, $FD, $FC, $FC, $FC, $FC, $FB, $FB, $FB, $FB
+DATA $FA, $FA, $FA, $FA, $FA, $F9, $F9, $F9, $F9, $F9, $F9, $FA, $FA, $FB, $FC, $FE
+:_99be
+DATA $EA, $EA, $EA, $F6, $F7, $F8, $F8, $F8, $F9, $F9, $F9, $FA, $FA, $FA, $FB, $FB
+DATA $FB, $FB, $FC, $FC, $FC, $FC, $FD, $FD, $FD, $FD, $FE, $FE, $FF, $00, $02, $04
+:_99de
+DATA $EA, $EA, $EA, $EA, $EA, $EA, $EA, $EA, $EA, $EA, $EA, $EA, $EE, $ED, $EC, $EC
+DATA $EC, $ED, $EE, $EF, $F0, $F2, $F3, $F4, $F5, $F7, $F8, $F9, $FA, $FB, $FD, $FF
+:_99fe
+DATA $00, $F8, $00, $F8, $00, $F9, $00, $FA, $00, $FB, $00, $FC, $E0, $FC, $80, $FD
+DATA $C0, $FD, $00, $FE, $40, $FE, $80, $FE, $C0, $FE, $00, $FF, $20, $FF, $40, $FF
+DATA $60, $FF, $80, $FF, $A0, $FF, $C0, $FF, $E0, $FF, $E8, $FF, $EA, $FF, $EC, $FF
+DATA $EE, $FF, $F0, $FF, $F2, $FF, $F4, $FF, $F6, $FF, $F8, $FF, $FC, $FF, $FE, $FF
+:_9a3e
+DATA $00, $FC, $00, $FC, $00, $FC, $00, $FB, $00, $FA, $00, $F9, $00, $F8, $00, $F7
+DATA $00, $F6, $80, $F5, $00, $F5, $C0, $F4, $80, $F4, $40, $F4, $00, $F4, $00, $F4
+DATA $00, $F4, $00, $F4, $40, $F4, $80, $F4, $C0, $F4, $00, $F5, $00, $F6, $00, $F7
+DATA $00, $F9, $00, $FA, $00, $FC, $80, $FC, $00, $FD, $C0, $FD, $00, $FF, $00, $FF
+
+`sprite layout
+:_9a7e
+DATA $FE, $FF, $FF, $FF, $FF, $FF
+DATA $38, $3A, $3C, $3E, $FF, $FF
+DATA $FF, $FF, $FF, $FF, $FF, $FF
+:_9a90
+DATA $48, $4A, $4C, $4E, $FF, $FF
+DATA $68, $6A, $6C, $6E, $FF, $FF
+DATA $FF, $FF, $FF, $FF, $FF, $FF
+:_9aa2
+DATA $FE, $12, $14, $16, $FF, $FF
+DATA $FE, $32, $34, $36, $FF, $FF
+DATA $FF
+
+`____________________________________________________________________________[$9AAF]___
+
+PROC :_9aaf {
+	ld	a,(#RAM_SONIC.Ydirection)
+	and	a
+	ret	m
+	
+	ld	a,(#RAM_SONIC.X)
+	add	a,$0c
+	and	$1f
+	ld	l,a
+	ld	h,$00
+	add	hl,bc
+	ld	b,$00
+	ld	c,(hl)
+	bit	7,c
+	jr	z,._1
+	dec	b
+._1	ld	l,(ix+#object.Y+0)
+	ld	h,(ix+#object.Y+1)
+	add	hl,bc
+	ld	(#RAM_SONIC.Y+0),hl
+	ld	a,(#RAM_SONIC.Yspeed+1)
+	cp	$03
+	jr	nc,._2
+	scf	
+	ret
+	
+._2	ld	de,$0001
+	ld	hl,(#RAM_SONIC.Yspeed)
+	ld	a,l
+	cpl	
+	ld	l,a
+	ld	a,h
+	cpl	
+	ld	h,a
+	ld	a,(#RAM_SONIC.Ydirection)
+	cpl	
+	add	hl,de
+	adc	a,$00
+	sra	a
+	rr	h
+	rr	l
+	ld	(#RAM_SONIC.Yspeed),hl
+	ld	(#RAM_SONIC.Ydirection),a
+	and	a
+	ret
+}
+
+`____________________________________________________________________________[$9AFB]___
+`OBJECT: moving bumper (Special Stage)
+
+PROC :doObjectCode_platform_bumper {
+	set	5,(ix+$18)
+	ld	(ix+#object.width),$1c
+	ld	(ix+#object.height),$06
+	ld	(ix+#object.spriteLayout+0),:_9b6e.lo
+	ld	(ix+#object.spriteLayout+1),:_9b6e.hi
+	ld	hl,$0001
+	ld	a,(ix+$12)
+	cp	$60
+	jr	nc,._1
+	ld	hl,$ffff
+._1	ld	(ix+#object.Xspeed+0),$00
+	ld	(ix+#object.Xspeed+1),l
+	ld	(ix+#object.Xdirection),h
+	inc	a
+	cp	$c0
+	jr	c,._2
+	xor	a
+._2	ld	(ix+$12),a
+	ld	a,(ix+$11)
+	and	a
+	jr	nz,._3
+	ld	hl,$0602
+	ld	(#RAM_TEMP6),hl
+	call	:_LABEL_3956_11
+	ret	c
+	ld	a,($D2E8)
+	ld	de,($D2E6)
+	ld	c,a
+	ld	hl,(#RAM_SONIC.Yspeed)
+	ld	a,l
+	cpl	
+	ld	l,a
+	ld	a,h
+	cpl	
+	ld	h,a
+	ld	a,(#RAM_SONIC.Ydirection)
+	cpl	
+	add	hl,de
+	adc	a,c
+	ld	de,$0001
+	add	hl,de
+	adc	a,$00
+	ld	(#RAM_SONIC.Yspeed),hl
+	ld	(#RAM_SONIC.Ydirection),a
+	ld	(ix+$11),$08
+	ld	a,$07
+	rst	::playSFX
+	ret
+	
+._3	dec	(ix+$11)
+	ret
+}
+
+`sprite layout
+:_9b6e
+DATA $08, $0A, $28, $2A, $FF, $FF
+DATA $FF
+
+`____________________________________________________________________________[$9B75]___
+`OBJECT: UNKNOWN
+
+PROC :_9b75 {
+	set	5,(ix+$18)
+	ld	(ix+#object.width),$1e
+	ld	(ix+#object.height),$60
+	ld	hl,$0000
+	ld	(#RAM_TEMP6),hl
+	call	:_LABEL_3956_11
+	jr	c,._2
+	ld	l,(ix+#object.X+0)
+	ld	h,(ix+#object.X+1)
+	ld	a,l
+	add	a,a
+	rl	h
+	add	a,a
+	rl	h
+	add	a,a
+	rl	h
+	ld	e,h
+	ld	l,(ix+#object.Y+0)
+	ld	h,(ix+#object.Y+1)
+	ld	a,l
+	add	a,a
+	rl	h
+	add	a,a
+	rl	h
+	add	a,a
+	rl	h
+	ld	d,h
+	ld	hl,:_9bd9
+	ld	b,$05
+	
+.loop	ld	a,(hl)
+	inc	hl
+	cp	e
+	jr	nz,._1
+	ld	a,(hl)
+	cp	d
+	jr	nz,._1
+	inc	hl
+	ld	a,(hl)
+	ld	($D2D3),a
+	ld	a,$01
+	ld	($D289),a
+	set	4,(iy+#vars.flags6)
+	jp	._2
+	
+._1	inc	hl
+	inc	hl
+	djnz	.loop
+	
+._2	xor	a
+	ld	(ix+#object.spriteLayout+0),a
+	ld	(ix+#object.spriteLayout+1),a
+	ret
+}
+
+:_9bd9
+DATA $7D, $1A, $15, $7D, $01, $14, $01, $3C, $18, $01, $02
+:_9be4
+DATA $19, $14, $0F, $1A
+
+`____________________________________________________________________________[$9BE8]___
+`OBJECT: UNKNOWN
+
+PROC :_9be8 {
+	ld	(ix+#object.Xspeed+0),$80
+	ld	(ix+#object.Xspeed+1),$01
+	ld	(ix+#object.Xdirection),$00
+	ld	(ix+#object.spriteLayout+0),:_9c69.lo
+	ld	(ix+#object.spriteLayout+1),:_9c69.hi
+._9bfc	set	5,(ix+$18)
+	bit	0,(ix+$18)
+	jr	nz,._1
+	ld	a,(ix+#object.X+0)
+	ld	(ix+$11),a
+	ld	a,(ix+#object.X+1)
+	ld	(ix+$12),a
+	ld	a,$18
+	rst	::playSFX
+	set	0,(ix+$18)
+._1	ld	(ix+#object.width),$06
+	ld	(ix+#object.height),$08
+	ld	a,(ix+$13)
+	cp	$64
+	jr	nc,._2
+	ld	hl,$0400
+	ld	(#RAM_TEMP6),hl
+	call	:_LABEL_3956_11
+	call	nc,:_35fd
+._2	inc	(ix+$13)
+	ld	a,(ix+$13)
+	cp	$64
+	ret	c
+	cp	$f0
+	jr	c,._3
+	xor	a			`set A to 0
+	ld	(ix+$01),a
+	ld	(ix+$13),a
+	ld	a,(ix+$11)
+	ld	(ix+#object.X+0),a
+	ld	a,(ix+$12)
+	ld	(ix+#object.X+1),a
+	ld	a,$18
+	rst	::playSFX
+	ret
+	
+._3	xor	a
+	ld	(ix+#object.spriteLayout+0),a
+	ld	(ix+#object.spriteLayout+1),a
+	ld	(ix+#object.Xspeed+0),a
+	ld	(ix+#object.Xspeed+1),a
+	ld	(ix+#object.Xdirection),a
+	ret
+}
+
+`sprite layout
+:_9c69
+DATA $0C, $0E, $FF, $FF, $FF, $FF
+DATA $FF
+
+`____________________________________________________________________________[$9C70]___
+`OBJECT: UNKNOWN
+
+PROC :_9c70 {
+	ld	(ix+#object.Xspeed+0),$80
+	ld	(ix+#object.Xspeed+1),$fe
+	ld	(ix+#object.Xdirection),$ff
+	ld	(ix+#object.spriteLayout+0),:_9c87.lo
+	ld	(ix+#object.spriteLayout+1),:_9c87.hi
+	jp	:_9be8._9bfc
+}
+
+`sprite layout
+:_9c87
+DATA $2C, $2E, $FF, $FF, $FF, $FF
+DATA $FF
+
+`____________________________________________________________________________[$9C8E]___
+`OBJECT: flame thrower - scrap brain
+
+PROC :doObjectCode_trap_flameThrower {
+	set	5,(ix+$18)
+	bit	0,(ix+$18)
+	jr	nz,._1
+	ld	l,(ix+#object.X+0)
+	ld	h,(ix+#object.X+1)
+	ld	de,$000c
+	add	hl,de
+	ld	(ix+#object.X+0),l
+	ld	(ix+#object.X+1),h
+	ld	l,(ix+#object.Y+0)
+	ld	h,(ix+#object.Y+1)
+	ld	de,$0012
+	add	hl,de
+	ld	(ix+#object.Y+0),l
+	ld	(ix+#object.Y+1),h
+	call	:_LABEL_625_57
+	ld	(ix+$11),a
+	set	0,(ix+$18)
+._1	ld	l,(ix+#object.X+0)
+	ld	h,(ix+#object.X+1)
+	ld	(#RAM_TEMP1),hl
+	ld	l,(ix+#object.Y+0)
+	ld	h,(ix+#object.Y+1)
+	ld	(#RAM_TEMP3),hl
+	ld	hl,$0000
+	ld	(#RAM_TEMP4),hl
+	ld	a,(ix+$11)
+	srl	a
+	srl	a
+	srl	a
+	srl	a
+	ld	c,a
+	ld	b,$00
+	add	a,a
+	ld	e,a
+	ld	d,$00
+	ld	hl,:_9d6a
+	add	hl,bc
+	ld	a,(hl)
+	ld	(ix+#object.height),a
+	ld	(ix+#object.width),$06
+	ld	hl,:_9d4a
+	add	hl,de
+	ld	a,(hl)
+	inc	hl
+	ld	h,(hl)
+	ld	l,a
+	or	h
+	jr	z,._2
+	ld	a,(ix+$11)
+	add	a,a
+	add	a,a
+	add	a,a
+	and	$1f
+	ld	e,a
+	ld	d,$00
+	add	hl,de
+	ld	b,$04
+	
+.loop	push	bc
+	ld	a,(hl)
+	inc	hl
+	ld	e,(hl)
+	inc	hl
+	ld	d,$00
+	push	hl
+	ld	(#RAM_TEMP6),de
+	call	:_3581
+	pop	hl
+	pop	bc
+	djnz	.loop
+	
+	ld	a,(ix+#object.height)
+	and	a
+	jr	z,._2
+	ld	hl,$0202
+	ld	(#RAM_TEMP6),hl
+	call	:_LABEL_3956_11
+	call	nc,:_35fd
+._2	inc	(ix+$11)
+	xor	a
+	ld	(ix+#object.spriteLayout+0),a
+	ld	(ix+#object.spriteLayout+1),a
+	ld	a,(ix+$11)
+	cp	$70
+	ret	nz
+	ld	a,$17
+	rst	::playSFX
+	ret
+}
+
+:_9d4a
+DATA $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $9A, $9D
+DATA $BA, $9D, $DA, $9D, $7A, $9D, $7A, $9D, $7A, $9D, $DA, $9D, $BA, $9D, $9A, $9D
+:_9d6a
+DATA $00, $00, $00, $00, $00, $00, $00, $1B, $1F, $22, $25, $25, $25, $22, $1F, $1B
+DATA $00, $15, $1E, $0E, $1E, $07, $1E, $00, $00, $17, $1E, $10, $1E, $09, $1E, $02
+DATA $00, $19, $1E, $12, $1E, $0B, $1E, $04, $00, $1B, $1E, $14, $1E, $0D, $1E, $06
+DATA $00, $0C, $1E, $08, $1E, $04, $1E, $00, $00, $0E, $1E, $0A, $1E, $06, $1E, $02
+DATA $00, $10, $1E, $0C, $1E, $08, $1E, $04, $00, $11, $1E, $0E, $1E, $0A, $1E, $06
+DATA $00, $0F, $1E, $0A, $1E, $05, $1E, $00, $00, $11, $1E, $0C, $1E, $07, $1E, $02
+DATA $00, $13, $1E, $0E, $1E, $09, $1E, $04, $00, $15, $1E, $10, $1E, $0B, $1E, $06
+DATA $00, $12, $1E, $0C, $1E, $06, $1E, $00, $00, $14, $1E, $0E, $1E, $08, $1E, $02
+DATA $00, $16, $1E, $10, $1E, $0A, $1E, $04, $00, $18, $1E, $12, $1E, $0C, $1E, $06
+
+`____________________________________________________________________________[$9DFA]___
+`OBJECT: door - one way left (Scrap Brain)
+
+PROC :doObjectCode_door_left {
+	set	5,(ix+$18)
+	call	:_9ed4
+	ld	a,(ix+$11)
+	cp	$28
+	jr	nc,._2
+	ld	hl,$0005
+	ld	(#RAM_TEMP6),hl
+	call	:_LABEL_3956_11
+	jr	c,._2
+	ld	de,$0005
+	ld	a,(#RAM_SONIC.Xdirection)
+	and	a
+	jp	m,._1
+	ld	de,$ffec
+._1	ld	l,(ix+#object.X+0)
+	ld	h,(ix+#object.X+1)
+	add	hl,de
+	ld	(#RAM_SONIC.X),hl
+	xor	a
+	ld	l,a
+	ld	h,a
+	ld	(#RAM_SONIC.Xspeed),hl
+	ld	(#RAM_SONIC.Xdirection),a
+._2	ld	l,(ix+#object.X+0)
+	ld	h,(ix+#object.X+1)
+	ld	de,$ffc8
+	add	hl,de
+	ld	de,(#RAM_SONIC.X)
+	xor	a
+	sbc	hl,de
+	jr	nc,._3
+	ld	l,(ix+#object.X+0)
+	ld	h,(ix+#object.X+1)
+	and	a
+	sbc	hl,de
+	jr	c,._3
+	ld	l,(ix+#object.Y+0)
+	ld	h,(ix+#object.Y+1)
+	ld	de,$ffe0
+	add	hl,de
+	ld	de,(#RAM_SONIC.Y+0)
+	xor	a
+	sbc	hl,de
+	jr	nc,._3
+	ld	l,(ix+#object.Y+0)
+	ld	h,(ix+#object.Y+1)
+	ld	bc,$0050
+	add	hl,bc
+	and	a
+	sbc	hl,de
+	jr	c,._3
+	call	:_9eb4
+	jr	._4
+	
+._3	call	:_9ec4
+._4	ld	de,:_9f2b
+._9e7e	ld	a,(ix+$11)
+	and	$0f
+	ld	c,a
+	ld	b,$00
+	ld	l,(ix+$12)
+	ld	h,(ix+$13)
+	and	a
+	sbc	hl,bc
+	ld	(ix+#object.Y+0),l
+	ld	(ix+#object.Y+1),h
+	ld	a,(ix+$11)
+	srl	a
+	srl	a
+	srl	a
+	srl	a
+	and	$03
+	add	a,a
+	ld	c,a
+	add	a,a
+	add	a,a
+	add	a,a
+	add	a,c
+	ld	c,a
+	ld	b,$00
+	ex	de,hl
+	add	hl,bc
+	ld	(ix+#object.spriteLayout+0),l
+	ld	(ix+#object.spriteLayout+1),h
+	ret
+}
+
+`____________________________________________________________________________[$9EB4]___
+
+PROC :_9eb4 {
+	ld	a,(ix+$11)
+	cp	$30
+	ret	nc
+	inc	a
+	ld	(ix+$11),a
+	dec	a
+	ret	nz
+	ld	a,$19
+	rst	::playSFX
+	ret
+}
+
+`____________________________________________________________________________[$9EC4]___
+
+PROC :_9ec4 {
+	ld	a,(ix+$11)
+	and	a
+	ret	z
+	dec	a
+	ld	(ix+$11),a
+	cp	$2f
+	ret	nz
+	ld	a,$19
+	rst	::playSFX
+	ret
+}
+
+`____________________________________________________________________________[$9ED4]___
+
+PROC :_9ed4 {
+	ld	(ix+#object.width),$04
+	ld	a,(ix+$11)
+	srl	a
+	srl	a
+	srl	a
+	srl	a
+	and	$03
+	ld	e,a
+	ld	a,$03
+	sub	e
+	add	a,a
+	add	a,a
+	add	a,a
+	add	a,a
+	ld	(ix+#object.height),a
+	bit	0,(ix+$18)
+	ret	nz
+	ld	bc,$0000
+	ld	de,$fff0
+	call	:getFloorLayoutRAMPositionForObject
+	ld	de,$0014
+	ld	a,(hl)
+	cp	$a3
+	jr	z,._1
+	ld	de,$0004
+	set	1,(ix+$18)
+._1	ld	l,(ix+#object.X+0)
+	ld	h,(ix+#object.X+1)
+	add	hl,de
+	ld	(ix+#object.X+0),l
+	ld	(ix+#object.X+1),h
+	ld	a,(ix+#object.Y+0)
+	ld	(ix+$12),a
+	ld	a,(ix+#object.Y+1)
+	ld	(ix+$13),a
+	set	0,(ix+$18)
+	ret
+}
+
+`sprite layout
+:_9f2b
+DATA $0A, $FF, $FF, $FF, $FF, $FF
+DATA $3E, $FF, $FF, $FF, $FF, $FF
+DATA $0A, $FF, $FF, $FF, $FF, $FF
+
+DATA $3E, $FF, $FF, $FF, $FF, $FF
+DATA $0A, $FF, $FF, $FF, $FF, $FF
+DATA $FF, $FF, $FF, $FF, $FF, $FF
+
+DATA $0A, $FF, $FF, $FF, $FF, $FF
+DATA $FF, $FF, $FF, $FF, $FF, $FF
+DATA $FF, $FF, $FF, $FF, $FF, $FF
+DATA $FF
+
+`____________________________________________________________________________[$9F62]___
+`OBJECT: door - one way right (Scrap Brain)
+
+PROC :doObjectCode_door_right {
+	set	5,(ix+$18)
+	call	:_9ed4
+	ld	a,(ix+$11)
+	cp	$28
+	jr	nc,._2
+	ld	hl,$0005
+	ld	(#RAM_TEMP6),hl
+	call	:_LABEL_3956_11
+	jr	c,._2
+	ld	de,$0005
+	ld	a,(#RAM_SONIC.Xdirection)
+	and	a
+	jp	m,._1
+	ld	de,$ffec
+._1	ld	l,(ix+#object.X+0)
+	ld	h,(ix+#object.X+1)
+	add	hl,de
+	ld	(#RAM_SONIC.X),hl
+	xor	a
+	ld	(#RAM_SONIC.Xspeed+0),a
+	ld	(#RAM_SONIC.Xspeed+1),a
+	ld	(#RAM_SONIC.Xdirection),a
+._2	ld	l,(ix+#object.X+0)
+	ld	h,(ix+#object.X+1)
+	ld	de,$fff0
+	add	hl,de
+	ld	de,(#RAM_SONIC.X)
+	xor	a
+	sbc	hl,de
+	jr	nc,._3
+	ld	l,(ix+#object.X+0)
+	ld	h,(ix+#object.X+1)
+	ld	bc,$0024
+	add	hl,bc
+	and	a
+	sbc	hl,de
+	jr	c,._3
+	ld	l,(ix+#object.Y+0)
+	ld	h,(ix+#object.Y+1)
+	ld	de,$ffe0
+	add	hl,de
+	ld	de,(#RAM_SONIC.Y+0)
+	xor	a
+	sbc	hl,de
+	jr	nc,._3
+	ld	l,(ix+#object.Y+0)
+	ld	h,(ix+#object.Y+1)
+	ld	bc,$0050
+	add	hl,bc
+	and	a
+	sbc	hl,de
+	jr	c,._3
+	call	:_9eb4
+	jr	._4
+._3	call	:_9ec4
+._4	ld	de,:_9fee
+	jp	:doObjectCode_door_left._9e7e
+}
+
+`sprite layout
+:_9fee
+DATA $36, $FF, $FF, $FF, $FF, $FF
+DATA $3E, $FF, $FF, $FF, $FF, $FF
+DATA $36, $FF, $FF, $FF, $FF, $FF
+
+DATA $3E, $FF, $FF, $FF, $FF, $FF
+DATA $36, $FF, $FF, $FF, $FF, $FF
+DATA $FF, $FF, $FF, $FF, $FF, $FF
+
+DATA $36, $FF, $FF, $FF, $FF, $FF
+DATA $FF, $FF, $FF, $FF, $FF, $FF
+DATA $FF, $FF, $FF, $FF, $FF, $FF
+DATA $FF
+
+`____________________________________________________________________________[$A025]___
+`OBJECT: door (Scrap Brain)
+
+PROC :doObjectCode_door {
+	set	5,(ix+$18)
+	call	:_9ed4
+	ld	a,(ix+$11)
+	cp	$28
+	jr	nc,._2
+	ld	hl,$0005
+	ld	(#RAM_TEMP6),hl
+	call	:_LABEL_3956_11
+	jr	c,._2
+	ld	de,$0005
+	ld	a,(#RAM_SONIC.Xdirection)
+	and	a
+	jp	m,._1
+	ld	de,$ffec
+._1	ld	l,(ix+#object.X+0)
+	ld	h,(ix+#object.X+1)
+	add	hl,de
+	ld	(#RAM_SONIC.X),hl
+	xor	a
+	ld	(#RAM_SONIC.Xspeed+0),a
+	ld	(#RAM_SONIC.Xspeed+1),a
+	ld	(#RAM_SONIC.Xdirection),a
+._2	ld	l,(ix+#object.X+0)
+	ld	h,(ix+#object.X+1)
+	ld	de,$ffc8
+	add	hl,de
+	ld	de,(#RAM_SONIC.X)
+	xor	a
+	sbc	hl,de
+	jr	nc,._3
+	ld	l,(ix+#object.X+0)
+	ld	h,(ix+#object.X+1)
+	ld	bc,$0024
+	add	hl,bc
+	and	a
+	sbc	hl,de
+	jr	c,._3
+	ld	l,(ix+#object.Y+0)
+	ld	h,(ix+#object.Y+1)
+	ld	de,$ffe0
+	add	hl,de
+	ld	de,(#RAM_SONIC.Y+0)
+	xor	a
+	sbc	hl,de
+	jr	nc,._3
+	ld	l,(ix+#object.Y+0)
+	ld	h,(ix+#object.Y+1)
+	ld	bc,$0050
+	add	hl,bc
+	and	a
+	sbc	hl,de
+	jr	c,._3
+	call	:_9eb4
+	jr	._4
+	
+._3	call	:_9ec4
+._4	ld	de,:_a0b1
+	jp	:doObjectCode_door_left._9e7e
+}
+
+`sprite layout
+:_a0b1
+DATA $38, $FF, $FF, $FF, $FF, $FF
+DATA $3E, $FF, $FF, $FF, $FF, $FF
+DATA $38, $FF, $FF, $FF, $FF, $FF
+
+DATA $3E, $FF, $FF, $FF, $FF, $FF
+DATA $38, $FF, $FF, $FF, $FF, $FF
+DATA $FF, $FF, $FF, $FF, $FF, $FF
+DATA $38, $FF, $FF, $FF, $FF, $FF
+
+DATA $FF, $FF, $FF, $FF, $FF, $FF
+DATA $FF, $FF, $FF, $FF, $FF, $FF
+DATA $FF
+
+`____________________________________________________________________________[$A0E8]___
+`OBJECT: electric sphere (Scrap Brain)
+
+PROC :doObjectCode_trap_electric {
+	set	5,(ix+$18)
+	ld	(ix+#object.width),$30
+	ld	(ix+#object.height),$10
+	bit	0,(ix+$18)
+	jr	nz,._1
+	ld	l,(ix+#object.X+0)
+	ld	h,(ix+#object.X+1)
+	ld	de,$0018
+	add	hl,de
+	ld	(ix+#object.X+0),l
+	ld	(ix+#object.X+1),h
+	ld	l,(ix+#object.Y+0)
+	ld	h,(ix+#object.Y+1)
+	ld	de,$0010
+	add	hl,de
+	ld	(ix+#object.Y+0),l
+	ld	(ix+#object.Y+1),h
+	set	0,(ix+$18)
+._1	ld	a,(ix+$11)
+	cp	$64
+	jr	c,._3
+	jr	nz,._2
+	ld	a,$13
+	rst	::playSFX
+._2	ld	hl,$0000
+	ld	(#RAM_TEMP6),hl
+	call	:_LABEL_3956_11
+	call	nc,:_35fd
+	ld	de,:_a173
+	ld	bc,:_a167
+	call	:_7c41
+	jp	._5
+	
+._3	cp	$46
+	jr	nc,._4
+	xor	a
+	ld	(ix+#object.spriteLayout+0),a
+	ld	(ix+#object.spriteLayout+1),a
+	jp	._5
+	
+._4	ld	de,:_a173
+	ld	bc,:_a16e
+	call	:_7c41
+._5	inc	(ix+$11)
+	ld	a,(ix+$11)
+	cp	$a0
+	ret	c
+	ld	(ix+$11),$00
+	ret
+}
+
+:_a167
+DATA $00, $01, $01, $01, $02, $01, $FF
+:_a16e
+DATA $02, $01, $03, $01, $FF
+
+`sprite layout
+:_a173
+DATA $02, $04, $FF, $FF, $FF, $FF
+DATA $FF, $FF, $FF, $FF, $FF, $FF
+DATA $FF, $FF, $FF, $FF, $FF, $FF
+
+DATA $FE, $FE, $FE, $FE, $02, $04
+DATA $FF, $FF, $FF, $FF, $FF, $FF
+DATA $FF, $FF, $FF, $FF, $FF, $FF
+
+DATA $FE, $FE, $16, $18, $FF, $FF
+DATA $FF, $FF, $FF, $FF, $FF, $FF
+DATA $FF, $FF, $FF, $FF, $FF, $FF
+DATA $FF
+
+`____________________________________________________________________________[$A1AA]___
+`OBJECT: badnick - Ball Hog (Scrap Brain)
+
+PROC :doObjectCode_badnick_ballHog {
+	ld	(ix+#object.width),$0a
+	ld	(ix+#object.height),$20
+	ld	hl,$0803
+	ld	(#RAM_TEMP6),hl
+	call	:_LABEL_3956_11
+	ld	hl,$0e00
+	ld	(#RAM_TEMP1),hl
+	call	nc,:_35e5
+	ld	(ix+#object.Yspeed+0),$00
+	ld	(ix+#object.Yspeed+1),$01
+	ld	(ix+#object.Ydirection),$00
+	ld	l,(ix+#object.X+0)
+	ld	h,(ix+#object.X+1)
+	ld	de,$000a
+	add	hl,de
+	ex	de,hl
+	ld	hl,(#RAM_SONIC.X)
+	ld	bc,$000c
+	add	hl,bc
+	and	a
+	sbc	hl,de
+	jr	nc,._3
+	ld	bc,:_a2d2
+	ld	a,(ix+$11)
+	cp	$eb
+	jr	c,._2
+	jr	nz,._1
+	ld	(ix+$16),$00
+._1	ld	bc,:_a2d7
+._2	ld	de,:_a2da
+	call	:_7c41
+	ld	a,(ix+$11)
+	cp	$ed
+	jp	nz,._6
+	call	:_7c7b
+	jp	c,._6
+	ld	e,(ix+#object.X+0)
+	ld	d,(ix+#object.X+1)
+	ld	c,(ix+#object.Y+0)
+	ld	b,(ix+#object.Y+1)
+	push	ix
+	push	hl
+	pop	ix
+	xor	a			`set A to 0
+	ld	(ix+#object.type),$1C	`ball from the Ball Hog
+	ld	(ix+$01),a
+	ld	(ix+#object.X+0),e
+	ld	(ix+#object.X+1),d
+	ld	hl,$0006
+	add	hl,bc
+	ld	(ix+$04),a
+	ld	(ix+#object.Y+0),l
+	ld	(ix+#object.Y+1),h
+	ld	(ix+$11),a
+	ld	(ix+$16),a
+	ld	(ix+$17),a
+	ld	(ix+#object.Xspeed+0),a
+	ld	(ix+#object.Xspeed+1),$ff
+	ld	(ix+#object.Xdirection),$ff
+	ld	(ix+#object.Yspeed+0),a
+	ld	(ix+#object.Yspeed+1),$01
+	ld	(ix+#object.Ydirection),a
+	pop	ix
+	jp	._6
+	
+._3	ld	bc,:_a2d2
+	ld	a,(ix+$11)
+	cp	$eb
+	jr	c,._5
+	jr	nz,._4
+	ld	(ix+$16),$00
+._4	ld	bc,:_a2d7
+._5	ld	de,:_a30b
+	call	:_7c41
+	ld	a,(ix+$11)
+	cp	$ed
+	jr	nz,._6
+	call	:_7c7b
+	jp	c,._6
+	ld	e,(ix+#object.X+0)
+	ld	d,(ix+#object.X+1)
+	ld	c,(ix+#object.Y+0)
+	ld	b,(ix+#object.Y+1)
+	push	ix
+	push	hl
+	pop	ix
+	xor	a			`set A to 0
+	ld	(ix+#object.type),$1C	`ball from the Ball Hog
+	ld	(ix+$01),a
+	ld	(ix+#object.X+0),e
+	ld	(ix+#object.X+1),d
+	ld	hl,$0006
+	add	hl,bc
+	ld	(ix+$04),a
+	ld	(ix+#object.Y+0),l
+	ld	(ix+#object.Y+1),h
+	ld	(ix+$11),a
+	ld	(ix+$16),a
+	ld	(ix+$17),a
+	ld	(ix+#object.Xspeed+0),a
+	ld	(ix+#object.Xspeed+1),$01
+	ld	(ix+#object.Xdirection),a
+	ld	(ix+#object.Yspeed+0),a
+	ld	(ix+#object.Yspeed+1),$01
+	ld	(ix+#object.Ydirection),a
+	pop	ix
+._6	inc	(ix+$11)
+	ret
+}
+
+:_a2d2
+DATA $00, $1C, $01, $06, $FF
+:_a2d7
+DATA $02, $18, $FF
+
+`sprite layout
+:_a2da
+DATA $40, $42, $FF, $FF, $FF, $FF
+DATA $60, $62, $FF, $FF, $FF, $FF
+DATA $FF, $FF, $FF, $FF, $FF, $FF
+
+DATA $44, $46, $FF, $FF, $FF, $FF
+DATA $64, $66, $FF, $FF, $FF, $FF
+DATA $FF, $FF, $FF, $FF, $FF, $FF
+
+DATA $40, $42, $FF, $FF, $FF, $FF
+DATA $68, $6A, $FF, $FF, $FF, $FF
+DATA $FF
+
+:_a30b
+DATA $50, $52, $FF, $FF, $FF, $FF
+DATA $70, $72, $FF, $FF, $FF, $FF
+DATA $FF, $FF, $FF, $FF, $FF, $FF
+
+DATA $4C, $4E, $FF, $FF, $FF, $FF
+DATA $6C, $6E, $FF, $FF, $FF, $FF
+DATA $FF, $FF, $FF, $FF, $FF, $FF
+
+DATA $50, $52, $FF, $FF, $FF, $FF
+DATA $48, $4A, $FF, $FF, $FF, $FF
+DATA $FF
+
+`____________________________________________________________________________[$A33C]___
+`OBJECT: UNKNOWN (ball from Ball Hog?)
+
+PROC :_a33c {
+	res	5,(ix+$18)
+	ld	(ix+#object.width),$0a
+	ld	(ix+#object.height),$0f
+	ld	hl,$0101
+	ld	(#RAM_TEMP6),hl
+	call	:_LABEL_3956_11
+	call	nc,:_35fd
+	bit	7,(ix+$18)
+	jr	z,._1
+	ld	(ix+#object.Yspeed+0),$00
+	ld	(ix+#object.Yspeed+1),$fd
+	ld	(ix+#object.Ydirection),$ff
+._1	ld	l,(ix+#object.Yspeed+0)
+	ld	h,(ix+#object.Yspeed+1)
+	ld	a,(ix+#object.Ydirection)
+	ld	de,$001f
+	add	hl,de
+	adc	a,$00
+	ld	(ix+#object.Yspeed+0),l
+	ld	(ix+#object.Yspeed+1),h
+	ld	(ix+#object.Ydirection),a
+	ld	a,(ix+$11)
+	cp	$82
+	jr	nc,._2
+	ld	bc,:_a3b1
+	ld	de,:_a3bb
+	call	:_7c41
+	jp	._4
+	
+._2	jr	nz,._3
+	ld	(ix+$16),$00
+	ld	a,$01
+	rst	::playSFX
+._3	ld	bc,:_a3b4
+	ld	de,:_a3bb
+	call	:_7c41
+._4	inc	(ix+$11)
+	ld	a,(ix+$11)
+	cp	$a5
+	ret	c
+	ld	(ix+#object.type),$FF	`remove object?
+	ret
+}
+
+:_a3b1
+DATA $00, $08, $FF
+:_a3b4
+DATA $01, $0C, $02, $0C, $03, $0C, $FF
+
+`sprite layout
+:_a3bb
+DATA $20, $22, $FF, $FF, $FF, $FF
+DATA $FF, $FF, $FF, $FF, $FF, $FF
+DATA $FF, $FF, $FF, $FF, $FF, $FF
+
+DATA $74, $76, $FF, $FF, $FF, $FF
+DATA $FF, $FF, $FF, $FF, $FF, $FF
+DATA $FF, $FF, $FF, $FF, $FF, $FF
+
+DATA $78, $7A, $FF, $FF, $FF, $FF
+DATA $FF, $FF, $FF, $FF, $FF, $FF
+DATA $FF, $FF, $FF, $FF, $FF, $FF
+
+DATA $7C, $7E, $FF, $FF, $FF, $FF
+DATA $FF
+
+`____________________________________________________________________________[$A3F8]___
+`OBJECT: switch
+
+PROC :doObjectCode_switch {
+	ld	(ix+#object.width),$0a
+	ld	(ix+#object.height),$11
+	bit	0,(ix+$18)
+	jr	nz,._1
+	ld	l,(ix+#object.X+0)
+	ld	h,(ix+#object.X+1)
+	ld	de,$0008
+	add	hl,de
+	ld	(ix+#object.X+0),l
+	ld	(ix+#object.X+1),h
+	set	0,(ix+$18)
+._1	ld	hl,$0001
+	ld	(#RAM_TEMP6),hl
+	call	:_LABEL_3956_11
+	jr	c,._3
+	
+	ld	a,(#RAM_SONIC.Ydirection)
+	and	a
+	jp	m,._3
+	
+	ld	(ix+#object.spriteLayout+0),:_a48b.lo
+	ld	(ix+#object.spriteLayout+1),:_a48b.hi
+	ld	a,(#RAM_LEVEL_SOLIDITY)
+	cp	$03
+	jr	nz,._2
+	ld	(ix+#object.spriteLayout+0),:_a49b.lo
+	ld	(ix+#object.spriteLayout+1),:_a49b.hi
+._2	ld	bc,$0006
+	ld	de,$0000
+	call	:_LABEL_7CC1_12
+	bit	1,(ix+$18)
+	jr	nz,._4
+	set	1,(ix+$18)
+	ld	hl,$D317
+	call	:getLevelBitFlag
+	ld	a,(hl)
+	xor	c
+	ld	(hl),a
+	ld	a,$1a
+	rst	::playSFX
+	jr	._4
+	
+._3	res	1,(ix+$18)
+	ld	(ix+#object.spriteLayout+0),:_a493.lo
+	ld	(ix+#object.spriteLayout+1),:_a493.hi
+	ld	a,(#RAM_LEVEL_SOLIDITY)
+	cp	$03
+	jr	nz,._4
+	ld	(ix+#object.spriteLayout+0),$a3
+	ld	(ix+#object.spriteLayout+1),$a4
+._4	xor	a
+	ld	(ix+#object.Yspeed+0),a
+	ld	(ix+#object.Yspeed+1),$02
+	ld	(ix+#object.Ydirection),a
+	ret
+}
+
+`sprite layout
+:_a48b
+DATA $1A, $1C, $FF, $FF, $FF, $FF
+DATA $FF, $FF
+:_a493
+DATA $3A, $3C, $FF, $FF, $FF, $FF
+DATA $FF, $FF
+:_a49b
+DATA $38, $3A, $FF, $FF, $FF, $FF
+DATA $FF, $FF, $34, $36, $FF, $FF
+DATA $FF, $FF, $FF, $FF
+
+`____________________________________________________________________________[$A4AB]___
+`OBJECT: switch door
+
+PROC :doObjectCode_door_switchActivated {
+	set	5,(ix+$18)
+	call	:_9ed4
+	ld	a,(ix+$11)
+	cp	$28
+	jr	nc,._2
+	ld	hl,$0005
+	ld	(#RAM_TEMP6),hl
+	call	:_LABEL_3956_11
+	jr	c,._2
+	ld	de,$0005
+	ld	a,(#RAM_SONIC.Xdirection)
+	and	a
+	jp	m,._1
+	ld	de,$ffec
+._1	ld	l,(ix+#object.X+0)
+	ld	h,(ix+#object.X+1)
+	add	hl,de
+	ld	(#RAM_SONIC.X),hl
+	xor	a
+	ld	(#RAM_SONIC.Xspeed+0),a
+	ld	(#RAM_SONIC.Xspeed+1),a
+	ld	(#RAM_SONIC.Xdirection),a
+	
+._2	ld	hl,$D317
+	call	:getLevelBitFlag
+	bit	1,(ix+$18)
+	jr	z,._3
+	ld	a,(hl)
+	and	c
+	jr	nz,._5
+	jr	._4
+	
+._3	ld	a,(hl)
+	and	c
+	jr	z,._5
+._4	ld	a,(ix+$11)
+	cp	$30
+	jr	nc,._6
+	inc	a
+	inc	a
+	ld	(ix+$11),a
+	jr	._6
+	
+._5	ld	a,(ix+$11)
+	and	a
+	jr	z,._6
+	dec	a
+	dec	a
+	ld	(ix+$11),a
+._6	ld	de,:_a51a
+	jp	:doObjectCode_door_left._9e7e
+}
+
+`sprite layout
+:_a51a
+DATA $3E, $FF, $FF, $FF, $FF, $FF
+DATA $38, $FF, $FF, $FF, $FF, $FF
+DATA $3E, $FF, $FF, $FF, $FF, $FF
+
+DATA $38, $FF, $FF, $FF, $FF, $FF
+DATA $3E, $FF, $FF, $FF, $FF, $FF
+DATA $FF, $FF, $FF, $FF, $FF, $FF
+
+DATA $3E, $FF, $FF, $FF, $FF, $FF
+DATA $FF, $FF, $FF, $FF, $FF, $FF
+DATA $FF, $FF, $FF, $FF, $FF, $FF
+DATA $FF
+
+`____________________________________________________________________________[$A551]___
+`OBJECT: badnick - Caterkiller
+
+PROC :doObjectCode_badnick_caterkiller {
+	ld	(ix+#object.width),$06
+	ld	(ix+#object.height),$10
+	ld	a,(#RAM_FRAMECOUNT)
+	and	$01
+	jr	nz,._5
+	ld	hl,:_a6b9
+	bit	1,(ix+$18)
+	jr	z,._1
+	ld	hl,:_a769
+._1	ld	e,(ix+$11)
+	sla	e
+	ld	d,$00
+	add	hl,de
+	ld	c,(hl)
+	inc	hl
+	ld	b,(hl)
+	ld	l,(ix+$01)
+	ld	h,(ix+#object.X+0)
+	ld	a,(ix+#object.X+1)
+	add	hl,bc
+	bit	7,b
+	jr	z,._2
+	adc	a,$ff
+	jr	._3
+	
+._2	adc	a,$00
+._3	ld	(ix+$01),l
+	ld	(ix+#object.X+0),h
+	ld	(ix+#object.X+1),a
+	ld	hl,:_a6e5
+	add	hl,de
+	ld	e,(hl)
+	inc	hl
+	ld	d,(hl)
+	ld	l,(ix+$12)
+	ld	h,(ix+$13)
+	add	hl,de
+	ld	(ix+$12),l
+	ld	(ix+$13),h
+	ld	c,$00
+	bit	7,h
+	jr	z,._4
+	ld	c,$ff
+._4	ld	(ix+$14),c
+._5	ld	l,(ix+#object.X+0)
+	ld	h,(ix+#object.X+1)
+	ld	(#RAM_TEMP1),hl
+	ld	l,(ix+#object.Y+0)
+	ld	h,(ix+#object.Y+1)
+	ld	(#RAM_TEMP3),hl
+	bit	1,(ix+$18)
+	jr	nz,._7
+	ld	hl,:_a711
+	ld	e,(ix+$11)
+	ld	d,$00
+	add	hl,de
+	ld	a,$24
+	call	:_a688
+	ld	a,$26
+	call	:_a6a2
+	ld	a,$26
+	call	:_a688
+	ld	a,$26
+	call	:_a6a2
+	ld	(ix+#object.width),$06
+	ld	hl,$0802
+	ld	(#RAM_TEMP6),hl
+	call	:_LABEL_3956_11
+	ld	hl,$0000
+	ld	(#RAM_TEMP1),hl
+	jr	c,._6
+	call	:_35e5
+	jr	._9
+	
+._6	ld	(ix+#object.width),$16
+	ld	hl,$0806
+	ld	(#RAM_TEMP6),hl
+	call	:_LABEL_3956_11
+	call	nc,:_35fd
+	jr	._9
+	
+._7	ld	hl,:_a795
+	ld	e,(ix+$11)
+	ld	d,$00
+	add	hl,de
+	ld	a,$2a
+	call	:_a688
+	ld	a,$28
+	call	:_a6a2
+	ld	a,$28
+	call	:_a688
+	ld	a,$28
+	call	:_a6a2
+	ld	(ix+#object.width),$10
+	ld	hl,$0401
+	ld	(#RAM_TEMP6),hl
+	call	:_LABEL_3956_11
+	jr	c,._8
+	call	:_35fd
+	jr	._9
+	
+._8	ld	(ix+#object.width),$16
+	ld	hl,$0410
+	ld	(#RAM_TEMP6),hl
+	call	:_LABEL_3956_11
+	ld	hl,$0000
+	ld	(#RAM_TEMP1),hl
+	call	nc,:_35e5
+._9	ld	(ix+#object.Yspeed+1),$01
+	ld	a,(#RAM_FRAMECOUNT)
+	and	$01
+	ret	nz
+	inc	(ix+$11)
+	ld	a,(ix+$11)
+	cp	$16
+	ret	c
+	ld	(ix+$11),$00
+	inc	(ix+$15)
+	ld	a,(ix+$15)
+	cp	$14
+	ret	c
+	ld	(ix+$15),$00
+	ld	a,(ix+$18)
+	xor	$02
+	ld	(ix+$18),a
+	ret
+}
+
+`____________________________________________________________________________[$A688]___
+
+PROC :_a688 {
+	push	hl
+	ld	e,(hl)
+	ld	d,$00
+	ld	(#RAM_TEMP4),de
+	ld	l,(ix+$13)
+	ld	h,(ix+$14)
+	ld	(#RAM_TEMP6),hl
+	call	:_3581
+	pop	hl
+	ld	de,$0016
+	add	hl,de
+	ret
+}
+
+`____________________________________________________________________________[$A6A2]___
+
+PROC :_a6a2 {
+	push	hl
+	ld	e,(hl)
+	ld	d,$00
+	ld	(#RAM_TEMP4),de
+	ld	hl,$0000
+	ld	(#RAM_TEMP6),hl
+	call	:_3581
+	pop	hl
+	ld	de,$0016
+	add	hl,de
+	ret
+}
+
+:_a6b9
+DATA $00 $00 $00 $00 $00 $00 $00 $00 $00 $00 $00 $00 $00 $00 $00 $00
+DATA $00 $00 $00 $00 $00 $00 $E0 $FF $E0 $FF $E0 $FF $E0 $FF $C0 $FF
+DATA $C0 $FF $80 $FF $80 $FF $00 $FF $00 $FF $00 $FE
+:_a6e5
+DATA $00 $FF $80 $FF $80 $FF $C0 $FF $C0 $FF $E0 $FF $E0 $FF $F0 $FF
+DATA $F0 $FF $F0 $FF $F0 $FF $10 $00 $10 $00 $10 $00 $10 $00 $20 $00
+DATA $20 $00 $40 $00 $40 $00 $80 $00 $80 $00 $00 $01
+:_a711
+DATA $00 $01 $02 $02 $03 $03 $03 $03 $03 $03 $03 $03 $03 $03 $03 $03
+DATA $03 $03 $02 $02 $01 $00 $07 $07 $07 $07 $07 $07 $07 $07 $07 $07
+DATA $07 $07 $07 $07 $07 $07 $07 $07 $07 $07 $07 $07 $0E $0D $0C $0C
+DATA $0B $0B $0B $0B $0B $0B $0B $0B $0B $0B $0B $0B $0B $0B $0C $0C
+DATA $0D $0E $15 $13 $12 $11 $10 $10 $0F $0F $0F $0F $0F $0F $0F $0F
+DATA $0F $0F $10 $10 $11 $12 $13 $15
+:_a769
+DATA $00 $00 $00 $00 $00 $00 $00 $00 $00 $00 $00 $00 $00 $00 $00 $00
+DATA $00 $00 $00 $00 $00 $00 $20 $00 $20 $00 $20 $00 $20 $00 $40 $00
+DATA $40 $00 $80 $00 $80 $00 $00 $01 $00 $01 $00 $02
+:_a795
+DATA $15 $14 $13 $13 $12 $12 $12 $12 $12 $12 $12 $12 $12 $12 $12 $12
+DATA $12 $12 $13 $13 $14 $15 $0E $0E $0E $0E $0E $0E $0E $0E $0E $0E
+DATA $0E $0E $0E $0E $0E $0E $0E $0E $0E $0E $0E $0E $07 $08 $09 $09
+DATA $0A $0A $0A $0A $0A $0A $0A $0A $0A $0A $0A $0A $0A $0A $09 $09
+DATA $08 $07 $00 $02 $03 $04 $05 $05 $06 $06 $06 $06 $06 $06 $06 $06
+DATA $06 $06 $05 $05 $04 $03 $02 $00
+
+`____________________________________________________________________________[$A7ED]___
+`OBJECT: boss (Scrap Brain)
+
+PROC :doObjectCode_boss_scrapBrain {
+	ld	(ix+#object.width),$1e
+	ld	(ix+#object.height),$2f
+	bit	0,(ix+$18)
+	jr	nz,._1
+	ld	hl,$0340
+	ld	(#RAM_LEVEL_LEFT),hl
+	
+	`lock the screen at 1344 pixels, 42 blocks
+	 `(near the boss lift in Scrap Brain Act 3)
+	ld	hl,$0540
+	ld	(#RAM_LEVEL_RIGHT),hl
+	
+	ld	hl,(#RAM_CAMERA_Y)
+	ld	(#RAM_LEVEL_TOP),hl
+	ld	(#RAM_LEVEL_BOTTOM),hl
+	ld	hl,$0220
+	ld	(#RAM_CAMERA_Y_GOTO),hl
+
+	`UNKNOWN
+	ld	hl,$ef3f
+	ld	de,$2000
+	ld	a,12
+	call	:decompressArt
+
+	ld	hl,:S1_BossPalette
+	ld	a,%00000010
+	call	:loadPaletteOnInterrupt
+	
+	ld	a,#index_music_boss1
+	rst	::playMusic
+	
+	set	0,(ix+$18)
+._1	bit	1,(ix+$18)
+	jr	nz,._4
+	ld	hl,(#RAM_CAMERA_X)
+	ld	(#RAM_LEVEL_LEFT),hl
+	ld	de,:_baf9
+	ld	bc,:_a9b7
+	call	:_7c41
+	ld	l,(ix+#object.X+0)
+	ld	h,(ix+#object.X+1)
+	ld	de,(#RAM_SONIC.X)
+	xor	a
+	sbc	hl,de
+	ld	de,$0040
+	xor	a
+	ld	bc,(#RAM_SONIC.Xspeed)
+	bit	7,b
+	jr	nz,._2
+	sbc	hl,de
+	jr	c,._3
+._2	ld	bc,$ff80
+._3	inc	b
+	ld	(ix+#object.Xspeed+0),c
+	ld	(ix+#object.Xspeed+1),b
+	ld	(ix+#object.Xdirection),a
+	ld	l,(ix+#object.X+0)
+	ld	h,(ix+#object.X+1)
+	ld	de,$05a0
+	xor	a
+	sbc	hl,de
+	jp	c,._9
+	ld	l,a
+	ld	h,a
+	ld	(ix+#object.Xspeed+0),a
+	ld	(ix+#object.Xspeed+1),a
+	ld	(#RAM_SONIC.Xspeed),hl
+	ld	(#RAM_SONIC.Xdirection),a
+	set	1,(ix+$18)
+	jp	._9
+	
+._4	bit	2,(ix+$18)
+	jr	nz,._5
+	
+	ld	hl,$0530
+	ld	de,$0220
+	call	:_7c8c
+	
+	ld	(iy+#vars.joypad),$ff
+	ld	hl,$05a0
+	ld	(ix+$01),$00
+	ld	(ix+#object.X+0),l
+	ld	(ix+#object.X+1),h
+	ld	(ix+#object.spriteLayout+0),:_baf9.lo
+	ld	(ix+#object.spriteLayout+1),:_baf9.hi
+	inc	(ix+$11)
+	ld	a,(ix+$11)
+	cp	$c0
+	jp	c,._9
+	set	2,(ix+$18)
+	jp	._9
+	
+._5	bit	3,(ix+$18)
+	jr	nz,._6
+	ld	(iy+#vars.joypad),$ff
+	xor	a
+	ld	(ix+#object.spriteLayout+0),a
+	ld	(ix+#object.spriteLayout+1),a
+	dec	(ix+$11)
+	jp	nz,._9
+	set	3,(ix+$18)
+	jp	._9
+	
+._6	bit	4,(ix+$18)
+	jr	nz,._8
+	ld	de,(#RAM_SONIC.X)
+	ld	hl,$0596
+	and	a
+	sbc	hl,de
+	jr	nc,._9
+	ld	hl,$05c0
+	xor	a
+	sbc	hl,de
+	jr	c,._9
+	or	(ix+$11)
+	jr	nz,._7
+	ld	hl,(#RAM_SONIC.Y+0)
+	ld	de,$028d
+	xor	a
+	sbc	hl,de
+	jr	c,._9
+	ld	l,a
+	ld	h,a
+	ld	(#RAM_SONIC.Xspeed),hl
+	ld	(#RAM_SONIC.Xdirection),a
+._7	ld	a,$80
+	ld	($D414),a
+	ld	hl,$05a0
+	ld	(#RAM_SONIC.X),hl
+	ld	(iy+#vars.joypad),$ff
+	ld	e,(ix+$11)
+	ld	d,$00
+	ld	hl,$028e
+	xor	a			`set A to 0
+	sbc	hl,de
+	ld	($D400),a
+	ld	(#RAM_SONIC.Y+0),hl
+	ld	a,($D2E8)
+	ld	hl,($D2E6)
+	ld	(#RAM_SONIC.Yspeed),hl
+	ld	(#RAM_SONIC.Ydirection),a
+	inc	(ix+$11)
+	ld	a,(ix+$11)
+	cp	$c0
+	jr	nz,._9
+	ld	hl,(#RAM_CAMERA_X)
+	inc	h
+	ld	(#RAM_SONIC.X),hl
+	set	4,(ix+$18)
+	
+	ld	a,#index_music_actComplete
+	rst	::playMusic
+	
+	ld	a,$a0
+	ld	($D289),a
+	set	1,(iy+#vars.flags6)
+	ret
+	
+._8	ld	a,(ix+$11)
+	and	a
+	jr	z,._9
+	dec	(ix+$11)
+._9	ld	e,(ix+$11)
+	ld	d,$00
+	ld	hl,$0280
+	xor	a
+	sbc	hl,de
+	ld	(ix+$04),a
+	ld	(ix+#object.Y+0),l
+	ld	(ix+#object.Y+1),h
+	ld	e,(ix+$11)
+	ld	d,$00
+	ld	hl,$02af
+	and	a
+	sbc	hl,de
+	ld	bc,(#RAM_CAMERA_Y)
+	and	a
+	sbc	hl,bc
+	ex	de,hl
+	ld	hl,$05a0
+	ld	bc,(#RAM_CAMERA_X)
+	and	a
+	sbc	hl,bc
+	ld	bc,:_a9c0		`address of sprite layout
+	call	:processSpriteLayout
+	ld	a,(ix+$11)
+	and	$1f
+	cp	$0f
+	ret	nz
+	ld	a,$19
+	rst	::playSFX
+	ret
+}
+
+:_a9b7
+DATA $03, $08, $04, $07, $05, $08, $04, $07, $FF
+
+`sprite layout
+:_a9c0
+DATA $74, $76, $76, $78, $FF, $FF
+DATA $FF
+
+`____________________________________________________________________________[$A9C7]___
+`OBJECT: meta - clouds (Sky Base)
+
+PROC :doObjectCode_meta_clouds {
+	set	5,(ix+$18)
+	ld	a,(iy+#vars.spriteUpdateCount)
+	ld	hl,(#RAM_SPRITETABLE_CURRENT)
+	push	af
+	push	hl
+	ld	a,($D2DE)
+	cp	$24
+	jr	nc,._1
+	ld	e,a
+	ld	d,$00
+	ld	hl,#RAM_SPRITETABLE
+	add	hl,de
+	ld	(#RAM_SPRITETABLE_CURRENT),hl
+	ld	a,($D2A3)
+	ld	c,a
+	ld	de,($D2A1)
+	ld	l,(ix+$04)
+	ld	h,(ix+#object.Y+0)
+	ld	a,(ix+#object.Y+1)
+	add	hl,de
+	adc	a,c
+	ld	l,h
+	ld	h,a
+	ld	bc,(#RAM_CAMERA_Y)
+	and	a
+	sbc	hl,bc
+	ex	de,hl
+	ld	l,(ix+#object.X+0)
+	ld	h,(ix+#object.X+1)
+	ld	bc,(#RAM_CAMERA_X)
+	and	a
+	sbc	hl,bc
+	ld	bc,:_aa63		`address of sprite layout
+	call	:processSpriteLayout
+	ld	a,($D2DE)
+	add	a,$0c
+	ld	($D2DE),a
+._1	pop	hl
+	pop	af
+	ld	(#RAM_SPRITETABLE_CURRENT),hl
+	ld	(iy+#vars.spriteUpdateCount),a
+	ld	hl,(#RAM_CAMERA_X)
+	ld	de,$ffe0
+	add	hl,de
+	ex	de,hl
+	ld	l,(ix+#object.X+0)
+	ld	h,(ix+#object.X+1)
+	and	a
+	sbc	hl,de
+	jr	nc,._2
+	call	:_LABEL_625_57
+	ld	b,$00
+	add	a,a
+	ld	c,a
+	rl	b
+	ld	hl,(#RAM_CAMERA_X)
+	ld	de,$01b4
+	add	hl,de
+	add	hl,bc
+	ld	(ix+#object.X+0),l
+	ld	(ix+#object.X+1),h
+._2	ld	(ix+#object.Xspeed+0),$00
+	ld	(ix+#object.Xspeed+1),$fd
+	ld	(ix+#object.Xdirection),$ff
+	ld	(ix+#object.spriteLayout+0),$00
+	ld	(ix+#object.spriteLayout+1),$00
+	ret
+}
+
+`sprite layout
+:_aa63
+DATA $40, $42, $44, $46, $FF, $FF
+DATA $FF
+
+`____________________________________________________________________________[$AA6A]___
+`OBJECT: propeller (Sky Base)
+
+PROC :doObjectCode_trap_propeller {
+	set	5,(ix+$18)
+	ld	(ix+#object.width),$05
+	ld	(ix+#object.height),$14
+	bit	0,(ix+$18)
+	jr	nz,._1
+	ld	l,(ix+#object.X+0)
+	ld	h,(ix+#object.X+1)
+	ld	de,$000f
+	add	hl,de
+	ld	(ix+#object.X+0),l
+	ld	(ix+#object.X+1),h
+	ld	l,(ix+#object.Y+0)
+	ld	h,(ix+#object.Y+1)
+	ld	de,$fffa
+	add	hl,de
+	ld	(ix+#object.Y+0),l
+	ld	(ix+#object.Y+1),h
+	set	0,(ix+$18)
+._1	ld	l,(ix+#object.X+0)
+	ld	h,(ix+#object.X+1)
+	ld	(#RAM_TEMP1),hl
+	ld	l,(ix+#object.Y+0)
+	ld	h,(ix+#object.Y+1)
+	ld	(#RAM_TEMP3),hl
+	ld	e,(ix+$11)
+	ld	d,$00
+	ld	hl,:_ab01
+	add	hl,de
+	ld	e,(hl)
+	inc	hl
+	ld	d,(hl)
+	ld	b,$02
+	
+.loop	push	bc
+	ld	a,(de)
+	ld	l,a
+	ld	h,$00
+	ld	(#RAM_TEMP4),hl
+	inc	de
+	ld	a,(de)
+	ld	l,a
+	ld	(#RAM_TEMP6),hl
+	inc	de
+	ld	a,(de)
+	inc	de
+	and	a
+	jp	m,._2
+	push	de
+	call	:_3581
+	pop	de
+._2	pop	bc
+	djnz	.loop
+	
+	ld	hl,$0202
+	ld	(#RAM_TEMP6),hl
+	call	:_LABEL_3956_11
+	call	nc,:_35fd
+	ld	(ix+#object.spriteLayout+0),$00
+	ld	(ix+#object.spriteLayout+1),$00
+	ld	a,(ix+$11)
+	inc	a
+	inc	a
+	cp	$08
+	ld	(ix+$11),a
+	ret	c
+	ld	(ix+$11),$00
+	ret
+}
+
+:_ab01
+DATA $09, $AB, $0F, $AB, $15, $AB, $1B, $AB, $00, $00, $1C, $00, $18, $3C, $00, $00
+DATA $1E, $00, $18, $3E, $00, $00, $38, $00, $18, $3A, $00, $08, $1A, $00, $00, $FF
+
+`____________________________________________________________________________[$AB21]___
+`OBJECT: badnick - bomb (Sky Base)
+
+PROC :doObjectCode_badnick_bomb {
+	ld	(ix+#object.width),$0c
+	ld	(ix+#object.height),$10
+	ld	a,(ix+$11)
+	cp	$64
+	jr	nc,._1
+	ld	l,(ix+#object.X+0)
+	ld	h,(ix+#object.X+1)
+	ld	de,$ffc8
+	add	hl,de
+	ex	de,hl
+	ld	hl,(#RAM_SONIC.X)
+	and	a
+	sbc	hl,de
+	jr	c,._1
+	ld	l,(ix+#object.X+0)
+	ld	h,(ix+#object.X+1)
+	ld	de,$002c
+	add	hl,de
+	ex	de,hl
+	ld	hl,(#RAM_SONIC.X)
+	and	a
+	sbc	hl,de
+	jr	nc,._1
+	ld	(ix+$11),$64
+._1	ld	a,(ix+$11)
+	cp	$1e
+	jr	nc,._2
+	ld	(ix+#object.Xspeed+0),$f8
+	ld	(ix+#object.Xspeed+1),$ff
+	ld	(ix+#object.Xdirection),$ff
+	ld	de,:_ad0b
+	ld	bc,:_acf1
+	call	:_7c41
+	jp	._7
+	
+._2	ld	a,(ix+$11)
+	cp	$64
+	jp	c,._4
+	ld	(ix+#object.Xspeed+0),$00
+	ld	(ix+#object.Xspeed+1),$00
+	ld	(ix+#object.Xdirection),$00
+	cp	$66
+	jr	nc,._3
+	ld	de,:_ad0b
+	ld	bc,:_ad01
+	call	:_7c41
+	jp	._7
+	
+._3	ld	(ix+#object.spriteLayout+0),:_ad53.lo
+	ld	(ix+#object.spriteLayout+1),:_ad53.hi
+	cp	$67
+	jp	nz,._7
+	ld	hl,$fffe
+	ld	(#RAM_TEMP4),hl
+	ld	hl,$fffc
+	ld	(#RAM_TEMP6),hl
+	call	:_7c7b
+	jp	c,._8
+	ld	de,$0000
+	ld	c,e
+	ld	b,d
+	call	:_ac96
+	ld	hl,$0003
+	ld	(#RAM_TEMP4),hl
+	ld	hl,$fffc
+	ld	(#RAM_TEMP6),hl
+	call	:_7c7b
+	jp	c,._8
+	ld	de,$0008
+	ld	bc,$0000
+	call	:_ac96
+	ld	hl,$fffe
+	ld	(#RAM_TEMP4),hl
+	ld	hl,$fffe
+	ld	(#RAM_TEMP6),hl
+	call	:_7c7b
+	jp	c,._8
+	ld	de,$0000
+	ld	bc,$0008
+	call	:_ac96
+	ld	hl,$0003
+	ld	(#RAM_TEMP4),hl
+	ld	hl,$fffe
+	ld	(#RAM_TEMP6),hl
+	call	:_7c7b
+	jp	c,._8
+	ld	de,$0008
+	ld	bc,$0008
+	call	:_ac96
+	ld	(ix+#object.type),$FF	`remove object?
+	ld	a,$1b
+	rst	::playSFX
+	jr	._8
+	
+._4	cp	$23
+	jr	nc,._5
+	xor	a
+	ld	(ix+#object.Xspeed+0),a
+	ld	(ix+#object.Xspeed+1),a
+	ld	(ix+#object.Xdirection),a
+	ld	de,:_ad0b
+	ld	bc,:_acf6
+	call	:_7c41
+	jr	._7
+	
+._5	ld	a,(ix+$11)
+	cp	$41
+	jr	nc,._6
+	ld	(ix+#object.Xspeed+0),$08
+	ld	(ix+#object.Xspeed+1),$00
+	ld	(ix+#object.Xdirection),$00
+	ld	de,:_ad0b
+	ld	bc,:_acf9
+	call	:_7c41
+	jr	._7
+	
+._6	ld	(ix+#object.Xspeed+0),$00
+	ld	(ix+#object.Xspeed+1),$00
+	ld	(ix+#object.Xdirection),$00
+	ld	de,:_ad0b
+	ld	bc,:_acfe
+	call	:_7c41
+._7	ld	(ix+#object.Yspeed+0),$80
+	ld	(ix+#object.Yspeed+1),$00
+	ld	(ix+#object.Ydirection),$00
+._8	ld	hl,$0202
+	ld	(#RAM_TEMP6),hl
+	call	:_LABEL_3956_11
+	call	nc,:_35fd
+	ld	a,(#RAM_FRAMECOUNT)
+	and	$3f
+	ret	nz
+	inc	(ix+$11)
+	ld	a,(ix+$11)
+	cp	$46
+	ret	nz
+	ld	(ix+$11),$00
+	ret
+}
+
+`____________________________________________________________________________[$AC96]___
+
+PROC :_ac96 {
+	push	ix
+	push	hl
+	ld	l,(ix+#object.X+0)
+	ld	h,(ix+#object.X+1)
+	add	hl,de
+	ex	de,hl
+	ld	l,(ix+#object.Y+0)
+	ld	h,(ix+#object.Y+1)
+	add	hl,bc
+	ld	c,l
+	ld	b,h
+	pop	ix
+	xor	a			`set A to 0
+	ld	(ix+#object.type),$0D	`unknown object
+	ld	(ix+$01),a
+	ld	(ix+#object.X+0),e
+	ld	(ix+#object.X+1),d
+	ld	(ix+$04),a
+	ld	(ix+#object.Y+0),c
+	ld	(ix+#object.Y+1),b
+	ld	(ix+$11),a
+	ld	(ix+$13),$24
+	ld	(ix+$14),a
+	ld	(ix+$15),a
+	ld	(ix+$16),a
+	ld	(ix+$17),a
+	ld	(ix+#object.Xspeed+0),a
+	ld	hl,(#RAM_TEMP4)
+	ld	(ix+#object.Xspeed+1),l
+	ld	(ix+#object.Xdirection),h
+	ld	(ix+#object.Yspeed+0),a
+	ld	hl,(#RAM_TEMP6)
+	ld	(ix+#object.Yspeed+1),l
+	ld	(ix+#object.Ydirection),h
+	pop	ix
+	ret
+}
+
+:_acf1
+DATA $00, $20, $01, $20, $FF
+:_acf6
+DATA $01, $20, $FF
+:_acf9
+DATA $02, $20, $03, $20, $FF
+:_acfe
+DATA $03, $20, $FF
+:_ad01
+DATA $01, $02, $04, $02, $FF, $03, $02, $05, $02, $FF
+
+`sprite layout
+:_ad0b
+DATA $0A, $0C, $FF, $FF, $FF, $FF
+DATA $FF, $FF, $FF, $FF, $FF, $FF
+DATA $FF, $FF, $FF, $FF, $FF, $FF
+
+DATA $0E, $10, $FF, $FF, $FF, $FF
+DATA $FF, $FF, $FF, $FF, $FF, $FF
+DATA $FF, $FF, $FF, $FF, $FF, $FF
+
+DATA $2A, $2C, $FF, $FF, $FF, $FF
+DATA $FF, $FF, $FF, $FF, $FF, $FF
+DATA $FF, $FF, $FF, $FF, $FF, $FF
+
+DATA $2E, $30, $FF, $FF, $FF, $FF
+DATA $FF, $FF, $FF, $FF, $FF, $FF
+DATA $FF, $FF, $FF, $FF, $FF, $FF
+
+:_ad53
+DATA $12, $14, $FF, $FF, $FF, $FF
+DATA $FF, $FF, $FF, $FF, $FF, $FF
+DATA $FF, $FF, $FF, $FF, $FF, $FF
+DATA $32, $34, $FF, $FF, $FF, $FF
+DATA $FF
+
+`____________________________________________________________________________[$AD6C]___
+`OBJECT: canon (Sky Base)
+
+PROC :doObjectCode_trap_cannon{
+	set	5,(ix+$18)
+	bit	0,(ix+$18)
+	jr	nz,._1
+	ld	l,(ix+#object.X+0)
+	ld	h,(ix+#object.X+1)
+	ld	de,$fffc
+	add	hl,de
+	ld	(ix+#object.X+0),l
+	ld	(ix+#object.X+1),h
+	call	:_LABEL_625_57
+	ld	(ix+$11),a
+	set	0,(ix+$18)
+._1	ld	a,(ix+$11)
+	cp	$64
+	jr	nz,._2
+	call	:_7c7b
+	jr	c,._2
+	push	ix
+	ld	e,(ix+#object.X+0)
+	ld	d,(ix+#object.X+1)
+	ld	c,(ix+#object.Y+0)
+	ld	b,(ix+#object.Y+1)
+	push	hl
+	pop	ix
+	xor	a			`set A to 0
+	ld	(ix+#object.type),$34	`unknown object
+	ld	(ix+$01),a
+	ld	hl,$0004
+	add	hl,de
+	ld	(ix+#object.X+0),l
+	ld	(ix+#object.X+1),h
+	ld	(ix+$04),a
+	ld	hl,$0010
+	add	hl,bc
+	ld	(ix+#object.Y+0),l
+	ld	(ix+#object.Y+1),h
+	pop	ix
+	ld	a,$1c
+	rst	::playSFX
+	ld	(ix+$12),$18
+	ld	(ix+$16),$00
+	ld	(ix+$17),$00
+._2	ld	a,(ix+$12)
+	and	a
+	jr	z,._3
+	ld	de,:_ae04
+	ld	bc,:_adfd
+	call	:_7c41
+	dec	(ix+$12)
+	inc	(ix+$11)
+	ret
+	
+._3	ld	(ix+#object.spriteLayout+0),a
+	ld	(ix+#object.spriteLayout+1),a
+	inc	(ix+$11)
+	ret
+}
+
+:_adfd
+DATA $00, $08, $01, $08, $02, $08, $FF
+
+`sprite layout
+:_ae04
+DATA $FE, $FF, $FF, $FF, $FF, $FF
+DATA $74, $76, $FF, $FF, $FF, $FF
+DATA $FF, $FF, $FF, $FF, $FF, $FF
+
+DATA $FE, $FF, $FF, $FF, $FF, $FF
+DATA $78, $7A, $FF, $FF, $FF, $FF
+DATA $FF, $FF, $FF, $FF, $FF, $FF
+
+DATA $FE, $FF, $FF, $FF, $FF, $FF
+DATA $7C, $7E, $FF, $FF, $FF, $FF
+DATA $FF
+
+`____________________________________________________________________________[$AE35]___
+`OBJECT: cannon ball (Sky Base)
+
+PROC :doObjectCode_trap_cannonBall {
+	set	5,(ix+$18)
+	ld	(ix+#object.width),$0c
+	ld	(ix+#object.height),$0c
+	ld	hl,(#RAM_CAMERA_X)
+	ld	de,$0110
+	add	hl,de
+	ld	e,(ix+#object.X+0)
+	ld	d,(ix+#object.X+1)
+	and	a
+	sbc	hl,de
+	jr	nc,._1
+	ld	(ix+#object.type),$FF	`remove object?
+._1	ld	hl,$0202
+	ld	(#RAM_TEMP6),hl
+	call	:_LABEL_3956_11
+	call	nc,:_35fd
+	xor	a
+	ld	(ix+#object.Xspeed+0),$80
+	ld	(ix+#object.Xspeed+1),$02
+	ld	(ix+#object.Xdirection),a
+	ld	(ix+#object.Yspeed+0),a
+	ld	(ix+#object.Yspeed+1),a
+	ld	(ix+#object.Ydirection),a
+	ld	(ix+#object.spriteLayout+0),:_ae81.lo
+	ld	(ix+#object.spriteLayout+1),:_ae81.hi
+	ret
+}
+
+`sprite layout
+:_ae81
+DATA $02, $04, $FF, $FF, $FF, $FF
+DATA $FF
+
+`____________________________________________________________________________[$AE88]___
+`OBJECT: badnick - Unidos (Sky Base)
+
+PROC :doObjectCode_badnick_unidos {
+	set	5,(ix+$18)
+	bit	0,(ix+$18)
+	jr	nz,._1
+	ld	(ix+$11),$00
+	ld	(ix+$12),$2a
+	ld	(ix+$13),$52
+	ld	(ix+$14),$7c
+	set	0,(ix+$18)
+._1	ld	l,(ix+#object.X+0)
+	ld	h,(ix+#object.X+1)
+	ld	de,(#RAM_SONIC.X)
+	and	a
+	sbc	hl,de
+	jr	c,._2
+	ld	(ix+#object.Xspeed+0),$f8
+	ld	(ix+#object.Xspeed+1),$ff
+	ld	(ix+#object.Xdirection),$ff
+	ld	(ix+#object.spriteLayout+0),:_b0d5.lo
+	ld	(ix+#object.spriteLayout+1),:_b0d5.hi
+	ld	hl,$ff80
+	ld	($D216),hl
+	call	:_af98
+	ld	(ix+$16),$01
+	jr	._3
+	
+._2	ld	(ix+#object.Xspeed+0),$08
+	ld	(ix+#object.Xspeed+1),$00
+	ld	(ix+#object.Xdirection),$00
+	ld	(ix+#object.spriteLayout+0),:_b0e7.lo
+	ld	(ix+#object.spriteLayout+1),:_b0e7.hi
+	ld	hl,$0080
+	ld	($D216),hl
+	call	:_af98
+	ld	(ix+$16),$ff
+._3	ld	(ix+#object.width),$1c
+	ld	(ix+#object.height),$1c
+	ld	hl,$1212
+	ld	(#RAM_TEMP6),hl
+	call	:_LABEL_3956_11
+	ld	hl,$1010
+	ld	(#RAM_TEMP1),hl
+	call	nc,:_35e5
+	ld	l,(ix+#object.X+0)
+	ld	h,(ix+#object.X+1)
+	ld	(#RAM_TEMP1),hl
+	ld	l,(ix+#object.Y+0)
+	ld	h,(ix+#object.Y+1)
+	ld	(#RAM_TEMP3),hl
+	push	ix
+	pop	hl
+	ld	de,$0011
+	add	hl,de
+	
+	ld	b,$04
+.loop	push	bc
+	push	hl
+	ld	a,(hl)
+	cp	$fe
+	jr	z,._4
+	and	$fe
+	ld	e,a
+	ld	d,$00
+	ld	hl,:_b031
+	add	hl,de
+	push	hl
+	ld	e,(hl)
+	ld	(#RAM_TEMP4),de
+	inc	hl
+	ld	e,(hl)
+	ld	(#RAM_TEMP6),de
+	ld	a,$24
+	call	:_3581
+	pop	hl
+	ld	a,(hl)
+	inc	a
+	inc	a
+	ld	(#RAM_TEMP6),a
+	add	a,$04
+	ld	(ix+#object.width),a
+	inc	hl
+	ld	a,(hl)
+	inc	a
+	inc	a
+	ld	(#RAM_TEMP7),a
+	add	a,$04
+	ld	(ix+#object.height),a
+	call	:_LABEL_3956_11
+	call	nc,:_35fd
+._4	pop	hl
+	pop	bc
+	ld	a,(hl)
+	cp	$fe
+	jr	z,._6
+	add	a,(ix+$16)
+	cp	$ff
+	jr	nz,._5
+	ld	a,$a3
+	jr	._6
+	
+._5	cp	$a4
+	jr	nz,._6
+	xor	a
+._6	ld	(hl),a
+	inc	hl
+	djnz	.loop
+	
+	ld	a,(#RAM_FRAMECOUNT)
+	and	$07
+	ret	z
+	ld	a,(ix+$15)
+	cp	$c8
+	ret	nc
+	inc	(ix+$15)
+	ret
+}
+
+`____________________________________________________________________________[$AF98]___
+
+PROC :_af98 {
+	ld	a,(ix+$15)
+	cp	$c8
+	ret	nz
+	ld	a,(#RAM_LEVEL_SOLIDITY)
+	cp	$03
+	ret	nz
+	ld	l,(ix+#object.Y+0)
+	ld	h,(ix+#object.Y+1)
+	ld	de,$ffd0
+	add	hl,de
+	ld	de,(#RAM_SONIC.Y+0)
+	and	a
+	sbc	hl,de
+	ret	nc
+	ld	l,(ix+#object.Y+0)
+	ld	h,(ix+#object.Y+1)
+	ld	bc,$002c
+	add	hl,bc
+	and	a
+	sbc	hl,de
+	ret	c
+	push	ix
+	pop	hl
+	ld	de,$0011
+	add	hl,de
+	ld	b,$04
+	
+.loop	push	bc
+	push	hl
+	ld	a,(hl)
+	cp	$4a
+	call	z,:_afdb
+	pop	hl
+	pop	bc
+	inc	hl
+	djnz	.loop
+	
+	ret
+}
+
+`____________________________________________________________________________[$AFDB]___
+
+PROC :_afdb {
+	ld	(hl),$fe
+	call	:_7c7b
+	ret	c
+	push	ix
+	ld	e,(ix+#object.X+0)
+	ld	d,(ix+#object.X+1)
+	ld	c,(ix+#object.Y+0)
+	ld	b,(ix+#object.Y+1)
+	push	hl
+	pop	ix
+	xor	a			`set A to 0
+	ld	(ix+#object.type),$36	`unknown object
+	ld	(ix+$01),a
+	ld	hl,$0012
+	add	hl,de
+	ld	(ix+#object.X+0),l
+	ld	(ix+#object.X+1),h
+	ld	(ix+$04),a
+	ld	hl,$001e
+	add	hl,bc
+	ld	(ix+#object.Y+0),l
+	ld	(ix+#object.Y+1),h
+	ld	hl,($D216)
+	ld	(ix+#object.Xspeed+0),l
+	ld	(ix+#object.Xspeed+1),h
+	xor	a
+	bit	7,h
+	jr	z,._1
+	ld	a,$ff
+._1	ld	(ix+#object.Xdirection),a
+	xor	a
+	ld	(ix+#object.Yspeed+0),a
+	ld	(ix+#object.Yspeed+1),a
+	ld	(ix+#object.Ydirection),a
+	pop	ix
+	ret
+}
+
+:_b031
+DATA $0C, $03, $0D, $03, $0E, $03, $0E, $04, $0F, $04, $10, $04, $10, $05, $11, $05
+DATA $11, $06, $12, $06, $12, $07, $13, $07, $13, $08, $13, $09, $14, $09, $14, $0A
+DATA $14, $0B, $15, $0B, $15, $0C, $15, $0D, $15, $0E, $15, $0F, $15, $10, $15, $11
+DATA $14, $11, $14, $12, $14, $13, $13, $13, $13, $14, $13, $15, $12, $15, $12, $16
+DATA $11, $16, $11, $17, $10, $17, $10, $18, $0F, $18, $0E, $18, $0E, $19, $0D, $19
+DATA $0C, $19, $0B, $19, $0A, $19, $09, $19, $09, $18, $08, $18, $07, $18, $07, $17
+DATA $06, $17, $06, $16, $05, $16, $05, $15, $04, $15, $04, $14, $04, $13, $03, $13
+DATA $03, $12, $03, $11, $02, $11, $02, $10, $02, $0F, $02
+:_b0ac
+DATA $0E, $02, $0D, $02, $0C, $02, $0B, $03, $0B, $03, $0A, $03, $09, $04, $09, $04
+DATA $08, $04, $07, $05, $07, $05, $06, $06, $06, $06, $05, $07, $05, $07, $04, $08
+DATA $04, $09, $04, $09, $03, $0A, $03, $0B, $03
+
+`sprite layout
+:_b0d5
+DATA $FE, $FF, $FF, $FF, $FF, $FF
+DATA $FE, $26, $28, $FF, $FF, $FF
+DATA $FF, $FF, $FF, $FF, $FF, $FF
+:_b0e7
+DATA $FE, $FF, $FF, $FF, $FF, $FF
+DATA $FE, $20, $22, $FF, $FF, $FF
+DATA $FF
+
+`____________________________________________________________________________[$B0F4]___
+`OBJECT: UNKNOWN
+
+PROC :_b0f4 {
+	set	5,(ix+$18)
+	ld	(ix+#object.spriteLayout+0),$00
+	ld	(ix+#object.spriteLayout+1),$00
+	ld	(ix+#object.width),$04
+	ld	(ix+#object.height),$0a
+	ld	hl,$0602
+	ld	(#RAM_TEMP6),hl
+	call	:_LABEL_3956_11
+	call	nc,:_35fd
+	ld	l,(ix+#object.X+0)
+	ld	h,(ix+#object.X+1)
+	ld	(#RAM_TEMP1),hl
+	ex	de,hl
+	ld	hl,(#RAM_CAMERA_X)
+	ld	bc,$fff0
+	add	hl,bc
+	and	a
+	sbc	hl,de
+	jr	nc,._1
+	ld	hl,(#RAM_CAMERA_X)
+	ld	bc,$0110
+	add	hl,bc
+	and	a
+	sbc	hl,de
+	jr	c,._1
+	ld	l,(ix+#object.Y+0)
+	ld	h,(ix+#object.Y+1)
+	ld	(#RAM_TEMP3),hl
+	ex	de,hl
+	ld	hl,(#RAM_CAMERA_Y)
+	ld	bc,$fff0
+	add	hl,bc
+	and	a
+	sbc	hl,de
+	jr	nc,._1
+	ld	hl,(#RAM_CAMERA_Y)
+	ld	bc,$00d0
+	add	hl,bc
+	and	a
+	sbc	hl,de
+	jr	c,._1
+	ld	hl,$0000
+	ld	(#RAM_TEMP4),hl
+	ld	(#RAM_TEMP6),hl
+	ld	a,$24
+	call	:_3581
+	ret
+	
+._1	ld	(ix+#object.type),$FF	`remove object?
+	ret
+}
+
+`____________________________________________________________________________[$B16C]___
+`OBJECT: rotating turret (Sky Base)
+
+PROC :doObjectCode_trap_turretRotating {
+	set	5,(ix+$18)
+	bit	0,(ix+$18)
+	jr	nz,._1
+	call	:_LABEL_625_57
+	and	$07
+	ld	(ix+$11),a
+	set	0,(ix+$18)
+._1	ld	(ix+#object.spriteLayout+0),$00
+	ld	(ix+#object.spriteLayout+1),$00
+	ld	l,(ix+#object.X+0)
+	ld	h,(ix+#object.X+1)
+	ld	(#RAM_TEMP1),hl
+	ld	l,(ix+#object.Y+0)
+	ld	h,(ix+#object.Y+1)
+	ld	(#RAM_TEMP3),hl
+	ld	a,(ix+$11)
+	add	a,a
+	add	a,a
+	add	a,a
+	ld	e,a
+	ld	d,$00
+	ld	hl,:_b227
+	add	hl,de
+	ld	b,$02
+	
+.loop	push	bc
+	ld	d,$00
+	ld	e,(hl)
+	bit	7,e
+	jr	z,._2
+	ld	d,$ff
+._2	ld	(#RAM_TEMP4),de
+	inc	hl
+	ld	d,$00
+	ld	e,(hl)
+	bit	7,e
+	jr	z,._3
+	ld	d,$ff
+._3	ld	(#RAM_TEMP6),de
+	inc	hl
+	ld	a,(hl)
+	inc	hl
+	inc	hl
+	cp	$ff
+	jr	z,._4
+	push	hl
+	call	:_3581
+	pop	hl
+._4	pop	bc
+	djnz	.loop
+	
+	ld	a,(#RAM_FRAMECOUNT)
+	and	$3f
+	jr	nz,._5
+	ld	a,(ix+$11)
+	inc	a
+	and	$07
+	ld	(ix+$11),a
+._5	inc	(ix+$12)
+	ld	a,(ix+$12)
+	cp	$1a
+	ret	nz
+	ld	(ix+$12),$00
+	ld	a,(ix+$11)
+	add	a,a
+	ld	e,a
+	add	a,a
+	add	a,e
+	ld	e,a
+	ld	d,$00
+	ld	hl,:_b267
+	add	hl,de
+	ld	e,(hl)
+	inc	hl
+	ld	d,(hl)
+	inc	hl
+	ld	(#RAM_TEMP4),de
+	ld	e,(hl)
+	inc	hl
+	ld	d,(hl)
+	ld	(#RAM_TEMP6),de
+	inc	hl
+	ld	e,(hl)
+	ld	d,$00
+	bit	7,e
+	jr	z,._6
+	dec	d
+._6	inc	hl
+	ld	c,(hl)
+	ld	b,$00
+	bit	7,c
+	jr	z,._7
+	dec	b
+._7	call	:_b5c2
+	ret
+}
+
+:_b227
+DATA $08, $F8, $66, $00, $00, $00, $FF, $00, $0C, $FA, $70, $00, $14, $FA, $72, $00
+DATA $0F, $07, $4C, $00, $17, $07, $4E, $00, $0D, $0C, $6C, $00, $15, $0C, $6E, $00
+DATA $08, $0F, $64, $00, $00, $00, $FF, $00, $FC, $0C, $68, $00, $04, $0C, $6A, $00
+DATA $F9, $07, $48, $00, $01, $07, $4A, $00, $FB, $F9, $50, $00, $03, $F9, $52, $00   
+:_b267
+DATA $00, $00, $00, $FE, $08, $F0, $00, $01, $00, $FF, $18, $F8, $00, $02, $00, $00
+DATA $1E, $07, $00, $01, $00, $01, $16, $16, $00, $00, $00, $02, $08, $20, $00, $FF
+DATA $00, $01, $F8, $18, $00, $FE, $00, $00, $F2, $07, $00, $FF, $00, $FF, $F7, $F6
+
+`____________________________________________________________________________[$B297]___
+`OBJECT: flying platform (Sky Base)
+
+PROC :doObjectCode_platform_flyingRight {
+	set	5, (ix+$18)
+	bit	0, (ix+$18)
+	jr	nz,._1
+	
+	ld	a,(ix+$04)
+	ld	(ix+$12),a
+	
+	ld	a,(ix+#object.Y+0)
+	ld	(ix+$13),a
+	
+	ld	a,(ix+#object.Y+1)
+	ld	(ix+$14),a
+	
+	set	0,(ix+$18)
+	
+._1	ld	a,($D2A3)
+	ld	c,a
+	ld	de,($D2A1)
+	ld	l,(ix+$12)
+	ld	h,(ix+$13)
+	ld	a,(ix+$14)
+	add	hl,de
+	adc	a,c
+	ld	(ix+$04),l
+	ld	(ix+#object.Y+0),h
+	ld	(ix+#object.Y+1),a
+	
+	ld	a,(#RAM_SONIC.Ydirection)
+	and	a
+	jp	m,._2
+	
+	ld	(ix+#object.width),$1e
+	ld	(ix+#object.height),$10
+	ld	hl,$0a02
+	ld	(#RAM_TEMP6),hl
+	call	:_LABEL_3956_11
+	jr	c,._2
+	
+	ld	hl,$0030
+	ld	($D26B),hl
+	ld	hl,$0030
+	ld	($D26D),hl
+	ld	bc,$0010
+	ld	de,$0000
+	call	:_LABEL_7CC1_12
+	ld	l,(ix+$01)
+	ld	h,(ix+#object.X+0)
+	ld	a,(ix+#object.X+1)
+	ld	de,$0080
+	add	hl,de
+	adc	a,$00
+	ld	(ix+$01),l
+	ld	(ix+#object.X+0),h
+	ld	(ix+#object.X+1),a
+	ld	hl,($D3FD)
+	ld	a,(#RAM_SONIC.X+1)
+	add	hl,de
+	adc	a,$00
+	ld	($D3FD),hl
+	ld	(#RAM_SONIC.X+1),a
+._2	ld	l,(ix+#object.X+0)
+	ld	h,(ix+#object.X+1)
+	ld	(#RAM_TEMP1),hl
+	ld	l,(ix+#object.Y+0)
+	ld	h,(ix+#object.Y+1)
+	ld	(#RAM_TEMP3),hl
+	ld	hl,$fff8
+	ld	(#RAM_TEMP4),hl
+	ld	e,(ix+$11)
+	ld	d,$00
+	ld	hl,:_b388
+	add	hl,de
+	ld	b,$02
+	
+.loop	push	bc
+	ld	e,(hl)
+	ld	d,$00
+	inc	hl
+	ld	(#RAM_TEMP6),de
+	ld	a,(hl)
+	inc	hl
+	cp	$ff
+	jr	z,._3
+	push	hl
+	call	:_3581
+	pop	hl
+._3	pop	bc
+	djnz	.loop
+	
+	ld	(ix+#object.spriteLayout+0),:_b37b.lo
+	ld	(ix+#object.spriteLayout+1),:_b37b.hi
+	ld	a,(ix+$11)
+	add	a,$04
+	ld	(ix+$11),a
+	cp	$10
+	ret	c
+	ld	(ix+$11),$00
+	ret
+}
+
+`sprite layout
+:_b37b
+DATA $FE, $FF, $FF, $FF, $FF, $FF
+DATA $36, $36, $36, $36, $FF, $FF
+DATA $FF
+
+:_b388
+DATA $08, $1C, $18, $3C, $08, $1E, $18, $3E, $08, $38, $18, $3A, $0C, $1A, $00, $FF
+
+`____________________________________________________________________________[$B398]___
+`OBJECT: moving spiked wall (Sky Base)
+
+PROC :_b398 {
+	set	5,(ix+$18)
+	bit	0,(ix+$18)
+	jr	nz,._1
+	ld	l,(ix+#object.X+0)
+	ld	h,(ix+#object.X+1)
+	ld	(ix+$11),l
+	ld	(ix+$12),h
+	set	0,(ix+$18)
+._1	ld	(ix+#object.width),$0c
+	ld	(ix+#object.height),$2e
+	ld	(ix+#object.spriteLayout+0),:_b45b.lo
+	ld	(ix+#object.spriteLayout+1),:_b45b.hi
+	ld	hl,$0202
+	ld	(#RAM_TEMP6),hl
+
+	call	:_LABEL_3956_11
+	call	nc,:_35fd
+	ld	l,(ix+$01)
+	ld	h,(ix+#object.X+0)
+	ld	a,(ix+#object.X+1)
+	ld	de,$0080
+	add	hl,de
+	adc	a,$00
+	ld	l,h
+	ld	h,a
+	ld	(#RAM_TEMP1),hl
+	ld	l,(ix+#object.Y+0)
+	ld	h,(ix+#object.Y+1)
+	ld	(#RAM_TEMP3),hl
+	ld	hl,$0000
+	ld	(#RAM_TEMP4),hl
+	ld	hl,$fff0
+	ld	(#RAM_TEMP6),hl
+	ld	a,$16
+	call	:_3581
+	ld	hl,$0008
+	ld	(#RAM_TEMP4),hl
+	ld	a,$18
+	call	:_3581
+	ld	l,(ix+#object.X+0)
+	ld	h,(ix+#object.X+1)
+	ld	de,$0580
+	xor	a
+	ld	(ix+#object.Xspeed+0),a
+	ld	(ix+#object.Xspeed+1),a
+	ld	(ix+#object.Xdirection),a
+	sbc	hl,de
+	ret	nc
+	ld	c,(ix+#object.Y+0)
+	ld	b,(ix+#object.Y+1)
+	ld	hl,$0040
+	add	hl,bc
+	ld	de,(#RAM_CAMERA_Y)
+	and	a
+	sbc	hl,de
+	jr	nc,._2
+	ld	a,(ix+$11)
+	ld	(ix+#object.X+0),a
+	ld	a,(ix+$12)
+	ld	(ix+#object.X+1),a
+._2	ld	de,(#RAM_SONIC.Y+0)
+	ld	hl,$ffe0
+	add	hl,bc
+	xor	a
+	sbc	hl,de
+	ret	nc
+	ld	hl,$002c
+	add	hl,bc
+	xor	a
+	sbc	hl,de
+	ret	c
+	ld	(ix+#object.Xspeed+0),$80
+	ld	(ix+#object.Xspeed+1),a
+	ld	(ix+#object.Xdirection),a
+	ret
+}
+
+`sprite layout
+:_b45b
+DATA $16, $18, $FF, $FF, $FF, $FF
+DATA $16, $18, $FF, $FF, $FF, $FF
+DATA $16, $18, $FF, $FF, $FF, $FF
+
+`____________________________________________________________________________[$B46D]___
+`OBJECT: fixed turret (Sky Base)
+
+PROC :doObjectCode_trap_turretFixed {
+	set	5,(ix+$18)
+	bit	0,(ix+$18)
+	jr	nz,._1
+	ld	bc,$0000
+	ld	e,c
+	ld	d,b
+	call	:getFloorLayoutRAMPositionForObject
+	ld	a,(hl)
+	sub	$3c
+	cp	$04
+	ret	nc
+	ld	(ix+$11),a
+	set	0,(ix+$18)
+._1	inc	(ix+$12)
+	ld	a,(ix+$12)
+	bit	6,a
+	ret	nz
+	and	$0f
+	ret	nz
+	ld	a,(ix+$11)
+	add	a,a
+	ld	e,a
+	add	a,a
+	add	a,a
+	add	a,e
+	ld	e,a
+	ld	d,$00
+	ld	hl,:_b4e6
+	add	hl,de
+	ld	e,(hl)
+	inc	hl
+	ld	d,(hl)
+	inc	hl
+	ld	(#RAM_TEMP4),de
+	ld	e,(hl)
+	inc	hl
+	ld	d,(hl)
+	inc	hl
+	ld	(#RAM_TEMP6),de
+	ld	e,(hl)
+	inc	hl
+	ld	d,(hl)
+	inc	hl
+	ld	c,(hl)
+	inc	hl
+	ld	b,(hl)
+	inc	hl
+	exx	
+	ld	e,(ix+#object.X+0)
+	ld	d,(ix+#object.X+1)
+	ld	hl,(#RAM_SONIC.X)
+	and	a
+	sbc	hl,de
+	ld	a,h
+	exx	
+	cp	(hl)
+	ret	nz
+	inc	hl
+	exx	
+	ld	e,(ix+#object.Y+0)
+	ld	d,(ix+#object.Y+1)
+	ld	hl,(#RAM_SONIC.Y+0)
+	and	a
+	sbc	hl,de
+	ld	a,h
+	exx	
+	cp	(hl)
+	ret	nz
+	call	:_b5c2
+	ret
+}
+
+:_b4e6
+DATA $80, $FE, $80, $FE, $00, $00, $F8, $FF, $FF, $FF, $80, $01, $80, $FE, $18, $00
+DATA $F8, $FF, $00, $FF, $80, $FE, $80, $01, $00, $00, $10, $00, $FF, $00, $80, $01
+DATA $80, $01, $18, $00, $10, $00, $00, $00   
+
+`____________________________________________________________________________[$B50E]___
+`OBJECT: flying platform - up/down (Sky Base)
+
+PROC :doObjectCode_platform_flyingUpDown {
+	set	5,(ix+$18)
+	ld	hl,:_b37b
+	ld	a,(#RAM_LEVEL_SOLIDITY)
+	cp	$01
+	jr	nz,._1
+	ld	hl,:_b5b5
+._1	ld	(ix+#object.spriteLayout+0),l
+	ld	(ix+#object.spriteLayout+1),h
+	ld	a,$50
+	ld	($D216),a
+	call	:_b53b
+	inc	(ix+$11)
+	ld	a,(ix+$11)
+	cp	$a0
+	ret	c
+	ld	(ix+$11),$00
+	ret
+}
+
+`----------------------------------------------------------------------------[$B53B]---
+
+PROC :_b53b {
+	ld	a,($D216)
+	ld	l,a
+	ld	de,$0010
+	ld	c,$00
+	ld	a,(ix+$11)
+	cp	l
+	jr	c,._1
+	dec	c
+	ld	de,$fff0
+._1	ld	l,(ix+#object.Yspeed+0)
+	ld	h,(ix+#object.Yspeed+1)
+	ld	a,(ix+#object.Ydirection)
+	add	hl,de
+	adc	a,c
+	ld	(ix+#object.Yspeed+0),l
+	ld	(ix+#object.Yspeed+1),h
+	ld	(ix+#object.Ydirection),a
+	ld	a,h
+	and	a
+	jp	p,._2
+	ld	a,l
+	cpl	
+	ld	l,a
+	ld	a,h
+	cpl	
+	ld	h,a
+	inc	hl
+	ld	a,h
+	cp	$02
+	jr	c,._3
+	ld	(ix+#object.Yspeed+0),$00
+	ld	(ix+#object.Yspeed+1),$fe
+	ld	(ix+#object.Ydirection),$ff
+	jr	._3
+	
+._2	cp	$02
+	jr	c,._3
+	ld	(ix+#object.Yspeed+0),$00
+	ld	(ix+#object.Yspeed+1),$02
+	ld	(ix+#object.Ydirection),$00
+	
+._3	ld	a,(#RAM_SONIC.Ydirection)
+	and	a
+	ret	m
+	
+	ld	(ix+#object.width),$1e
+	ld	(ix+#object.height),$1c
+	ld	hl,$0802
+	ld	(#RAM_TEMP6),hl
+	call	:_LABEL_3956_11
+	ret	c
+	ld	e,(ix+#object.Yspeed+0)
+	ld	d,(ix+#object.Yspeed+1)
+	ld	bc,$0010
+	call	:_LABEL_7CC1_12
+	ret
+}
+
+`sprite layout
+:_b5b5
+DATA $FE, $FF, $FF, $FF, $FF, $FF
+DATA $6C, $6E, $6C, $6E, $FF, $FF
+DATA $FF
+
+`____________________________________________________________________________[$B5C2]___
+
+PROC :_b5c2 {
+	push	bc
+	push	de
+	call	:_7c7b
+	pop	de
+	pop	bc
+	ret	c
+	push	ix
+	push	hl
+	ld	l,(ix+#object.X+0)
+	ld	h,(ix+#object.X+1)
+	add	hl,de
+	ex	de,hl
+	ld	l,(ix+#object.Y+0)
+	ld	h,(ix+#object.Y+1)
+	add	hl,bc
+	ld	c,l
+	ld	b,h
+	pop	ix
+	xor	a			`set A to 0
+	ld	(ix+#object.type),$0D	`unknown object?
+	ld	(ix+$01),a
+	ld	(ix+#object.X+0),e
+	ld	(ix+#object.X+1),d
+	ld	(ix+$04),a
+	ld	(ix+#object.Y+0),c
+	ld	(ix+#object.Y+1),b
+	ld	(ix+$11),a
+	ld	(ix+$13),a
+	ld	(ix+$14),a
+	ld	(ix+$15),a
+	ld	(ix+$16),a
+	ld	(ix+$17),a
+	ld	hl,(#RAM_TEMP4)
+	bit	7,h
+	jr	z,._1
+	ld	a,$ff
+._1	ld	(ix+#object.Xspeed+0),l
+	ld	(ix+#object.Xspeed+1),h
+	ld	(ix+#object.Xdirection),a
+	xor	a
+	ld	hl,(#RAM_TEMP6)
+	bit	7,h
+	jr	z,._2
+	ld	a,$ff
+._2	ld	(ix+#object.Yspeed+0),l
+	ld	(ix+#object.Yspeed+1),h
+	ld	(ix+#object.Ydirection),a
+	pop	ix
+	ld	a,$01
+	rst	::playSFX
+	ret
+}
+
+`____________________________________________________________________________[$B634]___
+`OBJECT: boss (Sky Base)
+
+PROC :doObjectCode_boss_skyBase {
+	ld	(ix+#object.width),$1e
+	ld	(ix+#object.height),$2f
+	set	5,(ix+$18)
+	bit	2,(ix+$18)
+	jp	nz,:_b821
+	call	:_7ca6
+	call	:_b7e6
+	bit	0,(ix+$18)
+	jr	nz,._1
+	
+	ld	hl,$0350
+	ld	de,$0120
+	call	:_7c8c
+	
+	ld	l,(ix+#object.X+0)
+	ld	h,(ix+#object.X+1)
+	ld	de,$0008
+	add	hl,de
+	ld	(ix+#object.X+0),l
+	ld	(ix+#object.X+1),h
+	ld	(ix+$11),l
+	ld	(ix+$12),h
+	ld	l,(ix+#object.Y+0)
+	ld	h,(ix+#object.Y+1)
+	ld	de,$0010
+	add	hl,de
+	ld	(ix+#object.Y+0),l
+	ld	(ix+#object.Y+1),h
+	ld	(ix+$13),l
+	ld	(ix+$14),h
+	xor	a
+	ld	($D2EC),a
+	
+	ld	a,#index_music_boss3
+	rst	::playMusic
+	
+	set	4,(iy+#vars.unknown0)
+	set	0,(ix+$18)
+._1	ld	a,(ix+$15)
+	and	a
+	jp	nz,._4
+	call	:_b99f
+	ld	a,(#RAM_FRAMECOUNT)
+	and	$07
+	jp	nz,._8
+	ld	a,(ix+$16)
+	cp	$1c
+	jr	nc,._2
+	inc	(ix+$17)
+	ld	a,(ix+$17)
+	cp	$02
+	jp	c,._3
+._2	ld	(ix+$17),$00
+._3	inc	(ix+$16)
+	ld	a,(ix+$16)
+	cp	$28
+	jp	c,._8
+	ld	(ix+$16),$00
+	inc	(ix+$15)
+	jp	._8
+	
+._4	dec	a
+	jr	nz,._5
+	ld	(ix+#object.Yspeed+0),$40
+	ld	(ix+#object.Yspeed+1),$fe
+	ld	(ix+#object.Ydirection),$ff
+	inc	(ix+$15)
+	ld	l,(ix+$11)
+	ld	h,(ix+$12)
+	ld	de,$0004
+	add	hl,de
+	ld	(ix+#object.X+0),l
+	ld	(ix+#object.X+1),h
+	ld	(ix+#object.spriteLayout+0),:_bb1d.lo
+	ld	(ix+#object.spriteLayout+1),:_bb1d.hi
+	jp	._8
+	
+._5	dec	a
+	jp	nz,._7
+	ld	l,(ix+#object.Yspeed+0)
+	ld	h,(ix+#object.Yspeed+1)
+	ld	a,(ix+#object.Ydirection)
+	ld	de,$000e
+	add	hl,de
+	adc	a,$00
+	ld	c,a
+	jp	m,._6
+	ld	a,h
+	cp	$02
+	jr	c,._6
+	ld	hl,$0200
+._6	ld	(ix+#object.Yspeed+0),l
+	ld	(ix+#object.Yspeed+1),h
+	ld	(ix+#object.Ydirection),c
+	ld	(ix+#object.spriteLayout+0),:_bb1d.lo
+	ld	(ix+#object.spriteLayout+1),:_bb1d.hi
+	ld	l,(ix+#object.Y+0)
+	ld	h,(ix+#object.Y+1)
+	dec	hl
+	ld	e,(ix+$13)
+	ld	d,(ix+$14)
+	and	a
+	sbc	hl,de
+	jr	c,._8
+	ld	(ix+#object.Y+0),e
+	ld	(ix+#object.Y+1),d
+	xor	a
+	ld	(ix+$16),a
+	ld	(ix+#object.Yspeed+0),a
+	ld	(ix+#object.Yspeed+1),a
+	ld	(ix+#object.Ydirection),a
+	inc	(ix+$15)
+	jp	._8
+	
+._7	dec	a
+	jp	nz,._8
+	ld	l,(ix+$11)
+	ld	h,(ix+$12)
+	ld	(ix+#object.X+0),l
+	ld	(ix+#object.X+1),h
+	ld	a,(ix+$16)
+	and	a
+	call	z,:_b9d5
+	ld	(ix+$17),$02
+	set	1,(ix+$18)
+	call	:_b99f
+	inc	(ix+$16)
+	ld	a,(ix+$16)
+	cp	$12
+	jr	c,._8
+	res	1,(ix+$18)
+	xor	a
+	ld	(ix+$15),a
+	ld	(ix+$16),a
+	
+._8	ld	hl,$ba31
+	bit	1,(ix+$18)
+	jr	z,._9
+	ld	hl,:_ba3b
+._9	ld	de,#RAM_TEMP1
+	ldi	
+	ldi	
+	ldi	
+	ldi	
+	ldi	
+	ldi	
+	ldi	
+	ldi	
+	ld	a,(hl)
+	inc	hl
+	push	hl
+	call	:_3581
+	ld	hl,(#RAM_TEMP4)
+	ld	de,$0008
+	add	hl,de
+	ld	(#RAM_TEMP4),hl
+	pop	hl
+	ld	a,(hl)
+	call	:_3581
+	ld	a,($D2EC)
+	cp	$0c
+	ret	c
+	xor	a
+	ld	(ix+$11),a
+	ld	(ix+$16),a
+	ld	(ix+$17),a
+	set	2,(ix+$18)
+	res	4,(iy+#vars.unknown0)
+	
+	ld	a,#index_music_scrapBrain
+	rst	::playMusic
+	
+	ld	a,$21
+	rst	::playSFX
+	ret
+}
+
+`____________________________________________________________________________[$B7E6]___	
+
+PROC :_b7e6 {
+	ld	a,($D2B1)
+	and	a
+	ret	nz
+	bit	0,(iy+#vars.scrollRingFlags)
+	ret	nz
+	ld	a,($D414)
+	rrca	
+	jr	c,._1
+	and	$02
+	ret	z
+._1	ld	hl,(#RAM_SONIC.X)
+	ld	de,$0410
+	and	a
+	sbc	hl,de
+	ret	c
+	ld	hl,$fd00
+	ld	a,$ff
+	ld	(#RAM_SONIC.Xspeed),hl
+	ld	(#RAM_SONIC.Xdirection),a
+	ld	hl,$D2B1
+	ld	(hl),$18
+	inc	hl
+	ld	(hl),$0c
+	inc	hl
+	ld	(hl),$3f
+	ld	a,$01
+	rst	::playSFX
+	ld	hl,$D2EC
+	inc	(hl)
+	ret
+}
+
+`____________________________________________________________________________[$B821]___	
+
+PROC :_b821 {
+	bit	3,(ix+$18)
+	jp	nz,._10
+	res	5,(ix+$18)
+	ld	a,(ix+$11)
+	cp	$0f
+	jr	nc,._1
+	add	a,a
+	add	a,a
+	ld	e,a
+	add	a,a
+	add	a,e
+	ld	e,a
+	ld	d,$00
+	ld	hl,$ba45
+	add	hl,de
+	ld	e,(hl)
+	inc	hl
+	ld	d,(hl)
+	inc	hl
+	ld	($D2AB),de
+	ld	e,(hl)
+	inc	hl
+	ld	d,(hl)
+	inc	hl
+	ld	($D2AD),de
+	ld	($D2AF),hl
+	inc	(ix+$11)
+	ld	a,(ix+$11)
+	cp	$0f
+	jr	nz,._1
+	set	5,(iy+#vars.flags0)
+	res	1,(iy+#vars.flags2)
+	
+	`something to do with scrolling
+	ld	hl,$0550
+	ld	(#RAM_LEVEL_RIGHT),hl
+	
+._1	ld	e,(ix+#object.X+0)
+	ld	d,(ix+#object.X+1)
+	ld	hl,$05e0
+	xor	a
+	sbc	hl,de
+	jr	nc,._2
+	ld	c,a
+	ld	b,a
+	jp	._5
+	
+._2	ex	de,hl
+	ld	de,(#RAM_SONIC.X)
+	xor	a
+	sbc	hl,de
+	ld	de,$0040
+	xor	a
+	ld	bc,(#RAM_SONIC.Xspeed)
+	bit	7,b
+	jr	nz,._3
+	sbc	hl,de
+	jr	c,._4
+._3	ld	bc,$ff80
+._4	inc	b
+._5	ld	(ix+#object.Xspeed+0),c
+	ld	(ix+#object.Xspeed+1),b
+	ld	(ix+#object.Xdirection),a
+	ld	a,(ix+$17)
+	cp	$06
+	jr	nz,._6
+	ld	a,(ix+$16)
+	dec	a
+	jr	nz,._6
+	bit	7,(ix+$18)
+	jr	z,._6
+	ld	(ix+#object.Yspeed+0),$00
+	ld	(ix+#object.Yspeed+1),$ff
+	ld	(ix+#object.Ydirection),$ff
+._6	ld	de,$0017
+	ld	bc,$0036
+	call	:getFloorLayoutRAMPositionForObject
+	ld	e,(hl)
+	ld	d,$00
+	ld	hl,$3f28
+	add	hl,de
+	ld	a,(hl)
+	and	$3f
+	and	a
+	jr	z,._7
+	bit	7,(ix+$18)
+	jr	z,._7
+	ld	(ix+#object.Yspeed+0),$80
+	ld	(ix+#object.Yspeed+1),$fd
+	ld	(ix+#object.Ydirection),$ff
+._7	ld	de,$0000
+	ld	bc,$0008
+	call	:getFloorLayoutRAMPositionForObject
+	ld	a,(hl)
+	cp	$49
+	jr	nz,._8
+	bit	7,(ix+$18)
+	jr	z,._8
+	xor	a
+	ld	(ix+$16),a
+	ld	(ix+$17),a
+	ld	(ix+#object.Xspeed+0),a
+	ld	(ix+#object.Xspeed+1),a
+	ld	(ix+#object.Xdirection),a
+	ld	(ix+$11),$e0
+	ld	(ix+$12),$05
+	ld	(ix+$13),$60
+	ld	(ix+$14),$01
+	
+	ld	hl,$0550
+	ld	de,$0120
+	call	:_7c8c
+	
+	set	3,(ix+$18)
+	jp	._10
+	
+._8	ld	l,(ix+#object.Yspeed+0)
+	ld	h,(ix+#object.Yspeed+1)
+	ld	a,(ix+#object.Ydirection)
+	ld	de,$000e
+	add	hl,de
+	adc	a,$00
+	ld	c,a
+	jp	m,._9
+	ld	a,h
+	cp	$02
+	jr	c,._9
+	ld	hl,$0200
+._9	ld	(ix+#object.Yspeed+0),l
+	ld	(ix+#object.Yspeed+1),h
+	ld	(ix+#object.Ydirection),c
+	ld	bc,:_ba28
+	ld	de,:_baf9
+	call	:_7c41
+	ret
+	
+._10	ld	(iy+#vars.joypad),$ff
+	call	:_b99f
+	ld	a,(ix+$16)
+	cp	$30
+	jr	nc,._12
+	ld	c,a
+	ld	a,(#RAM_FRAMECOUNT)
+	and	$07
+	jr	nz,._11
+	ld	a,(ix+$17)
+	inc	a
+	and	$01
+	ld	(ix+$17),a
+	inc	(ix+$16)
+._11	ld	a,c
+	cp	$2c
+	ret	c
+	ld	(ix+#object.spriteLayout+0),:_bb77.lo
+	ld	(ix+#object.spriteLayout+1),:_bb77.hi
+	ret
+	
+._12	xor	a
+	ld	(ix+#object.spriteLayout+0),a
+	ld	(ix+#object.spriteLayout+1),a
+	inc	(ix+$16)
+	ld	a,(ix+$16)
+	cp	$70
+	ret	c
+	ld	(ix+#object.type),$FF	`remove object?
+	ret
+}
+	
+`____________________________________________________________________________[$B99F]___
+
+PROC :_b99f {
+	ld	hl,:_ba1c
+	ld	a,(ix+$17)
+	add	a,a
+	add	a,a
+	ld	e,a
+	ld	d,$00
+	ld	b,d
+	add	hl,de
+	ld	c,(hl)
+	inc	hl
+	ld	e,(hl)
+	inc	hl
+	ld	a,(hl)
+	inc	hl
+	ld	h,(hl)
+	ld	l,a
+	ld	(ix+#object.spriteLayout+0),l
+	ld	(ix+#object.spriteLayout+1),h
+	ld	l,(ix+$11)
+	ld	h,(ix+$12)
+	add	hl,bc
+	ld	(ix+#object.X+0),l
+	ld	(ix+#object.X+1),h
+	ld	l,(ix+$13)
+	ld	h,(ix+$14)
+	add	hl,de
+	ld	(ix+#object.Y+0),l
+	ld	(ix+#object.Y+1),h
+	ret
+}
+
+`____________________________________________________________________________[$B9D5]___
+
+PROC :_b9d5 {
+	bit	5,(iy+#vars.unknown0)
+	ret	nz
+	call	:_7c7b
+	ret	c
+	push	ix
+	push	hl
+	pop	ix
+	xor	a			`set A to 0
+	ld	(ix+#object.type),$47	`unknown object
+	ld	(ix+$01),a
+	ld	hl,$0420
+	ld	(ix+#object.X+0),l
+	ld	(ix+#object.X+1),h
+	ld	(ix+$04),a
+	ld	hl,$012f
+	ld	(ix+#object.Y+0),l
+	ld	(ix+#object.Y+1),h
+	ld	(ix+$11),a
+	ld	(ix+$18),a
+	ld	(ix+#object.Xspeed+0),a
+	ld	(ix+#object.Xspeed+1),a
+	ld	(ix+#object.Xdirection),a
+	ld	(ix+#object.Yspeed+0),a
+	ld	(ix+#object.Yspeed+1),a
+	ld	(ix+#object.Ydirection),a
+	pop	ix
+	ret
+}
+
+:_ba1b
+DATA $C9					`unused?
+:_ba1c    
+DATA $00, $00, $F9, $BA, $00, $02, $0B, $BB, $00, $07, $0B, $BB
+:_ba28
+DATA $03, $08, $04, $07, $05, $08, $04, $07, $FF, $30, $04, $A0, $01, $00, $00
+:_ba37
+DATA $00, $00, $20, $22
+:_ba3b
+DATA $30, $04, $A0, $01, $00, $00, $00, $00, $24, $26, $20, $04, $60, $01, $37, $10
+DATA $38, $10, $4A, $10, $4B, $10, $30, $04, $60, $01, $28, $10, $19, $10, $4C, $10
+DATA $4D, $10, $40, $04, $60, $01, $00, $10, $2D, $10, $4E, $10, $4F, $10, $20, $04
+DATA $70, $01, $00, $00, $00, $00, $00, $00, $00, $00, $30, $04, $70, $01, $00, $00
+DATA $00, $00, $00, $00, $00, $00, $40, $04, $70, $01, $00, $00, $00, $00, $00, $00
+DATA $00, $00, $20, $04, $80, $01, $00, $00, $00, $00, $00, $00, $00, $00, $30, $04
+DATA $80, $01, $00, $00, $00, $00, $00, $00, $00, $00, $40, $04, $80, $01, $00, $00
+DATA $00, $00, $00, $00, $00, $00, $20, $04, $90, $01, $00, $00, $00, $00, $00, $00
+DATA $00, $00, $30, $04, $90, $01, $00, $00, $00, $00, $00, $00, $00, $00, $40, $04
+DATA $90, $01, $00, $00, $00, $00, $00, $00, $00, $00, $20, $04, $A0, $01, $5A, $10
+DATA $5B, $10, $37, $10, $3B, $10, $30, $04, $A0, $01, $5C, $10, $5D, $10, $3C, $10
+DATA $00, $10, $40, $04, $A0, $01, $5E, $10, $5F, $10, $00, $10, $2D, $10
+
+`sprite layout
+:_baf9
+DATA $FE, $0A, $0C, $0E, $FF, $FF
+DATA $28, $2A, $2C, $2E, $FF, $FF
+DATA $FE, $4A, $4C, $4E, $FF, $FF
+
+DATA $FE, $0A, $0C, $0E, $FF, $FF
+DATA $28, $2A, $2C, $2E, $FF, $FF
+DATA $FE, $02, $04, $06, $FF, $FF
+:_bb1d
+DATA $10, $12, $14, $16, $FF, $FF
+DATA $30, $32, $34, $FE, $FF, $FF
+DATA $50, $52, $54, $FE, $FF, $FF
+
+DATA $18, $1A, $1C, $1E, $FF, $FF
+DATA $FE, $3A, $3C, $3E, $FF, $FF
+DATA $FE, $64, $66, $68, $FF, $FF
+
+DATA $18, $1A, $1C, $1E, $FF, $FF
+DATA $FE, $3A, $3C, $3E, $FF, $FF
+DATA $FE, $6A, $6C, $6E, $FF, $FF
+
+DATA $18, $1A, $1C, $1E, $FF, $FF
+DATA $FE, $3A, $3C, $3E, $FF, $FF
+DATA $70, $72, $5A, $5C, $5E, $FF
+
+DATA $00, $0A, $0C, $0E, $FF, $FF
+DATA $28, $2A, $2C, $2E, $FF, $FF
+DATA $00, $4A, $4C, $4E, $FF, $FF
+
+:_bb77
+DATA $FE, $FF, $FF, $FF, $FF, $FF
+DATA $FE, $44, $46, $FF, $FF, $FF
+DATA $FF
+
+`____________________________________________________________________________[$BB84]___
+`OBJECT: boss - electric beam (Sky Base)
+
+PROC :doObjectCode_boss_electricBeam {
+	set	5,(ix+$18)
+	ld	hl,$0008
+	ld	($D26B),hl
+	bit	0,(ix+$18)
+	jr	nz,._1
+
+	`UNKNOWN
+	ld	hl,$ef3f
+	ld	de,$2000
+	ld	a,$0c
+	call	:decompressArt
+
+	ld	(ix+$12),$01
+	set	0,(ix+$18)
+._1	ld	hl,$0390
+	ld	(#RAM_TEMP1),hl
+	ld	l,(ix+$11)
+	ld	h,$00
+	ld	(#RAM_TEMP4),hl
+	ld	l,h
+	ld	(#RAM_TEMP6),hl
+	ld	de,$011a
+	ld	hl,:_bcdd
+	call	:_bca5
+	ld	e,(ix+$11)
+	ld	d,$00
+	ld	(#RAM_TEMP4),de
+	ld	de,$01d2
+	ld	hl,:_bcdd
+	call	:_bca5
+	bit	4,(iy+#vars.unknown0)
+	ret	z
+	bit	1,(ix+$18)
+	jr	z,._2
+	ld	a,(#RAM_FRAMECOUNT)
+	bit	0,a
+	ret	nz
+	and	$02
+	ld	e,a
+	ld	d,$00
+	ld	hl,:_bcc7
+	add	hl,de
+	ld	b,$0a
+	ld	de,$0130
+	
+.loop	push	bc
+	push	de
+	call	:_bca5
+	pop	de
+	push	hl
+	ld	hl,$0010
+	add	hl,de
+	ex	de,hl
+	pop	hl
+	pop	bc
+	djnz	.loop
+	
+	ld	hl,$0390
+	ld	c,(ix+$11)
+	ld	b,$00
+	add	hl,bc
+	ld	c,l
+	ld	b,h
+	ld	hl,$000c
+	add	hl,bc
+	ld	de,(#RAM_SONIC.X)
+	and	a
+	sbc	hl,de
+	jr	c,._2
+	ld	hl,$000e
+	add	hl,de
+	and	a
+	sbc	hl,bc
+	jr	c,._2
+	bit	0,(iy+#vars.scrollRingFlags)
+	call	z,:_35fd
+	
+._2	ld	a,($D2EC)
+	cp	$06
+	jr	nc,._5
+	bit	1,(ix+$18)
+	jr	nz,._3
+	ld	a,(ix+$11)
+	inc	a
+	ld	(ix+$11),a
+	cp	$80
+	ret	c
+	ld	a,(#RAM_FRAMECOUNT)
+	ld	c,a
+	and	$01
+	ret	nz
+	set	1,(ix+$18)
+	ret
+	
+._3	ld	a,(#RAM_FRAMECOUNT)
+	and	$0f
+	jr	nz,._4
+	ld	a,$13
+	rst	::playSFX
+._4	dec	(ix+$11)
+	ret	nz
+	ld	(ix+$11),$00
+	res	1,(ix+$18)
+	ret
+	
+._5	ld	hl,(#RAM_SONIC.X)
+	ld	e,(ix+#object.X+0)
+	ld	d,(ix+#object.X+1)
+	and	a
+	sbc	hl,de
+	jr	nc,._6
+	ld	a,(ix+$11)
+	and	a
+	jr	z,._7
+	dec	(ix+$11)
+	jr	._7
+	
+._6	ld	a,(ix+$11)
+	cp	$80
+	jr	nc,._7
+	inc	(ix+$11)
+._7	res	1,(ix+$18)
+	ld	a,(#RAM_FRAMECOUNT)
+	ld	c,a
+	and	$40
+	ret	nz
+	ld	a,($D2EC)
+	cp	$06
+	ret	z
+	set	1,(ix+$18)
+	ld	a,c
+	and	$1f
+	ret	nz
+	ld	a,$13
+	rst	::playSFX
+	ret
+}
+
+`____________________________________________________________________________[$BAC5]___
+
+PROC :_bca5 {
+	ld	(#RAM_TEMP3),de
+	ld	a,(hl)
+	inc	hl
+	push	hl
+	call	:_3581
+	pop	hl
+	ld	a,(hl)
+	inc	hl
+	push	hl
+	ld	hl,(#RAM_TEMP4)
+	push	hl
+	ld	de,$0008
+	add	hl,de
+	ld	(#RAM_TEMP4),hl
+	call	:_3581
+	pop	hl
+	ld	(#RAM_TEMP4),hl
+	pop	hl
+	ret
+}
+
+:_bcc7
+DATA $36, $38, $56, $58, $36, $38, $56, $58, $36, $38, $56, $58, $36, $38, $56, $58
+DATA $36, $38, $56, $58, $36, $38
+:_bcdd
+DATA $40, $42
+
+`____________________________________________________________________________[$BCDF]___
+`OBJECT: UNKNOWN
+
+PROC :_bcdf {
+	set	5,(ix+$18)
+	set	5,(iy+#vars.unknown0)
+	ld	hl,$0202
+	ld	(#RAM_TEMP6),hl
+	call	:_LABEL_3956_11
+	jr	c,._1
+	bit	0,(iy+#vars.scrollRingFlags)
+	call	z,:_35fd
+	jp	._8
+	
+._1	ld	a,(ix+$11)
+	cp	$c8
+	jp	c,._6
+	ld	e,(ix+#object.X+0)
+	ld	d,(ix+#object.X+1)
+	ld	hl,(#RAM_CAMERA_X)
+	ld	bc,$fff4
+	add	hl,bc
+	and	a
+	sbc	hl,de
+	jp	nc,._8
+	ld	hl,(#RAM_CAMERA_X)
+	inc	h
+	and	a
+	sbc	hl,de
+	jp	c,._8
+	ld	hl,(#RAM_SONIC.X)
+	and	a
+	sbc	hl,de
+	ld	l,(ix+#object.Xspeed+0)
+	ld	h,(ix+#object.Xspeed+1)
+	ld	a,(ix+#object.Xdirection)
+	jr	nc,._2
+	ld	c,$ff
+	ld	de,$fff4
+	bit	7,a
+	jr	nz,._3
+	ld	de,$ffe8
+	jr	._3
+
+._2	ld	c,$00
+	ld	de,$000c
+	bit	7,a
+	jr	z,._3
+	ld	de,$0018
+._3	add	hl,de
+	adc	a,c
+	ld	(ix+#object.Xspeed+0),l
+	ld	(ix+#object.Xspeed+1),h
+	ld	(ix+#object.Xdirection),a
+	ld	e,(ix+#object.Y+0)
+	ld	d,(ix+#object.Y+1)
+	ld	hl,(#RAM_CAMERA_Y)
+	ld	bc,$fff4
+	add	hl,bc
+	and	a
+	sbc	hl,de
+	jr	nc,._8
+	ld	hl,(#RAM_CAMERA_Y)
+	ld	bc,$00c0
+	add	hl,de
+	and	a
+	sbc	hl,de
+	jr	c,._8
+	ld	hl,(#RAM_SONIC.Y+0)
+	and	a
+	sbc	hl,de
+	ld	l,(ix+#object.Yspeed+0)
+	ld	h,(ix+#object.Yspeed+1)
+	ld	a,(ix+#object.Ydirection)
+	jr	nc,._4
+	ld	c,$ff
+	ld	de,$fff6
+	bit	7,a
+	jr	nz,._5
+	ld	de,$fffb
+	jr	._5
+	
+._4	ld	de,$000a
+	ld	c,$00
+	bit	7,a
+	jr	z,._5
+	ld	de,$0005
+._5	add	hl,de
+	adc	a,c
+	ld	(ix+#object.Yspeed+0),l
+	ld	(ix+#object.Yspeed+1),h
+	ld	(ix+#object.Ydirection),a
+	jr	._7
+._6	inc	(ix+$11)
+._7	ld	bc,:_bdc7
+	ld	de,:_bdce
+	call	:_7c41
+	bit	4,(iy+#vars.unknown0)
+	ret	nz
+._8	ld	(ix+#object.type),$FF	`remove object?
+	res	5,(iy+#vars.unknown0)
+	ret
+}
+
+:_bdc7
+DATA $00, $01, $01, $01, $02, $01, $FF
+
+`sprite layout
+:_bdce
+DATA $44, $46, $FF, $FF, $FF, $FF
+DATA $FF, $FF, $FF, $FF, $FF, $FF
+DATA $FF, $FF, $FF, $FF, $FF, $FF
+
+DATA $48, $08, $FF, $FF, $FF, $FF
+DATA $FF, $FF, $FF, $FF, $FF, $FF
+DATA $FF, $FF, $FF, $FF, $FF, $FF
+
+DATA $60, $62, $FF, $FF, $FF, $FF
+DATA $FF
+
+`____________________________________________________________________________[$BDF9]___
+`OBJECT: final animation
+
+PROC :doObjectCode_anim_final {
+	set	5,(ix+$18)
+	ld	(iy+#vars.joypad),$ff
+	bit	1,(ix+$18)
+	jr	nz,._1
+	ld	hl,:S1_BossPalette
+	ld	a,%00000010
+	call	:loadPaletteOnInterrupt
+	ld	a,$FF
+	ld	(#RAM_SONIC),a
+	ld	hl,$0000
+	ld	(#RAM_SONIC.Y+0),hl
+	ld	(ix+$12),$ff
+	set	6,(iy+#vars.timeLightningFlags)
+	set	1,(ix+$18)
+._1	ld	a,(#RAM_FRAMECOUNT)
+	rrca	
+	jr	c,._2
+	ld	a,(ix+$12)
+	and	a
+	jr	z,._2
+	dec	(ix+$12)
+	jr	nz,._2
+	ld	l,(ix+#object.X+0)
+	ld	h,(ix+#object.X+1)
+	ld	de,$003c
+	add	hl,de
+	ld	(#RAM_SONIC.X),hl
+	ld	l,(ix+#object.Y+0)
+	ld	h,(ix+#object.Y+1)
+	ld	de,$ffc0
+	add	hl,de
+	ld	(#RAM_SONIC.Y+0),hl
+	xor	a			`set A to 0
+	ld	(#RAM_SONIC),a
+	set	6,(iy+#vars.unknown0)
+	ld	a,$06
+	rst	::playSFX
+._2	ld	(ix+#object.width),$20
+	ld	(ix+#object.height),$1c
+	xor	a
+	ld	(ix+#object.Xspeed+0),a
+	ld	(ix+#object.Xspeed+1),$01
+	ld	(ix+#object.Xdirection),a
+	ld	(ix+#object.Yspeed+0),a
+	ld	(ix+#object.Yspeed+1),a
+	ld	(ix+#object.Ydirection),a
+	bit	6,(iy+#vars.timeLightningFlags)
+	jr	z,._3
+	ld	de,(#RAM_CAMERA_X)
+	ld	hl,$0040
+	add	hl,de
+	ld	c,(ix+#object.X+0)
+	ld	b,(ix+#object.X+1)
+	and	a
+	sbc	hl,bc
+	jr	nc,._3
+	inc	de
+	ld	(#RAM_CAMERA_X),de
+._3	ld	(ix+#object.spriteLayout+0),._bf21.lo
+	ld	(ix+#object.spriteLayout+1),._bf21.hi
+	bit	0,(ix+$18)
+	jr	nz,._4
+	ld	hl,$1008
+	ld	(#RAM_TEMP6),hl
+	call	:_LABEL_3956_11
+	jr	c,+
+	ld	de,$0001
+	ld	hl,(#RAM_SONIC.Yspeed)
+	ld	a,l
+	cpl	
+	ld	l,a
+	ld	a,h
+	cpl	
+	ld	h,a
+	ld	a,(#RAM_SONIC.Ydirection)
+	cpl	
+	add	hl,de
+	adc	a,$00
+	ld	(#RAM_SONIC.Yspeed),hl
+	ld	(#RAM_SONIC.Ydirection),a
+	res	6,(iy+#vars.timeLightningFlags)
+	set	0,(ix+$18)
+	ld	(ix+$11),$01
+	ld	a,$01
+	rst	::playSFX
+._4	call	:_79fa
+	bit	0,(ix+$18)
+	ret	z
+	xor	a
+	ld	(ix+#object.Yspeed+0),$40
+	ld	(ix+#object.Yspeed+1),a
+	ld	(ix+#object.Ydirection),a
+	ld	(ix+#object.spriteLayout+0),._bf33.lo
+	ld	(ix+#object.spriteLayout+1),._bf33.hi
+	dec	(ix+$11)
+	ret	nz
+	call	:_7a3a
+	ld	(ix+$11),$18
+	inc	(ix+$13)
+	ld	a,(ix+$13)
+	cp	$0a
+	ret	c
+	ld	a,($D27F)
+	cp	$06
+	jr	c,._5
+	set	7,(iy+#vars.unknown0)
+	ret
+	
+._5	ld	a,($D289)
+	and	a
+	ret	nz
+	ld	a,$20
+	ld	($D289),a
+	set	2,(iy+$0d)
+	ret
+
+._bf21
+DATA $2A, $2C, $2E, $30, $32, $FF, $4A, $4C, $4E, $50, $52, $FF, $6A, $6C, $6E, $70
+DATA $72, $FF
+
+`sprite layout
+._bf33
+DATA $2A, $34, $36, $38, $32, $FF
+DATA $4A, $4C, $4E, $50, $52, $FF
+DATA $6A, $6C, $6E, $70, $72, $FF
+DATA $5C, $5E, $FF, $FF, $FF, $FF
+DATA $FF
+}
+
+`____________________________________________________________________________[$BF4C]___
+`OBJECT: all emeralds animation
+
+PROC :doObjectCode_anim_emeralds {
+	set	5,(ix+$18)
+	ld	hl,$5400		`$15400 - emerald image
+	call	:loadPowerUpIcon
+	
+	bit	0,(ix+$18)
+	jr	nz,._1
+	
+	xor	a			`set A to 0
+	ld	(ix+#object.spriteLayout+0),a
+	ld	(ix+#object.spriteLayout+1),a
+	ld	(ix+#object.Xspeed+0),a
+	ld	(ix+#object.Xspeed+1),a
+	ld	(ix+#object.Xdirection),a
+	inc	(ix+$11)
+	ld	a,(ix+$11)
+	cp	$50
+	ret	c
+	set	0,(ix+$18)
+	ld	(ix+$11),$64
+	ret
+	
+._1	ld	a,(ix+$11)
+	and	a
+	jr	z,._2
+	dec	(ix+$11)
+	jr	._3
+	
+._2	ld	(ix+#object.Yspeed+0),$80
+	ld	(ix+#object.Yspeed+1),$ff
+	ld	(ix+#object.Ydirection),$ff
+._3	ld	hl,:_bff1
+	ld	a,(#RAM_FRAMECOUNT)
+	rrca	
+	jr	nc,._4
+	ld	a,(iy+#vars.spriteUpdateCount)
+	ld	hl,(#RAM_SPRITETABLE_CURRENT)
+	push	af
+	push	hl
+	ld	hl,#RAM_SPRITETABLE
+	ld	(#RAM_SPRITETABLE_CURRENT),hl
+	ld	l,(ix+#object.Y+0)
+	ld	h,(ix+#object.Y+1)
+	ld	de,(#RAM_CAMERA_Y)
+	and	a
+	sbc	hl,de
+	ex	de,hl
+	ld	l,(ix+#object.X+0)
+	ld	h,(ix+#object.X+1)
+	ld	bc,(#RAM_CAMERA_X)
+	and	a
+	sbc	hl,bc
+	ld	bc,._bff1		`address of sprite layout
+	call	:processSpriteLayout
+	pop	hl
+	pop	af
+	ld	(#RAM_SPRITETABLE_CURRENT),hl
+	ld	(iy+#vars.spriteUpdateCount),a
+._4	ld	l,(ix+#object.Y+0)
+	ld	h,(ix+#object.Y+1)
+	ld	de,$0020
+	add	hl,de
+	ld	de,(#RAM_CAMERA_Y)
+	and	a
+	sbc	hl,de
+	ret	nc
+	ld	a,$01
+	ld	($D289),a
+	set	2,(iy+$0d)
+	ret
+
+`sprite layout
+._bff1
+DATA $5C, $5E, $FF, $FF, $FF, $FF
+DATA $FF
+
+DATA $49, $43, $20, $54, $48, $45, $20, $48
+}

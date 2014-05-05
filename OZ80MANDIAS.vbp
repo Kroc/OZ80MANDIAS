@@ -1,11 +1,11 @@
 Type=Exe
 Reference=*\G{420B2830-E718-11CF-893D-00A0C9054228}#1.0#0#C:\Windows\system32\scrrun.dll#Microsoft Scripting Runtime
-Module=Run; CODE\Run.bas
 RelatedDoc=SYNTAX.txt
 Class=oz80_Assembler; CODE\oz80_Assembler.cls
 Class=oz80_TokenStream; CODE\oz80_Tokeniser.cls
 Class=PerformanceCounter; CODE\PerformanceCounter.cls
-Startup="Sub Main"
+Form=CODE\UI.frm
+Startup="UI"
 HelpFile=""
 Title="OZ80MANDIAS"
 ExeName32="OZ80MANDIAS.exe"

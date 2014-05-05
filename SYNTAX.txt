@@ -7,19 +7,25 @@ Licenced under a Creative Commons 3.0 Attribution Licence
 				TABLE OF CONTENTS
 	
 	i.		Goals
+	
 	1.		Comments
-	2.		Register Hints
-	3.		Numbers
-	3.1.		Number Suffixes
-	3.2.		Signed Numbers
-	4.		Banks & Slots
-	4.1.		Setting the Assembly Point
-	5.		Labels
-	5.1.		Procedures
-	5.2.		Params
-	5.3.		Sub-Labels
-	5.4.		Anonymous Labels
-	6.		Variables
+	1.1.		Register Hints
+	
+	2.		Numbers
+	2.1.		Number Suffixes
+	2.2.		Signed Numbers
+	
+	3.		Memory Management
+	3.1.		Sections
+	3.2.		Setting the Assembly Point
+	
+	4.		Labels
+	4.1.		Procedures
+	4.2.		Params
+	4.3.		Sub-Labels
+	4.4.		Anonymous Labels
+	
+	5.		Variables
 	
 	
 
@@ -75,15 +81,14 @@ double back-tick is encountered. All text in between is ignored.
 	rrca
 	rrca
 
-
-2.	Register Hints
-=======================================================================================
+1.1.	Register Hints
+---------------------------------------------------------------------------------------
 Format:
 	<register>;<hintName>		`or:
 	<register>'<hintName>		`for indicating shadow registers in use
 
 The Z80 registers are your temporary working space for manipulating information with
-the CPU, as such register contents change constantly, for differing purposes.
+the CPU. As such, register contents change constantly; for differing purposes.
 
 Register hints provide the ability to keep track of the temporary "role" of registers.
 It allows you to explain 'what' a register currently is, without resorting to comments
@@ -120,7 +125,7 @@ explain why a piece of code is doing what it is, but register hints do remove th
 need to waste comments on explaining the mechanics of basic information flow.
 
 
-3.	Numbers
+2.	Numbers
 =======================================================================================
 It's safe to say you know how to use numbers. With Z80 code some instructions will
 require 8-bit numbers and some 16-bit numbers.
@@ -153,7 +158,7 @@ time, but more may be supported in the future.
 	
 	ld hl, %0000111100001111
 
-3.1.	Number Suffixes:
+2.1.	Number Suffixes:
 ---------------------------------------------------------------------------------------
 Some number suffixes (units) are supported to represent larger number in a simpler
 fashion.
@@ -162,107 +167,172 @@ fashion.
 	1 KB		= 1'024 (kibibytes)
 	1 Kbit		= 128 (kibibits)
 	
-3.2.	Signed Numbers:
+2.2.	Signed Numbers:
 ---------------------------------------------------------------------------------------
 Numbers are assumed to be positive and filling the full space of the 8 or 16-bits
 available, i.e. 0-255 or 0-65535.
 
 Negative numbers are represented on the Master System by having bit 7 set.
-This limits a negative number to -127 (8-bit) or -32'767 (16-bit).
+This limits a negative number to -127.
 
 TODO: Is this one or two's compliment???
 
 
-4.	Banks & Slots
+3.	Memory Management
 =======================================================================================
-Format:
-	BANK <expr>[, <expr> ...] [SLOT <expr> [, <expr> ...]]
-
-TODO: This will ideally be replaced by SECTION use, e.g.
-      SECTION :<sectionName> [BANK <expr> SLOT <expr>] [AT <expr>]
-
-The Master System can address 64 KB of memory which is mapped into different 
-configurable slots. Since a cartridge may contain more than 64 KB (typically 256 KB
+The Master System can address 64 KB of memory which is mapped into 3 configurable
+slots spanning 48 KB. Since a cartridge may contain more than 48 KB (typically 256 KB
 or 512 KB), the contents of the cartridge can be "paged" into the slots in memory in
 16 KB chunks known as "banks".
 
-Here's a map of the Master System's memory as seen by the Z80 processor.
+Slots 0, 1 & 2 can each hold any of the 16 KB banks in the cartridge.
+A 256 KB cartridge, for example, would have 16 banks.
 
-	$FFFF	+-----------------+
-	        | RAM (mirror)    |
-	$E000	+-----------------+
-	        | RAM             | 8 KB
-	$C000	+-----------------+
-		|                 |
-		| SLOT 2          | 16 KB
-		|                 |
-	$8000	+-----------------+
-		|                 |
-		| SLOT 1          | 16 KB
-		|                 |
-	$4000	+-----------------+
-		|                 |
-		| SLOT 0          | 15 KB
-	$0400	+ - - - - - - - - +
-	$0000	+-----------------+ 1 KB
+		Z80:					Cartridge ROM:
 
-It's important to note that the first 1 KB of memory is *always* paged in to the first
-1 KB of the cartridge, regardless of which bank in the cartridge slot 0 is assigned to.
-That means that $0000-$03FF in the memory is always mapped to $0000-$03FF in the ROM.
+	$0000	+-----------------+ 1 KB	$00000	+-----------------+
+	$0400	+ - - - - - - - - +			| BANK 0          | 16 KB
+		| SLOT 0          | 15 KB	$04000	+-----------------+
+		|                 |			| BANK 1          | 16 KB
+	$4000	+-----------------+		$08000	+-----------------+
+		|                 |			| BANK 2          | 16 KB
+		| SLOT 1          | 16 KB	$0C000	+-----------------+
+		|                 |			| BANK 3          | 16 KB
+	$8000	+-----------------+		$10000	+-----------------+
+		|                 |			| BANK 4          | 16 KB
+		| SLOT 2          | 16 KB	$14000	+-----------------+
+		|                 |			| BANK 5          | 16 KB
+	$C000	+-----------------+		$18000	+-----------------+
+	        | RAM             | 8 KB		| BANK 6          | 16 KB
+	$E000	+-----------------+		$1C000	+-----------------+
+	        | RAM (mirror)    |			| BANK 7          | 16 KB
+	$FFFF	+-----------------+		$20000	+-----------------+
+							| BANK 8          | 16 KB
+						$24000	+-----------------+
+							| BANK 9          | 16 KB
+						$28000	+-----------------+
+							| BANK 10         | 16 KB
+						$2C000	+-----------------+
+							| BANK 11         | 16 KB
+						$30000	+-----------------+
+							| BANK 12         | 16 KB
+						$34000	+-----------------+
+							| BANK 13         | 16 KB
+						$38000	+-----------------+
+							| BANK 14         | 16 KB
+						$3C000	+-----------------+
+							| BANK 15         | 16 KB
+						$3FFFF	+-----------------+
 
-The `BANK` directive tells the assembler which bank of the cartridge the following
-code is to be assembled into and automatically sets the origin to $0000 -- the start
-of the bank.
+What must be understood is that the code in the cartridge ROM that needs to refer to
+elsewhere in the ROM cannot do so using absolute addresses, e.g. $2C000.
 
-In its simplest form just state the bank number, the slot is assumed to be 0.
+Let’s say that you have some code in BANK 10 that needs to refer to some data in
+BANK 14. The code must begin by loading these banks into the memory slots.
+For example, BANK 10 is loaded into SLOT 1 and BANK 14 is loaded into SLOT 2.
+That means that the contents of BANK 14 are referenced by addresses $4000 - $7FFF,
+and *not* $38000-$3BFFF as in the ROM.
 
-	BANK 0
+NOTE: The first 1 KB of memory is *always* paged in to the first 1 KB of the cartridge,
+regardless of which bank in the cartridge slot 0 is assigned to. That means $0000-$03FF
+in the memory is always mapped to $0000-$03FF in the ROM.
 
-You can also specify the slot number explicitly:
+To make your life easier, the assembler will do all the necessary translation of
+addresses for you automatically, however you must divide your code into SECTIONs
+to alert the assembler when a particular bank or slot is required for a piece of code.
 
-	BANK 5 SLOT 1
+				!!! IMPORTANT !!!
 
-This will assemble the code as if it is located between $4000-$7FFF even though it is
-positioned at $10000-$13FFF in the ROM.
+ALL Z80 CODE MUST EXIST WITHIN SECTIONS. Your source code will not assemble if any Z80
+instructions lie outside of a `SECTION` block.
 
-An error will occur if the assembler overflows the 16 KB limit of the bank.
+				!!! IMPORTANT !!!
 
-If you are assembling a large amount of code or data that is bigger than 16 KB you may
-not want to manage the boundary line manually as this is inflexible. Instead you can
-specify more than one bank number (separated by commas) and the data will overflow
-from one bank into the next automatically, i.e.
-
-	BANK 10, 11, 12
-
-When the slot number is not specified it will begin at 0 and increase with each
-automatic bank change until it reaches 2, before restarting back at 0.
-
-You can specify a slot number which will be used for each bank, or a series of slot
-numbers which will be used in order, e.g.
-
-	BANK 10, 11, 12 SLOT 2
-	BANK 3, 4, 5, 6 SLOT 0, 1, 0, 1
-
-If no `BANK` declaration exists before the first line of assembled code,
-`BANK 0 SLOT 0` will be assumed.
-
-4.1.	Setting the Assembly Point
+3.1.	Sections
 ---------------------------------------------------------------------------------------
 Format:
-	AT <expr>
+	SECTION ::<sectionName>
+		[BANK <expr> [SLOT <expr>] [AT <expr>]] [LIMIT <expr>]
+	{
+		<code>
+	}
+	
+A Section exists as an encapsulation for your code to keep closely related code/data
+together.
+	
+	SECTION ::code {
+		ld a, (::data)
+		ld b, (::data+1)
+		ld c, (::data+2)
+	}
+	
+	SECTION ::data {
+		DATA 1, 2, 3
+	}
+	
+The assembler will automatically choose where in the ROM to place each section and will
+calculate the correct memory references to use for you. If your cartridge ROM is 48 KB
+or less, you will not have to do any additional work.
 
-If you need to place a piece of code or data starting in a particular location within
-a bank the `AT` statement specifies an offset address from the beginning of the bank
-to the desired starting point. In other assemblers this is usually known as `ORG`.
+For larger ROMs, your Z80 code will need to specifically page in the desired banks
+where the data is stored. The assembler allows you to do this in such a way that you
+do not have to manually manage the bank numbers yourself.
+	
+	SECTION ::code {
+		ld a, ::data.bank
+		ld ($FFFE), a
+	}
+	
+	SECTION ::data {
+		DATA 1, 2, 3
+	}
 
-	BANK 5				`bank 5 begins at $10000
-	AT $2000			`begin assembling at $12000
+In this example, the code loads the bank containing the data section into the first
+slot (`$FFFE` on the Master System). `::data.bank` is automatically filled in with
+the correct bank number by the assembler. Thankfully, your code will continue to
+assemble even as your program grows and the data section moves into increasing bank
+numbers!
 
-TODO: SKIP
-...
+For any Section, you can provide a specific Bank number to use and Slot number to
+apply. For example:
+
+	SECTION ::code BANK 10 {
+		ld a, ::data.bank
+		ld ($FFFD+::data.slot), a
+	}
+	
+	SECTION ::data BANK 14 SLOT 1 {
+		DATA 1, 2, 3
+	}
+
+Here, the data section will be located in Bank 14 in the ROM and references to its
+content will be addressed through Slot 1 ($4000-$7FFF). This is a good example of
+writing portable code that will adapt automatically to changes.
+
+If you require a section to assemble into a very specific location, you can provide
+the `AT` parameter to provide an offset address from the beginning of the Bank.
+(You cannot specify `AT` without specifying at least a bank number)
+
+	`force this code to appear at $00066 in the ROM
+	SECTION ::PauseHandler BANK 0 SLOT 0 AT $66 {
+		ld (#pauseFlag), 1
+	}
+
+3.2.	Handling Bank & Slot Boundaries
+---------------------------------------------------------------------------------------
+Sections are by default limited to 16 KB. If the contents of a Section overflow,
+the source code will not assemble. This is because Banks & Slots are 16 KB in size
+and for any Sections larger than this you will have to write Z80 code to load the
+additional Banks into whichever desired slots.
+
+(A Section that unknowingly overflows its Bank can easily cause difficult to debug 
+problems with your game, so this is done for your safety.)
+
+TODO: BANK / SLOT PARAMETERS
+TODO: SKIP?
 
 
-5.	Labels
+4.	Labels
 =======================================================================================
 Format:
 	:<labelName>
@@ -285,7 +355,7 @@ ROM address (accounting for the correct bank & slot) everywhere the name is used
 	
 	ld a, (:someData)
 
-5.1.	Procedures
+4.1.	Procedures
 ---------------------------------------------------------------------------------------
 Format:
 	PROC :<procedureName> {
@@ -312,7 +382,7 @@ the assembler will calculate the label's address in memory for you.
 The curly braces form a "block", a special encapsulation that define the beginning
 and end of the code that makes up the procedure.
 
-5.2.	Params
+4.2.	Params
 ---------------------------------------------------------------------------------------
 Format:
 	PROC :myProcedure
@@ -345,7 +415,7 @@ Here's a diverse sample:
 Here the procedure is noted to use registers A, HL & BC as inputs and sets DE and
 the memory address referred to by #RAM.thing on return.
 
-5.3.	Sub-Labels
+4.3.	Sub-Labels
 ---------------------------------------------------------------------------------------
 Within procedure blocks, labels that begin with a dot are attached as properties of
 the procedure, e.g.
@@ -368,7 +438,7 @@ procedures (such as "loop") from clashing with other procedures' internal labell
 Outside of "myProcedure", it is referred to via the full label name.
 
 
-6.	Variables
+5.	Variables
 =======================================================================================
 Format:
 	DEF #<variableName> [<expr>]
@@ -496,9 +566,9 @@ Format:
 =======================================================================================
 Format:
 	TABLE :<tableName> {
-		.<rowIndexName>
+		.<rowName>		;Also defines `rowName.index`
 		<data> ...
-		[.<rowIndexName>
+		[.<rowName>
 		<data> ...]
 	}
 ...
@@ -709,21 +779,6 @@ TODO: "EXIT IF"
 #.#.	Logical Operators
 ---------------------------------------------------------------------------------------
 TODO: =, NOT, <, <=, >, >=, AND, OR (`&`/`|`/`!` are purely bitwise operators)
-
-
-#.	Sections
-=======================================================================================
-Format:
-	SECTION :<sectionName> [BANK <expr> SLOT <expr>] [AT <expr>] [MAXSIZE <expr>] {
-		<code>
-	}
-
-A SECTION defines a standard label, but with an additional `.size` property that will
-give the number of bytes in the section *after* assembly. This will allow you to
-determine how large a block of code/data is, and to include this value in your code.
-
-TODO: MAXSIZE property
-TODO: BANK/SLOT/AT parameters?
 
 
 #.	Macros & Functions

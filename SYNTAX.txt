@@ -56,7 +56,7 @@ overcome without a new, clean language design.
 Format:
 	`single-line
 	``multi-
-	line``
+	  line``
 
 The first thing available to you to make writing Z80 assembly easier is the ability
 to add descriptive comments to your source.
@@ -240,13 +240,6 @@ in the memory is always mapped to $0000-$03FF in the ROM.
 To make your life easier, the assembler will do all the necessary translation of
 addresses for you automatically, however you must divide your code into SECTIONs
 to alert the assembler when a particular bank or slot is required for a piece of code.
-
-				!!! IMPORTANT !!!
-
-ALL Z80 CODE MUST EXIST WITHIN SECTIONS. Your source code will not assemble if any Z80
-instructions lie outside of a `SECTION` block.
-
-				!!! IMPORTANT !!!
 
 3.1.	Sections
 ---------------------------------------------------------------------------------------

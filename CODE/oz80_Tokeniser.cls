@@ -251,26 +251,26 @@ Public Enum OZ80_TOKEN_DATA
     TOKEN_KEYWORD_BINARY = &H4
     TOKEN_KEYWORD_BYTE = &H5
     TOKEN_KEYWORD_DATA = &H6
-    TOKEN_KEYWORD_DEF = &H7
-    TOKEN_KEYWORD_DEFAULT = &H8
-    TOKEN_KEYWORD_ECHO = &H9
-    TOKEN_KEYWORD_ELSE = &HA
-    TOKEN_KEYWORD_EXISTS = &HB
-    TOKEN_KEYWORD_FAIL = &HC
-    TOKEN_KEYWORD_FILL = &HD
-    TOKEN_KEYWORD_IF = &HE
-    TOKEN_KEYWORD_INCLUDE = &HF
-    TOKEN_KEYWORD_LENGTH = &H10
-    TOKEN_KEYWORD_OBJECT = &H11
-    TOKEN_KEYWORD_PARAMS = &H12
-    TOKEN_KEYWORD_PROC = &H13
-    TOKEN_KEYWORD_RETURN = &H14
-    TOKEN_KEYWORD_SECTION = &H15
-    TOKEN_KEYWORD_SLOT = &H16
-    TOKEN_KEYWORD_START = &H17
-    TOKEN_KEYWORD_STOP = &H18
-    TOKEN_KEYWORD_STRUCT = &H19
-    TOKEN_KEYWORD_TABLE = &H1A
+    TOKEN_KEYWORD_DEFAULT = &H7
+    TOKEN_KEYWORD_ECHO = &H8
+    TOKEN_KEYWORD_ELSE = &H9
+    TOKEN_KEYWORD_EXISTS = &HA
+    TOKEN_KEYWORD_FAIL = &HB
+    TOKEN_KEYWORD_FILL = &HC
+    TOKEN_KEYWORD_IF = &HD
+    TOKEN_KEYWORD_INCLUDE = &HE
+    TOKEN_KEYWORD_LENGTH = &HF
+    TOKEN_KEYWORD_OBJECT = &H10
+    TOKEN_KEYWORD_PARAMS = &H11
+    TOKEN_KEYWORD_PROC = &H12
+    TOKEN_KEYWORD_RETURN = &H13
+    TOKEN_KEYWORD_SECTION = &H14
+    TOKEN_KEYWORD_SLOT = &H15
+    TOKEN_KEYWORD_START = &H16
+    TOKEN_KEYWORD_STOP = &H17
+    TOKEN_KEYWORD_STRUCT = &H18
+    TOKEN_KEYWORD_TABLE = &H19
+    TOKEN_KEYWORD_VAR = &H1A
     TOKEN_KEYWORD_WORD = &H1B
 End Enum
 
@@ -464,14 +464,25 @@ End Sub
 
 'PROPERTY Count : Number of tokens _
  ======================================================================================
-Public Property Get Count() As Long: Let Count = TokenCount: End Property
+Public Property Get Count() As Long
+    'Internally the token count is zero-based (easy to manage), _
+     but externally it is one-based (expected behaviour)
+    Let Count = TokenCount + 1
+End Property
+
+'PROPERTY EOF : End Of File? _
+ ======================================================================================
+Public Property Get EOF() As Boolean
+    Let EOF = CBool(TokenIndex > TokenCount)
+End Property
 
 'PROPERTY Index : Current location within the tokenStream _
  ======================================================================================
 Public Property Get Index() As Long: Let Index = TokenIndex: End Property
 Public Property Let Index(ByVal Value As Long)
     'Out of bounds?
-    If Value < 0 Or Value > (TokenCount - 1) Then
+    If (Value < 0) Or (Value > TokenCount) Then
+        'Raise a standard VB error for 'array out of bounds'
         Call Err.Raise(9)
     Else
         Let TokenIndex = Value
@@ -480,19 +491,27 @@ End Property
 
 'PROPERTY Kind : Token Kind of current token _
  ======================================================================================
-Public Property Get Kind() As OZ80_TOKEN: Let Kind = Tokens(TokenIndex).Kind: End Property
+Public Property Get Kind() As OZ80_TOKEN
+    If EOF = True Then Let Kind = 0 Else Let Kind = Tokens(TokenIndex).Kind
+End Property
 
 'PROPERTY Data : Data value of current token _
  ======================================================================================
-Public Property Get Data() As OZ80_TOKEN_DATA: Let Data = Tokens(TokenIndex).Data: End Property
+Public Property Get Data() As OZ80_TOKEN_DATA
+    If EOF = True Then Let Data = 0 Else Let Data = Tokens(TokenIndex).Data
+End Property
 
 'PROPERTY Line : Line number in the source of the current token _
  ======================================================================================
-Public Property Get Line() As Long: Let Line = Tokens(TokenIndex).Line: End Property
+Public Property Get Line() As Long
+    If EOF = True Then Let Line = 0 Else Let Line = Tokens(TokenIndex).Line
+End Property
 
 'PROPERTY Col : Column number in the source of the current token _
  ======================================================================================
-Public Property Get Col() As Long: Let Col = Tokens(TokenIndex).Col: End Property
+Public Property Get Col() As Long
+    If EOF = True Then Let Col = 0 Else Let Col = Tokens(TokenIndex).Col
+End Property
 
 'CRCString : Calculate a unique hash for a string _
  ======================================================================================
@@ -522,11 +541,17 @@ End Function
 'Forward : Move onto the next token, returns false if the tokenStream hit the end _
  ======================================================================================
 Public Function Forward() As Boolean
-    If (TokenIndex + 1) > (TokenCount - 1) Then Exit Function
     Let TokenIndex = TokenIndex + 1
+    If TokenIndex > TokenCount Then Exit Function
     Let Forward = True
 End Function
 
+'Rewind : Go back to the start of the tokenStream _
+ ======================================================================================
+Public Sub Rewind()
+    Let TokenIndex = 0
+End Sub
+ 
 'TokeniseFile : Break a file into individual words and convert to machine tokens _
  ======================================================================================
 Public Function TokeniseFile(ByRef FilePath As String) As OZ80_ERROR
@@ -540,9 +565,9 @@ Public Function TokeniseFile(ByRef FilePath As String) As OZ80_ERROR
     Dim ii As Long
     
     'Prepare a large buffer to accept the token stream (using `ReDim` for every token _
-     added is *incredibly* slow). If the tokens overflow this buffer, we'll increase _
-     it by another chunk there and then
-    Let TokenLimit = TOKEN_BUFFER: Let TokenCount = 0: Let TokenIndex = 0
+     added is *incredibly* slow). If the tokens overflow this buffer, _
+     we'll increase it by another chunk there and then
+    Let TokenLimit = TOKEN_BUFFER: Let TokenCount = 0: Call Me.Rewind
     ReDim Tokens(0 To TokenLimit) As oz80Token
     Erase Text
     
@@ -915,7 +940,6 @@ TokenWord:
         If CompStr(WordBegin, WordLen, "djnz") Then Call Add(TOKEN_Z80, TOKEN_Z80_DJNZ, LineBegin, ColBegin): GoTo NextWord
         'Keywords
         If CompStr(WordBegin, WordLen, "data") Then Call Add(TOKEN_KEYWORD, TOKEN_KEYWORD_DATA, LineBegin, ColBegin): GoTo NextWord
-        If CompStr(WordBegin, WordLen, "def") Then Call Add(TOKEN_KEYWORD, TOKEN_KEYWORD_DEF, LineBegin, ColBegin): GoTo NextWord
         If CompStr(WordBegin, WordLen, "default") Then Call Add(TOKEN_KEYWORD, TOKEN_KEYWORD_DEFAULT, LineBegin, ColBegin): GoTo NextWord
         
     ElseIf Asc1 = E Then '..................................................... `e` ...
@@ -1071,6 +1095,11 @@ TokenWord:
         'There is no `t` register
         GoTo WordError
     
+    ElseIf Asc1 = V Then '..................................................... `v` ...
+        'Keywords
+        If CompStr(WordBegin, WordLen, "var") Then Call Add(TOKEN_KEYWORD, TOKEN_KEYWORD_VAR, LineBegin, ColBegin): GoTo NextWord
+        GoTo WordError
+        
     ElseIf Asc1 = W Then '..................................................... `w` ...
         'Keywords
         If CompStr(WordBegin, WordLen, "word") Then Call Add(TOKEN_KEYWORD, TOKEN_KEYWORD_WORD, LineBegin, ColBegin): GoTo NextWord
@@ -1282,17 +1311,17 @@ Finish:
        'Reduce the buffers to the final size
         ReDim Preserve Tokens(0 To TokenCount - 1) As oz80Token
         'Move the cursor back to the start of the stream
-        Let TokenIndex = 0
+        Call Me.Rewind
         
         Erase Text
         RaiseEvent Message("- Words: " & Format$(WordCount, "#,#"))
         RaiseEvent Message("- Tokens: " & Format$(TokenCount, "#,#"))
         RaiseEvent Message("- Time: " & Format$(Stopwatch.Elapsed / 1000, "0.000") & "s")
     Else
-        'When there's an error, clean up
+        'clean up!
         Erase Text, Tokens
         Let TokenCount = 0
-        Let TokenIndex = 0
+        Call Me.Rewind
     End If
 End Function
 
@@ -1307,7 +1336,7 @@ Private Sub Add( _
     'The `Kind` param MUST be 0-255, but is given as long for speed reasons; _
      the rest of this class will ensure that this is never out of bounds
     With Tokens(TokenIndex)
-        Let .Kind = Kind
+        Let .Kind = Kind & &HFF
         Let .Data = Data
         Let .Line = Line
         Let .Col = Col
@@ -1339,7 +1368,6 @@ Private Sub AddString( _
     
     'Pass the string back to the assembler. It'll want to pool together all of the _
      strings used across all files for the purpose of label lookups
-    'TODO
     RaiseEvent StringAdded(Key, Data)
     
     'Add the index key to the token so that we can retrieve the string later
@@ -1384,7 +1412,7 @@ End Function
 
 'IsValidName : Check validity for variables, labels & properties _
  ======================================================================================
-Public Function IsValidName(ByRef First As Long, ByRef Last As Long) As Boolean
+Private Function IsValidName(ByRef First As Long, ByRef Last As Long) As Boolean
     'Variable, label and property names can contain A-Z, 0-9 underscore and dot with _
      the exceptions that the first letter cannot be a number or a dot, two dots cannot _
      occur in a row nor can a number follow a dot and the name cannot end in a dot

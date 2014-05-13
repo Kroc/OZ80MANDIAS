@@ -90,10 +90,10 @@ SECTION ::doObjectCode_boss_endSign BANK 1, 2 SLOT 1, 2 {
 	jr	z,._7
 	
 	ld	a,#index_music_actComplete
-	rst	::playMusic
+	rst	:rst_playMusic
 	
 	ld	a,$0c
-	rst	::playSFX
+	rst	:rst_playSFX
 	res	2,(ix+$11)
 	set	3,(ix+$11)
 	ld	a,$a0
@@ -132,7 +132,7 @@ SECTION ::doObjectCode_boss_endSign BANK 1, 2 SLOT 1, 2 {
 	set	1,(ix+$11)
 	res	3,(iy+#vars.flags6)
 	ld	a,$0b
-	rst	::playSFX
+	rst	:rst_playSFX
 	
 ._7	ld	de,._6157
 	bit	1,(ix+$11)

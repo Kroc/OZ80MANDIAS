@@ -6,8 +6,8 @@
 `____________________________________________________________________________[$65EE]___
 `OBJECT: badnick - crabmeat
 
-SECTION	::doObjectCode_badnick_crabMeat BANK 1, 2 SLOT 1, 2 {
-	
+PROC	:doObjectCode_badnick_crabMeat  SECTION ::objects
+{	
 	ld	(ix+#object.width),$10
 	ld	(ix+#object.height),$1f
 	ld	e,(ix+$12)
@@ -65,7 +65,7 @@ SECTION	::doObjectCode_badnick_crabMeat BANK 1, 2 SLOT 1, 2 {
 	ld	bc,$0000
 	call	:_ac96
 	ld	a,$0a
-	rst	::playSFX
+	rst	:rst_playSFX
 	jp	._7
 	
 ._6	ld	(ix+#object.Xspeed+0),l
@@ -116,20 +116,23 @@ SECTION	::doObjectCode_badnick_crabMeat BANK 1, 2 SLOT 1, 2 {
 ._66f6	DATA $03 $01 $FF	
 	
 	`sprite layouts			`[$66F9]
-.layout	DATA $00 $02 $04 $FF $FF $FF
-	DATA $20 $22 $24 $FF $FF $FF
-	DATA $FF $FF $FF $FF $FF $FF
+TABLE   .layout {
+        
+        DATA $00 $02 $04 $FF $FF $FF
+        DATA $20 $22 $24 $FF $FF $FF
+        DATA $FF $FF $FF $FF $FF $FF
 
-	DATA $00 $02 $44 $FF $FF $FF
-	DATA $46 $22 $4A $FF $FF $FF
-	DATA $FF $FF $FF $FF $FF $FF
+        DATA $00 $02 $44 $FF $FF $FF
+        DATA $46 $22 $4A $FF $FF $FF
+        DATA $FF $FF $FF $FF $FF $FF
 
-	DATA $40 $02 $44 $FF $FF $FF
-	DATA $26 $22 $2A $FF $FF $FF
-	DATA $FF $FF $FF $FF $FF $FF
+        DATA $40 $02 $44 $FF $FF $FF
+        DATA $26 $22 $2A $FF $FF $FF
+        DATA $FF $FF $FF $FF $FF $FF
 
-	DATA $40 $02 $04 $FF $FF $FF
-	DATA $46 $22 $4A $FF $FF $FF
-	DATA $FF
-	
+        DATA $40 $02 $04 $FF $FF $FF
+        DATA $46 $22 $4A $FF $FF $FF
+        DATA $FF
+        
+        }
 }

@@ -19,7 +19,7 @@
    --------------------------------------------------------------------------------- ``
 `` This source code is given to the public domain:
    
-   whilst "SEGA" and "Sonic" are registered trademarks of Sega Enterprises, Ltd.,
+   whilst "SEGA" and "Sonic" are registered trademarks of SEGA Enterprises, Ltd.,
    this is not their source code (I haven't broken into SEGA's offices ¬__¬), so not
    their copyright. Neither does this contain any byte-for-byte data of the original
    ROM (this is all ASCII codes, even the hex data parts). the fact that this text
@@ -53,6 +53,14 @@
    this disassembly was made possible by earlier documentation provided by
    David Declerk, ValleyBell, Penta Penguin and Ravenfreak ``
 
+`LAYOUT {
+`        SECTION ::interrupts    BANK 0 SLOT 0
+`        SECTION ::main          BANK 0 SLOT 0
+`        SECTION ::objects       BANK 1, 2 SLOT 1, 2
+`        SECTION ::sound         BANK 3, SLOT 2
+`}
+
+   
 ``
 IF EXISTS "ROM.sms" {
 	`once all large data is inserted with `INCLUDE BINARY`, this won't be needed
@@ -64,29 +72,6 @@ IF EXISTS "ROM.sms" {
 }
 ``
 
-
-`experimental configuration:
-`======================================================================================
-
-`` the Master System has a typical screen image height of 192px.
-   enabling the definition below will expand this by 32px to 224px
-   WARNING:
-   - this only works on the Master System II and not all emulators
-   - the feature is incomplete and breaks the game
-   - there's not enough VRAM for the Sonic sprite
-``
-`DEF #S1_CONFIG_BIGGERSCREEN
-
-`keep the screen height handy, it'll be used in a lot of places
-`IF DEF #S1_CONFIG_BIGGERSCREEN {
-`	DEF #SMS_SCREENHEIGHT_PX	224
-`} ELSE {
-	DEF #SMS_SCREENHEIGHT_PX	192
-`}
-`how many blocks (32x32px) fit in the screen height
-DEF #SMS_SCREENHEIGHT_BLOCKS	#SMS_SCREENHEIGHT_PX / 32
-
-
 `hardware constants:
 `======================================================================================
 `the banking of the cartridge ROM into the slots of the Z80 address space is handled
@@ -94,47 +79,46 @@ DEF #SMS_SCREENHEIGHT_BLOCKS	#SMS_SCREENHEIGHT_PX / 32
  `mapper and $FFFD/E/F sets the ROM bank number to page into the relevant memory slot.
  `for more details, see http://www.smspower.org/Development/Mappers
  
-DEF #SMS_PAGE_RAM		$FFFC	`RAM select register
-DEF #SMS_PAGE_0			$FFFD	`Page 0 ROM Bank
-DEF #SMS_PAGE_1			$FFFE	`Page 1 ROM Bank
-DEF #SMS_PAGE_2			$FFFF	`Page 2 ROM Bank
+VAR #SMS_PAGE_RAM		$FFFC	`RAM select register
+VAR #SMS_PAGE_0			$FFFD	`Page 0 ROM Bank
+VAR #SMS_PAGE_1			$FFFE	`Page 1 ROM Bank
+VAR #SMS_PAGE_2			$FFFF	`Page 2 ROM Bank
 
 `VDP:
 `--------------------------------------------------------------------------------------
 `the Video Display Processor in the Master System handles the graphics and sprites
  `stored in video RAM ("VRAM"), composites the display and outputs it to the TV
  
-DEF #SMS_CURRENT_SCANLINE 	$7E	`current vertical scanline from 0 to 191
-DEF #SMS_VDP_DATA		$BE	`graphics data port
-DEF #SMS_VDP_CONTROL		$BF	`graphics control port
+VAR #SMS_CURRENT_SCANLINE 	$7E	`read current vertical scanline from 0 to 191
+VAR #SMS_VDP_DATA		$BE	`graphics data port
+VAR #SMS_VDP_CONTROL		$BF	`graphics control port
 
 `VDP registers are written to by sending first the data byte, and then the 4-bit
  `register number with bit 7 set. for more details, see
  `http://www.smspower.org/Development/VDPRegisters
 
-DEF #SMS_VDP_REGISTER_WRITE	%10000000
-DEF #SMS_VDP_REGISTER_0		#SMS_VDP_REGISTER_WRITE | 0
-DEF #SMS_VDP_REGISTER_1		#SMS_VDP_REGISTER_WRITE | 1
-DEF #SMS_VDP_REGISTER_2		#SMS_VDP_REGISTER_WRITE | 2
-DEF #SMS_VDP_REGISTER_5		#SMS_VDP_REGISTER_WRITE | 5
-DEF #SMS_VDP_REGISTER_6		#SMS_VDP_REGISTER_WRITE | 6
-DEF #SMS_VDP_REGISTER_7		#SMS_VDP_REGISTER_WRITE | 7
-DEF #SMS_VDP_REGISTER_8		#SMS_VDP_REGISTER_WRITE | 8
-DEF #SMS_VDP_REGISTER_9		#SMS_VDP_REGISTER_WRITE | 9
-DEF #SMS_VDP_REGISTER_10	#SMS_VDP_REGISTER_WRITE | 10
+VAR #SMS_VDP_REGISTER_WRITE	%10000000
+VAR #SMS_VDP_REGISTER_0		#SMS_VDP_REGISTER_WRITE | 0
+VAR #SMS_VDP_REGISTER_1		#SMS_VDP_REGISTER_WRITE | 1
+VAR #SMS_VDP_REGISTER_2		#SMS_VDP_REGISTER_WRITE | 2
+VAR #SMS_VDP_REGISTER_5		#SMS_VDP_REGISTER_WRITE | 5
+VAR #SMS_VDP_REGISTER_6		#SMS_VDP_REGISTER_WRITE | 6
+VAR #SMS_VDP_REGISTER_7		#SMS_VDP_REGISTER_WRITE | 7
+VAR #SMS_VDP_REGISTER_8		#SMS_VDP_REGISTER_WRITE | 8
+VAR #SMS_VDP_REGISTER_9		#SMS_VDP_REGISTER_WRITE | 9
+VAR #SMS_VDP_REGISTER_10	#SMS_VDP_REGISTER_WRITE | 10
 
-`location of the screen name table (layout of the tiles on screen) in VRAM
-`IF DEF #S1_CONFIG_BIGGERSCREEN {
-`	DEF #SMS_VDP_SCREENNAMETABLE	$3700
-`} ELSE {
-	DEF #SMS_VDP_SCREENNAMETABLE	$3800
-`}
+VAR #SMS_VDP_SCREENNAMETABLE	$3800
+
+`how many blocks (32x32px) fit in the screen height
+VAR #SMS_SCREENHEIGHT_PX	192
+VAR #SMS_SCREENHEIGHT_BLOCKS	#SMS_SCREENHEIGHT_PX / 32
 
 `--------------------------------------------------------------------------------------
-DEF #SMS_SOUND_PORT		$7F	`write-only port to send data to sound chip
+VAR #SMS_SOUND_PORT		$7F	`write-only port to send data to sound chip
 
-DEF #SMS_JOYPAD_1		$DC
-DEF #SMS_JOYPAD_2		$DD
+VAR #SMS_JOYPAD_1		$DC
+VAR #SMS_JOYPAD_2		$DD
 
 
 `game variables:
@@ -220,119 +204,121 @@ OBJECT #vars {				`$D200:
 
 `these variables are reused throughout, some times for passing extra parameters to a
  `function and sometimes as extra working space within a function
-DEF #RAM_TEMP1			$D20E
-DEF #RAM_TEMP2			$D20F
-DEF #RAM_TEMP3			$D210
-DEF #RAM_TEMP4			$D212
-DEF #RAM_TEMP5			$D213
-DEF #RAM_TEMP6			$D214
-DEF #RAM_TEMP7			$D215
+VAR #RAM_TEMP1			$D20E
+VAR #RAM_TEMP2			$D20F
+VAR #RAM_TEMP3			$D210
+VAR #RAM_TEMP4			$D212
+VAR #RAM_TEMP5			$D213
+VAR #RAM_TEMP6			$D214
+VAR #RAM_TEMP7			$D215
 
 `hardware caches:
 `--------------------------------------------------------------------------------------
 
-DEF #RAM_VDPREGISTER_0		$D218	`RAM cache of the VDP register 0
-DEF #RAM_VDPREGISTER_1		$D219	`RAM cache of the VDP register 1
+VAR #RAM_VDPREGISTER_0		$D218	`RAM cache of the VDP register 0
+VAR #RAM_VDPREGISTER_1		$D219	`RAM cache of the VDP register 1
 
-DEF #RAM_PAGE_1			$D235	`used to keep track of what bank is in page 1
-DEF #RAM_PAGE_2			$D236	`used to keep track of what bank is in page 2
+VAR #RAM_PAGE_1			$D235	`used to keep track of what bank is in page 1
+VAR #RAM_PAGE_2			$D236	`used to keep track of what bank is in page 2
 
-DEF #RAM_VDPSCROLL_HORIZONTAL	$D251
-DEF #RAM_VDPSCROLL_VERTICAL	$D252
+VAR #RAM_VDPSCROLL_HORIZONTAL	$D251
+VAR #RAM_VDPSCROLL_VERTICAL	$D252
 
-DEF #RAM_SPRITETABLE		$D000	`X/Y/I data for the 64 sprites
+VAR #RAM_SPRITETABLE		$D000	`X/Y/I data for the 64 sprites
 
 `--------------------------------------------------------------------------------------
 
-DEF #RAM_CURRENT_LEVEL		$D23E
+VAR #RAM_CURRENT_LEVEL		$D23E
 
-DEF #RAM_FLOORLAYOUT		$C000
+VAR #RAM_FLOORLAYOUT		$C000
 
 `level dimensions / crop
-DEF #RAM_LEVEL_FLOORWIDTH	$D238	`width of the floor layout in blocks
-DEF #RAM_LEVEL_FLOORHEIGHT	$D23A	`height of the floor layout in blocks
-DEF #RAM_LEVEL_LEFT		$D273
+VAR #RAM_LEVEL_FLOORWIDTH	$D238	`width of the floor layout in blocks
+VAR #RAM_LEVEL_FLOORHEIGHT	$D23A	`height of the floor layout in blocks
+VAR #RAM_LEVEL_LEFT		$D273
 `prevents the level scrolling past this left-most point
  `(i.e. sets an effective right-hand limit to the level -- this + width of the screen)
-DEF #RAM_LEVEL_RIGHT		$D275
-DEF #RAM_LEVEL_TOP		$D277
-DEF #RAM_LEVEL_BOTTOM		$D279
+VAR #RAM_LEVEL_RIGHT		$D275
+VAR #RAM_LEVEL_TOP		$D277
+VAR #RAM_LEVEL_BOTTOM		$D279
 
-DEF #RAM_LEVEL_SOLIDITY		$D2D4
+VAR #RAM_LEVEL_SOLIDITY		$D2D4
 
-DEF #RAM_RINGS			$D2AA	`player's ring count
-DEF #RAM_LIVES			$D246	`player's lives count
-DEF #RAM_TIME			$D29F	`the level's time
+VAR #RAM_RINGS			$D2AA	`player's ring count
+VAR #RAM_LIVES			$D246	`player's lives count
+VAR #RAM_TIME			$D29F	`the level's time
 
 ` `loadPaletteOnInterrupt` and `loadPaletteFromInterrupt` use these to pass parameters
-DEF #RAM_LOADPALETTE_ADDRESS	$D22B
-DEF #RAM_LOADPALETTE_FLAGS	$D22F
+VAR #RAM_LOADPALETTE_ADDRESS	$D22B
+VAR #RAM_LOADPALETTE_FLAGS	$D22F
 ` `loadPalette` use these to pass the addresses of the tile/sprite palettes to load
-DEF #RAM_LOADPALETTE_TILE	$D230
-DEF #RAM_LOADPALETTE_SPRITE	$D232
+VAR #RAM_LOADPALETTE_TILE	$D230
+VAR #RAM_LOADPALETTE_SPRITE	$D232
 
 `a copy of the level music index is kept so that the music can be started again (?)
  `after other sound events like invincibility
-DEF #RAM_LEVEL_MUSIC		$D2FC
+VAR #RAM_LEVEL_MUSIC		$D2FC
 `the previous song played is checked during level load to avoid re-initialising the
  `same song (for example, when teleporting in Scrap Brain)
-DEF #RAM_PREVIOUS_MUSIC		$D2D2
+VAR #RAM_PREVIOUS_MUSIC		$D2D2
 
 `the address of where the cycle palette begins
-DEF #RAM_CYCLEPALETTE_POINTER	$D2A8
+VAR #RAM_CYCLEPALETTE_POINTER	$D2A8
 `the current palette in the cycle palette being used
-DEF #RAM_CYCLEPALETTE_INDEX	$D2A6
-DEF #RAM_CYCLEPALETTE_SPEED	$D2A4
+VAR #RAM_CYCLEPALETTE_INDEX	$D2A6
+VAR #RAM_CYCLEPALETTE_SPEED	$D2A4
 
-DEF #RAM_RASTERSPLIT_STEP	$D247
-DEF #RAM_RASTERSPLIT_LINE	$D248
-DEF #RAM_WATERLINE		$D2DB
+VAR #RAM_RASTERSPLIT_STEP	$D247
+VAR #RAM_RASTERSPLIT_LINE	$D248
+VAR #RAM_WATERLINE		$D2DB
 
-DEF #RAM_SONIC_CURRENT_FRAME	$D28F
-DEF #RAM_SONIC_PREVIOUS_FRAME	$D291
+VAR #RAM_SONIC_CURRENT_FRAME	$D28F
+VAR #RAM_SONIC_PREVIOUS_FRAME	$D291
 
-DEF #RAM_RING_CURRENT_FRAME	$D293
-DEF #RAM_RING_PREVIOUS_FRAME	$D295
+VAR #RAM_RING_CURRENT_FRAME	$D293
+VAR #RAM_RING_PREVIOUS_FRAME	$D295
 
 `a pointer to a position within a sprite table, consisting of three bytes each entry:
  `X-position, Y-position and sprite index number. this is used to set where the next
  `sprites will be created in the table, e.g. `processSpriteLayout`
-DEF #RAM_SPRITETABLE_CURRENT	$D23C
+VAR #RAM_SPRITETABLE_CURRENT	$D23C
 
-DEF #RAM_CAMERA_X		$D25A
-DEF #RAM_CAMERA_Y		$D25D
+VAR #RAM_CAMERA_X		$D25A
+VAR #RAM_CAMERA_Y		$D25D
 
-DEF #RAM_CAMERA_X_LEFT		$D26F	`used to check when the camera goes left
-DEF #RAM_CAMERA_Y_UP		$D271	`used to check when the camera goes up
+VAR #RAM_CAMERA_X_LEFT		$D26F	`used to check when the camera goes left
+VAR #RAM_CAMERA_Y_UP		$D271	`used to check when the camera goes up
 
-DEF #RAM_CAMERA_X_GOTO		$D27B	`a point to move the camera to - i.e. boss
-DEF #RAM_CAMERA_Y_GOTO		$D27D
+VAR #RAM_CAMERA_X_GOTO		$D27B	`a point to move the camera to - i.e. boss
+VAR #RAM_CAMERA_Y_GOTO		$D27D
 
-DEF #RAM_BLOCK_X		$D257	`number of blocks across the camera is
-DEF #RAM_BLOCK_Y		$D258	`number of blocks down the camera is
+VAR #RAM_BLOCK_X		$D257	`number of blocks across the camera is
+VAR #RAM_BLOCK_Y		$D258	`number of blocks down the camera is
 
 `absolute address of the block mappings when in page 1 (i.e. $4000)
-DEF #RAM_BLOCKMAPPINGS		$D24F
+VAR #RAM_BLOCKMAPPINGS		$D24F
 
 `the number of the hardware sprites "in use"
-DEF #RAM_ACTIVESPRITECOUNT	$D2B4
+VAR #RAM_ACTIVESPRITECOUNT	$D2B4
 
 `when the screen scrolls and new tiles need to be filled in, they are pulled from these
  `caches which have the necessary tiles already in horizontal/vertical order for speed
-DEF #RAM_OVERSCROLLCACHE_HORZ	$D180
-DEF #RAM_OVERSCROLLCACHE_VERT	$D100
+VAR #RAM_OVERSCROLLCACHE_HORZ	$D180
+VAR #RAM_OVERSCROLLCACHE_VERT	$D100
 
-DEF #RAM_PALETTE		$D3BC
+VAR #RAM_PALETTE		$D3BC
 
-DEF #RAM_FRAMECOUNT		$D223
+VAR #RAM_FRAMECOUNT		$D223
 
 `======================================================================================
 
-INCLUDE "core.oz80"
+INCLUDE "interrupts.oz80"
 
 INCLUDE "main.oz80"
 
-INCLUDE "objects.oz80"
+INCLUDE "screens\map.oz80"
+
+INCLUDE "objects\objects.oz80"
 
 `======================================================================================
 `music code and song data

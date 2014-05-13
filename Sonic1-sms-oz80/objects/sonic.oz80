@@ -996,7 +996,7 @@ PROC	:_4ff5 {
 	res	0,(iy+#vars.unknown0)
 	
 	ld	a,(#RAM_LEVEL_MUSIC)
-	rst	::playMusic
+	rst	:rst_playMusic
 	
 	ret
 
@@ -1030,7 +1030,7 @@ PROC	:_5009 {
 	ld	($D287),a
 	
 	ld	a,#index_music_death
-	rst	::playMusic
+	rst	:rst_playMusic
 	
 	call	:_91eb
 	call	:_91eb
@@ -1050,7 +1050,7 @@ PROC	:_5009 {
 	and	(hl)
 	jr	nz,._2
 	ld	a,$1a
-	rst	::playSFX
+	rst	:rst_playSFX
 ._2	ld	a,(#RAM_FRAMECOUNT)
 	rrca	
 	ret	nc
@@ -1084,7 +1084,7 @@ PROC	:_509d {
 	ld	a,$10
 	ld	($D28E),a
 	ld	a,$00
-	rst	::playSFX
+	rst	:rst_playSFX
 	ret
 
 	}
@@ -1124,7 +1124,7 @@ PROC	:_50c1 {
 	or	h
 	jr	z,._1
 	ld	a,$06
-	rst	::playSFX
+	rst	:rst_playSFX
 ._1	set	2,(iy+#vars.timeLightningFlags)
 	ret
 
@@ -1322,7 +1322,7 @@ PROC	:_51f3 {
 	bit	7,(ix+$18)
 	ret	z
 	ld	a,$03
-	rst	::playSFX
+	rst	:rst_playSFX
 	ld	a,$3c
 	ld	($D412),a
 	ret
@@ -1435,7 +1435,7 @@ PROC	:_5285 {
 	ret	nz
 	
 	ld	a,(#RAM_LEVEL_MUSIC)
-	rst	::playMusic
+	rst	:rst_playMusic
 	
 	ld	c,(iy+#vars.spriteUpdateCount)
 	res	0,(iy+#vars.flags0)
@@ -1758,7 +1758,7 @@ PROC	:_54ce {
 	ld	(ix+#object.Yspeed+1),l
 	ld	(ix+#object.Ydirection),h
 	ld	a,$05
-	rst	::playSFX
+	rst	:rst_playSFX
 	ret
 
 	}
@@ -1778,7 +1778,7 @@ PROC	:_550f {
 	ld	(ix+#object.Xdirection),$ff
 	set	1,(ix+$18)
 	ld	a,$04
-	rst	::playSFX
+	rst	:rst_playSFX
 	ret
 
 	}
@@ -1803,7 +1803,7 @@ PROC	:_552d {
 	ld	(ix+#object.Yspeed+1),$f4
 	ld	(ix+#object.Ydirection),$ff
 	ld	a,$04
-	rst	::playSFX
+	rst	:rst_playSFX
 	ret
 
 	}
@@ -1824,7 +1824,7 @@ PROC	:_5556 {
 	ld	(ix+#object.Xdirection),$00
 	res	1,(ix+$18)
 	ld	a,$04
-	rst	::playSFX
+	rst	:rst_playSFX
 	ret
 
 	}
@@ -1873,7 +1873,7 @@ PROC	:_55a8 {
 	bit	4,(ix+$18)
 	jr	nz,._1
 	ld	a,$12
-	rst	::playSFX
+	rst	:rst_playSFX
 ._1	set	4,(ix+$18)
 	ret
 
@@ -1901,7 +1901,7 @@ PROC	:_55b6 {
 	ld	(ix+#object.Yspeed+1),$f4
 	ld	(ix+#object.Ydirection),$ff
 	ld	a,$04
-	rst	::playSFX
+	rst	:rst_playSFX
 	ret
 
 	}
@@ -1914,7 +1914,7 @@ PROC 	:_55e2 {
 	bit	7,(ix+#object.Ydirection)
 	ret	nz
 	ld	a,$05
-	rst	::playSFX
+	rst	:rst_playSFX
 	ret
 
 	}
@@ -1970,7 +1970,7 @@ PROC	:_55eb {
 	ld	a,$50
 	ld	($D28A),a
 	ld	a,$06
-	rst	::playSFX
+	rst	:rst_playSFX
 	ret
 
 ._1	inc	hl
@@ -2001,7 +2001,7 @@ PROC	:_565c {
 	bit	4,(ix+$18)
 	jr	nz,._1
 	ld	a,$12
-	rst	::playSFX
+	rst	:rst_playSFX
 ._1	set	4,(ix+$18)
 	ret
 
@@ -2123,7 +2123,7 @@ PROC	:_56d6 {
 	ld	a,$10
 	ld	($D2E1),a
 	ld	a,$07
-	rst	::playSFX
+	rst	:rst_playSFX
 	ret
 
 	}
@@ -2181,7 +2181,7 @@ PROC	:_5761 {
 	ld	(ix+#object.Yspeed+1),$f6
 	ld	(ix+#object.Ydirection),$ff
 	ld	a,$04
-	rst	::playSFX
+	rst	:rst_playSFX
 	ret
 
 	}
@@ -2195,7 +2195,7 @@ PROC	:_5771 {
 	ld	(ix+#object.Yspeed+1),$f4
 	ld	(ix+#object.Ydirection),$ff
 	ld	a,$04
-	rst	::playSFX
+	rst	:rst_playSFX
 	ret
 
 	}
@@ -2209,7 +2209,7 @@ PROC	:_5781 {
 	ld	(ix+#object.Yspeed+1),$f2
 	ld	(ix+#object.Ydirection),$ff
 	ld	a,$04
-	rst	::playSFX
+	rst	:rst_playSFX
 	ret
 
 	}
@@ -2250,7 +2250,7 @@ PROC	:_5791 {
 	inc	hl
 	ld	(hl),$3f
 	ld	a,$07
-	rst	::playSFX
+	rst	:rst_playSFX
 	ret
 
 	}

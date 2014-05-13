@@ -2,5 +2,6 @@
 !.gitignore
 
 !objects
+!screens
 
 !*.oz80

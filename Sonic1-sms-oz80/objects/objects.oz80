@@ -28,7 +28,7 @@ OBJECT #object {
 }
 
 `the player is an object like any other and has reserved object parameters in memory
-DEF #RAM_SONIC		$D3FC	AS #object
+VAR #RAM_SONIC		$D3FC	AS #object
 	`type			$D3FC
 	`unknown1		$D3FD
 	`X			$D3FE/F
@@ -673,7 +673,7 @@ PROC :doObjectCode_badnick_buzzBomber {
 	ld	(ix+#object.Ydirection),a
 	pop	ix, bc
 	ld	a,$0a
-	rst	::playSFX
+	rst	:rst_playSFX
 	ld	c,$00
 	ld	l,c
 	ld	h,c
@@ -1002,7 +1002,7 @@ PROC :doObjectCode_badnick_newtron {
 	pop	ix
 	pop	bc
 	ld	a,$0a
-	rst	::playSFX
+	rst	:rst_playSFX
 ._5	ld	bc,:_6fed
 	cp	$78
 	jr	c,._7
@@ -1068,7 +1068,7 @@ PROC :doObjectCode_boss_greenHill {
 	call	:loadPaletteOnInterrupt
 	
 	ld	a,#index_music_boss1
-	rst	::playMusic
+	rst	:rst_playMusic
 	
 	xor	a
 	ld	($D2EC),a
@@ -1480,7 +1480,7 @@ PROC :doObjectCode_boss_capsule {
 	ld	($D289),a
 	
 	ld	a,#index_music_actComplete
-	rst	::playMusic
+	rst	:rst_playMusic
 	
 	set	1,(ix+$18)
 ._11	xor	a
@@ -1823,7 +1823,7 @@ PROC :_77be {
 	ld	a,$3f
 	ld	($D2B3),a
 	ld	a,$01
-	rst	::playSFX
+	rst	:rst_playSFX
 	ld	a,($D2EC)
 	inc	a
 	ld	($D2EC),a
@@ -1895,7 +1895,7 @@ PROC :_77be {
 	ld	(hl),$5b
 	
 	ld	a,(#RAM_LEVEL_MUSIC)
-	rst	::playMusic
+	rst	:rst_playMusic
 	
 	ld	a,(iy+#vars.spriteUpdateCount)
 	res	0,(iy+#vars.flags0)
@@ -2069,7 +2069,7 @@ PROC :_7a3a {
 	ld	(ix+#object.Ydirection),a
 	pop	ix
 	ld	a,$01
-	rst	::playSFX
+	rst	:rst_playSFX
 	ret
 }
 	
@@ -2102,7 +2102,7 @@ PROC :doObjectCode_meta_trip {
 	set	6,(iy+#vars.flags6)
 	ld	(iy+#vars.joypad),$ff
 	ld	a,$11
-	rst	::playSFX
+	rst	:rst_playSFX
 	ret
 }
 
@@ -2423,7 +2423,7 @@ PROC :doObjectCode_badnick_chopper {
 	ld	(ix+#object.Ydirection),$ff
 	set	0,(ix+$18)
 	ld	a,$12
-	rst	::playSFX
+	rst	:rst_playSFX
 	ld	(ix+$11),$03
 	jr	._5
 	
@@ -2774,7 +2774,7 @@ PROC :doObjectCode_boss_jungle {
 	call	:loadPaletteOnInterrupt
 	
 	ld	a,#index_music_boss1
-	rst	::playMusic
+	rst	:rst_playMusic
 	
 	xor	a
 	ld	($D2EC),a
@@ -2982,7 +2982,7 @@ PROC :_8218 {
 	ret	z
 	ld	(ix+$16),$00
 	ld	a,$01
-	rst	::playSFX
+	rst	:rst_playSFX
 ._4	xor	a
 	ld	(ix+#object.Xspeed+0),a
 	ld	(ix+#object.Xspeed+1),a
@@ -3130,7 +3130,7 @@ PROC :doObjectCode_platform_bridge {
 	ld	($D2AF),hl
 	set	0,(ix+$18)
 	ld	a,$20
-	rst	::playSFX
+	rst	:rst_playSFX
 ._2	ld	(ix+#object.spriteLayout+0),:_8481.lo
 	ld	(ix+#object.spriteLayout+1),:_8481.hi
 	ld	l,(ix+#object.Yspeed+0)
@@ -3210,7 +3210,7 @@ PROC :doObjectCode_boss_bridge {
 	ld	($D2EC),a
 	
 	ld	a,#index_music_boss1
-	rst	::playMusic
+	rst	:rst_playMusic
 	
 	set	0,(ix+$18)
 ._1	ld	a,(ix+$11)
@@ -3317,7 +3317,7 @@ PROC :doObjectCode_boss_bridge {
 	djnz	.loop
 	
 	ld	a,$01
-	rst	::playSFX
+	rst	:rst_playSFX
 	jp	._6
 	
 ._5	ld	(ix+#object.Yspeed+0),$80
@@ -3471,7 +3471,7 @@ PROC :doObjectCode_platform_balance {
 ._5	bit	1,(ix+$18)
 	jr	z,._6
 	ld	a,$04
-	rst	::playSFX
+	rst	:rst_playSFX
 ._6	xor	a
 	ld	(ix+$11),a
 	ld	(ix+$12),a
@@ -4032,7 +4032,7 @@ PROC :doObjectCode_trap_spear {
 	cp	$80
 	ret	nz
 	ld	a,$1d
-	rst	::playSFX
+	rst	:rst_playSFX
 	ret
 }
 
@@ -4099,7 +4099,7 @@ PROC :doObjectCode_trap_fireball {
 	ret
 	
 ._3	ld	a,$18
-	rst	::playSFX
+	rst	:rst_playSFX
 ._4	xor	a
 	bit	1,(ix+$18)
 	jr	nz,._5
@@ -4770,7 +4770,7 @@ PROC :doObjectCode_boss_labyrinth {
 	ld	($D2EC),a
 	
 	ld	a,#index_music_boss1
-	rst	::playMusic
+	rst	:rst_playMusic
 	
 	set	0,(ix+$18)
 ._1	ld	a,(ix+$11)
@@ -4963,7 +4963,7 @@ PROC :doObjectCode_boss_labyrinth {
 	ld	c,$04
 	call	:_85d1
 	ld	a,$01
-	rst	::playSFX
+	rst	:rst_playSFX
 	jp	._
 }
 
@@ -5351,7 +5351,7 @@ PROC :_96f8 {
 	ld	($D2FB),a
 	ld	(ix+$12),$10
 	ld	a,$22
-	rst	::playSFX
+	rst	:rst_playSFX
 ._5	ld	(ix+#object.Yspeed+0),$98
 	ld	(ix+#object.Yspeed+1),$ff
 	ld	(ix+#object.Ydirection),$ff
@@ -5683,7 +5683,7 @@ PROC :doObjectCode_platform_bumper {
 	ld	(#RAM_SONIC.Ydirection),a
 	ld	(ix+$11),$08
 	ld	a,$07
-	rst	::playSFX
+	rst	:rst_playSFX
 	ret
 	
 ._3	dec	(ix+$11)
@@ -5776,7 +5776,7 @@ PROC :_9be8 {
 	ld	a,(ix+#object.X+1)
 	ld	(ix+$12),a
 	ld	a,$18
-	rst	::playSFX
+	rst	:rst_playSFX
 	set	0,(ix+$18)
 ._1	ld	(ix+#object.width),$06
 	ld	(ix+#object.height),$08
@@ -5801,7 +5801,7 @@ PROC :_9be8 {
 	ld	a,(ix+$12)
 	ld	(ix+#object.X+1),a
 	ld	a,$18
-	rst	::playSFX
+	rst	:rst_playSFX
 	ret
 	
 ._3	xor	a
@@ -5926,7 +5926,7 @@ PROC :doObjectCode_trap_flameThrower {
 	cp	$70
 	ret	nz
 	ld	a,$17
-	rst	::playSFX
+	rst	:rst_playSFX
 	ret
 }
 
@@ -6046,7 +6046,7 @@ PROC :_9eb4 {
 	dec	a
 	ret	nz
 	ld	a,$19
-	rst	::playSFX
+	rst	:rst_playSFX
 	ret
 }
 
@@ -6061,7 +6061,7 @@ PROC :_9ec4 {
 	cp	$2f
 	ret	nz
 	ld	a,$19
-	rst	::playSFX
+	rst	:rst_playSFX
 	ret
 }
 
@@ -6306,7 +6306,7 @@ PROC :doObjectCode_trap_electric {
 	jr	c,._3
 	jr	nz,._2
 	ld	a,$13
-	rst	::playSFX
+	rst	:rst_playSFX
 ._2	ld	hl,$0000
 	ld	(#RAM_TEMP6),hl
 	call	:_LABEL_3956_11
@@ -6536,7 +6536,7 @@ PROC :_a33c {
 ._2	jr	nz,._3
 	ld	(ix+$16),$00
 	ld	a,$01
-	rst	::playSFX
+	rst	:rst_playSFX
 ._3	ld	bc,:_a3b4
 	ld	de,:_a3bb
 	call	:_7c41
@@ -6613,7 +6613,7 @@ PROC :doObjectCode_switch {
 	xor	c
 	ld	(hl),a
 	ld	a,$1a
-	rst	::playSFX
+	rst	:rst_playSFX
 	jr	._4
 	
 ._3	res	1,(ix+$18)
@@ -6940,7 +6940,7 @@ PROC :doObjectCode_boss_scrapBrain {
 	call	:loadPaletteOnInterrupt
 	
 	ld	a,#index_music_boss1
-	rst	::playMusic
+	rst	:rst_playMusic
 	
 	set	0,(ix+$18)
 ._1	bit	1,(ix+$18)
@@ -7062,7 +7062,7 @@ PROC :doObjectCode_boss_scrapBrain {
 	set	4,(ix+$18)
 	
 	ld	a,#index_music_actComplete
-	rst	::playMusic
+	rst	:rst_playMusic
 	
 	ld	a,$a0
 	ld	($D289),a
@@ -7101,7 +7101,7 @@ PROC :doObjectCode_boss_scrapBrain {
 	cp	$0f
 	ret	nz
 	ld	a,$19
-	rst	::playSFX
+	rst	:rst_playSFX
 	ret
 }
 
@@ -7363,7 +7363,7 @@ PROC :doObjectCode_badnick_bomb {
 	call	:_ac96
 	ld	(ix+#object.type),$FF	`remove object?
 	ld	a,$1b
-	rst	::playSFX
+	rst	:rst_playSFX
 	jr	._8
 	
 ._4	cp	$23
@@ -7531,7 +7531,7 @@ PROC :doObjectCode_trap_cannon{
 	ld	(ix+#object.Y+1),h
 	pop	ix
 	ld	a,$1c
-	rst	::playSFX
+	rst	:rst_playSFX
 	ld	(ix+$12),$18
 	ld	(ix+$16),$00
 	ld	(ix+$17),$00
@@ -8423,7 +8423,7 @@ PROC :_b5c2 {
 	ld	(ix+#object.Ydirection),a
 	pop	ix
 	ld	a,$01
-	rst	::playSFX
+	rst	:rst_playSFX
 	ret
 }
 
@@ -8465,7 +8465,7 @@ PROC :doObjectCode_boss_skyBase {
 	ld	($D2EC),a
 	
 	ld	a,#index_music_boss3
-	rst	::playMusic
+	rst	:rst_playMusic
 	
 	set	4,(iy+#vars.unknown0)
 	set	0,(ix+$18)
@@ -8601,10 +8601,10 @@ PROC :doObjectCode_boss_skyBase {
 	res	4,(iy+#vars.unknown0)
 	
 	ld	a,#index_music_scrapBrain
-	rst	::playMusic
+	rst	:rst_playMusic
 	
 	ld	a,$21
-	rst	::playSFX
+	rst	:rst_playSFX
 	ret
 }
 
@@ -8637,7 +8637,7 @@ PROC :_b7e6 {
 	inc	hl
 	ld	(hl),$3f
 	ld	a,$01
-	rst	::playSFX
+	rst	:rst_playSFX
 	ld	hl,$D2EC
 	inc	(hl)
 	ret
@@ -9039,7 +9039,7 @@ PROC :doObjectCode_boss_electricBeam {
 	and	$0f
 	jr	nz,._4
 	ld	a,$13
-	rst	::playSFX
+	rst	:rst_playSFX
 ._4	dec	(ix+$11)
 	ret	nz
 	ld	(ix+$11),$00
@@ -9075,7 +9075,7 @@ PROC :doObjectCode_boss_electricBeam {
 	and	$1f
 	ret	nz
 	ld	a,$13
-	rst	::playSFX
+	rst	:rst_playSFX
 	ret
 }
 
@@ -9269,7 +9269,7 @@ PROC :doObjectCode_anim_final {
 	ld	(#RAM_SONIC),a
 	set	6,(iy+#vars.unknown0)
 	ld	a,$06
-	rst	::playSFX
+	rst	:rst_playSFX
 ._2	ld	(ix+#object.width),$20
 	ld	(ix+#object.height),$1c
 	xor	a
@@ -9317,7 +9317,7 @@ PROC :doObjectCode_anim_final {
 	set	0,(ix+$18)
 	ld	(ix+$11),$01
 	ld	a,$01
-	rst	::playSFX
+	rst	:rst_playSFX
 ._4	call	:_79fa
 	bit	0,(ix+$18)
 	ret	z

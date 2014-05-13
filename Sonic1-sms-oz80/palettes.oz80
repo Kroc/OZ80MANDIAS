@@ -3,12 +3,8 @@
    for MaSS1VE: The Master System Sonic 1 Visual Editor <github.com/Kroc/MaSS1VE>
    ================================================================================= ``
 
-`____________________________________________________________________________[$627C]___
-
-SECTION ::S1_Palettes {
-
-TABLE	:S1_Palette_Pointers {		`[$627C]
-	
+TABLE	:S1_Palette_Pointers `_______________________________________________[$627C]___
+{
 	.greenHill	DATA :S1_PaletteData.greenHill
 	.bridge		DATA :S1_PaletteData.bridge
 	.jungle		DATA :S1_PaletteData.jungle
@@ -17,11 +13,10 @@ TABLE	:S1_Palette_Pointers {		`[$627C]
 	.skyBaseExt	DATA :S1_PaletteData.skyBaseExt
 	.skyBaseInt	DATA :S1_PaletteData.skyBaseInt
 	.specialStage	DATA :S1_PaletteData.specialStage
-	
-	}
+}
 
-TABLE	:S1_PaletteCycle_Pointers {	`[$628C]
-	
+TABLE	:S1_PaletteCycle_Pointers `__________________________________________[$628C]___
+{
 	.greenHill	DATA :S1_PaletteData.greenHill_cycles
 	.bridge		DATA :S1_PaletteData.bridge_cycles
 	.jungle		DATA :S1_PaletteData.jungle_cycles
@@ -31,14 +26,13 @@ TABLE	:S1_PaletteCycle_Pointers {	`[$628C]
 	.skyBaseInt	DATA :S1_PaletteData.skyBaseInt_cycles
 	.specialStage	DATA :S1_PaletteData.specialStage_cycles
 	.skyBaseExt	DATA :S1_PaletteData.skyBaseExt_cycles
-	
-	}
+}
 
 	``the regular and cycle palettes are lumped together in one data-block,
 	  the pointer tables above sort them into an order``
 	
-TABLE	:S1_PaletteData	{		`[$629E]
-
+TABLE	:S1_PaletteData `____________________________________________________[$629E]___
+{
 	.greenHill			`[$629E] Green Hill
 	DATA $38 $01 $06 $0B $04 $08 $0C $3D $3B $34 $3C $3E $3F $0F $00 $3F
 	DATA $38 $20 $35 $1B $16 $2A $00 $3F $01 $03 $3A $06 $0F $00 $00 $00
@@ -114,6 +108,4 @@ TABLE	:S1_PaletteData	{		`[$629E]
 	DATA $00 $14 $39 $3D $28 $10 $20 $34 $07 $0F $28 $14 $39 $0F $00 $3F
 	DATA $00 $14 $39 $3D $28 $10 $20 $34 $0F $07 $14 $14 $39 $0F $00 $3F
 	DATA $00 $14 $39 $3D $28 $10 $20 $34 $07 $0F $00 $14 $39 $0F $00 $3F
-
-        }
 }

@@ -11,7 +11,6 @@ Begin VB.Form UI
    MinButton       =   0   'False
    ScaleHeight     =   5070
    ScaleWidth      =   6885
-   ShowInTaskbar   =   0   'False
    StartUpPosition =   3  'Windows Default
    Begin VB.TextBox txtLog 
       BorderStyle     =   0  'None
@@ -96,7 +95,10 @@ Private Sub Assembler_Message(Text As String)
 End Sub
 
 Private Sub Log(Optional ByRef Text As String = vbNullString)
-    Let Me.txtLog.Text = Me.txtLog.Text & Text & vbCrLf
+    'Thanks to Jdo300 for this execllent tip to precent flicker _
+     <xtremevbtalk.com/showpost.php?s=8d2b9228eb01630447300b4488275f11&p=1330080&postcount=2>
     Let Me.txtLog.SelStart = Len(Me.txtLog.Text)
+    Let Me.txtLog.SelText = Text & vbCrLf
+    
     DoEvents
 End Sub

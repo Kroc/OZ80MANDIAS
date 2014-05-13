@@ -114,7 +114,7 @@ PROC	:doObjectCode_powerUp_speed {
 	ld	a,$f0
 	ld	($D411),a
 	ld	a,$02
-	rst	::playSFX
+	rst	:rst_playSFX
 	jp	:doObjectCode_powerUp_ring._5b29
 	
 ._1	ld	hl,$5200
@@ -164,7 +164,7 @@ PROC	:doObjectCode_powerUp_life {
 	ld	(ix+#object.spriteLayout+1),a
 	
 	ld	a,$09
-	rst	::playSFX
+	rst	:rst_playSFX
 	
 	ld	a,(#RAM_CURRENT_LEVEL)
 	cp	28			`special stage?
@@ -271,7 +271,7 @@ PROC	:doObjectCode_powerUp_invincibility {
 	ld	($D28D),a
 	
 	ld	a,#index_music_invincibility
-	rst	::playMusic
+	rst	:rst_playMusic
 	
 	jp	:doObjectCode_powerUp_ring._5b29
 	
@@ -510,7 +510,7 @@ PROC	:doObjectCode_powerUp_emerald {
 	ld	($D28B),a
 	
 	ld	a,#index_music_emerald
-	rst	::playMusic
+	rst	:rst_playMusic
 	
 ._1	ld	(ix+#object.type),$FF	`remove object?
 	ret

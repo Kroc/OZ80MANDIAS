@@ -231,12 +231,10 @@ PROC    ;_LABEL_C52_106
 
         }
 
-`____________________________________________________________________________[$0DD9]___
-`referenced by table at $1201
-
 PROC    ;_0dd9
-{
-        
+        `====================================================================[$0DD9]===
+        `referenced by table at $1201
+{    
 	ld	hl,$0000
 	ld	(#RAM_TEMP1),hl
 	ld	hl,$00dc
@@ -272,14 +270,12 @@ PROC    ;_0dd9
 	djnz	._2
 	
 	jp	;_LABEL_C52_106._
+}
 
-        }
-
-`____________________________________________________________________________[$0E24]___
-`referenced by table at $1201
-
-PROC    ;_0e24 {
-        
+PROC    ;_0e24
+        `====================================================================[$0E24]===
+        `referenced by table at $1201
+{        
 	ld	hl,$0000
 	ld	(#RAM_TEMP1),hl
 	ld	hl,$0080
@@ -298,14 +294,12 @@ PROC    ;_0e24 {
 	djnz	.loop
 	
 	jp	;_LABEL_C52_106._
+}
 
-        }
-
-`____________________________________________________________________________[$0E4B]___
-`referenced by table at $1201
-
-PROC    ;_0e4b {
-	
+PROC    ;_0e4b
+        `====================================================================[$04EB]===
+        `referenced by table at $1201
+{	
 	ld	hl,$0000
 	ld	(#RAM_TEMP1),hl
 	ld	hl,$0078
@@ -324,8 +318,7 @@ PROC    ;_0e4b {
 	djnz	.loop
 	
 	jp	;_LABEL_C52_106._
-
-	}
+}
 
 ;_0e72
 DATA ;_1129, $04, $01
@@ -336,10 +329,9 @@ DATA ;_115f, $04, $00
 ;_0e82
 DATA ;_1183, $04, $00
 
-`____________________________________________________________________________[$0E86]___
-
-PROC    ;_LABEL_E86_110 {
-        
+PROC    ;_LABEL_E86_110
+        `====================================================================[$0E86]===
+{        
 	push	hl, de, bc
 	
 	ld	hl, (#RAM_TEMP1)
@@ -387,15 +379,14 @@ PROC    ;_LABEL_E86_110 {
 	
 	pop	bc, de, hl
 	ret
+}
 
-        }
-
-`____________________________________________________________________________[$0EDD]___
-`something to do with constructing the sprites on the map screen?
-
-PROC    ;_0edd {
-        `BC : address
-	
+PROC    ;_0edd
+        `====================================================================[$0EDD]===
+        `something to do with constructing the sprites on the map screen?
+        
+PARAMS  bc
+{	
 	push	hl, de
 	
 	`copy BC to HL
@@ -437,10 +428,7 @@ PROC    ;_0edd {
 	
 	pop	de, hl
 	ret
-
-        }
-
-`______________________________________________________________________________________
+}
 
 ;S1_MapScreen1_Palette			`[$0F0E]
 DATA $35, $01, $06, $0B, $04, $08, $0C, $3D, $1F, $39, $2A, $14, $25, $2B, $00, $3F
@@ -639,11 +627,9 @@ DATA ;_0e24
 DATA ;_0e4b
 DATA ;_0dd9
 
-`____________________________________________________________________________[$1209]___
-
-`Section, Proc or Table? The row indexes are not used here
-
-TABLE ;S1_ZoneTitles {			`[$1209]
+TABLE   ;S1_ZoneTitles
+        `====================================================================[$1209]===
+{			                `[$1209]
 
 DATA .GreenHill				`Green Hill Act 1
 DATA .GreenHill				`Green Hill Act 2
@@ -679,10 +665,9 @@ DATA $10, $13, $AE, $6E, $DE, $EB, $1F, $1E, $AE, $3E, $EB, $EB, $EB, $EB, $FF
 
 }
 
-`____________________________________________________________________________[$1287]___
-
-PROC    ;titleScreen {
-        
+PROC    ;titleScreen
+        `====================================================================[$1287]===
+{        
 	`turn off screen
 	ld	a, (#RAM_VDPREGISTER_1)
 	and	%10111111		`remove bit 6 of $D219
@@ -856,14 +841,12 @@ PROC    ;titleScreen {
 .S1_TitleScreen_Palette			`[$13E1]
         DATA $00 $10 $34 $38 $06 $1B $2F $3F $3D $3E $01 $03 $0B $0F $00 $3F
         DATA $00 $10 $34 $38 $06 $1B $2F $3F $3D $3E $01 $03 $0B $0F $00 $3F
-        
-        }
+}
 
-`____________________________________________________________________________[$1401]___
-`Act Complete screen?
-
-PROC    ;_1401 {
-        
+PROC    ;_1401
+        `====================================================================[$1401]===
+        `Act Complete screen?
+{        
 	`turn off the screen
 	ld	a,(#RAM_VDPREGISTER_1)
 	and	%10111111		`remove bit 6 of VDP register 1
@@ -1013,14 +996,12 @@ PROC    ;_1401 {
         DATA $00 $00 $05 $00 $03 $00 $02 $30 $02 $00 $01 $30 $01 $00 $00 $30
         DATA $00 $00 $1E $15 $22 $15 $26 $15 $2A $15 $2E $15 $32 $15 $36 $15
         DATA $3A $15
-        
-        }
+}
 
-`____________________________________________________________________________[$155E]___
-`Act Complete screen?
-
-PROC    ;_155e {
-        
+PROC    ;_155e
+        `====================================================================[$155E]===
+        `Act Complete screen?
+{        
 	ld	a, (#RAM_CURRENT_LEVEL)
 	cp		19
 	jp	z,;_172f
@@ -1222,13 +1203,11 @@ PROC    ;_155e {
 	djnz	._14
 
 .exit	ret
+}
 
-        }
-
-`____________________________________________________________________________[$16D9]___
-
-PROC    ;_16d9 {
-        
+PROC    ;_16d9
+        `====================================================================[$16D9]===
+{        
 	ld	b,a
 	push	bc
 	ld	de,$D2BE
@@ -1264,7 +1243,7 @@ PROC    ;_16d9 {
 	
 	ret
 
-        }
+}
 
 ;_1711
 DATA $14, $ad, $ae, $ff
@@ -1272,33 +1251,30 @@ DATA $15, $bd, $be, $ff
 
 `____________________________________________________________________________[$1719]___
 
-PROC    ;_1719 {
-        
+PROC    ;_1719
+        `====================================================================[$1719]===
+{        
 	xor	a			`set A to 0
 	ld	(#RAM_RINGS),a
 	res	3,(iy+#vars.flags9)
 	res	2,(iy+#vars.flags9)
 	ret
+}
 
-        }
-
-`____________________________________________________________________________[$1726]___
-`called by Act Complete screen?
-
-PROC    ;_1726 {
-        
+PROC    ;_1726
+        `====================================================================[$1726]===
+        `called by Act Complete screen?
+{        
 	ld	hl,$D284
 	inc	(hl)
 	res	3,(iy+#vars.flags9)
 	ret
+}
 
-        }
-
-`____________________________________________________________________________[$172F]___
-`jumped to from $155E
-
-PROC    ;_172f {
-        
+PROC    ;_172f
+        `====================================================================[$172F]===
+        `jumped to from $155E
+{
 	ld	a,$ff
 	ld	($D2FD),a
 	ld	c,$00
@@ -1449,13 +1425,11 @@ PROC    ;_172f {
 ._13	ld	bc,$01e0
 	call	;_1860
 	ret
+}
 
-        }
-
-`____________________________________________________________________________[$1860]___
-
-PROC    ;_1860 {
-        
+PROC    ;_1860
+        `====================================================================[$1860]===
+{        
 	push	bc
 	
 	res	0,(iy+#vars.flags0)
@@ -1530,8 +1504,7 @@ PROC    ;_1860 {
 	or	c
 	jp	nz,;_1860
 	ret
-
-        }
+}
 
 `these look like text boxes
 ;_1907
@@ -1567,10 +1540,9 @@ DATA $02, $00, $00
 ;_19b1
 DATA $00, $50, $00
 
-`____________________________________________________________________________[$19B4]___
-
-PROC    ;_19b4 {
-        
+PROC    ;_19b4
+        `====================================================================[$19B4]===
+{        
 	ld	hl,#RAM_RINGS
 	ld	a,(hl)
 	and	a
@@ -1596,13 +1568,11 @@ PROC    ;_19b4 {
 	ld	e,a
 ._2	call	;_39d8
 	ret
+}
 
-        }
-
-`____________________________________________________________________________[$19DF]___
-
-PROC    ;_19df {
-        
+PROC    ;_19df
+        `====================================================================[$19DF]===
+{        
 	ld	hl,(#RAM_TEMP4)
 	ld	de,(#RAM_TEMP6)
 	ld	a,h
@@ -1636,16 +1606,14 @@ PROC    ;_19df {
 	ld	c,$00
 	call	;_39d8
 	ret
-
-        }
+}
 
 ;_1a14
 DATA $00, $00, $00, $00
 
-`____________________________________________________________________________[$1A18]___
-
-PROC    ;_1a18 {
-        
+PROC    ;_1a18
+        `====================================================================[$1A18]===
+{        
 	ld	(iy+#vars.spriteUpdateCount),$00
 	ld	hl,#RAM_SPRITETABLE
 	ld	(#RAM_SPRITETABLE_CURRENT),hl
@@ -1721,13 +1689,11 @@ PROC    ;_1a18 {
 	call	;_LABEL_35CC_117
 	ld	(#RAM_SPRITETABLE_CURRENT),hl
 	ret
+}
 
-        }
-
-`____________________________________________________________________________[$1ACA]___
-
-PROC    ;_1aca {
-        
+PROC    ;_1aca
+        `====================================================================[$1ACA]===
+{        
 	`load number of lives into HL
 	ld	a,(#RAM_LIVES)
 	ld	l,a
@@ -1766,13 +1732,11 @@ PROC    ;_1aca {
 	call	;_LABEL_35CC_117
 	ld	(#RAM_SPRITETABLE_CURRENT),hl
 	ret
+}
 
-        }
-
-`____________________________________________________________________________[$1B13]___
-
-PROC    ;_1b13 {
-        
+PROC    ;_1b13
+        `====================================================================[$1B13]===
+{        
 	ld	a,(hl)
 	and	$f0
 	jr	nz,._
@@ -1817,13 +1781,11 @@ PROC    ;_1b13 {
 	ld	(de),a
 	ld	hl,$D2BE
 	ret
+}
 
-        }
-
-`____________________________________________________________________________[$1B51]___
 `UNKNOWN
 
-;_1b51
+;_1b51                                                                       `$1B51
 DATA $83, $84, $93, $94, $A3, $A4, $B3, $B4, $85, $86, $95, $96, $A5, $A6, $B5, $B6
 DATA $87, $88, $97, $98, $A7, $A8, $B7, $B8
 ;_1b69
@@ -1831,17 +1793,15 @@ DATA $00, $08, $10, $00, $08, $10, $00, $08, $10, $00, $08, $10, $00, $08, $10, 
 DATA $08, $10, $00, $00, $08, $08, $08, $08, $08, $08, $08, $08, $00, $00, $00, $00
 DATA $00, $00, $00, $00
 
-`____________________________________________________________________________[$1B8D]___
 `"Sonic Has Passed" screen palette:
 
-;S1_ActComplete_Palette
+;S1_ActComplete_Palette                                                      `$1B8D
 DATA $35, $01, $06, $0B, $04, $08, $0C, $3D, $1F, $39, $2A, $14, $25, $2B, $00, $3F
 DATA $35, $20, $35, $1B, $16, $2A, $00, $3F, $01, $03, $3A, $06, $0F, $00, $00, $00
 
-`______________________________________________________________________________________
-
-PROC    ;_1bad {
-        
+PROC    ;_1bad
+        `====================================================================[$1BAD]===
+{        
 	ld	hl,($D2B5)
 	ld	de,;_1bc6
 	add	hl,de
@@ -1854,8 +1814,7 @@ PROC    ;_1bad {
 	inc	hl
 	ld	($D2B5),hl
 	ret
-
-        }
+}
 
 ;_1bc6
 DATA $F7, $F7, $F7, $F7, $DF, $F7, $FF, $FF, $D7, $F7, $F7, $F7, $FF, $DF, $F7, $F7
@@ -1868,10 +1827,9 @@ DATA $D7, $F7, $F7, $F7, $FF, $FF, $FF, $FF, $FF, $FF, $FF, $F7, $F7, $F7, $D7, 
 DATA $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF
 DATA $FF, $FF, $00
 
-`____________________________________________________________________________[$1C49]___
-
-PROC    ;_LABEL_1C49_62 {
-        
+PROC    ;_LABEL_1C49_62
+        `====================================================================[$1C49]===
+{        
 	`set bit 0 of the parameter address (IY=$D200); `waitForInterrupt` will pause
 	 `until an interrupt event switches bit 0 of $D200 on
 	set	0, (iy+#vars.flags0)			
@@ -1954,30 +1912,24 @@ PROC    ;_LABEL_1C49_62 {
 	dec	a
 	jr	z,._LABEL_1C9F_104
 	jp	._LABEL_1CBD_120
-
-        }
+}
 	
-`____________________________________________________________________________[$1CE8]___
-
 PROC    ;_fillMemoryWithValue
+        `====================================================================[$1CE8]===
 PARAMS	hl;memory	`memory address
 	b;count	        `number of bytes to fill
 	a;value		`which value to fill with
-        {
-        
+{
 	ld	(hl;memory), a;value
 	inc	hl;memory
 	djnz	:
 	ret
+}
 
-        }
-
-`____________________________________________________________________________[$1CED]___
-`start level?
-`(could be main gameplay loop)
-
-PROC    ;_LABEL_1CED_131 {
-        
+PROC    ;_LABEL_1CED_131
+        `====================================================================[$1CED]===
+        `start level? (could be main gameplay loop)
+{        
 	`load page 1 (Z80:$4000-$7FFF) with bank 5 (ROM:$14000-$17FFF)
 	ld	a, 5
 	ld	(#SMS_PAGE_1), a
@@ -2213,13 +2165,12 @@ PROC    ;_LABEL_1CED_131 {
 	ld	(#RAM_SONIC.Yspeed),hl
 	ld	(#RAM_SONIC.Ydirection),a
 	ret
+}
 
-        }
-
-`____________________________________________________________________________[$1E9E]___
-
-PROC    ;_1e9e {	`demo mode?
-        
+PROC    ;_1e9e
+        `====================================================================[$1E9E]===
+        `demo mode?
+{        
 	bit	1,(iy+#vars.scrollRingFlags)
 	ret	nz
 	
@@ -2242,32 +2193,28 @@ PROC    ;_1e9e {	`demo mode?
 	bit	3,(iy+#vars.timeLightningFlags)
 	jr	nz,._1
 	
-	ld	a,;sound_unpause.bank
+	ld	a,;sound_unpause#bank
 	ld	(#SMS_PAGE_1),a
 	ld	(#RAM_PAGE_1),a
 	call	;sound_unpause
 	ret
+}
 
-        }
-
-`____________________________________________________________________________[$1ED8]___
-`lock the screen -- prevents the screen scrolling left or right
- `(i.e. during boss battles)
-
-PROC    ;lockCameraHorizontal {
-        
+PROC    ;lockCameraHorizontal
+        `====================================================================[$1ED8]===
+        ``lock the screen -- prevents the screen scrolling left or right
+          (i.e. during boss battles)``
+{
 	ld	hl,(#RAM_CAMERA_X)
 	ld	(#RAM_LEVEL_LEFT),hl
 	ld	(#RAM_LEVEL_RIGHT),hl
 	ret
+}
 
-        }
-
-`____________________________________________________________________________[$1EE2]___
-`move the left-hand side of the level across -- i.e. Bridge Act 2
-
-PROC    ;_1ee2 {
-        
+PROC    ;_1ee2
+        `====================================================================[$1EE2]===
+        `move the left-hand side of the level across -- i.e. Bridge Act 2
+{        
 	ld	a,(#RAM_FRAMECOUNT)
 	rrca	
 	ret	nc
@@ -2279,13 +2226,11 @@ PROC    ;_1ee2 {
 	`prevent scrolling to the right by limiting the width of the level to the same
 	ld	(#RAM_LEVEL_RIGHT),hl
 	ret
+}
 
-        }
-
-`____________________________________________________________________________[$1EF2]___
-
-PROC    ;_1ef2 {
-        
+PROC    ;_1ef2
+        `====================================================================[$1EF2]===
+{        
 	ld	a,(#RAM_FRAMECOUNT)
 	rrca	
 	ret	nc
@@ -2294,25 +2239,21 @@ PROC    ;_1ef2 {
 	dec	hl
 	ld	(#RAM_LEVEL_BOTTOM),hl
 	ret
+}
 
-        }
-
-`____________________________________________________________________________[$1EFF]___
-`fix the bottom of the level to the current screen position, 
- `i.e. Jungle Act 2
-
-PROC    ;dontScrollDown {
-        
+PROC    ;dontScrollDown
+        `====================================================================[$1EFF]===
+        ``fix the bottom of the level to the current screen position, 
+          i.e. Jungle Act 2``
+{        
 	ld	hl,(#RAM_CAMERA_Y)
 	ld	(#RAM_LEVEL_BOTTOM),hl
 	ret
+}
 
-        }
-
-`____________________________________________________________________________[$1F06]___
-
-PROC    ;_1f06 {
-        
+PROC    ;_1f06
+        `====================================================================[$1F06]===
+{        
 	dec	a
 	ld	($D2B1),a
 	ld	e,a
@@ -2348,13 +2289,12 @@ PROC    ;_1f06 {
 ._2	out	(#SMS_VDP_DATA),a
 	ei	
 	ret
+}
 
-        }
-
-`____________________________________________________________________________[$1F49]___
-
-PROC    ;_1f49 {	`lightning is enabled...
-        
+PROC    ;_1f49
+        `====================================================================[$1F49]===
+        `lightning is enabled...
+{       
 	ld	de,($D2E9)
 	ld	hl,$00aa
 	xor	a
@@ -2407,8 +2347,7 @@ PROC    ;_1f49 {	`lightning is enabled...
 ._4	inc	de
 	ld	($D2E9),de
 	ret
-
-        }
+}
 	
 `lightning palette control:
 ;_1f9d
@@ -2418,10 +2357,9 @@ DATA $02, $04, ;S1_PaletteData.skyBase_cycles_Lightning1
 ;_1fa5
 DATA $02, $04, ;S1_PaletteData.skyBase_cycles_Lightning2
 
-`____________________________________________________________________________[$1FA9]___
-
-PROC    ;_1fa9 {
-        
+PROC    ;_1fa9
+        `====================================================================[$1FA9]===
+{        
 	dec	a
 	ld	($D289),a
 	jr	z,._1
@@ -2483,59 +2421,53 @@ PROC    ;_1fa9 {
 	inc	(hl)
 ._5	ld	a,$ff
 	ret
+}
 
-        }
-
-`____________________________________________________________________________[$2023]___
-
-;_2023
+;_2023                                                                       `$2023
 DATA $0000, ;_202d, ;_2031, ;_2039, ;_203f
 
-PROC    ;_202d {
-        
+PROC    ;_202d
+        `====================================================================[$202D]===
+{        
 	ld	a, $0E
 	rst	:playSFX
 	ret
-        
-        }
+}
 
-PROC    ;_2031 {
-        
+PROC    ;_2031
+        `====================================================================[$2031]===
+{        
 	ld	hl,#RAM_LIVES
 	inc	(hl)
 	ld	a,$09
 	rst	:playSFX
 	ret
+}
 
-        }
-
-PROC    ;_2039 {
-        
+PROC    ;_2039
+        `====================================================================[$2039]===
+{        
 	ld	a,$10
 	call	;_39ac
 	ret
+}
 
-        }
-
-PROC    ;_203f {
-        
+PROC    ;_203f
+        `====================================================================[$203F]===
+{        
 	ld	a,$07
 	rst	:playSFX
 	set	0,(iy+#vars.timeLightningFlags)
 	ret
+}
 
-        }
-
-`____________________________________________________________________________[$2047]___
-
-;_2047
+;_2047                                                                       `$2047
 DATA $7F, $7F, $7F, $7F, $7F, $7F, $7F, $7F, $7F, $7F, $7F, $7F, $7F, $7F, $7F, $7F
 DATA $7F, $7F, $7F, $7F, $7F, $7F, $7F, $7F, $7F, $7F, $7F, $7F, $7F, $7F, $7F, $7F
 
-`____________________________________________________________________________[$2067]___
-
-PROC    ;_2067 {
-        
+PROC    ;_2067
+        `====================================================================[$2067]===
+{        
 	dec	a
 	ld	($D287),a
 	jp	nz,;_LABEL_1CED_131._1de2
@@ -2562,13 +2494,11 @@ PROC    ;_2067 {
 	ld	(#RAM_LIVES),a
 	ld	a,$01
 	ret
+}
 
-        }
-
-`____________________________________________________________________________[$20A4]___
-
-PROC    ;_20a4 {
-        
+PROC    ;_20a4
+        `====================================================================[$20A4]===
+{        
 	ld	a,(#RAM_RASTERSPLIT_STEP)
 	and	a
 	jr	nz,;_20a4
@@ -2581,14 +2511,12 @@ PROC    ;_20a4 {
 	ei	
 	
 	ret
+}
 
-        }
-
-`____________________________________________________________________________[$20B8]___
-
-PROC    ;_20b8 {
-        
-	ld	a,;sound_fadeOut.bank
+PROC    ;_20b8
+        `====================================================================[$20B8]===
+{        
+	ld	a,;sound_fadeOut#bank
 	ld	(#SMS_PAGE_1),a
 	ld	(#RAM_PAGE_1),a
 	
@@ -2598,12 +2526,11 @@ PROC    ;_20b8 {
 	
 	xor	a
 	ret
-
-        }
+}
 	
-`____________________________________________________________________________[$20CB]___
-
-PROC    ;loadLevel {
+PROC    ;loadLevel
+        `====================================================================[$20CB]===
+{
         `PAGE 1 ($4000-$7FFF) is at BANK 5 ($14000-$17FFF)
         `HL : address for the level header
         
@@ -3136,14 +3063,13 @@ PROC    ;loadLevel {
 	set	5,(iy+#vars.flags6)
 	
 	ret
-
-        }
+}
 	
-`----------------------------------------------------------------------------[$232B]---
-`NOTE: $D2F2 is used only here -- perhaps a regular temp variable could be used
-
-PROC    ;loadObjectLayout {
-        `HL : address of an object layout
+PROC    ;loadObjectLayout
+        `--------------------------------------------------------------------[$232B]---
+PARAMS  hl      `address of an object layout
+{       
+        `NOTE: $D2F2 is used only here -- perhaps a regular temp variable could be used
         
 	push	hl
 	
@@ -3189,18 +3115,15 @@ PROC    ;loadObjectLayout {
 	djnz	._2
 	
 	ret
-
-        }
-
-`----------------------------------------------------------------------------[$235E]---
+}
 
 PROC    ;loadObject
+        `--------------------------------------------------------------------[$235E]---
 PARAMS	a	`object type
 	ix	`address of an object in RAM
 	de	`?
 	hl	`address with the X & Y positions of the object
-        {
-        
+{        
 	ld	(ix+#object.type),a	`set the object type
 	
 	`--- X position ---------------------------------------------------------------
@@ -3257,13 +3180,12 @@ PARAMS	a	`object type
 	inc	hl			`
 	add	ix,de			`add the DE parameter to IX (object address)
 	ret
+}
 
-        }
-
-`____________________________________________________________________________[$239C]___
-
-`animate ring
-PROC    ;_239c {
+PROC    ;_239c
+        `====================================================================[$239C]===
+        `animate ring
+{
         `ld      ($D25F) = $0060	
         `ld      ($D261) = $0088	
         `ld      ($D263) = $0060
@@ -3297,13 +3219,11 @@ PROC    ;_239c {
 	xor	a
 ._1	ld	(hl),a
 	ret
+}
 
-        }
-
-`____________________________________________________________________________[$23C9]___
-
-PROC    ;_23c9 {
-        
+PROC    ;_23c9
+        `====================================================================[$23C9]===
+{        
 	`this doesn't seem right?
 	ld	a,(#RAM_CYCLEPALETTE_SPEED)
 	dec	a
@@ -3332,8 +3252,7 @@ PROC    ;_23c9 {
 	ld	a,($D2A5)
 	ld	(#RAM_CYCLEPALETTE_SPEED),a
 	ret
-
-        }
+}
 
 ;_23f9
 DATA $05, $04, $03, $02, $01, $00
@@ -3392,11 +3311,10 @@ DATA $07, $41, $3A, $DF, $3A, $21, $00, $43, $3E, $E4, $37, $28, $F9, $44, $42, 
 DATA $33, $2E, $F2, $44, $45, $F1, $2F, $34, $EA, $43, $47, $F9, $2A, $3A, $E3, $41
 DATA $49, $00, $24, $3F, $DC, $3F
 
-`____________________________________________________________________________[$258B]___
-
 `end sequence screens?
-PROC    ;_LABEL_258B_133 {
-        
+PROC    ;_LABEL_258B_133
+        `====================================================================[$258B]===
+{        
 	ld	a, (#RAM_VDPREGISTER_1)
 	and	%10111111
 	ld	(#RAM_VDPREGISTER_1), a
@@ -3610,19 +3528,16 @@ PROC    ;_LABEL_258B_133 {
 	ld	(#RAM_TEMP1),a
 	ld	hl,;S1_Credits_Text
 	call	;_2795
-
-        }
+}
 	
-PROC    ;unused_infiniteLoop {
-	
+PROC    ;unused_infiniteLoop
+{	
         jp	:
+}
 
-        }
-
-`____________________________________________________________________________[$2718]___
-
-PROC    ;_2718 {
-        
+PROC    ;_2718
+        `====================================================================[$2718]===
+{        
 	push	af, hl, de, bc
 ._1	push 	bc
 	
@@ -3648,16 +3563,14 @@ PROC    ;_2718 {
 	
 	pop	bc, de, hl, af
 	ret
-
-        }
-
-`____________________________________________________________________________[$2745]___
-`wait a given number of frames
+}
 
 PROC    ;waitFrames
-PARAMS 	bc	`number of frames to wait
-        {
+        `====================================================================[$2745]===
+        `wait a given number of frames
         
+PARAMS 	bc	`number of frames to wait
+{        
 	push	bc
 	
 	`refresh the screen
@@ -3676,13 +3589,11 @@ PARAMS 	bc	`number of frames to wait
 	jr	nz,:
 	
 	ret
+}
 
-        }
-
-`____________________________________________________________________________[$275A]___
-
-PROC    ;_275a {
-        
+PROC    ;_275a
+        `====================================================================[$275A]===
+{        
 	ld	e,(hl)
 	inc	hl
 	ld	d,(hl)
@@ -3735,13 +3646,11 @@ PROC    ;_275a {
 	call	;processSpriteLayout
 	pop	hl
 	ret
+}
 
-        }
-
-`____________________________________________________________________________[$2795]___
-
-PROC    ;_2795 {
-        
+PROC    ;_2795
+        `====================================================================[$2795]===
+{        
 	ld	de,$D2BE
 	ldi	
 	ldi	
@@ -3833,8 +3742,7 @@ PROC    ;_2795 {
 	djnz	._3
 	pop	hl
 	jp	._
-
-        }
+}
 
 ;_2825
 DATA $5c, $5e, $ff
@@ -4137,11 +4045,10 @@ DATA $A6, $A8, $FF
 ;_2e55
 DATA $A0, $A2, $A4, $00, $FF
 
-`____________________________________________________________________________[$2E5A]___
-`update HUD?
-
-PROC    ;_2e5a {
-        
+PROC    ;_2e5a
+        `====================================================================[$2E5A]===
+        `update HUD?
+{        
 	`do not update the Sonic sprite frame
 	res	7,(iy+#vars.timeLightningFlags)
 	
@@ -4218,13 +4125,11 @@ PROC    ;_2e5a {
 	`run the code for all the different objects on screen (including the player)
 	call	;doObjects
 	ret
+}
 
-        }
-
-`____________________________________________________________________________[$2EE6]___
-
-PROC    ;_2ee6 {
-        
+PROC    ;_2ee6
+        `====================================================================[$2EE6]===
+{        
 	ld	a,(#RAM_RINGS)
 	ld	c,a
 	rrca	
@@ -4253,13 +4158,11 @@ PROC    ;_2ee6 {
 	call	;_LABEL_35CC_117
 	ld	(#RAM_SPRITETABLE_CURRENT),hl
 	ret
+}
 
-        }
-
-`____________________________________________________________________________[$2F1F]___
-
-PROC    ;_2f1f {
-        
+PROC    ;_2f1f
+        `====================================================================[$2F1F]===
+{        
 	ld	hl,$D2BE
 	ld	a,($D2CE)
 	and	$0f
@@ -4300,13 +4203,11 @@ PROC    ;_2f1f {
 	call	;_LABEL_35CC_117
 	ld	(#RAM_SPRITETABLE_CURRENT),hl
 	ret
+}
 
-        }
-
-`____________________________________________________________________________[$2F66]___
-
-PROC    ;_2f66 {
-        
+PROC    ;_2f66
+        `====================================================================[$2F66]===
+{        
 	bit	6,(iy+#vars.timeLightningFlags)
 	ret	nz
 	
@@ -4509,36 +4410,31 @@ PROC    ;_2f66 {
 	jr	c,.ret
 	ld	(#RAM_CAMERA_Y),de
 .ret	ret
+}
 
-        }
-
-`____________________________________________________________________________[$311A]___
-
-PROC    ;_311a {
-        
+PROC    ;_311a
+        `====================================================================[$311A]===
+{        
 	ld	(hl),d
 	dec	hl
 	ld	(hl),e
 	inc	hl
 	ret
+}
 
-        }
-
-`____________________________________________________________________________[$311F]___
-
-PROC    ;_311f {
-        
+PROC    ;_311f
+        `====================================================================[$311F]===
+{        
 	ld	c,$08
 	ret
+}
 
-        }
+PROC    ;_3122
+        `====================================================================[$3122]===
+        `scroll vertically towards the locked camera position
 
-`____________________________________________________________________________[$3122]___
-`scroll vertically towards the locked camera position
-
-PROC    ;_3122 {
-        `HL : ?
-        
+PARAMS  hl
+{
 	ld	de,(#RAM_LEVEL_TOP)
 	and	a
 	sbc	hl,de
@@ -4553,15 +4449,14 @@ PROC    ;_3122 {
 	ld	(#RAM_LEVEL_TOP),de
 	ld	(#RAM_LEVEL_BOTTOM),de
 	ret
+}
 
-        }
-
-`____________________________________________________________________________[$3140]___
-`scroll horizontally towards the locked camera position
-
-PROC    ;_3140 {
-        `HL : (RAM_CAMERA_X_GOTO)
+PROC    ;_3140
+        `====================================================================[$3140]===
+        `scroll horizontally towards the locked camera position
         
+PARAMS  hl      `(RAM_CAMERA_X_GOTO)  
+{
 	ld	de,(#RAM_LEVEL_LEFT)
 	and	a			`reset the carry so it doesn't affect `sbc`
 	sbc	hl,de
@@ -4577,26 +4472,23 @@ PROC    ;_3140 {
 	ld	(#RAM_LEVEL_LEFT),de
 	ld	(#RAM_LEVEL_RIGHT),de
 	ret
-        
-        }
+}
 
-`____________________________________________________________________________[$315E]___
-
-PROC    ;_315e {
-        
+PROC    ;_315e
+        `====================================================================[$315E]===
+{        
 	jr	c,._1
 	inc	de
 	ret
 	
 ._1	dec	de
 	ret
+}
 
-        }
 
-`____________________________________________________________________________[$3164]___
-	
-PROC    ;_3164 {
-        
+PROC    ;_3164
+        `====================================================================[$3164]===
+{        
 	ld	hl,($D29D)
 	ld	de,(#RAM_TIME)
 	add	hl,de
@@ -4648,48 +4540,42 @@ PROC    ;_3164 {
 	ld	hl,$fffe
 	ld	(#RAM_TIME),hl
 	ret
+}
 
-        }
-
-`____________________________________________________________________________[$31CF]___
-
-PROC    ;_31cf {
-        
+PROC    ;_31cf
+        `====================================================================[$31CF]===
+{        
 	ld	bc,$0020
 	ret
+}
 
-        }
-
-`____________________________________________________________________________[$31D3]___
-
-PROC    ;_31d3 {
-        
+PROC    ;_31d3
+        `====================================================================[$31D3]===
+{        
 	ld	bc,$0070
 	ret
+}
 
-        }
-
-`___ UNUSED! (4 bytes) ______________________________________________________[$31D7]___
-
+PROC    :unused_31d7
+        `====================================================================[$31D7]===
+{
 	ld	bc,$0070
 	ret
+}
 
-`____________________________________________________________________________[$31DB]___
-
-PROC    ;_31db {
-        
+PROC    ;_31db
+        `====================================================================[$31DB]===
+{        
 	bit	6,(iy+#vars.scrollRingFlags)
 	ret	nz
 	ld	bc,($D2B7)
 	add	hl,bc
 	ret
+}
 
-        }
-
-`____________________________________________________________________________[$31E6]___
-
-PROC    ;_31e6 {
-        
+PROC    ;_31e6
+        `====================================================================[$31E6]===
+{        
 	ld	a,(#RAM_FRAMECOUNT)
 	and	$07
 	ld	c,a
@@ -4795,16 +4681,14 @@ PROC    ;_31e6 {
 	dec	b
 	jp	nz,.loop
 	ret
+}
 
-        }
-
-`____________________________________________________________________________[$392B]___
-`runs the code for each of the objects in memory
-
-PROC    ;doObjects {
-        
-	`starting from $D37E, read 16-bit numbers until a non-zero one is found,
-	 `or 31 numbers have been read
+PROC    ;doObjects
+        `====================================================================[$392B]===
+        `runs the code for each of the objects in memory
+{        
+	``starting from $D37E, read 16-bit numbers until a non-zero one is found,
+	  or 31 numbers have been read``
 	ld	hl,$D37E
 	ld	b,31
 	
@@ -4839,13 +4723,11 @@ PROC    ;doObjects {
 	ld	(#RAM_SPRITETABLE_CURRENT),hl
 	ld	(iy+#vars.spriteUpdateCount),a
 	ret
+}
 
-        }
-
-`----------------------------------------------------------------------------[$32C8]---
-
-PROC    ;doObjectCode {
-        
+PROC    ;doObjectCode
+        `--------------------------------------------------------------------[$32C8]---
+{        
 	ld	a,(de)			`get object from the list
 	cp	$FF			`ignore object #$FF
 	ret	z
@@ -4877,13 +4759,11 @@ PROC    ;doObjectCode {
 	
 	`run the object's code
 	jp	(hl)
-
-        }
+}
 	
-`----------------------------------------------------------------------------[$32E2]---
-
-PROC    ;_32e2 {
-        
+PROC    ;_32e2
+        `--------------------------------------------------------------------[$32E2]---
+{        
 	ld	e, (ix+#object.Xspeed+0)
 	ld	d, (ix+#object.Xspeed+1)
 	ld	c, (ix+#object.Xdirection)
@@ -5164,19 +5044,17 @@ PROC    ;_32e2 {
 	
 	pop	hl, bc
 	ret
-
-        }
-
-`____________________________________________________________________________[$350F]___
-`process sprite layout data?
+}
 
 PROC    :processSpriteLayout
+        `====================================================================[$350F]===
+        `process sprite layout data?
+        
 PARAMS	hl	`X-position
 	d	`?? (some kind of control flag)
 	e	`Y-position
 	bc	`address to a sprite layout
-{
-        
+{        
 	`store the X-position of the sprite for aligning the rows
 	ld	(#RAM_TEMP6), hl
 	
@@ -5300,10 +5178,9 @@ PARAMS	hl	`X-position
 	ret
 }
 
-`____________________________________________________________________________[$3581]___
-
-PROC    ;_3581 {
-        
+PROC    ;_3581
+        `====================================================================[$3581]===
+{        
 	ld	hl,(#RAM_TEMP3)
 	ld	bc,(#RAM_TEMP6)
 	add	hl,bc
@@ -5348,18 +5225,15 @@ PROC    ;_3581 {
 	ld	(#RAM_SPRITETABLE_CURRENT),bc
 	inc	(iy+#vars.spriteUpdateCount)
 	ret
+}
 
-        }
-
-`____________________________________________________________________________[$35CC]___
-
-PROC    ;_LABEL_35CC_117 {
-        `e.g.
-        ` C : $10
-        `B  : 172
-        `HL : (RAM_SPRITETABLE_CURRENT)
-        `DE : $D2BE	: $A0, $A2, $A4, ($80 + RAM_LIVES * 2), $FF
-        
+PROC    ;_LABEL_35CC_117
+        `====================================================================[$35CC]===
+PARAMS  b       `e.g. $10
+        c       `e.g. 172
+        hl      `(#RAM_SPRITETABLE_CURRENT)  
+        de      `$D2BE	: $A0, $A2, $A4, ($80 + #RAM_LIVES * 2), $FF
+{       
 	ld	a, (de)
 	cp	$FF
 	ret	z
@@ -5380,13 +5254,11 @@ PROC    ;_LABEL_35CC_117 {
 	add	a, $08
 	ld	c, a
 	jp	:
+}
 
-        }
-
-`____________________________________________________________________________[$35E5]___
-
-PROC    ;_35e5 {
-        
+PROC    ;_35e5
+        `====================================================================[$35E5]===
+{        
 	bit	0,(iy+#vars.scrollRingFlags)
 	ret	nz
 	bit	0,(iy+#vars.unknown0)
@@ -5396,13 +5268,11 @@ PROC    ;_35e5 {
 	jp	c,;_36be
 	and	$02
 	jp	nz,;_36be
+}
 
-        }
-
-`----------------------------------------------------------------------------[$35FD]---
-
-PROC    ;_35fd {
-        
+PROC    ;_35fd
+        `--------------------------------------------------------------------[$35FD]---
+{        
 	bit	0,(iy+#vars.flags9)
 	ret	nz
 	bit	6,(iy+#vars.flags6)
@@ -5414,13 +5284,11 @@ PROC    ;_35fd {
 	ld	a,(#RAM_RINGS)
 	and	a
 	jr	nz,;_3644
+}
 
-        }
-
-`----------------------------------------------------------------------------[$3618]---
-
-PROC    ;_3618 {
-        
+PROC    ;_3618
+        `--------------------------------------------------------------------[$3618]---
+{        
 	set	0,(iy+#vars.scrollRingFlags)
 	ld	hl,$D414
 	set	7,(hl)
@@ -5439,13 +5307,11 @@ PROC    ;_3618 {
 	rst	:playMusic
 	
 	ret
+}
 
-        }
-
-`----------------------------------------------------------------------------[$3644]---
-
-PROC    ;_3644 {
-        
+PROC    ;_3644
+        `--------------------------------------------------------------------[$3644]---
+{       
 	xor	a
 	ld	(#RAM_RINGS),a
 	call	;_7c7b
@@ -5495,13 +5361,11 @@ PROC    ;_3644 {
 	ld	a,$11
 	rst	:playSFX
 	ret
+}
 
-        }
-
-`----------------------------------------------------------------------------[$36BE]---
-
-PROC    ;_36be {
-        
+PROC    ;_36be
+        `--------------------------------------------------------------------[$36BE]---
+{        
 	ld	(ix+#object.type),$0A	`explosion
 	ld	a,(#RAM_TEMP1)
 	ld	e,a
@@ -5527,13 +5391,12 @@ PROC    ;_36be {
 	ld	c,$00
 	call	;_39d8
 	ret
-
-        }
-
-`____________________________________________________________________________[$36F9]___
-`retrieves a location in the Floor Layout in RAM based on the current object
+}
 
 PROC    :getFloorLayoutRAMPositionForObject
+        `====================================================================[$36F9]===
+        `retrieves a location in the Floor Layout in RAM based on the current object
+        
 PARAMS	bc	`horizontal pixel offset to add to the object's X position
 		 `before locating tile
 	de	`vertical pixel offset to add to the object's Y position
@@ -5701,10 +5564,9 @@ PARAMS	bc	`horizontal pixel offset to add to the object's X position
 	ret
 }
 
-`____________________________________________________________________________[$37E0]___
-`copy the current Sonic animation frame into the sprite data
-
 PROC    :updateSonicSpriteFrame
+        `====================================================================[$37E0]===
+        `copy the current Sonic animation frame into the sprite data
 {        
 	ld	de, (#RAM_SONIC_CURRENT_FRAME)
 	ld	hl, (#RAM_SONIC_PREVIOUS_FRAME)
@@ -5812,9 +5674,8 @@ PROC    :updateSonicSpriteFrame
 	ret
 }
 
-`____________________________________________________________________________[$3879]___
-
 PROC    :updateRingFrame
+        `====================================================================[$3879]===
 {        
 	ld	de,(#RAM_RING_CURRENT_FRAME)
 	ld	hl,(#RAM_RING_PREVIOUS_FRAME)
@@ -5856,10 +5717,9 @@ PROC    :updateRingFrame
 	ret
 }
 
-`____________________________________________________________________________[$38B0]___
-
-PROC    ;_LABEL_38B0_51 {
-        
+PROC    ;_LABEL_38B0_51
+        `====================================================================[$38B0]===
+{        
 	ld	hl, ($D2AB)
 	ld	a, l
 	and	%11111000
@@ -5976,13 +5836,12 @@ PROC    ;_LABEL_38B0_51 {
 	djnz	.loop
 	
 	ret
+}
 
-        }
-
-`____________________________________________________________________________[$3956]___
-`called by objects, very common -- collision detection?
-
-PROC    ;_LABEL_3956_11 {
+PROC    ;_LABEL_3956_11
+        `====================================================================[$3956]===
+        `called by objects, very common -- collision detection?
+{
         `RAM_TEMP6/7 : e.g. $0806
         
 	bit	0, (iy+$05)
@@ -6037,14 +5896,12 @@ PROC    ;_LABEL_3956_11 {
 	xor	a
 	sbc	hl, de
 	ret
+}
 
-        }
-
-`____________________________________________________________________________[$39AC]___
-`looks like this handles increasing the number of rings?
-
-PROC    ;_39ac {
-        
+PROC    ;_39ac
+        `====================================================================[$39AC]===
+        `looks like this handles increasing the number of rings?
+{        
 	ld	c,a
 	ld	a,(#RAM_RINGS)
 	add	a,c
@@ -6071,13 +5928,11 @@ PROC    ;_39ac {
 	ld	a,$02
 	rst	:playSFX
 	ret
+}
 
-        }
-
-`____________________________________________________________________________[$39D8]___
-
-PROC    ;_39d8 {
-        
+PROC    ;_39d8
+        `====================================================================[$39D8]===
+{        
 	ld	hl,$D2BD
 	ld	a,e
 	add	a,(hl)
@@ -6113,13 +5968,11 @@ PROC    ;_39d8 {
 	ld	a,$09
 	rst	:playSFX
 	ret
+}
 
-        }
-
-`____________________________________________________________________________[$3A03]___
-
-PROC    ;_3a03 {
-        
+PROC    ;_3a03
+        `====================================================================[$3A03]===
+{        
 	bit	0,(iy+#vars.scrollRingFlags)
 	ret	nz	
 	ld	hl,$D2D0
@@ -6182,8 +6035,7 @@ PROC    ;_3a03 {
 	xor	a
 ._7	ld	(hl),a
 	ret
-
-        }
+}
 
 ;_3a62
 DATA $01, $30, $00

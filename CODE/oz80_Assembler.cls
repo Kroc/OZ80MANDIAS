@@ -19,22 +19,52 @@ Option Explicit
 '======================================================================================
 'CLASS :: oz80_Assembler
 
-'/// CONSTANTS ////////////////////////////////////////////////////////////////////////
+'The CRC function of this class is from "Calculating CRC32 With VB" by Steve McMahon _
+ <www.vbaccelerator.com/home/VB/Code/Libraries/CRC32/article.asp> which was _
+ derived from from the VB.NET CRC32 algorithm by Paul Caton
 
-'This structure is used when parsing parameters of Z80 instructions
-Private Type oz80Param
-    Register As OZ80_TOKEN_DATA         'If a register, which one
-    Value As Long                       'The numerical value of the parameter
-    ValueUnknown As Boolean             'If the parameter has unknown values (labels)
-    Kind As OZ80_PARAM                  'As below, a brief hint at the parameter type
-    Mask As OZ80_MASK                   'A detailed bit-mask of parameter features
+'/// API //////////////////////////////////////////////////////////////////////////////
+
+'Cast String to Array: _
+ --------------------------------------------------------------------------------------
+'By manipulating some pointers we can cast a VB string directly into an array without _
+ having to make a copy of the string, nor waste memory on a separate array. _
+ This is obviously very fast, especially for long strings
+'<vbforums.com/showthread.php?729385>
+
+'This is VB6's internal structure used for VB arrays _
+ <msdn.microsoft.com/en-us/library/ms221482(v=vs.85).aspx>
+Private Type SAFEARRAY1D
+    cDims      As Integer   'The count of dimensions
+    fFeatures  As Integer   'Flags used by the SafeArray
+    cbElements As Long      'The size of an array element
+    cLocks     As Long      'Lock count
+    pvData     As Long      'Pointer to the data
+    cElements  As Long      'The number of elements in the dimension
+    lLbound    As Long      'The lower bound of the dimension
 End Type
 
-Private Enum OZ80_PARAM
-    PARAM_REGISTER = 1
-    PARAM_NUMBER = 2
-    PARAM_MEMORY = 3
-End Enum
+'- An array that is allocated on the stack
+Private Const FADF_AUTO      As Integer = &H1
+'- An array that may not be resized or reallocated
+Private Const FADF_FIXEDSIZE As Integer = &H10
+
+'Undocumented VB6 API to get at the array pointer
+Private Declare Function msvbvm60_VarPtr Lib "msvbvm60.dll" Alias "VarPtr" ( _
+    ByRef ArrayVar() As Any _
+) As Long
+
+'Undocumented VB6 API to write 4-bytes (Long) of memory
+Private Declare Sub msvbvm60_PutMem4 Lib "msvbvm60.dll" Alias "PutMem4" ( _
+    ByVal Addr As Long, _
+    ByVal NewVal As Long _
+)
+
+Private CastStrSA1D As SAFEARRAY1D      'A dummy VB6 array header
+Private CastStrPtr  As Long             'Pointer to our dummy array
+Private CastStrArr() As Integer         'Empty array that will be hacked
+
+'/// CONSTANTS ////////////////////////////////////////////////////////////////////////
 
 'Specific values used with opcodes for various instruction features: _
  E.g. the use of IX/IY often requires extra bytes to denote these
@@ -67,6 +97,25 @@ Private Enum OZ80_OPCODE
     OPCODE_FLAG_PE = &H28               '..x-x...
     OPCODE_FLAG_P = &H30                '..xx-...
     OPCODE_FLAG_M = &H38                '..xxx...
+End Enum
+
+'--------------------------------------------------------------------------------------
+
+'This structure is used when parsing parameters of Z80 instructions
+Private Type oz80Param
+    Register As OZ80_TOKEN_DATA         'If a register, which one
+    Value As Long                       'The numerical value of the parameter
+    ValueUnknown As Boolean             'If the parameter has unknown values (labels)
+    Kind As OZ80_PARAM                  'As below, a brief hint at the parameter type
+    Mask As OZ80_MASK                   'A detailed bit-mask of parameter features
+End Type
+
+'This gives a very rough estimation of the type of the Z80 parameter _
+ without having to go into too much detail
+Private Enum OZ80_PARAM
+    PARAM_REGISTER = 1
+    PARAM_NUMBER = 2
+    PARAM_MEMORY = 3
 End Enum
 
 'When fetching parameters for Z80 instructions, a bit-pattern is used to relay the _
@@ -124,14 +173,29 @@ Private Enum OZ80_MASK
     MASK_BC_DE_HL = MASK_BC Or MASK_DE Or MASK_HL
 End Enum
 
+'--------------------------------------------------------------------------------------
+
+'This is the official polynomial used by CRC32 in PKZip. _
+ Often the polynomial is shown reversed (04C11DB7)
+Private Const CRC_POLYNOMIAL As Long = &HEDB88320
+
 '/// CLASS VARIABLES //////////////////////////////////////////////////////////////////
+
+'Store a look up table for the CRC calculations
+Private CRCTable(0 To 255) As Long
 
 'For timing this process
 Private Stopwatch As PerformanceCounter
 
 'The current source file being processed
-Private WithEvents TokenFile As oz80_TokenStream
-Attribute TokenFile.VB_VarHelpID = -1
+Private WithEvents TokenStream As oz80_TokenStream
+Attribute TokenStream.VB_VarHelpID = -1
+
+'Caches of the current token information since dereferencing the object is slow
+Private TokenKind As OZ80_TOKEN
+Private TokenData As OZ80_TOKEN_DATA
+Private TokenLine As Long
+Private TokenCol As Long
 
 'The line number of the previous token, so that we can tell when a label/property _
  definition occurs on a new line and isn't therefore part of a list
@@ -151,7 +215,17 @@ Private Strings As Scripting.Dictionary
 
 'The numerical values of variables / labels / properties &c. will be stored here. _
  The key for a name is the CRC32 of the string (from `Strings` above)
+
 Private NameValues As Scripting.Dictionary
+
+'Variables and Labels are kept separately as the first assembling pass determines _
+ the final location of the labels in the ROM and the second pass then fills in the _
+ expressions that could not be evaluated, but we need to clear out the variable _
+ values produced during the first pass so that they don't change the behaviour of _
+ the second pass
+
+Private Variables As Scripting.Dictionary
+Private Labels As Scripting.Dictionary
 
 '/// EVENTS ///////////////////////////////////////////////////////////////////////////
 
@@ -169,7 +243,37 @@ Event Error( _
  ======================================================================================
 Private Sub Class_Initialize()
     Set Stopwatch = New PerformanceCounter
-    Set NameValues = New Scripting.Dictionary
+    Set Variables = New Scripting.Dictionary
+    Set Labels = New Scripting.Dictionary
+    
+    'Create the CRC look-up table _
+     (I will not pretend to understand how this works other than it goes through _
+      shifting and flipping bits, make of that what you will)
+    Dim i As Long, Value As Long
+    For i = 0 To 255
+        Value = i
+        Dim ii As Long
+        For ii = 8 To 1 Step -1
+            If (Value And 1) Then
+                Let Value = ((Value And &HFFFFFFFE) \ 2&) And &H7FFFFFFF
+                Let Value = Value Xor CRC_POLYNOMIAL
+            Else
+                Let Value = ((Value And &HFFFFFFFE) \ 2&) And &H7FFFFFFF
+            End If
+        Next
+        Let CRCTable(i) = Value
+    Next
+    
+    With CastStrSA1D
+        .cDims = 1
+        .fFeatures = FADF_AUTO Or FADF_FIXEDSIZE
+        .cbElements = 2&
+        .cLocks = 1&
+        .lLbound = 0&
+    End With
+    
+    Let CastStrPtr = msvbvm60_VarPtr(CastStrArr())
+    Call msvbvm60_PutMem4(CastStrPtr, VarPtr(CastStrSA1D))
     
     'NOTE:
     '   +rr     BC = +00
@@ -410,38 +514,46 @@ End Sub
 'CLASS Terminate _
  ======================================================================================
 Private Sub Class_Terminate()
-    Set NameValues = Nothing
+    Set Variables = Nothing
+    Set Labels = Nothing
     Set Strings = Nothing
     Set Stopwatch = Nothing
-    Erase ROM
+    Set TokenStream = Nothing
+    Erase ROM, CRCTable
+    
+    'Clean up our array hacking (for casting a string to an array) _
+     otherwise VB will crash when it frees up the memory
+    Call msvbvm60_PutMem4(CastStrPtr, 0&)
 End Sub
 
-'EVENT <TokenFile> Error : Detailed error message from a TokenStream object _
+'EVENT <TokenStream> Error : Detailed error message from a TokenStream object _
  ======================================================================================
-Private Sub TokenFile_Error( _
+Private Sub TokenStream_Error( _
     ByVal Number As OZ80_ERROR, Description As String, _
     ByVal Line As Long, ByVal Col As Long _
 )
     RaiseEvent Error(Number, Description, Line, Col)
 End Sub
 
-'EVENT <TokenFile> Message : Basic progress message from a TokenStream object _
+'EVENT <TokenStream> Message : Basic progress message from a TokenStream object _
  ======================================================================================
-Private Sub TokenFile_Message(Text As String)
+Private Sub TokenStream_Message(Text As String)
     RaiseEvent Message(Text)
 End Sub
 
-'EVENT <TokenFile> StringAdded : While parsing a source file, a string name was read _
+'EVENT <TokenStream> StringAdded : While parsing a source file, a string name was read _
  ======================================================================================
-Private Sub TokenFile_StringAdded(ByRef Key As Long, ByRef StringData As String)
-    'Add the label/variable/property name to the string storage. _
-     The key is a CRC32 of the string so that we can easily find it again
+Private Sub TokenStream_StringAdded(ByRef Key As Long, ByRef StringData As String)
+    'We need to provide a unique key, we use the CRC32 of the string
+    'When this event finishes, the TokenStream will add a token using this key
+    Let Key = CRCString(StringData)
+    'Add the label/variable/property name to the string storage
     If Strings.Exists(Key) = False Then Call Strings.Add(Key, StringData)
 End Sub
 
 '/// PUBLIC INTERFACE /////////////////////////////////////////////////////////////////
 
-'Process : Assemble a Z80 binary from a given token stream _
+'Assemble : Compile a Z80 binary from a given starting source code file _
  ======================================================================================
 Public Function Assemble(ByVal FilePath As String) As OZ80_ERROR
     RaiseEvent Message( _
@@ -457,11 +569,11 @@ Public Function Assemble(ByVal FilePath As String) As OZ80_ERROR
     
     'Stage 1: Parse Source _
      ----------------------------------------------------------------------------------
-    'Create a tokeniser object to hold the machine representation of the text files; _
+    'Create a tokeniser object to hold the machine representation of the text file; _
      the assembler doesn't work with the original text directly
-    Set TokenFile = New oz80_TokenStream
+    Set TokenStream = New oz80_TokenStream
     'Explode the source code file into tokens
-    Let Assemble = TokenFile.TokeniseFile(FilePath)
+    Let Assemble = TokenStream.TokeniseFile(FilePath)
     If Assemble <> OZ80_ERROR_NONE Then
         Stop
         GoTo ErrorOut
@@ -478,10 +590,13 @@ Public Function Assemble(ByVal FilePath As String) As OZ80_ERROR
     Let ROMSize = 2 ^ 15
     ReDim ROM(0 To ROMSize - 1) As Byte
     
-    'Phase 1 : Determine the size of the assembly and remember all label positions
+    'Phase 1 : Determine the size of the assembly and remember all label positions _
+     ..................................................................................
+    Call RewindTokenStream
     Let Assemble = ScopeRoot()
     
-    'Phase 2 : 'Fill in the blanks' -- go back and evaluate the unknowns
+    'Phase 2 : 'Fill in the blanks' -- go back and evaluate the unknowns _
+     ..................................................................................
     'TODO
     
     RaiseEvent Message("- Final ROM size is " & (ROMSize \ 1024) & " KB")
@@ -566,63 +681,71 @@ Private Function ScopeRoot() As OZ80_ERROR
     'When a file begins, it is at the top-most scope. Certain keywords are only _
      allowed here. Once all nested scopes are exhausted, we return here
     
+    'These are used for evaluating expressions used in parameters
+    Dim ReturnValue As Long, ReturnValueIsUnknown As Boolean
+    
 Continue:
-'    If TokenFile.Kind = OZ80_TOKEN.TOKEN_LABEL Then '----------------------------------
+'    If TokenKind = OZ80_TOKEN.TOKEN_LABEL Then '----------------------------------
 '        'If the label is already defined, we have a problem
-'        If Labels.Exists(TokenFile.Data) = True Then
+'        If Labels.Exists(TokenData) = True Then
 '            'TODO: Handle Section scope
 '            'Error - label already defined
 '            Let ScopeRoot = RaiseError(OZ80_ERROR_DUPLICATE, _
 '                "Duplicate label definition! '" & _
-'                Strings(TokenFile.Data) & "' is already defined.", _
-'                TokenFile.Line, TokenFile.Col _
+'                Strings(TokenData) & "' is already defined.", _
+'                TokenLine, TokenCol _
 '            ): Exit Function
 '            Stop
 '        Else
 '            'Add a label using the token's data value for an index key as this will _
 '             be the string hash generated in the token stream
-'            Call Labels.Add(TokenFile.Data, At)
+'            Call Labels.Add(TokenData, At)
 '        End If
     
     'Only particular keywords are allowed at root
-    If TokenFile.Kind <> TOKEN_KEYWORD Then
+    If TokenKind <> TOKEN_KEYWORD Then
         'ERROR: Not a keyword on root scope
         Let ScopeRoot = RaiseError(OZ80_ERROR_UNEXPECTED, _
-            "Unexpected content. Only the keywords INCLUDE, PROC, STRUCT, TABLE " & _
-            "or VAR are allowed here.", TokenFile.Line, TokenFile.Col _
+            "Only the keywords INCLUDE, OBJECT, PROC, STRUCT, TABLE or VAR " & _
+            "are allowed here.", TokenLine, TokenCol _
         ): Exit Function
     End If
     
     'Remember the keyword before we move past it
     Dim Keyword As OZ80_TOKEN_DATA
-    Let Keyword = TokenFile.Data
+    Let Keyword = TokenData
     'Move forward past the keyword into the first parameter
-    If NextToken() = False Then Stop
+    If NextToken() = False Then
+        'ERROR: The file ended before the first parameter
+        Let ScopeRoot = RaiseError(OZ80_ERROR_ENDOFFILE, _
+            "Unexpected end of file! Parameter expected", TokenLine, TokenCol _
+        ): Exit Function
+    End If
     
+    '`INCLUDE [BINARY] <expr> [START <expr> [LENGTH <expr>|STOP <expr>]]` _
+     ----------------------------------------------------------------------------------
+    If Keyword = TOKEN_KEYWORD_INCLUDE Then
+        'TODO
+        
     '`VAR #<variable> [<list>]` _
      ----------------------------------------------------------------------------------
-    If Keyword = OZ80_TOKEN_DATA.TOKEN_KEYWORD_VAR Then
+    ElseIf Keyword = TOKEN_KEYWORD_VAR Then
         'The first parameter must always be a variable name
-        If TokenFile.Kind <> TOKEN_VARIABLE Then
+        If TokenKind <> TOKEN_VARIABLE Then
             'ERROR: Not a variable name for `VAR`
-            Stop
-            Let ScopeRoot = OZ80_ERROR_UNEXPECTED
-            Exit Function
+            Let ScopeRoot = RaiseError(OZ80_ERROR_UNEXPECTED, _
+                "Expected a variable name.", TokenLine, TokenCol _
+            ): Exit Function
         End If
         
         'Fetch the key for the string name
         Dim NameKey As Long
-        Let NameKey = TokenFile.Data
+        Let NameKey = TokenData
         
         'Move forward to the value parameter
-        'TODO: Check for end of stream
-        Call NextToken
-        
-        
-        Dim ReturnValue As Long, ReturnValueIsUnknown As Boolean
-            
-        'The value parameter is optional
-        If IsExpression = True Then
+        'NOTE: the value parameter is optional, and the file could end right here -- _
+               if so, it'll skip over retreiving the value
+        If NextToken() = True And IsExpression = True Then
             'TODO: A whole lot of error handling
             Let ScopeRoot = ScopeExpression(ReturnValue, ReturnValueIsUnknown)
             If ScopeRoot <> OZ80_ERROR_NONE Then Stop
@@ -635,12 +758,12 @@ Continue:
         End If
         
         'Is the variable already defined?
-        If NameValues.Exists(NameKey) = True Then
+        If Variables.Exists(NameKey) = True Then
             'Update the value
-            Let NameValues(NameKey) = ReturnValue
+            Let Variables(NameKey) = ReturnValue
         Else
             'Create the named value
-            Call NameValues.Add(NameKey, ReturnValue)
+            Call Variables.Add(NameKey, ReturnValue)
         End If
         
         RaiseEvent Message("= VAR " & Strings(NameKey) & " " & ReturnValue)
@@ -648,25 +771,24 @@ Continue:
         'TODO: Are we on the next token? If no value parameter, then NO!
         GoTo Continue
         
-        
-    '`INCLUDE [BINARY] <expr> [START <expr> [LENGTH <expr>|STOP <expr>]]` _
+    '`OBJECT #<objectName> { [...] }` _
      ----------------------------------------------------------------------------------
-    ElseIf Keyword = OZ80_TOKEN_DATA.TOKEN_KEYWORD_INCLUDE Then
+    ElseIf TokenData = TOKEN_KEYWORD_OBJECT Then
+        'TODO
+        
+    '`PROC :<procedureName> [PARAMS <list>] [RETURN <list>] { [...] }` _
+     ----------------------------------------------------------------------------------
+    ElseIf Keyword = TOKEN_KEYWORD_PROC Then
+        'TODO
+        
+    '`STRUCT :<structureName> AS #<objectName> { [...] }` _
+     ----------------------------------------------------------------------------------
+    ElseIf Keyword = TOKEN_KEYWORD_STRUCT Then
         'TODO
         
     '`TABLE :<tableName> { [...] }` _
      ----------------------------------------------------------------------------------
-    ElseIf TokenFile.Data = OZ80_TOKEN_DATA.TOKEN_KEYWORD_TABLE Then
-        'TODO
-    
-    '`STRUCT :<structureName> AS #<objectName> { [...] }` _
-     ----------------------------------------------------------------------------------
-    ElseIf Keyword = OZ80_TOKEN_DATA.TOKEN_KEYWORD_STRUCT Then
-        'TODO
-        
-    '`PROC :myProcedure [PARAMS <list>] [RETURN <list> { [...] }` _
-     ----------------------------------------------------------------------------------
-    ElseIf Keyword = OZ80_TOKEN_DATA.TOKEN_KEYWORD_PROC Then
+    ElseIf TokenData = TOKEN_KEYWORD_TABLE Then
         'TODO
         
     End If
@@ -679,22 +801,22 @@ End Function
 Private Function ScopeCode() As OZ80_ERROR
     'This scope allows data statements and Z80 source code, e.g. root and procedures
     
-    If TokenFile.Kind = OZ80_TOKEN.TOKEN_KEYWORD Then
+    If TokenKind = OZ80_TOKEN.TOKEN_KEYWORD Then
         'TODO: Which keywords are allowed here
-        If TokenFile.Data = OZ80_TOKEN_DATA.TOKEN_KEYWORD_BYTE Then
+        If TokenData = OZ80_TOKEN_DATA.TOKEN_KEYWORD_BYTE Then
             'TODO
-        ElseIf TokenFile.Data = OZ80_TOKEN_DATA.TOKEN_KEYWORD_DATA Then
+        ElseIf TokenData = OZ80_TOKEN_DATA.TOKEN_KEYWORD_DATA Then
             'TODO
-        ElseIf TokenFile.Data = OZ80_TOKEN_DATA.TOKEN_KEYWORD_VAR Then
+        ElseIf TokenData = OZ80_TOKEN_DATA.TOKEN_KEYWORD_VAR Then
             'TODO
-        ElseIf TokenFile.Data = OZ80_TOKEN_DATA.TOKEN_KEYWORD_WORD Then
+        ElseIf TokenData = OZ80_TOKEN_DATA.TOKEN_KEYWORD_WORD Then
             'TODO
         Else
             'TODO: Error - keyword not allowed at this Scope
 '            Stop
         End If
         
-    ElseIf TokenFile.Kind = OZ80_TOKEN.TOKEN_Z80 Then
+    ElseIf TokenKind = OZ80_TOKEN.TOKEN_Z80 Then
         'Process a Z80 instruction ...
         Let ScopeCode = ScopeZ80()
         Exit Function
@@ -703,7 +825,7 @@ Private Function ScopeCode() As OZ80_ERROR
         'ERROR: Unexpected content at this point
         Let ScopeCode = RaiseError(OZ80_ERROR_UNEXPECTED, _
             "Unexpected content at this scope. Only `BYTE/DATA/DEF/WORD` keywords " & _
-            "or Z80 instructions allowed here.", TokenFile.Line, TokenFile.Col _
+            "or Z80 instructions allowed here.", TokenLine, TokenCol _
         ): Exit Function
     End If
     
@@ -733,11 +855,11 @@ Private Function ScopeExpression( _
     
     'If next token is not an operator assume the expression has finished, _
       the parent will handle whatever the next token is used for
-    If TokenFile.Kind <> OZ80_TOKEN.TOKEN_OPERATOR Then Exit Function
+    If TokenKind <> OZ80_TOKEN.TOKEN_OPERATOR Then Exit Function
     
 Continue:
     'Remember the operator for after we have operand 2 to work with
-    Let Operator = TokenFile.Data
+    Let Operator = TokenData
     
     'Get the second operand
     'TODO: Error - unexpected end
@@ -793,7 +915,7 @@ Continue:
 '    If NextToken() = False Then Exit Function
     
     'Does the expression continue?
-    If TokenFile.Kind = OZ80_TOKEN.TOKEN_OPERATOR Then
+    If TokenKind = OZ80_TOKEN.TOKEN_OPERATOR Then
         'Set the current result as the first operand and go around again
         Let Operand1 = ReturnValue
         GoTo Continue
@@ -807,36 +929,36 @@ Private Function ScopeMemory( _
     ByRef Value As Long, ByRef Unknown As Boolean _
 ) As OZ80_ERROR
     'If the current token is an open parentheses move forward into the expression
-    If TokenFile.Kind = OZ80_TOKEN.TOKEN_PARENOPEN Then
+    If TokenKind = OZ80_TOKEN.TOKEN_PARENOPEN Then
         If NextToken() = False Then Stop
     End If
     
     'The first item in the expression can be a register, typically HL, IX or IY
-    If TokenFile.Kind = OZ80_TOKEN.TOKEN_REGISTER Then
+    If TokenKind = OZ80_TOKEN.TOKEN_REGISTER Then
         'The `IN` & `OUT` instructions accept only the C register
-        If TokenFile.Data = TOKEN_REGISTER_C Then
+        If TokenData = TOKEN_REGISTER_C Then
             Let Register = TOKEN_REGISTER_C
         
         '`LD` accepts registers BC & DE
-        ElseIf TokenFile.Data = TOKEN_REGISTER_BC Then
+        ElseIf TokenData = TOKEN_REGISTER_BC Then
             Let Register = TOKEN_REGISTER_BC
-        ElseIf TokenFile.Data = TOKEN_REGISTER_DE Then
+        ElseIf TokenData = TOKEN_REGISTER_DE Then
             Let Register = TOKEN_REGISTER_DE
             
-        ElseIf TokenFile.Data = TOKEN_REGISTER_HL Then
+        ElseIf TokenData = TOKEN_REGISTER_HL Then
             Let Register = TOKEN_REGISTER_HL
             
-        ElseIf TokenFile.Data = TOKEN_REGISTER_IX Then
+        ElseIf TokenData = TOKEN_REGISTER_IX Then
             Let Register = TOKEN_REGISTER_IX
             'IX can have an additional expression, e.g. `ld a, (ix+$8)`
             GoTo AddExpr
             
-        ElseIf TokenFile.Data = TOKEN_REGISTER_IY Then
+        ElseIf TokenData = TOKEN_REGISTER_IY Then
             Let Register = TOKEN_REGISTER_IY
             'IY can also have an additional expression, e.g. `ld a, (ix+$8)`
             GoTo AddExpr
             
-        ElseIf TokenFile.Data = TOKEN_REGISTER_SP Then
+        ElseIf TokenData = TOKEN_REGISTER_SP Then
             Let Register = TOKEN_REGISTER_SP
         Else
             'ERROR: register not allowed here
@@ -852,13 +974,13 @@ AddExpr:
         'Look for the `+` following the register name
         If NextToken() = False Then Stop
         'If present, skip over it and check for an expression
-        If TokenFile.Kind = OZ80_TOKEN.TOKEN_OPERATOR Then
-            If TokenFile.Data = TOKEN_OPERATOR_ADD Then
+        If TokenKind = OZ80_TOKEN.TOKEN_OPERATOR Then
+            If TokenData = TOKEN_OPERATOR_ADD Then
                 If NextToken() = False Then Stop
             End If
             
         'If it's just a register in parens, then finish
-        ElseIf TokenFile.Kind = OZ80_TOKEN.TOKEN_PARENCLOSE Then
+        ElseIf TokenKind = OZ80_TOKEN.TOKEN_PARENCLOSE Then
             Exit Function
         End If
     End If
@@ -869,7 +991,7 @@ AddExpr:
     Let ScopeMemory = ScopeExpression(Value, Unknown)
 
 EndScope:
-    If TokenFile.Kind = OZ80_TOKEN.TOKEN_PARENCLOSE Then
+    If TokenKind = OZ80_TOKEN.TOKEN_PARENCLOSE Then
         Call NextToken
         Exit Function
     End If
@@ -884,26 +1006,36 @@ Private Function ScopeOperand( _
 ) As OZ80_ERROR
     'Is it a named value?
     'TODO: Handle scope expansion for names
-    If TokenFile.Kind = TOKEN_LABEL _
-    Or TokenFile.Kind = TOKEN_PROPERTY _
-    Or TokenFile.Kind = TOKEN_VARIABLE Then
+    If TokenKind = TOKEN_LABEL _
+    Or TokenKind = TOKEN_PROPERTY Then
+        'TODO: get the full label from the property
+        
         'If the named value is not yet known, the expression cannot be evaluated _
          until it is defined later on
-        If NameValues.Exists(TokenFile.Data) = False Then
+        If Labels.Exists(TokenData) = False Then
             Let ReturnValueIsUnknown = True
         Else
-            Let ReturnValue = NameValues(TokenFile.Data)
+            Let ReturnValue = Variables(TokenData)
+        End If
+        
+    ElseIf TokenKind = TOKEN_VARIABLE Then
+        'If the named value is not yet known, the expression cannot be evaluated _
+         until it is defined later on
+        If Variables.Exists(TokenData) = False Then
+            Let ReturnValueIsUnknown = True
+        Else
+            Let ReturnValue = Variables(TokenData)
         End If
         
     'This is an easy one
-    ElseIf TokenFile.Kind = TOKEN_NUMBER Then
-        Let ReturnValue = TokenFile.Data
+    ElseIf TokenKind = TOKEN_NUMBER Then
+        Let ReturnValue = TokenData
         
     Else
         'ERROR: Not a valid operand. We won't produce an error message here as the _
          error might be exepected (i.e. an optional parameter). We fold upwards and _
          whomever knows best will deal with the error
-        Debug.Print TokenFile.Line & ", " & TokenFile.Col
+        Debug.Print TokenLine & ", " & TokenCol
         Stop
         Let ScopeOperand = OZ80_ERROR_OPERAND
     End If
@@ -916,10 +1048,10 @@ End Function
  ======================================================================================
 Private Function ScopeZ80() As OZ80_ERROR
     'Remember which Z80 instruction is being processed
-    Dim Instruction As OZ80_TOKEN_DATA: Let Instruction = TokenFile.Data
+    Dim Instruction As OZ80_TOKEN_DATA: Let Instruction = TokenData
     'Remember the line number of this since a label or property on a different line _
      will be a definition, not a parameter
-    Dim Line As Long: Let Line = TokenFile.Line
+    Dim Line As Long: Let Line = TokenLine
     'Skip over the Z80 instruction token now that we know it
     If NextToken() = False Then Stop
     
@@ -1000,7 +1132,7 @@ Private Function ScopeZ80() As OZ80_ERROR
     ElseIf Instruction = OZ80_TOKEN_DATA.TOKEN_Z80_SCF Then
         Call AddByte(&H37)
     Else
-        Debug.Print TokenFile.Line, TokenFile.Col
+        Debug.Print TokenLine, TokenCol
         Stop
     End If
     Exit Function
@@ -1289,7 +1421,7 @@ push:   If TestOpcode(&HC5, Param1, MASK_AF Or MASK_BC_DE_HL Or MASK_IXY) Then
         End If
         
     Else
-        Debug.Print TokenFile.Line, TokenFile.Col
+        Debug.Print TokenLine, TokenCol
         Stop
     End If
     Exit Function
@@ -1367,6 +1499,34 @@ Private Sub AddOpcode( _
     End If
 End Sub
 
+'CRCString : Calculate a unique hash for a string _
+ ======================================================================================
+Private Function CRCString(ByRef Data As String) As Long
+    Dim Length As Long
+    
+    'Cast the string to an array by attaching its pointer to our dummy VB array header
+    With CastStrSA1D
+       Let .pvData = StrPtr(Data)
+       Let .cElements = Len(Data)
+       Let Length = .cElements
+    End With
+
+    'Calculate the CRC by twiddling the bits
+    
+    Dim i As Long
+    Dim iLookup As Integer
+
+    Let CRCString = &HFFFFFFFF
+    Let Length = Length - 1
+    For i = 0 To Length
+        Let iLookup = (CRCString And &HFF) Xor (CastStrArr(i) And &HFF)
+        Let CRCString = ((CRCString And &HFFFFFF00) \ &H100) And 16777215
+        Let CRCString = CRCString Xor CRCTable(iLookup)
+    Next
+
+    Let CRCString = Not (CRCString)
+End Function
+
 'GetParameter : Fetch the type / value of a Z80 instruction parameter _
  ======================================================================================
 Private Function GetParameter(ByRef Result As oz80Param) As OZ80_ERROR
@@ -1380,10 +1540,10 @@ Private Function GetParameter(ByRef Result As oz80Param) As OZ80_ERROR
     End With
     
      'If the current token is a register, map this to the opcode offset required
-    If TokenFile.Kind = OZ80_TOKEN.TOKEN_REGISTER Then '...................................
+    If TokenKind = OZ80_TOKEN.TOKEN_REGISTER Then '...................................
         'Set the return field to be a register/flag and capture which
         Let Result.Kind = PARAM_REGISTER
-        Let Result.Register = TokenFile.Data
+        Let Result.Register = TokenData
         'Return the opcode modifier in the value field. _
          The `AddOpcode` function will do the right thing with it
         If Result.Register = TOKEN_REGISTER_A Then
@@ -1438,7 +1598,7 @@ Private Function GetParameter(ByRef Result As oz80Param) As OZ80_ERROR
     
     'If the token is a memory reference, such as `(ix+$8)`, _
      then get the associated register and value
-    ElseIf TokenFile.Kind = OZ80_TOKEN.TOKEN_PARENOPEN Then '..............................
+    ElseIf TokenKind = OZ80_TOKEN.TOKEN_PARENOPEN Then '..............................
         Let GetParameter = ScopeMemory( _
             Result.Register, Result.Value, Result.ValueUnknown _
         )
@@ -1474,7 +1634,7 @@ Private Function GetParameter(ByRef Result As oz80Param) As OZ80_ERROR
         'ERROR: Not an expression
         Let GetParameter = RaiseError(OZ80_ERROR_EXPRESSION, _
             "Z80 instruction parameter expected. Not a valid parameter expression.", _
-            TokenFile.Line, TokenFile.Col _
+            TokenLine, TokenCol _
         )
     End If
 End Function
@@ -1482,21 +1642,23 @@ End Function
 'IsParameter : Check if the current token would be considered a Z80 parameter _
  ======================================================================================
 Private Function IsParameter() As Boolean
+    'If the stream ended, always return false
+    If TokenStream.EOF = True Then Exit Function
     'A parameter can be a number, label/variable/property, register _
      or memory reference
-    If TokenFile.Kind = OZ80_TOKEN.TOKEN_LABEL Then
+    If TokenKind = OZ80_TOKEN.TOKEN_LABEL Then
         'A label on a new line is a definition, not a parameter
-        If TokenFile.Line = PrevLine Then Let IsParameter = True
-    ElseIf TokenFile.Kind = OZ80_TOKEN.TOKEN_NUMBER Then
+        If TokenLine = PrevLine Then Let IsParameter = True
+    ElseIf TokenKind = OZ80_TOKEN.TOKEN_NUMBER Then
         Let IsParameter = True
-    ElseIf TokenFile.Kind = OZ80_TOKEN.TOKEN_PARENOPEN Then
+    ElseIf TokenKind = OZ80_TOKEN.TOKEN_PARENOPEN Then
         Let IsParameter = True
-    ElseIf TokenFile.Kind = OZ80_TOKEN.TOKEN_PROPERTY Then
+    ElseIf TokenKind = OZ80_TOKEN.TOKEN_PROPERTY Then
         'A property on a new line is a definition, not a parameter
-        If TokenFile.Line = PrevLine Then Let IsParameter = True
-    ElseIf TokenFile.Kind = OZ80_TOKEN.TOKEN_REGISTER Then
+        If TokenLine = PrevLine Then Let IsParameter = True
+    ElseIf TokenKind = OZ80_TOKEN.TOKEN_REGISTER Then
         Let IsParameter = True
-    ElseIf TokenFile.Kind = OZ80_TOKEN.TOKEN_VARIABLE Then
+    ElseIf TokenKind = OZ80_TOKEN.TOKEN_VARIABLE Then
         Let IsParameter = True
     End If
 End Function
@@ -1504,14 +1666,16 @@ End Function
 'IsExpression : Check if the current token would be considered an expression _
  ======================================================================================
 Private Function IsExpression() As Boolean
+    'If the stream ended, always return false
+    If TokenStream.EOF = True Then Exit Function
     'A parameter can be a number or label/variable/property
-    If TokenFile.Kind = OZ80_TOKEN.TOKEN_LABEL Then
+    If TokenKind = OZ80_TOKEN.TOKEN_LABEL Then
         Let IsExpression = True
-    ElseIf TokenFile.Kind = OZ80_TOKEN.TOKEN_NUMBER Then
+    ElseIf TokenKind = OZ80_TOKEN.TOKEN_NUMBER Then
         Let IsExpression = True
-    ElseIf TokenFile.Kind = OZ80_TOKEN.TOKEN_PROPERTY Then
+    ElseIf TokenKind = OZ80_TOKEN.TOKEN_PROPERTY Then
         Let IsExpression = True
-    ElseIf TokenFile.Kind = OZ80_TOKEN.TOKEN_VARIABLE Then
+    ElseIf TokenKind = OZ80_TOKEN.TOKEN_VARIABLE Then
         Let IsExpression = True
     End If
 End Function
@@ -1521,9 +1685,30 @@ End Function
 Private Function NextToken() As Boolean
     'This function is a mere wrapper simply because we need to track when a new line _
      occurs between tokens to diferentiate label definitions and parameters
-    Let PrevLine = TokenFile.Line
-    Let NextToken = TokenFile.Forward()
+    With TokenStream
+        Let PrevLine = .Line
+        'We return false if the stream comes to an end
+        Let NextToken = .Forward()
+        'Cache the token information as dereferencing the object every time is slow
+        Let TokenKind = .Kind
+        Let TokenData = .Data
+        Let TokenLine = .Line
+        Let TokenCol = .Col
+    End With
 End Function
+
+'RewindTokenStream : Due to the cache we have to wrap the rewind function _
+ ======================================================================================
+Private Sub RewindTokenStream()
+    With TokenStream
+        Call .Rewind
+        Let PrevLine = 0
+        Let TokenKind = .Kind
+        Let TokenData = .Data
+        Let TokenLine = .Line
+        Let TokenCol = .Col
+    End With
+End Sub
 
 'RiaseError : provide error details through an event _
  ======================================================================================

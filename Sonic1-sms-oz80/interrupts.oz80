@@ -78,9 +78,8 @@ PROC    :interruptHandler               SECTION ::interrupts
 	  mid-instruction!``
 	
 	``NOTE: the interrupt automatically swaps in the shadow registers, therefore
-	        if we ensure that interrupts are disabled during routines that use the
-	        shadow registers, we might conceivably do away with these leading /
-	        trailing stack exchanges and save some cycles on the interrupt handler``
+	  if we ensure that interrupts are disabled during routines that use the
+	  shadow registers, we might conceivably do away with these leading / trailing stack exchanges and save some cycles on the interrupt handler``
         
 	push	af', hl', de', bc'
 	
@@ -149,7 +148,7 @@ PROC    :interruptHandler               SECTION ::interrupts
 	ei
 	
 	`switch in the music engine / data
-	ld	a, :sound_update.bank
+	ld	a, :sound_update#bank
 	ld	(#SMS_PAGE_1), a
 	ld	(#RAM_PAGE_1), a
 	call	:sound_update
@@ -514,7 +513,7 @@ PARAMS	a;songIndex	``index number of song to play
 	push	af;songIndex
 	
 	`switch page 1 (Z80:$4000-$7FFF) to bank 3 ($C000-$FFFF)
-	ld	a;bank, :sound_playMusic.bank
+	ld	a;bank, :sound_playMusic#bank
 	ld	(#SMS_PAGE_1), a;bank
 	
 	pop	af;songIndex
@@ -535,7 +534,7 @@ PROC	:muteSound                      SECTION ::interrupts
 	di				`disable interrupts
 	
 	`switch page 1 (Z80:$4000-$7FFF) to bank 3 (ROM:$0C000-$0FFFF)
-	ld	a, :sound_stop.bank
+	ld	a, :sound_stop#bank
 	ld	(#SMS_PAGE_1), a
 	call	:sound_stop
 	ld	a, (#RAM_PAGE_1)
@@ -553,7 +552,7 @@ PARAMS	a;SFXIndex
 	di	
 	push	af;SFXIndex
 	
-	ld	a;bank,:sound_playSFX.bank
+	ld	a;bank,:sound_playSFX#bank
 	ld	(#SMS_PAGE_1),a;bank
 	
         pop	af;SFXIndex
@@ -651,8 +650,8 @@ PROC	:updateVDPSprites               SECTION ::interrupts
 	add	hl, de			`move to the next sprite
 	djnz	.yLoop
 	
-	`if the number of sprites to update is equal or greater than the existing
-	 `number of active sprites, skip ahead to setting the X-positions and indexes
+	``if the number of sprites to update is equal or greater than the existing
+	  number of active sprites, skip ahead to setting the X-positions and indexes``
 ._1	ld	a, (#RAM_ACTIVESPRITECOUNT)
 	ld	b, a
 	ld	a, (iy+#vars.spriteUpdateCount)
@@ -660,9 +659,9 @@ PROC	:updateVDPSprites               SECTION ::interrupts
 	cp	b			`test spriteUpdateCount - RAM_ACTIVESPRITECOUNT	
 	jr	nc, ._2			`
 	
-	`if the number of active sprites is greater than the sprite update count, 
-	 `that is - there will be active sprites remaining, calculate the amount
-	 `remaining and make them inactive
+	``if the number of active sprites is greater than the sprite update count, 
+	  that is - there will be active sprites remaining, calculate the amount
+	  remaining and make them inactive``
 	ld	a, b
 	sub	c
 	ld	b, a

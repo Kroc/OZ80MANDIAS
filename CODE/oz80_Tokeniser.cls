@@ -27,52 +27,50 @@ Option Compare Text
 'This class only represents one source code file. The assembler handles the specifics _
  of including additional source code files and spawns more TokenStream instances
 
-'The CRC function of this class is from "Calculating CRC32 With VB" by Steve McMahon _
- <www.vbaccelerator.com/home/VB/Code/Libraries/CRC32/article.asp> which was _
- derived from from the VB.NET CRC32 algorithm by Paul Caton
-
-'TODO: When facing a variable+property combination (e.g. `#var.prop`), we could split _
-       it into the component parts, CRC each, combine and CRC together. Why? _
-       When the assembler reads a property, it can combine it with the parent _
-       variable, without having to access the string information!
-
 '/// API //////////////////////////////////////////////////////////////////////////////
 
-'API support for `CompStr` function _
+'Cast String to Array: _
  --------------------------------------------------------------------------------------
-'<www.vbforums.com/showthread.php?729385-VB6-clsStrToIntArray-cls-Cast-String-To-Integer-Array>
+'By manipulating some pointers we can cast a VB string directly into an array without _
+ having to make a copy of the string, nor waste memory on a separate array. _
+ This is obviously very fast, especially for long strings
+'<vbforums.com/showthread.php?729385>
 
-Private Type SAFEARRAY1D    'Represents a safe array. (One Dimensional)
-    cDims      As Integer   'The count of dimensions.
-    fFeatures  As Integer   'Flags used by the SafeArray.
-    cbElements As Long      'The size of an array element.
-    cLocks     As Long      'The number of times the array has been locked without a corresponding unlock.
-    pvData     As Long      'Pointer to the data.
-    cElements  As Long      'The number of elements in the dimension.
-    lLbound    As Long      'The lower bound of the dimension.
-End Type                    'http://msdn.microsoft.com/en-us/library/ms221482(v=vs.85).aspx
+'This is VB6's internal structure used for VB arrays _
+ <msdn.microsoft.com/en-us/library/ms221482(v=vs.85).aspx>
+Private Type SAFEARRAY1D
+    cDims      As Integer   'The count of dimensions
+    fFeatures  As Integer   'Flags used by the SafeArray
+    cbElements As Long      'The size of an array element
+    cLocks     As Long      'Lock count
+    pvData     As Long      'Pointer to the data
+    cElements  As Long      'The number of elements in the dimension
+    lLbound    As Long      'The lower bound of the dimension
+End Type
 
 '- An array that is allocated on the stack
 Private Const FADF_AUTO      As Integer = &H1
 '- An array that may not be resized or reallocated
 Private Const FADF_FIXEDSIZE As Integer = &H10
 
+'Undocumented VB6 API to get at the array pointer
 Private Declare Function msvbvm60_VarPtr Lib "msvbvm60.dll" Alias "VarPtr" ( _
     ByRef ArrayVar() As Any _
 ) As Long
 
+'Undocumented VB6 API to write 4-bytes (Long) of memory
 Private Declare Sub msvbvm60_PutMem4 Lib "msvbvm60.dll" Alias "PutMem4" ( _
     ByVal Addr As Long, _
     ByVal NewVal As Long _
 )
 
-Private CompStrPtr  As Long
-Private CompStrSA1D As SAFEARRAY1D
-
-Dim CompStrArr() As Integer
+Private CastStrSA1D As SAFEARRAY1D      'A dummy VB6 array header
+Private CastStrPtr  As Long             'Pointer to our dummy array
+Private CastStrArr() As Integer         'Empty array that will be hacked
 
 '/// PUBLIC CONSTANTS /////////////////////////////////////////////////////////////////
-'These are defined here (instead of in 'oz80_Assembler') to avoid circular references
+'These are defined here (instead of in 'oz80_Assembler') to avoid circular references _
+ due to the way the assembler sinks events from this class
 
 Public Enum OZ80_ERROR
     OZ80_ERROR_NONE = 0                 'Assembly completed successfully
@@ -85,8 +83,9 @@ Public Enum OZ80_ERROR
     OZ80_ERROR_Z80_PARAMETER = 8        'An unexpected parameter for a z80 instruction
     OZ80_ERROR_OPERAND = 9              'Not a valid operand for an expression
     OZ80_ERROR_EXPRESSION = 10          'Not a valid expression
-    OZ80_ERROR_DUPLICATE = 11           'A label has been defined twice
+    OZ80_ERROR_DUPLICATE = 11           'A name has been defined twice
     OZ80_ERROR_UNEXPECTED = 12          'Incorrect tokens at the current scope
+    OZ80_ERROR_ENDOFFILE = 13           'Unexpected end of file
 End Enum
 
 '--------------------------------------------------------------------------------------
@@ -329,26 +328,15 @@ End Enum
 'Use a 100'000 item initial buffer for the token stream
 Private Const TOKEN_BUFFER As Long = 100000
 
-'This is the official polynomial used by CRC32 in PKZip. _
- Often the polynomial is shown reversed (04C11DB7)
-Private Const CRC_POLYNOMIAL As Long = &HEDB88320
-
 'Used for time measurement
 Private Stopwatch As PerformanceCounter
 
-'Store a look up table for the CRC calculations
-Private CRCTable(0 To 255) As Long
-
-'A look up table of ASCII codes from upper-case to lower-case
-Private LowCase(0 To 255) As Long
-'A look up table of ASCII codes to validate decimal digits
-Private IsNumber(0 To 255) As Boolean
-'A look up table of ASCII codes to validate hexadecimal digits
-Private IsHex(0 To 255) As Boolean
-'A look up table of ASCII codes to validate alpha characters (both cases)
-Private IsAlpha(0 To 255) As Boolean
-'A look up table of ASCII codes to validate alphanumeric characters (both cases)
-Private IsAlphaNumeric(0 To 255) As Boolean
+'Look-up tables to validate ASCII codes:
+Private LowCase(0 To 255) As Long       'From upper case to lower case
+Private IsNumber(0 To 255) As Boolean   'Validates decimal digits
+Private IsHex(0 To 255) As Boolean      'Validates hexadecimal digits (0-9, A-F)
+Private IsAlpha(0 To 255) As Boolean    'Validate alpha characters (both cases)
+Private IsAlphaNum(0 To 255) As Boolean 'Validate alphanumeric chars (both cases)
 
 '/// CLASS STORAGE ////////////////////////////////////////////////////////////////////
 
@@ -379,9 +367,7 @@ Event Error( _
     ByVal Line As Long, ByVal Col As Long _
 )
 
-'To avoid the assembler having to keep a duplicate copy of the variable / label _
- names (otherwise it'd have to remember which string is defined in which TokenStream) _
- we raise an event each time we come across a string so that the assembler can pool _
+'We raise an event each time we come across a string so that the assembler can pool _
  together all strings across all source files
 Event StringAdded(ByRef Key As Long, ByRef StringData As String)
 
@@ -399,41 +385,24 @@ Private Sub Class_Initialize()
             Let LowCase(ii) = ii
             Let IsNumber(ii) = True
             Let IsHex(ii) = True
-            Let IsAlphaNumeric(ii) = True
+            Let IsAlphaNum(ii) = True
         ElseIf ii >= A And ii <= Z Then
             Let LowCase(ii) = ii
             Let IsAlpha(ii) = True
-            Let IsAlphaNumeric(ii) = True
+            Let IsAlphaNum(ii) = True
             If ii <= F Then Let IsHex(ii) = True
         ElseIf ii >= 65 And ii <= 90 Then
             Let LowCase(ii) = ii Or 32
             Let IsAlpha(ii) = True
-            Let IsAlphaNumeric(ii) = True
+            Let IsAlphaNum(ii) = True
             If ii <= 70 Then Let IsHex(ii) = True
         Else
             Let LowCase(ii) = ii
         End If
     Next ii
     
-    'Create the CRC look-up table _
-     (I will not pretend to understand how this works other than it goes through _
-      shifting and flipping bits, make of that what you will)
-    Dim Value As Long
-    For i = 0 To 255
-        Value = i
-        For ii = 8 To 1 Step -1
-            If (Value And 1) Then
-                Let Value = ((Value And &HFFFFFFFE) \ 2&) And &H7FFFFFFF
-                Let Value = Value Xor CRC_POLYNOMIAL
-            Else
-                Let Value = ((Value And &HFFFFFFFE) \ 2&) And &H7FFFFFFF
-            End If
-        Next
-        Let CRCTable(i) = Value
-    Next
-    
     'Initialise the array used within the `CompStr` function
-    With CompStrSA1D
+    With CastStrSA1D
         .cDims = 1
         .fFeatures = FADF_AUTO Or FADF_FIXEDSIZE
         .cbElements = 2&
@@ -441,8 +410,8 @@ Private Sub Class_Initialize()
         .lLbound = 0&
     End With
     
-    Let CompStrPtr = msvbvm60_VarPtr(CompStrArr())
-    Call msvbvm60_PutMem4(CompStrPtr, VarPtr(CompStrSA1D))
+    Let CastStrPtr = msvbvm60_VarPtr(CastStrArr())
+    Call msvbvm60_PutMem4(CastStrPtr, VarPtr(CastStrSA1D))
 End Sub
 
 'CLASS Terminate _
@@ -451,13 +420,15 @@ Private Sub Class_Terminate()
     'Clean up the timing class
     Set Stopwatch = Nothing
     'Clean up the look up tables
-    Erase LowCase, IsNumber, CRCTable
+    Erase LowCase, IsNumber, IsHex, IsAlphaNum
     'The `Tokenise` method will clean this up, but just be doubly sure
     Erase Text
     'Empty the token stream
     Erase Tokens
     
-    Call msvbvm60_PutMem4(CompStrPtr, 0&)
+    'Clean up our array hacking (for casting a string to an array) _
+     otherwise VB will crash when it frees up the memory
+    Call msvbvm60_PutMem4(CastStrPtr, 0&)
 End Sub
 
 '/// PUBLIC INTERFACE /////////////////////////////////////////////////////////////////
@@ -512,31 +483,6 @@ End Property
 Public Property Get Col() As Long
     If EOF = True Then Let Col = 0 Else Let Col = Tokens(TokenIndex).Col
 End Property
-
-'CRCString : Calculate a unique hash for a string _
- ======================================================================================
-Public Function CRCString(ByRef Data As String) As Long
-    Dim Length As Long
-    
-    With CompStrSA1D
-       Let .pvData = StrPtr(Data)
-       Let .cElements = Len(Data)
-       Let Length = .cElements
-    End With
-
-    Dim i As Long
-    Dim iLookup As Integer
-
-    Let CRCString = &HFFFFFFFF
-    Let Length = Length - 1
-    For i = 0 To Length
-        Let iLookup = (CRCString And &HFF) Xor (CompStrArr(i) And &HFF)
-        Let CRCString = ((CRCString And &HFFFFFF00) \ &H100) And 16777215
-        Let CRCString = CRCString Xor CRCTable(iLookup)
-    Next
-
-   Let CRCString = Not (CRCString)
-End Function
 
 'Forward : Move onto the next token, returns false if the tokenStream hit the end _
  ======================================================================================
@@ -1336,7 +1282,7 @@ Private Sub Add( _
     'The `Kind` param MUST be 0-255, but is given as long for speed reasons; _
      the rest of this class will ensure that this is never out of bounds
     With Tokens(TokenIndex)
-        Let .Kind = Kind & &HFF
+        Let .Kind = Kind And &HFF
         Let .Data = Data
         Let .Line = Line
         Let .Col = Col
@@ -1349,7 +1295,8 @@ Private Sub Add( _
     
     'Note that the tokens array is given a large size to begin with as ReDimming it _
      with every token added is *incredibly* slow. If we go over this buffer size, _
-     we need to increase it
+     we need to increase it by a large chunk. Once parsing is complete the buffer _
+     will be trimmed down to the final size
     If TokenCount > TokenLimit Then
         Let TokenLimit = TokenLimit + TOKEN_BUFFER
         ReDim Preserve Tokens(0 To TokenLimit) As oz80Token
@@ -1362,12 +1309,11 @@ Private Sub AddString( _
     ByRef TokenType As OZ80_TOKEN, ByRef Data As String, _
     ByRef Line As Long, ByRef Col As Long _
 )
-    'Hash the string to get its unique index key
     Dim Key As Long
-    Let Key = CRCString(Data)
     
     'Pass the string back to the assembler. It'll want to pool together all of the _
      strings used across all files for the purpose of label lookups
+    'Note that the assembler will produce the key for us and pass it back
     RaiseEvent StringAdded(Key, Data)
     
     'Add the index key to the token so that we can retrieve the string later
@@ -1390,14 +1336,14 @@ Private Function CompStr( _
      Note that Length is 0-based here
     If Length <> Len(CompText) - 1 Then Exit Function
 
-    With CompStrSA1D
+    With CastStrSA1D
        .pvData = StrPtr(CompText)
        .cElements = Len(CompText)
     End With
     
     Dim ii As Long
     For ii = 0 To Length
-        If LowCase(Text(Begin + ii)) <> CompStrArr(ii) Then Exit Function
+        If LowCase(Text(Begin + ii)) <> CastStrArr(ii) Then Exit Function
     Next ii
     
     Let CompStr = True
@@ -1430,7 +1376,7 @@ Private Function IsValidName(ByRef First As Long, ByRef Last As Long) As Boolean
         'Not a dot?
         If Text(ii) <> SYNTAX_PROPERTY Then
             'Is letter not alphanumeric?
-            If IsAlphaNumeric(Text(ii)) = False Then
+            If IsAlphaNum(Text(ii)) = False Then
                 'Finally, not an underscore?
                 If Text(ii) <> UNDRSCR Then Exit Function
             End If
@@ -1454,7 +1400,7 @@ Private Function RaiseError( _
     ByRef Description As String, _
     Optional ByRef Line As Long = 0, Optional ByRef Col As Long = 0 _
 ) As OZ80_ERROR
-    
+    'Send the error to the controller (if it sinks events)
     RaiseEvent Error(Number, Description, Line, Col)
     
     'We return the same error number we were given only to make the tail recursion _

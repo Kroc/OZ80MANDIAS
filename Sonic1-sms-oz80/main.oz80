@@ -50,15 +50,15 @@ PARAMS	hl	`relative address from the beginning of the intended bank (A)
 	add	hl, de
 	
 	`stash the current page 1/2 bank numbers cached in RAM
-	ld	de, (#RAM_PAGE_1)
+	ld	de, ($.PAGE_1)
 	push	de
 	
 	`change pages 1 & 2 (Z80:$4000-$BFFF) to banks A & A+1
 	ld	(#SMS_PAGE_1), a
-	ld	(#RAM_PAGE_1), a
+	ld	($.PAGE_1), a
 	inc	a
 	ld	(#SMS_PAGE_2), a
-	ld	(#RAM_PAGE_2), a
+	ld	($.PAGE_2), a
 	
 	`--- read header --------------------------------------------------------------
 	
@@ -66,7 +66,7 @@ PARAMS	hl	`relative address from the beginning of the intended bank (A)
 	jr	nz, ._3
 	ei
 	
-._3	ld	(#RAM_TEMP4), hl
+._3	ld	($.TEMP4), hl
 	
 	`begin reading the compressed art header:
 	 `see <info.sonicretro.org/SCHG:Sonic_the_Hedgehog_%288-bit%29#Header>
@@ -96,22 +96,22 @@ PARAMS	hl	`relative address from the beginning of the intended bank (A)
 	ld	b, (hl)
 	inc	hl
 	
-	ld	(#RAM_TEMP3), bc	`store the row count in $D210
-	ld	(#RAM_TEMP6), hl	`where the UniqueRows list begins
+	ld	($.TEMP3), bc	`store the row count in $D210
+	ld	($.TEMP6), hl	`where the UniqueRows list begins
 	
 	`swap BC/DE/HL with their shadow values
 	exx
 	
 	`load BC with the absolute starting address of the art header;
 	 `the DuplicateRows and ArtData values are always relative to this
-	ld	bc, (#RAM_TEMP4)
+	ld	bc, ($.TEMP4)
 	`copy it to DE
 	ld	e, c
 	ld	d, b
 	
 	pop	hl			`pull the ArtData value from the stack
 	add	hl, bc			`get the absolute address of ArtData
-	ld	(#RAM_TEMP1), hl	`and store that in $D20E
+	ld	($.TEMP1), hl	`and store that in $D20E
 	`copy it to BC. this will be used to produce a counter from 0 to RowCount
 	ld	c, l
 	ld	b, h
@@ -130,7 +130,7 @@ PARAMS	hl	`relative address from the beginning of the intended bank (A)
 	
 	`--- process row --------------------------------------------------------------
 .processRow
-	ld	hl, (#RAM_TEMP3)	`load HL with the original row count number
+	ld	hl, ($.TEMP3)	`load HL with the original row count number
 					 `(#$0400 for sprites, #$0800 for tiles)
 	xor	a			`set A to 0 (Carry is reset)
 	sbc	hl, bc			`subtract current counter from the row count
@@ -158,7 +158,7 @@ PARAMS	hl	`relative address from the beginning of the intended bank (A)
 	srl	d
 	rr	e
 	
-	ld	hl, (#RAM_TEMP6)	`the absolute address where the UniqueRows
+	ld	hl, ($.TEMP6)	`the absolute address where the UniqueRows
 					 `list begins
 	add	hl, de			`add the counter, so move along to the
 					 `DE'th byte in the UniqueRows list
@@ -239,7 +239,7 @@ PARAMS	hl	`relative address from the beginning of the intended bank (A)
 	add	hl, hl			
 	add	hl, hl
 	
-	ld	de, (#RAM_TEMP1)	`get the absolute address to the art data
+	ld	de, ($.TEMP1)	`get the absolute address to the art data
 	add	hl, de			`add the index from the duplicate row list
 	
 	`write 1 row of pixels (4 bytes) to the VDP
@@ -275,7 +275,7 @@ PARAMS	hl	`relative address from the beginning of the intended bank (A)
 	di
 ._6	`restore the pages to the original banks at the beginning of the procedure
 	pop	de
-	ld	(#RAM_PAGE_1), de
+	ld	($.PAGE_1), de
 	ld	(#SMS_PAGE_1), de
 	
 	ei
@@ -333,7 +333,7 @@ PARAMS	bc	`length of the compressed data
 	`--- uncompressed byte --------------------------------------------------------
 	out	(#SMS_VDP_DATA), a	`send the tile to the VDP
 	ld	e, a			`update the "current byte" being compared
-	ld	a, (#RAM_TEMP1)		`get the upper byte to use for the tiles
+	ld	a, ($.TEMP1)		`get the upper byte to use for the tiles
 					 `(foreground / background / flip)
 	out	(#SMS_VDP_DATA), a
 	
@@ -361,7 +361,7 @@ PARAMS	bc	`length of the compressed data
 	`repeat the byte
 ._4	out	(#SMS_VDP_DATA), a
 	push	af
-	ld	a, (#RAM_TEMP1)
+	ld	a, ($.TEMP1)
 	out	(#SMS_VDP_DATA), a
 	pop	af
 	dec	e
@@ -411,8 +411,8 @@ PARAMS	a	`which palette(s) to set
 		 `bit 0 - tile palette (0-15)
 		 `bit 1 - sprite palette (16-31)
 	hl	`address of palette
-RETURN	#RAM_LOADPALETTE_TILE,
-	#RAM_LOADPALETTE_SPRITE
+RETURN	$.LOADPALETTE_TILE,
+	$.LOADPALETTE_SPRITE
 {        
 	push	af
 	
@@ -422,7 +422,7 @@ RETURN	#RAM_LOADPALETTE_TILE,
 	bit	0, a			`are we loading a tile palette?
 	jr	z, ._1			`if no, skip ahead to the sprite palette
 	
-	ld	(#RAM_LOADPALETTE_TILE), hl
+	ld	($.LOADPALETTE_TILE), hl
 	call	.sendPalette		`send the palette colours to the VDP
 	
 ._1	pop	af
@@ -431,7 +431,7 @@ RETURN	#RAM_LOADPALETTE_TILE,
 	ret	z			`if no, finish here
 	
 	`store the address of the sprite palette
-	ld	(#RAM_LOADPALETTE_SPRITE), hl
+	ld	($.LOADPALETTE_SPRITE), hl
 	
 	ld	b, 16			`we will copy 16 colours
 	ld	c, 16			`beginning at palette index 16 (sprites)
@@ -543,7 +543,7 @@ PARAMS	hl      `address to memory with column & row numbers,
 	out	(#SMS_VDP_DATA), a
 	push	af			`kill time?
 	pop	af
-	ld	a, (#RAM_TEMP1)		`what to use as the tile upper bits
+	ld	a, ($.TEMP1)		`what to use as the tile upper bits
 					 `(front/back, flip &c.)
 	out	(#SMS_VDP_DATA), a
 	inc	de
@@ -555,7 +555,7 @@ PARAMS	hl      `address to memory with column & row numbers,
 PROC    :hideSprites                    SECTION ::main
         `====================================================================[$05E2]===
 {        
-	ld	hl, #RAM_SPRITETABLE
+	ld	hl, $.SPRITES
 	ld	e, l
 	ld	d, h
 	ld	bc, 3 * 63		`three bytes (X/Y/I) for each sprite
@@ -577,7 +577,7 @@ PROC    :hideSprites                    SECTION ::main
 	ld	(iy+#vars.spriteUpdateCount), 64	
 	`and set zero active sprites
 	xor	a			`(set A to 0)
-	ld	(#RAM_ACTIVESPRITECOUNT), a
+	ld	($.ACTIVESPRITECOUNT), a
 	ret
 }
 
@@ -645,10 +645,9 @@ PROC    :_LABEL_625_57                  SECTION ::main
         `====================================================================[$0625]===
         `random number generator?
 {        
-	push	hl
-	push	de
+	push	hl, de
 	
-	ld	hl, ($D2D7)
+	ld	hl, ($.D2D7)
 	ld	e, l
 	ld	d, h
 	add	hl, de			`x2
@@ -662,11 +661,10 @@ PROC    :_LABEL_625_57                  SECTION ::main
 	
 	ld	de, $0054
 	add	hl, de
-	ld	($D2D7), hl
+	ld	($.D2D7), hl
 	ld	a, h
 	
-	pop	de
-	pop	hl
+	pop	de, hl
 	ret
 }
 
@@ -675,12 +673,12 @@ PROC    :updateCamera                   SECTION ::main
         `calculate the VDP scroll offset according to the camera position?
 {        
 	`fill B with vertical and C with horizontal VDP scroll values
-	ld	bc,(#RAM_VDPSCROLL_HORIZONTAL)
+	ld	bc,($.VDPSCROLL_HORZ)
 	
 	`------------------------------------------------------------------------------
 	`has the camera scrolled left?
-	ld	hl,(#RAM_CAMERA_X)
-	ld	de,(#RAM_CAMERA_X_LEFT)
+	ld	hl,($.CAMERA_X)
+	ld	de,($.CAMERA_X_LEFT)
 	and	a			`clear carry flag
 	sbc	hl,de			`is `RAM_CAMERA_X_LEFT` > `RAM_CAMERA_X`?
 	jr	c,._1			`jump if the camera has moved left
@@ -704,8 +702,8 @@ PROC    :updateCamera                   SECTION ::main
 	`------------------------------------------------------------------------------
 	`has the camera scrolled up?
 	
-._2	ld	hl,(#RAM_CAMERA_Y)
-	ld	de,(#RAM_CAMERA_Y_UP)
+._2	ld	hl,($.CAMERA_Y)
+	ld	de,($.CAMERA_Y_UP)
 	and	a			`clear carry flag
 	sbc	hl,de			`is `RAM_CAMERA_Y_UP` > `RAM_CAMERA_Y`?
 	jr	c,._4			`jump if the camera has moved up
@@ -732,14 +730,14 @@ PROC    :updateCamera                   SECTION ::main
 	`------------------------------------------------------------------------------
 	`update the VDP horizontal / vertical scroll values in the RAM,
 	 `the interrupt routine will send the values to the chip
-._6	ld	(#RAM_VDPSCROLL_HORIZONTAL),bc
+._6	ld	($.VDPSCROLL_HORZ),bc
 	
 	`get the number of blocks across / down the camera is located:
 	 `we do this by multiplying the camera position by 8 and taking only the high
 	 `byte (effectively dividing by 256) so that everything below 32 pixels of
 	 `precision is lost
 	
-	ld	hl,(#RAM_CAMERA_X)
+	ld	hl,($.CAMERA_X)
 	sla	l			`x2 ...
 	rl	h
 	sla	l			`x4 ...
@@ -748,7 +746,7 @@ PROC    :updateCamera                   SECTION ::main
 	rl	h
 	ld	c,h			`take the high byte
 	
-	ld	hl,(#RAM_CAMERA_Y)
+	ld	hl,($.CAMERA_Y)
 	sla	l			`x2 ...
 	rl	h
 	sla	l			`x4 ...
@@ -758,13 +756,13 @@ PROC    :updateCamera                   SECTION ::main
 	ld	b,h			`take the high byte
 	
 	`now store the block X & Y counts
-	ld	(#RAM_BLOCK_X),bc
+	ld	($.BLOCK_X),bc
 	
 	`update the left / up values now that the camera has moved
-	ld	hl,(#RAM_CAMERA_X)
-	ld	(#RAM_CAMERA_X_LEFT),hl
-	ld	hl,(#RAM_CAMERA_Y)
-	ld	(#RAM_CAMERA_Y_UP),hl
+	ld	hl,($.CAMERA_X)
+	ld	($.CAMERA_X_LEFT),hl
+	ld	hl,($.CAMERA_Y)
+	ld	($.CAMERA_Y_UP),hl
 	
 	ret
 }
@@ -783,16 +781,16 @@ PROC    :fillOverscrollCache            SECTION ::main
 	`switch pages 1 & 2 ($4000-$BFFF) to banks 4 & 5 ($10000-$17FFF)
 	ld	a,:S1_BlockMappings#bank
 	ld	(#SMS_PAGE_1),a
-	ld	(#RAM_PAGE_1),a
+	ld	($.PAGE_1),a
 	ld	a,:S1_BlockMappings#bank+1
 	ld	(#SMS_PAGE_2),a
-	ld	(#RAM_PAGE_2),a
+	ld	($.PAGE_2),a
 	ei	
 	
 	`------------------------------------------------------------------------------
 	`get the address of the solidity data for the level's tilemap:
 	
-	ld	a,(#RAM_LEVEL_SOLIDITY)	`get the solidity index for the level
+	ld	a,($.LEVEL_SOLIDITY)	`get the solidity index for the level
 	add	a,a			`double it (for a pointer)
 	ld	c,a			`and put it into a 16-bit number (BC)
 	ld	b,$00
@@ -808,7 +806,7 @@ PROC    :fillOverscrollCache            SECTION ::main
 	ld	l,a
 	
 	`store the solidity data address in RAM
-	ld	(#RAM_TEMP3),hl
+	ld	($.TEMP3),hl
 	
 	`------------------------------------------------------------------------------
 	`horizontal scrolling allowed??
@@ -825,7 +823,7 @@ PROC    :fillOverscrollCache            SECTION ::main
 
 	`get the position in the floor layout (in RAM) of the camera:
 	
-.horz	ld	a,(#RAM_VDPSCROLL_HORIZONTAL)
+.horz	ld	a,($.VDPSCROLL_HORZ)
 	and	%00011111		`MOD 32 (i.e. 0-31 looping)
 	add	a,8			`add 8 (ergo, 8-39)
 	rrca				`divide by 2 ...
@@ -840,7 +838,7 @@ PROC    :fillOverscrollCache            SECTION ::main
 ._1	call	:getFloorLayoutRAMPosition
 	
 	`------------------------------------------------------------------------------
-	ld	a,(#RAM_VDPSCROLL_HORIZONTAL)
+	ld	a,($.VDPSCROLL_HORZ)
 	
 	`has the camera moved left?
 	bit	6,(iy+#vars.flags0)
@@ -855,19 +853,19 @@ PROC    :fillOverscrollCache            SECTION ::main
 	srl	a			`divide by 8 (determine which tile, 0-3)
 	ld	c,a			`copy the tile number (0-3) into BC
 	ld	b,$00
-	ld	(#RAM_TEMP1),bc		`stash it away for later
+	ld	($.TEMP1),bc		`stash it away for later
 	
 	exx	
-	ld	de,#RAM_OVERSCROLLCACHE_HORZ
+	ld	de,$.OVERSCROLLCACHE_HORZ
 	exx	
-	ld	de,(#RAM_LEVEL_FLOORWIDTH)
+	ld	de,($.LEVEL_FLOORWIDTH)
 	
 	ld	b,7
 .loopH	ld	a,(hl)			`read a block index from the Floor Layout
 	exx	
 	ld	c,a
 	ld	b,$00
-	ld	hl,(#RAM_TEMP3)		`retrieve the solidity data address
+	ld	hl,($.TEMP3)		`retrieve the solidity data address
 	add	hl,bc			`offset the block index into the solidity data
 	
 	`multiply the block index by 16
@@ -889,9 +887,9 @@ PROC    :fillOverscrollCache            SECTION ::main
 	rrca	
 	and	%00010000
 	
-	ld	hl,(#RAM_TEMP1)		`retrieve the column number of the VSP scroll
+	ld	hl,($.TEMP1)		`retrieve the column number of the VSP scroll
 	add	hl,bc
-	ld	bc,(#RAM_BLOCKMAPPINGS)	`get the address of the level's block mappings
+	ld	bc,($.BLOCKMAPPINGS)	`get the address of the level's block mappings
 	add	hl,bc
 	ld	bc,4
 	ldi				`copy the first byte
@@ -934,15 +932,15 @@ PROC    :fillOverscrollCache            SECTION ::main
 	
 	`------------------------------------------------------------------------------
 ._4	call	:getFloorLayoutRAMPosition
-	ld	a,(#RAM_VDPSCROLL_VERTICAL)
+	ld	a,($.VDPSCROLL_VERT)
 	and	%00011111
 	srl	a
 	and	%11111100
 	ld	c,a
 	ld	b,$00
-	ld	(#RAM_TEMP1),bc
+	ld	($.TEMP1),bc
 	exx	
-	ld	de,#RAM_OVERSCROLLCACHE_VERT
+	ld	de,$.OVERSCROLLCACHE_VERT
 	exx	
 	ld	b,$09
 
@@ -950,7 +948,7 @@ PROC    :fillOverscrollCache            SECTION ::main
 	exx	
 	ld	c,a
 	ld	b,$00
-	ld	hl,(#RAM_TEMP3)
+	ld	hl,($.TEMP3)
 	add	hl,bc
 	rlca	
 	rlca	
@@ -967,9 +965,9 @@ PROC    :fillOverscrollCache            SECTION ::main
 	rrca	
 	rrca	
 	and	%00010000
-	ld	hl,(#RAM_TEMP1)
+	ld	hl,($.TEMP1)
 	add	hl,bc
-	ld	bc,(#RAM_BLOCKMAPPINGS)
+	ld	bc,($.BLOCKMAPPINGS)
 	add	hl,bc
 	ldi	
 	ld	(de),a
@@ -1006,7 +1004,7 @@ PROC    :fillScrollTiles                SECTION ::main
 	`calculate the number of bytes to offset by to get to the correct row in the
 	 `screen table
 	
-	ld	a;scrollVert, (#RAM_VDPSCROLL_VERTICAL)
+	ld	a;scrollVert, ($.VDPSCROLL_VERT)
 	and	%11111000		`round the scroll to the nearest 8 pixels
 	
 	`multiply the vertical scroll offset by 8. since the scroll offset is already
@@ -1024,7 +1022,7 @@ PROC    :fillScrollTiles                SECTION ::main
 	`calculate the number of bytes to get from the beginning of a row to the 
 	 `horizontal scroll position
 	
-	ld	a;scrollHorz, (#RAM_VDPSCROLL_HORIZONTAL)
+	ld	a;scrollHorz, ($.VDPSCROLL_HORZ)
 	
 	bit	6, (iy+#vars.flags0)	`camera moved left?
 	jr	z, ._1
@@ -1047,11 +1045,11 @@ PROC    :fillScrollTiles                SECTION ::main
 	
 	`------------------------------------------------------------------------------
 	exx
-	ld	hl, #RAM_OVERSCROLLCACHE_HORZ
+	ld	hl, $.OVERSCROLLCACHE_HORZ
 	
 	`find where in a block the scroll offset sits (this is needed to find which
 	 `of the 4 tiles width in a block have to be referenced)
-	ld	a, (#RAM_VDPSCROLL_VERTICAL)
+	ld	a, ($.VDPSCROLL_VERT)
 	and	%00011111		`MOD 32
 	srl	a			`divide by 2 ...
 	srl	a			`divide by 4 ...
@@ -1090,7 +1088,7 @@ PROC    :fillScrollTiles                SECTION ::main
 	`------------------------------------------------------------------------------
 ._4	bit	1, (iy+#vars.flags2)
 	jp	z, .exit		`could  optimise to `ret z`?
-	ld	a, (#RAM_VDPSCROLL_VERTICAL)
+	ld	a, ($.VDPSCROLL_VERT)
 	ld	b, $00
 	srl	a
 	srl	a
@@ -1111,7 +1109,7 @@ PROC    :fillScrollTiles                SECTION ::main
 	add	a, a
 	rl	b
 	ld	c, a
-	ld	a, (#RAM_VDPSCROLL_HORIZONTAL)
+	ld	a, ($.VDPSCROLL_HORZ)
 	add	a, $08
 	and	%11111000
 	srl	a
@@ -1122,8 +1120,8 @@ PROC    :fillScrollTiles                SECTION ::main
 	add	hl, bc
 	set	6, h
 	ex	de, hl
-	ld	hl, #RAM_OVERSCROLLCACHE_VERT
-	ld	a, (#RAM_VDPSCROLL_HORIZONTAL)
+	ld	hl, $.OVERSCROLLCACHE_VERT
+	ld	a, ($.VDPSCROLL_HORZ)
 	and	%00011111
 	add	a, $08
 	srl	a
@@ -1135,7 +1133,7 @@ PROC    :fillScrollTiles                SECTION ::main
 	add	hl, bc
 	ld	a, e
 	and	%11000000
-	ld	(#RAM_TEMP1), a
+	ld	($.TEMP1), a
 	ld	a, e
 	out	(#SMS_VDP_CONTROL), a
 	and	$3F
@@ -1154,7 +1152,7 @@ PROC    :fillScrollTiles                SECTION ::main
 	jp	nz, ._7
 	ret
 
-._8	ld	a, (#RAM_TEMP1)
+._8	ld	a, ($.TEMP1)
 	out	(#SMS_VDP_CONTROL), a
 	ld	a, d
 	out	(#SMS_VDP_CONTROL), a
@@ -1174,11 +1172,12 @@ PROC    :fillScrollTiles                SECTION ::main
 PROC    :getFloorLayoutRAMPosition      SECTION ::main
         `====================================================================[$07D5]===
         `convert block X & Y coords into a location in the Floor Layout in RAM
+        
 PARAMS  bc	`a flag, $0000 or $0001 depending on callee
 {        
 	`get the low-byte of the width of the level in blocks. many levels are 256
 	 `blocks wide, ergo have a FloorWidth of $0100, making the low-byte $00
-	ld	a,(#RAM_LEVEL_FLOORWIDTH)
+	ld	a,($.LEVEL_FLOORWIDTH)
 	rlca				`double it (x2)
 	jr	c,._1			`>128?
 	rlca				`double it again (x4)
@@ -1190,24 +1189,24 @@ PARAMS  bc	`a flag, $0000 or $0001 depending on callee
 	jp	._5			`255...?
 	
 	`------------------------------------------------------------------------------
-._1	ld	a,(#RAM_BLOCK_Y)
+._1	ld	a,($.BLOCK_Y)
 	add	a,b
 	ld	e,$00
 	srl	a			`divide by 2
 	rr	e
 	ld	d,a
 	
-	ld	a,(#RAM_BLOCK_X)
+	ld	a,($.BLOCK_X)
 	add	a,c
 	add	a,e
 	ld	e,a
 	
-	ld	hl,#RAM_FLOORLAYOUT
+	ld	hl,$.FLOORLAYOUT
 	add	hl,de
 	ret
 	
 	`------------------------------------------------------------------------------
-._2	ld	a,(#RAM_BLOCK_Y)
+._2	ld	a,($.BLOCK_Y)
 	add	a,b
 	ld	e,$00
 	srl	a
@@ -1216,17 +1215,17 @@ PARAMS  bc	`a flag, $0000 or $0001 depending on callee
 	rr	e
 	ld	d,a
 	
-	ld	a,(#RAM_BLOCK_X)
+	ld	a,($.BLOCK_X)
 	add	a,c
 	add	a,e
 	ld	e,a
 	
-	ld	hl,#RAM_FLOORLAYOUT
+	ld	hl,$.FLOORLAYOUT
 	add	hl,de
 	ret
 	
 	`------------------------------------------------------------------------------
-._3	ld	a,(#RAM_BLOCK_Y)
+._3	ld	a,($.BLOCK_Y)
 	add	a,b
 	ld	e,$00
 	srl	a
@@ -1236,17 +1235,17 @@ PARAMS  bc	`a flag, $0000 or $0001 depending on callee
 	srl	a
 	rr	e
 	ld	d,a
-	ld	a,(#RAM_BLOCK_X)
+	ld	a,($.BLOCK_X)
 	add	a,c
 	add	a,e
 	ld	e,a
 	
-	ld	hl,#RAM_FLOORLAYOUT
+	ld	hl,$.FLOORLAYOUT
 	add	hl,de
 	ret
 	
 	`------------------------------------------------------------------------------
-._4	ld	a,(#RAM_BLOCK_Y)
+._4	ld	a,($.BLOCK_Y)
 	add	a,b
 	ld	e,$00
 	srl	a
@@ -1258,24 +1257,24 @@ PARAMS  bc	`a flag, $0000 or $0001 depending on callee
 	srl	a
 	rr	e
 	ld	d,a
-	ld	a,(#RAM_BLOCK_X)
+	ld	a,($.BLOCK_X)
 	add	a,c
 	add	a,e
 	ld	e,a
 	
-	ld	hl,#RAM_FLOORLAYOUT
+	ld	hl,$.FLOORLAYOUT
 	add	hl,de
 	ret
 	
 	`------------------------------------------------------------------------------
-._5	ld	a,(#RAM_BLOCK_Y)
+._5	ld	a,($.BLOCK_Y)
 	add	a,b
 	ld	d,a
-	ld	a,(#RAM_BLOCK_X)
+	ld	a,($.BLOCK_X)
 	add	a,c
 	ld	e,a
 	
-	ld	hl,#RAM_FLOORLAYOUT
+	ld	hl,$.FLOORLAYOUT
 	add	hl,de
 	ret
 }
@@ -1290,10 +1289,10 @@ PROC    :fillScreenWithFloorLayout      SECTION ::main
 	di				`disable interrupts
 	ld	a,:S1_BlockMappings#bank
 	ld	(#SMS_PAGE_1),a
-	ld	(#RAM_PAGE_1),a
+	ld	($.PAGE_1),a
 	ld	a,:S1_BlockMappings#bank + 1
 	ld	(#SMS_PAGE_2),a
-	ld	(#RAM_PAGE_2),a
+	ld	($.PAGE_2),a
 	
 	ld	bc,$0000
 	call	:getFloorLayoutRAMPosition
@@ -1318,7 +1317,7 @@ PROC    :fillScreenWithFloorLayout      SECTION ::main
 	
 	exx	
 	ld	e,a			`copy the block index to E'
-	ld	a,(#RAM_LEVEL_SOLIDITY)	`now load A with the level's solidity index
+	ld	a,($.LEVEL_SOLIDITY)	`now load A with the level's solidity index
 	add	a,a			`double it (i.e. for a 16-bit pointer)
 	ld	c,a			`put it into BC'
 	ld	b,$00
@@ -1354,7 +1353,7 @@ PROC    :fillScreenWithFloorLayout      SECTION ::main
 	add	hl,hl			`x4 ...
 	add	hl,hl			`x8 ...
 	add	hl,hl			`x16
-	ld	bc,(#RAM_BLOCKMAPPINGS)
+	ld	bc,($.BLOCKMAPPINGS)
 	add	hl,bc
 	
 	`DE will be the address of block mapping
@@ -1423,7 +1422,7 @@ PROC    :fillScreenWithFloorLayout      SECTION ::main
 	
 	pop	de
 	pop	hl
-	ld	bc,(#RAM_LEVEL_FLOORWIDTH)
+	ld	bc,($.LEVEL_FLOORWIDTH)
 	add	hl,bc
 	ex	de,hl
 	ld	bc,$0100
@@ -1442,7 +1441,7 @@ PROC    :loadFloorLayout                SECTION ::main
 PARAMS	hl	`address of Floor Layout data
 	bc	`length of compressed data
 {        
-	ld	de,#RAM_FLOORLAYOUT	`where in RAM the floor layout will go
+	ld	de,$.FLOORLAYOUT	`where in RAM the floor layout will go
 
 	`RLE decompress floor layout:
 	`------------------------------------------------------------------------------
@@ -1497,10 +1496,10 @@ PROC    :fadeOut                        SECTION ::main
 {        
 	ld	a, 1
 	ld	(#SMS_PAGE_1), a
-	ld	(#RAM_PAGE_1), a
+	ld	($.PAGE_1), a
 	ld	a, 2
 	ld	(#SMS_PAGE_2), a
-	ld	(#RAM_PAGE_2), a
+	ld	($.PAGE_2), a
 	
 	ld	a, (iy+#vars.spriteUpdateCount)
 	res	0, (iy+#vars.flags0)	`wait for interrupt to occur
@@ -1514,18 +1513,18 @@ PROC    :fadeOut                        SECTION ::main
 ._1	push	bc			`put aside the loop counter
 		
 	`fade out the tile palette one step
-	ld	hl, (#RAM_LOADPALETTE_TILE)
-	ld	de, #RAM_PALETTE
+	ld	hl, ($.LOADPALETTE_TILE)
+	ld	de, $.PALETTE
 	ld	b, 16
 	call	:darkenPalette
 	
 	`fade out the sprite palette one step
-	ld	hl, (#RAM_LOADPALETTE_SPRITE)
+	ld	hl, ($.LOADPALETTE_SPRITE)
 	ld	b, 16
 	call	:darkenPalette
 	
 	`load the darkened palette on the next interrupt
-	ld	hl, #RAM_PALETTE
+	ld	hl, $.PALETTE
 	ld	a, %00000011
 	call	:loadPaletteOnInterrupt
 	
@@ -1588,33 +1587,33 @@ PROC    :_aae                           SECTION ::main
         `====================================================================[$0AAE]===
 PARAMS  hl
 {
-        ld	(#RAM_TEMP6),hl
+        ld	($.TEMP6),hl
 	
 	`------------------------------------------------------------------------------
 	`copy parameter palette into the temporary RAM palette used for fading out
 	
-	ld	hl,(#RAM_LOADPALETTE_TILE)
-	ld	de,#RAM_PALETTE
+	ld	hl,($.LOADPALETTE_TILE)
+	ld	de,$.PALETTE
 	ld	bc,32
 	ldir	
 	
 	ld	a,1
 	ld	(#SMS_PAGE_1),a
-	ld	(#RAM_PAGE_1),a
+	ld	($.PAGE_1),a
 	ld	a,2
 	ld	(#SMS_PAGE_2),a
-	ld	(#RAM_PAGE_2),a
+	ld	($.PAGE_2),a
 	
 	`switch to using the temporary palette on screen
-	ld	hl,#RAM_PALETTE
+	ld	hl,$.PALETTE
 	ld	a,%00000011
 	call	:loadPaletteOnInterrupt
 	
 	`------------------------------------------------------------------------------
 	ld	c,(iy+#vars.spriteUpdateCount)
-	ld	a,(#RAM_VDPREGISTER_1)
+	ld	a,($.VDPREGISTER_1)
 	or	%01000000		`enable screen (bit 6 of VDP register 1)
-	ld	(#RAM_VDPREGISTER_1),a
+	ld	($.VDPREGISTER_1),a
 	
 	`wait for interrupt (refresh screen)
 	res	0,(iy+#vars.flags0)
@@ -1635,8 +1634,8 @@ PARAMS  hl
 	
 	ld	b,4
 ._2	push	bc
-	ld	hl,(#RAM_TEMP6)		`restore the HL parameter
-	ld	de,#RAM_PALETTE
+	ld	hl,($.TEMP6)		`restore the HL parameter
+	ld	de,$.PALETTE
 	ld	b,32
 
 ._3	push	bc
@@ -1674,7 +1673,7 @@ PARAMS  hl
 	pop	bc
 	djnz	._3
 	
-	ld	hl,#RAM_PALETTE
+	ld	hl,$.PALETTE
 	ld	a,%00000011
 	call	:loadPaletteOnInterrupt
 	
@@ -1695,8 +1694,8 @@ PROC    :_b50                           SECTION ::main
         `====================================================================[$0B50]===
         `erase RAM_PALETTE?
 {        
-	ld	(#RAM_TEMP6),hl
-	ld	hl,#RAM_PALETTE
+	ld	($.TEMP6),hl
+	ld	hl,$.PALETTE
 	ld	b,32
 	
 .loop	ld	(hl),$00
@@ -1709,28 +1708,28 @@ PROC    :_b50                           SECTION ::main
 PROC    :_b60 SECTION ::main
         `--------------------------------------------------------------------[$0B60]---
 {                
-	ld	(#RAM_TEMP6),hl
+	ld	($.TEMP6),hl
 	
-	ld	hl,(#RAM_LOADPALETTE_TILE)
-	ld	de,#RAM_PALETTE
+	ld	hl,($.LOADPALETTE_TILE)
+	ld	de,$.PALETTE
 	ld	bc,32
 	ldir	
 	
 ._1	ld	a,1
 	ld	(#SMS_PAGE_1),a
-	ld	(#RAM_PAGE_1),a
+	ld	($.PAGE_1),a
 	ld	a,2
 	ld	(#SMS_PAGE_2),a
-	ld	(#RAM_PAGE_2),a
+	ld	($.PAGE_2),a
 	
-	ld	hl,#RAM_PALETTE
+	ld	hl,$.PALETTE
 	ld	a,%00000011
 	call	:loadPaletteOnInterrupt
 	
 	ld	c,(iy+#vars.spriteUpdateCount)
-	ld	a,(#RAM_VDPREGISTER_1)
+	ld	a,($.VDPREGISTER_1)
 	or	$40
-	ld	(#RAM_VDPREGISTER_1),a
+	ld	($.VDPREGISTER_1),a
 	
 	res	0,(iy+#vars.flags0)
 	call	:waitForInterrupt
@@ -1747,8 +1746,8 @@ PROC    :_b60 SECTION ::main
 	ld	b,$04
 	
 ._3	push	bc
-	ld	hl,(#RAM_TEMP6)
-	ld	de,#RAM_PALETTE
+	ld	hl,($.TEMP6)
+	ld	de,$.PALETTE
 	ld	b,32
 	
 ._4	push	bc
@@ -1786,7 +1785,7 @@ PROC    :_b60 SECTION ::main
 	pop	bc
 	djnz	._4
 	
-	ld	hl,#RAM_PALETTE
+	ld	hl,$.PALETTE
 	ld	a,%00000011
 	call	:loadPaletteOnInterrupt
 	
@@ -1810,7 +1809,7 @@ PARAMS  hl	`an address to a series of 19 bits, one for each level
 		 `$D311+: set by continue monitor
 		 `$D317+: set by switch
 {       
-	ld	a, (#RAM_CURRENT_LEVEL)
+	ld	a, ($.CURRENT_LEVEL)
 	ld	c, a
 	srl	a			`divide by 2 ...
 	srl	a			`divide by 4 ...
@@ -1851,7 +1850,7 @@ PARAMS	hl	`absolute address to uncompressed art data for the icons,
 	ld	a,5			`temporarily switch to bank 5 for the function
 	ld	(#SMS_PAGE_1),a
 	
-	ld	a,(#RAM_FRAMECOUNT)
+	ld	a,($.FRAMECOUNT)
 	and	%00001111
 	add	a,a			`x2
 	add	a,a			`x4
@@ -1882,7 +1881,7 @@ PARAMS	hl	`absolute address to uncompressed art data for the icons,
 	djnz	.loop
 	
 	`return to the previous bank number
-	ld	a,(#RAM_PAGE_1)
+	ld	a,($.PAGE_1)
 	ld	(#SMS_PAGE_1),a
 	ei	
 	ret

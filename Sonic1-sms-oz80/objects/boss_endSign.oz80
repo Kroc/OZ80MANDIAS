@@ -29,19 +29,19 @@ SECTION ::doObjectCode_boss_endSign BANK 1, 2 SLOT 1, 2 {
 	
 	set	0,(ix+$11)
 	
-._1	ld	hl,(#RAM_CAMERA_X)
-	ld	(#RAM_LEVEL_LEFT),hl
+._1	ld	hl,($.CAMERA_X)
+	ld	($.LEVEL_LEFT),hl
 	
 	ld	l,(ix+#object.X+0)
 	ld	h,(ix+#object.X+1)
 	ld	de,$FF90
 	add	hl,de
-	ld	(#RAM_LEVEL_RIGHT),hl
+	ld	($.LEVEL_RIGHT),hl
 	
 	ld	hl,$0080
-	ld	($D26B),hl
+	ld	($.D26B),hl
 	ld	hl,$0088
-	ld	($D26D),hl
+	ld	($.D26D),hl
 	
 	ld	c,(ix+$13)
 	ld	a,($D414)
@@ -54,7 +54,7 @@ SECTION ::doObjectCode_boss_endSign BANK 1, 2 SLOT 1, 2 {
 	jr	z,._3
 	ld	e,(ix+#object.X+0)
 	ld	d,(ix+#object.X+1)
-	ld	hl,(#RAM_SONIC.X)
+	ld	hl,($.SONIC.X)
 	and	a
 	sbc	hl,de
 	bit	7,h
@@ -97,19 +97,19 @@ SECTION ::doObjectCode_boss_endSign BANK 1, 2 SLOT 1, 2 {
 	res	2,(ix+$11)
 	set	3,(ix+$11)
 	ld	a,$a0
-	ld	($D289),a
+	ld	($.D289),a
 	set	1,(iy+#vars.flags6)
 	jp	._7
 	
 ._4	ld	hl,$0a0a
-	ld	(#RAM_TEMP6),hl
+	ld	($.TEMP6),hl
 	call	:_LABEL_3956_11
 	jr	c,._7
 	bit	7,(ix+#object.Ydirection)
 	jr	nz,._7
 	bit	1,(ix+$11)
 	jr	nz,._7
-	ld	de,(#RAM_SONIC.Xspeed)
+	ld	de,($.SONIC.Xspeed)
 	bit	7,d
 	jr	z,._5
 	ld	a,e
@@ -142,7 +142,7 @@ SECTION ::doObjectCode_boss_endSign BANK 1, 2 SLOT 1, 2 {
 	ld	de,$6171
 	bit	3,(ix+$11)
 	jr	z,._
-	ld	a,(#RAM_CURRENT_LEVEL)
+	ld	a,($.CURRENT_LEVEL)
 	cp	$0c
 	jr	c,._8
 	cp	$1c
@@ -153,7 +153,7 @@ SECTION ::doObjectCode_boss_endSign BANK 1, 2 SLOT 1, 2 {
 	
 ._8	ld	de,$61a8
 	ld	c,$04
-	ld	a,(#RAM_RINGS)
+	ld	a,($.RINGS)
 	cp	$50
 	jr	nc,._11
 ._9	cp	$40
@@ -162,13 +162,13 @@ SECTION ::doObjectCode_boss_endSign BANK 1, 2 SLOT 1, 2 {
 	ld	c,$03
 	and	$0f
 	jr	z,._11
-._10	ld	a,(#RAM_RINGS)
+._10	ld	a,($.RINGS)
 	srl	a
 	srl	a
 	srl	a
 	srl	a
 	ld	b,a
-	ld	a,(#RAM_CURRENT_LEVEL)
+	ld	a,($.CURRENT_LEVEL)
 	and	$03
 	inc	a
 	ld	de,$6174
@@ -178,7 +178,7 @@ SECTION ::doObjectCode_boss_endSign BANK 1, 2 SLOT 1, 2 {
 	ld	de,$618e
 	ld	c,$01
 ._11	ld	a,c
-	ld	($D288),a
+	ld	($.D288),a
 ._	ld      l,(ix+$12)
 	ld	h,$00
 	add	hl,de

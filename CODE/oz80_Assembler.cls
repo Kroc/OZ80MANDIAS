@@ -205,6 +205,13 @@ Private At As Long                      'Current position within the ROM (absolu
 Private Bank As Long                    'Current bank number
 Private Slot As Long                    'Current slot number the bank applies to
 
+'When using a Section this variable holds the key of the section name in the strings _
+ database below. This is used to expand names into their full form, e.g. _
+ `.sub` => `::section:proc.sub`
+Private Section As Long
+'As above, containing the key for the current procedure name
+Private Proc As Long
+
 Private ROM() As Byte                   'The output!
 Private ROMSize As Long                 'Size of the ROM (32/64/128/256/512/1024 KB)
 
@@ -215,8 +222,6 @@ Private Strings As Scripting.Dictionary
 
 'The numerical values of variables / labels / properties &c. will be stored here. _
  The key for a name is the CRC32 of the string (from `Strings` above)
-
-Private NameValues As Scripting.Dictionary
 
 'Variables and Labels are kept separately as the first assembling pass determines _
  the final location of the labels in the ROM and the second pass then fills in the _
@@ -544,8 +549,8 @@ End Sub
 'EVENT <TokenStream> StringAdded : While parsing a source file, a string name was read _
  ======================================================================================
 Private Sub TokenStream_StringAdded(ByRef Key As Long, ByRef StringData As String)
-    'We need to provide a unique key, we use the CRC32 of the string
-    'When this event finishes, the TokenStream will add a token using this key
+    'We need to provide a unique key, we use the CRC32 of the string. _
+     When this event finishes, the TokenStream will add a token using this key
     Let Key = CRCString(StringData)
     'Add the label/variable/property name to the string storage
     If Strings.Exists(Key) = False Then Call Strings.Add(Key, StringData)
@@ -1498,6 +1503,12 @@ Private Sub AddOpcode( _
         If Kind And MASK_16 Then Call AddByte((Value And &HFF00&) \ &H100)
     End If
 End Sub
+
+'CanonicaliseName : Expand a name to its full form _
+ ======================================================================================
+Private Function CanonicaliseName(ByRef Stub As String) As String
+    '
+End Function
 
 'CRCString : Calculate a unique hash for a string _
  ======================================================================================

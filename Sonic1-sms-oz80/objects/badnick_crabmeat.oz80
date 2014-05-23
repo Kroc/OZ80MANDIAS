@@ -14,7 +14,7 @@ PROC	:doObjectCode_badnick_crabMeat  SECTION ::objects
 	ld	d,$00
 ._1	ld	hl,._66c5
 	add	hl,de
-	ld	(#RAM_TEMP6),hl
+	ld	($.TEMP6),hl
 	ld	a,(hl)
 	and	a
 	jr	nz,._2
@@ -46,9 +46,9 @@ PROC	:doObjectCode_badnick_crabMeat  SECTION ::objects
 	cp	$20
 	jp	nz,._6
 	ld	hl,$ffff
-	ld	(#RAM_TEMP4),hl
+	ld	($.TEMP4),hl
 	ld	hl,$fffc
-	ld	(#RAM_TEMP6),hl
+	ld	($.TEMP6),hl
 	call	:_7c7b
 	jp	c,._6
 	ld	de,$0000
@@ -56,9 +56,9 @@ PROC	:doObjectCode_badnick_crabMeat  SECTION ::objects
 	ld	b,d
 	call	:_ac96
 	ld	hl,$0001
-	ld	(#RAM_TEMP4),hl
+	ld	($.TEMP4),hl
 	ld	hl,$fffc
-	ld	(#RAM_TEMP6),hl
+	ld	($.TEMP6),hl
 	call	:_7c7b
 	jr	c,._6
 	ld	de,$000e
@@ -87,7 +87,7 @@ PROC	:doObjectCode_badnick_crabMeat  SECTION ::objects
 	ld	(ix+#object.Yspeed+0),l
 	ld	(ix+#object.Yspeed+1),h
 	ld	(ix+#object.Ydirection),a
-	ld	hl,(#RAM_TEMP6)
+	ld	hl,($.TEMP6)
 	ld	a,(hl)
 	add	a,a
 	ld	e,a
@@ -99,10 +99,10 @@ PROC	:doObjectCode_badnick_crabMeat  SECTION ::objects
 	ld	de,.layout
 	call	:_7c41
 	ld	hl,$0a04
-	ld	(#RAM_TEMP6),hl
+	ld	($.TEMP6),hl
 	call	:_LABEL_3956_11
 	ld	hl,$0804
-	ld	(#RAM_TEMP1),hl
+	ld	($.TEMP1),hl
 	call	nc,:_35e5
 	ret
 

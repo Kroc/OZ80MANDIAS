@@ -16,7 +16,7 @@ PROC	:doObjectCode_powerUp_ring {
 	ld	(ix+#object.height),$18
 	call	:_5da8
 	ld	hl,$0003
-	ld	(#RAM_TEMP6),hl
+	ld	($.TEMP6),hl
 	call	:_LABEL_3956_11
 	jr	c,._1
 	call	:_5deb
@@ -35,7 +35,7 @@ PROC	:doObjectCode_powerUp_ring {
 	call	:loadPowerUpIcon
 	ld	(ix+#object.spriteLayout+0),:_5bbf.lo
 	ld	(ix+#object.spriteLayout+1),:_5bbf.hi
-	ld	a,(#RAM_FRAMECOUNT)
+	ld	a,($.FRAMECOUNT)
 	and	$07
 	cp	$05
 	ret	nc
@@ -50,7 +50,7 @@ PROC	:doObjectCode_powerUp_ring {
 	adc	a,(ix+#object.Xdirection)
 	ld	l,h
 	ld	h,a
-	ld	(#RAM_TEMP1),hl
+	ld	($.TEMP1),hl
 	ld	l,(ix+$04)
 	ld	h,(ix+#object.Y+0)
 	ld	a,(ix+#object.Y+1)
@@ -62,15 +62,15 @@ PROC	:doObjectCode_powerUp_ring {
 	adc	a,(ix+#object.Ydirection)
 ._2	ld	l,h
 	ld	h,a
-	ld	(#RAM_TEMP3),hl
+	ld	($.TEMP3),hl
 	ld	hl,$0004
-	ld	(#RAM_TEMP4),hl
+	ld	($.TEMP4),hl
 	ld	hl,$0000
-	ld	(#RAM_TEMP6),hl
+	ld	($.TEMP6),hl
 	ld	a,$5c
 	call	:_3581
 	ld	hl,$000c
-	ld	(#RAM_TEMP4),hl
+	ld	($.TEMP4),hl
 	ld	a,$5e
 	call	:_3581
 	bit	1,(ix+$18)
@@ -106,7 +106,7 @@ PROC	:doObjectCode_powerUp_speed {
 	ld	(ix+#object.height),$18
 	call	:_5da8
 	ld	hl,$0003
-	ld	(#RAM_TEMP6),hl
+	ld	($.TEMP6),hl
 	call	:_LABEL_3956_11
 	jr	c,._1
 	call	:_5deb
@@ -142,14 +142,14 @@ PROC	:doObjectCode_powerUp_life {
 	jp	:doObjectCode_powerUp_ring._5b29
 	
 ._1	ld	hl,$0003
-	ld	(#RAM_TEMP6),hl
+	ld	($.TEMP6),hl
 	call	:_LABEL_3956_11
 	jr	c,._2
 	call	:_5deb
 	jr	c,._2
 	bit	2,(ix+$18)
 	jp	nz,:doObjectCode_powerUp_ring._5b24
-	ld	hl,#RAM_LIVES
+	ld	hl,$.LIVES
 	inc	(hl)
 	
 	`set the level's bit flag at $D305+
@@ -166,7 +166,7 @@ PROC	:doObjectCode_powerUp_life {
 	ld	a,$09
 	rst	:rst_playSFX
 	
-	ld	a,(#RAM_CURRENT_LEVEL)
+	ld	a,($.CURRENT_LEVEL)
 	cp	28			`special stage?
 	ret	nc
 	
@@ -175,7 +175,7 @@ PROC	:doObjectCode_powerUp_life {
 	ret
 	
 	`------------------------------------------------------------------------------
-._2	ld	a,(#RAM_CURRENT_LEVEL)
+._2	ld	a,($.CURRENT_LEVEL)
 	cp	4			`level 4 (Bridge Act 2)?
 	jr	z,._4
 	cp	$09			`level 9 (Labyrinth Act 1)?
@@ -239,7 +239,7 @@ PROC	:doObjectCode_powerUp_shield {
 	ld	(ix+#object.height),$18
 	call	:_5da8
 	ld	hl,$0003
-	ld	(#RAM_TEMP6),hl
+	ld	($.TEMP6),hl
 	call	:_LABEL_3956_11
 	jr	c,._1
 	call	:_5deb
@@ -261,14 +261,14 @@ PROC	:doObjectCode_powerUp_invincibility {
 	ld	(ix+#object.height),$18
 	call	:_5da8
 	ld	hl,$0003
-	ld	(#RAM_TEMP6),hl
+	ld	($.TEMP6),hl
 	call	:_LABEL_3956_11
 	jr	c,._1
 	call	:_5deb
 	jr	c,._1
 	set	0,(iy+#vars.unknown0)
 	ld	a,$f0
-	ld	($D28D),a
+	ld	($.D28D),a
 	
 	ld	a,#index_music_invincibility
 	rst	:rst_playMusic
@@ -289,7 +289,7 @@ PROC	:doObjectCode_powerUp_checkpoint {
 	ld	(ix+#object.height),$18
 	call	:_5da8
 	ld	hl,$0003
-	ld	(#RAM_TEMP6),hl
+	ld	($.TEMP6),hl
 	call	:_LABEL_3956_11
 	jr	c,._1
 	call	:_5deb
@@ -301,7 +301,7 @@ PROC	:doObjectCode_powerUp_checkpoint {
 	or	c
 	ld	(hl),a
 	
-	ld	a,(#RAM_CURRENT_LEVEL)
+	ld	a,($.CURRENT_LEVEL)
 	add	a,a
 	ld	e,a
 	ld	d,$00
@@ -340,7 +340,7 @@ PROC	:doObjectCode_powerUp_continue {
 	ld	(ix+#object.height),$18
 	call	:_5da8
 	ld	hl,$0003
-	ld	(#RAM_TEMP6),hl
+	ld	($.TEMP6),hl
 	call	:_LABEL_3956_11
 	jr	c,._1
 	call	:_5deb
@@ -359,7 +359,7 @@ PROC	:_5da8 {
 	
 	bit	0,(ix+$18)
 	ret	nz
-	ld	a,(#RAM_LEVEL_SOLIDITY)
+	ld	a,($.LEVEL_SOLIDITY)
 	and	a
 	jr	nz,._1
 	ld	bc,$0000
@@ -393,11 +393,11 @@ PROC	:_5da8 {
 PROC	:_5deb {
 	
 	ld	hl,$0804
-	ld	(#RAM_TEMP1),hl
+	ld	($.TEMP1),hl
 	ld	a,($D414)
 	and	$01
 	jr	nz,._2
-	ld	de,(#RAM_SONIC.X)
+	ld	de,($.SONIC.X)
 	ld	c,(ix+#object.X+0)
 	ld	b,(ix+#object.X+1)
 	ld	hl,$ffee
@@ -420,18 +420,18 @@ PROC	:_5deb {
 	xor	a
 	ld	b,a
 	sbc	hl,bc
-	ld	(#RAM_SONIC.Y+0),hl
-	ld	($D28E),a
-	ld	a,($D2E8)
-	ld	hl,($D2E6)
-	ld	(#RAM_SONIC.Yspeed),hl
-	ld	(#RAM_SONIC.Ydirection),a
+	ld	($.SONIC.Y+0),hl
+	ld	($.D28E),a
+	ld	a,($.D2E8)
+	ld	hl,($.D2E6)
+	ld	($.SONIC.Yspeed),hl
+	ld	($.SONIC.Ydirection),a
 	ld	hl,$D414
 	set	7,(hl)
 	scf	
 	ret
 
-._1	ld	a,(#RAM_SONIC.Ydirection)
+._1	ld	a,($.SONIC.Ydirection)
 	and	a
 	jp	m,._3
 	
@@ -444,14 +444,14 @@ PROC	:_5deb {
 	ld	(ix+#object.Ydirection),$ff
 	ld	hl,$0400
 	xor	a
-	ld	(#RAM_SONIC.Yspeed),hl
-	ld	(#RAM_SONIC.Ydirection),a
-	ld	($D28e),a
+	ld	($.SONIC.Yspeed),hl
+	ld	($.SONIC.Ydirection),a
+	ld	($.D28E),a
 	set	1,(ix+$18)
 	scf	
 	ret
 
-._4	ld	hl,(#RAM_SONIC.X)
+._4	ld	hl,($.SONIC.X)
 	ld	de,$000c
 	add	hl,de
 	ex	de,hl
@@ -467,13 +467,13 @@ PROC	:_5deb {
 ._5	ld	l,(ix+#object.X+0)
 	ld	h,(ix+#object.X+1)
 	add	hl,bc
-	ld	(#RAM_SONIC.X),hl
+	ld	($.SONIC.X),hl
 	xor	a
 	ld	($D3FD),a
 	ld	l,a
 	ld	h,a
-	ld	(#RAM_SONIC.Xspeed+0),a
-	ld	(#RAM_SONIC.Xspeed+1),hl
+	ld	($.SONIC.Xspeed+0),a
+	ld	($.SONIC.Xspeed+1),hl
 	scf	
 	ret
 
@@ -496,7 +496,7 @@ PROC	:doObjectCode_powerUp_emerald {
 	ld	(ix+#object.spriteLayout+0),a
 	ld	(ix+#object.spriteLayout+1),a
 	ld	hl,$0202
-	ld	(#RAM_TEMP6),hl
+	ld	($.TEMP6),hl
 	call	:_LABEL_3956_11
 	jr	c,._2
 	ld	hl,$D30B
@@ -504,10 +504,10 @@ PROC	:doObjectCode_powerUp_emerald {
 	ld	a,(hl)
 	or	c
 	ld	(hl),a
-	ld	hl,$D27F
+	ld	hl,$.D27F
 	inc	(hl)
 	ld	a,$fe
-	ld	($D28B),a
+	ld	($.D28B),a
 	
 	ld	a,#index_music_emerald
 	rst	:rst_playMusic
@@ -515,7 +515,7 @@ PROC	:doObjectCode_powerUp_emerald {
 ._1	ld	(ix+#object.type),$FF	`remove object?
 	ret
 
-._2	ld	a,(#RAM_FRAMECOUNT)
+._2	ld	a,($.FRAMECOUNT)
 	rrca	
 	jr	c,._3
 	ld	(ix+#object.spriteLayout+0),._5f10.lo

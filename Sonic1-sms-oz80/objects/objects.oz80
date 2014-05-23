@@ -3,7 +3,8 @@
    for MaSS1VE: The Master System Sonic 1 Visual Editor <github.com/Kroc/MaSS1VE>
    ================================================================================= ``
 
-OBJECT #object {
+OBJECT  #object
+{
 	.type			AS BYTE	`IX+$00 - the object type index number
 	.unknown1		AS BYTE	`related to X somehow?
 	.X			AS WORD	`IX+$02/03 - in px
@@ -28,7 +29,7 @@ OBJECT #object {
 }
 
 `the player is an object like any other and has reserved object parameters in memory
-VAR #RAM_SONIC		$D3FC	AS #object
+VAR     $.SONIC		$D3FC	AS #object
 	`type			$D3FC
 	`unknown1		$D3FD
 	`X			$D3FE/F
@@ -60,13 +61,13 @@ INCLUDE "badnick_crabmeat.oz80"
 PROC :doObjectCode_platform_swinging {
 	set	5,(ix+$18)
 	ld	hl,$0020
-	ld	($D267),hl
+	ld	($.D267),hl
 	ld	hl,$0048
-	ld	($D269),hl
+	ld	($.D269),hl
 	ld	hl,$0030
-	ld	($D26B),hl
+	ld	($.D26B),hl
 	ld	hl,$0030
-	ld	($D26D),hl
+	ld	($.D26D),hl
 	bit	0,(ix+$18)
 	jr	nz,._1
 	ld	l,(ix+#object.X+0)
@@ -84,7 +85,7 @@ PROC :doObjectCode_platform_swinging {
 	ld	(ix+#object.height),$10
 	ld	l,(ix+#object.X+0)
 	ld	h,(ix+#object.X+1)
-	ld	(#RAM_TEMP1),hl
+	ld	($.TEMP1),hl
 	ld	hl,._682f
 	ld	e,(ix+$11)
 	ld	d,$00
@@ -101,10 +102,10 @@ PROC :doObjectCode_platform_swinging {
 	add	hl,de
 	ld	(ix+#object.X+0),l
 	ld	(ix+#object.X+1),h
-	ld	de,(#RAM_TEMP1)
+	ld	de,($.TEMP1)
 	and	a
 	sbc	hl,de
-	ld	(#RAM_TEMP1),hl
+	ld	($.TEMP1),hl
 	inc	bc
 	ld	d,$00
 	ld	a,(bc)
@@ -118,23 +119,23 @@ PROC :doObjectCode_platform_swinging {
 	ld	(ix+#object.Y+0),l
 	ld	(ix+#object.Y+1),h
 	
-	ld	a,(#RAM_SONIC.Ydirection)
+	ld	a,($.SONIC.Ydirection)
 	and	a
 	jp	m,._4
 	
 	ld	hl,$0806
-	ld	(#RAM_TEMP6),hl
+	ld	($.TEMP6),hl
 	call	:_LABEL_3956_11
 	jr	c,._4
-	ld	hl,(#RAM_SONIC.X)
-	ld	de,(#RAM_TEMP1)
+	ld	hl,($.SONIC.X)
+	ld	de,($.TEMP1)
 	add	hl,de
-	ld	(#RAM_SONIC.X),hl
+	ld	($.SONIC.X),hl
 	ld	bc,$0010
 	ld	de,$0000
 	call	:_LABEL_7CC1_12
 ._4	ld	hl,:_6911
-	ld	a,(#RAM_LEVEL_SOLIDITY)
+	ld	a,($.LEVEL_SOLIDITY)
 	and	a
 	jr	z,._5
 	ld	hl,:_6923
@@ -307,17 +308,17 @@ PROC :doObjectCode_explosion {
 	ld	(ix+$17),a
 	bit	5,(iy+#vars.flags0)
 	jr	z,._1
-	ld	a,(#RAM_CURRENT_LEVEL)
+	ld	a,($.CURRENT_LEVEL)
 	cp	$12
 	jr	z,._1
 	ld	a,($D414)
 	rlca	
 	jr	c,._1
-	ld	a,($D2E8)
-	ld	de,($D2E6)
+	ld	a,($.D2E8)
+	ld	de,($.D2E6)
 	inc	de
 	ld	c,a
-	ld	hl,(#RAM_SONIC.Yspeed)
+	ld	hl,($.SONIC.Yspeed)
 	ld	a,l
 	cpl	
 	ld	l,a
@@ -325,15 +326,15 @@ PROC :doObjectCode_explosion {
 	cpl	
 	ld	h,a
 	
-	ld	a,(#RAM_SONIC.Ydirection)
+	ld	a,($.SONIC.Ydirection)
 	and	a
 	jp	m,._1
 	
 	cpl	
 	add	hl,de
 	adc	a,c
-	ld	(#RAM_SONIC.Yspeed),hl
-	ld	(#RAM_SONIC.Ydirection),a
+	ld	($.SONIC.Yspeed),hl
+	ld	($.SONIC.Ydirection),a
 	
 ._1	xor	a			`set A to 0
 	ld	(ix+#object.Xspeed+0),a
@@ -377,12 +378,12 @@ PROC :doObjectCode_platform {
 	ld	(ix+#object.spriteLayout+0),:_6911.lo
 	ld	(ix+#object.spriteLayout+1),:_6911.hi
 	
-	ld	a,(#RAM_SONIC.Ydirection)
+	ld	a,($.SONIC.Ydirection)
 	and	a
 	jp	m,._2
 	
 	ld	hl,$0806
-	ld	(#RAM_TEMP6),hl
+	ld	($.TEMP6),hl
 	call	:_LABEL_3956_11
 	jr	c,._2
 	
@@ -438,12 +439,12 @@ PROC :doObjectCode_platform_weight {
 ._1	ld	(ix+#object.width),$1a		`this can't mean `_101a`?
 	ld	(ix+#object.height),$10
 	
-	ld	a,(#RAM_SONIC.Ydirection)
+	ld	a,($.SONIC.Ydirection)
 	and	a
 	jp	m,._2
 	
 	ld	hl,$0806
-	ld	(#RAM_TEMP6),hl
+	ld	($.TEMP6),hl
 	call	:_LABEL_3956_11
 	jr	c,._2
 	ld	(ix+$16),$01
@@ -452,13 +453,13 @@ PROC :doObjectCode_platform_weight {
 	ld	d,(ix+#object.Yspeed+1)
 	call	:_LABEL_7CC1_12
 ._2	ld	hl,:_6911
-	ld	a,(#RAM_LEVEL_SOLIDITY)
+	ld	a,($.LEVEL_SOLIDITY)
 	and	a
 	jr	z,._3
 	ld	hl,:_6923
 ._3	ld	(ix+#object.spriteLayout+0),l
 	ld	(ix+#object.spriteLayout+1),h
-	ld	hl,(#RAM_CAMERA_Y)
+	ld	hl,($.CAMERA_Y)
 	ld	de,$00c0
 	add	hl,de
 	ld	e,(ix+#object.Y+0)
@@ -478,7 +479,7 @@ PROC :_6ac1 {
 	ld	(ix+#object.width),$02
 	ld	(ix+#object.height),$02
 	ld	hl,$0303
-	ld	(#RAM_TEMP6),hl
+	ld	($.TEMP6),hl
 	call	:_LABEL_3956_11
 	call	nc,:_35fd
 	ld	l,(ix+#object.Yspeed+0)
@@ -493,23 +494,23 @@ PROC :_6ac1 {
 	ld	(ix+#object.Ydirection),a
 	ld	l,(ix+#object.X+0)
 	ld	h,(ix+#object.X+1)
-	ld	(#RAM_TEMP1),hl
+	ld	($.TEMP1),hl
 	ld	l,(ix+#object.Y+0)
 	ld	h,(ix+#object.Y+1)
-	ld	(#RAM_TEMP3),hl
+	ld	($.TEMP3),hl
 	ld	hl,$0000
-	ld	(#RAM_TEMP4),hl
-	ld	(#RAM_TEMP6),hl
+	ld	($.TEMP4),hl
+	ld	($.TEMP6),hl
 	ld	(ix+#object.spriteLayout+0),l
 	ld	(ix+#object.spriteLayout+1),h
 	ld	hl,:_6b72
-	ld	a,(#RAM_CURRENT_LEVEL)
+	ld	a,($.CURRENT_LEVEL)
 	cp	$05
 	jr	z,._1
 	cp	$0b
 	jr	z,._1
 	ld	hl,:_6b70
-._1	ld	a,(#RAM_FRAMECOUNT)
+._1	ld	a,($.FRAMECOUNT)
 	and	$01
 	ld	e,a
 	ld	d,$00
@@ -522,7 +523,7 @@ PROC :_6ac1 {
 	ld	h,b
 	ld	de,$fff8
 	add	hl,de
-	ld	de,(#RAM_CAMERA_X)
+	ld	de,($.CAMERA_X)
 	and	a
 	sbc	hl,de
 	jr	c,._2
@@ -536,7 +537,7 @@ PROC :_6ac1 {
 	ld	h,b
 	ld	de,$0010
 	add	hl,de
-	ld	de,(#RAM_CAMERA_Y)
+	ld	de,($.CAMERA_Y)
 	and	a
 	sbc	hl,de
 	jr	c,._2
@@ -572,7 +573,7 @@ PROC :doObjectCode_badnick_buzzBomber {
 	ld	(ix+#object.Xspeed+0),a
 	ld	(ix+#object.Xspeed+1),a
 	ld	(ix+#object.Xdirection),a
-	ld	hl,(#RAM_CAMERA_X)
+	ld	hl,($.CAMERA_X)
 	ld	bc,$0100
 	add	hl,bc
 	sbc	hl,de
@@ -582,7 +583,7 @@ PROC :doObjectCode_badnick_buzzBomber {
 	ld	(ix+#object.height),$20
 	ld	l,(ix+#object.X+0)
 	ld	h,(ix+#object.X+1)
-	ld	de,(#RAM_SONIC.X)
+	ld	de,($.SONIC.X)
 	and	a
 	sbc	hl,de
 	jr	c,._2
@@ -598,7 +599,7 @@ PROC :doObjectCode_badnick_buzzBomber {
 	
 ._3	ld	hl,$6cd7
 	add	hl,de
-	ld	(#RAM_TEMP6),hl
+	ld	($.TEMP6),hl
 	ld	a,(hl)
 	and	a
 	jr	nz,._4
@@ -612,7 +613,7 @@ PROC :doObjectCode_badnick_buzzBomber {
 	ld	h,(ix+#object.X+1)
 	ld	de,$0030
 	add	hl,de
-	ld	de,(#RAM_CAMERA_X)
+	ld	de,($.CAMERA_X)
 	xor	a
 	sbc	hl,de
 	jr	nc,._5
@@ -687,7 +688,7 @@ PROC :doObjectCode_badnick_buzzBomber {
 	add	hl,de
 	ld	(ix+$11),l
 	ld	(ix+$12),h
-	ld	hl,(#RAM_TEMP6)
+	ld	hl,($.TEMP6)
 	ld	a,(hl)
 	add	a,a
 	ld	e,a
@@ -699,10 +700,10 @@ PROC :doObjectCode_badnick_buzzBomber {
 	ld	de,:_6cf9
 	call	:_7c41
 	ld	hl,$1000
-	ld	(#RAM_TEMP6),hl
+	ld	($.TEMP6),hl
 	call	:_LABEL_3956_11
 	ld	hl,$1004
-	ld	(#RAM_TEMP1),hl
+	ld	($.TEMP1),hl
 	call	nc,:_35e5
 	ret
 }
@@ -750,32 +751,32 @@ DATA $30, $34, $FF, $FF, $FF, $FF
 PROC :doObjectCode_platform_leftRight {
 	set	5,(ix+$18)
 	
-	ld	a,(#RAM_CURRENT_LEVEL)
+	ld	a,($.CURRENT_LEVEL)
 	cp	$07			`Jungle act 2?
 	jr	z,._1
 	
 	ld	hl,$0020
-	ld	($D267),hl
+	ld	($.D267),hl
 	
 	ld	hl,$0048
-	ld	($D269),hl
+	ld	($.D269),hl
 	
 	ld	hl,$0030
-	ld	($D26B),hl
+	ld	($.D26B),hl
 	
 	ld	hl,$0030
-	ld	($D26D),hl
+	ld	($.D26D),hl
 	
 ._1	ld	(ix+#object.width),$1a
 	ld	(ix+#object.height),$10
 	ld	c,$00
 	
-	ld	a,(#RAM_SONIC.Ydirection)
+	ld	a,($.SONIC.Ydirection)
 	and	a
 	jp	m,._2
 	
 	ld	hl,$0806
-	ld	(#RAM_TEMP6),hl
+	ld	($.TEMP6),hl
 	call	:_LABEL_3956_11
 	
 	ld	c,$00
@@ -817,12 +818,12 @@ PROC :doObjectCode_platform_leftRight {
 	and	a
 	jr	z,._5
 	
-	ld	hl,(#RAM_SONIC.X)
+	ld	hl,($.SONIC.X)
 	add	hl,de
-	ld	(#RAM_SONIC.X),hl
+	ld	($.SONIC.X),hl
 	
 ._5	ld	hl,:_6911
-	ld	a,(#RAM_LEVEL_SOLIDITY)
+	ld	a,($.LEVEL_SOLIDITY)
 	and	a
 	jr	z,._6
 	
@@ -847,7 +848,7 @@ PROC :doObjectCode_badnick_motobug {
 	ld	d,$00
 ._1	ld	hl,:_6e96
 	add	hl,de
-	ld	(#RAM_TEMP6),hl
+	ld	($.TEMP6),hl
 	ld	a,(hl)
 	and	a
 	jr	nz,._2
@@ -881,7 +882,7 @@ PROC :doObjectCode_badnick_motobug {
 	ld	(ix+#object.Yspeed+0),$00
 	ld	(ix+#object.Yspeed+1),$02
 	ld	(ix+#object.Ydirection),$00
-	ld	hl,(#RAM_TEMP6)
+	ld	hl,($.TEMP6)
 	ld	a,(hl)
 	add	a,a
 	ld	e,a
@@ -894,10 +895,10 @@ PROC :doObjectCode_badnick_motobug {
 	ld	de,:_6ecb
 	call	:_7c41
 	ld	hl,$0203
-	ld	(#RAM_TEMP6),hl
+	ld	($.TEMP6),hl
 	call	:_LABEL_3956_11
 	ld	hl,$0000
-	ld	(#RAM_TEMP1),hl
+	ld	($.TEMP1),hl
 	call	nc,:_35e5
 	ret
 }
@@ -947,7 +948,7 @@ PROC :doObjectCode_badnick_newtron {
 	jr	z,._1
 	and	a
 	jr	nz,._4
-._1	ld	a,(#RAM_FRAMECOUNT)
+._1	ld	a,($.FRAMECOUNT)
 	and	$01
 	jr	z,._2
 	ld	bc,$0000
@@ -1022,10 +1023,10 @@ PROC :doObjectCode_badnick_newtron {
 ._7	ld	(ix+#object.spriteLayout+0),c
 	ld	(ix+#object.spriteLayout+1),b
 	ld	hl,$0202
-	ld	(#RAM_TEMP6),hl
+	ld	($.TEMP6),hl
 	call	:_LABEL_3956_11
 	ld	hl,$0000
-	ld	(#RAM_TEMP1),hl
+	ld	($.TEMP1),hl
 	call	nc,:_35e5
 	ret	
 }
@@ -1101,7 +1102,7 @@ PROC :doObjectCode_boss_greenHill {
 	ld	l,(ix+$14)
 	ld	h,(ix+$15)
 	add	hl,de
-	ld	(#RAM_TEMP6),hl
+	ld	($.TEMP6),hl
 	ld	a,(hl)
 	and	a
 	jr	nz,._5
@@ -1121,7 +1122,7 @@ PROC :doObjectCode_boss_greenHill {
 	ld	h,(hl)
 	ld	l,a
 	jp	(hl)
-	ld	hl,(#RAM_LEVEL_LEFT)
+	ld	hl,($.LEVEL_LEFT)
 	ld	de,$0006
 	add	hl,de
 	ld	e,(ix+#object.X+0)
@@ -1145,7 +1146,7 @@ PROC :doObjectCode_boss_greenHill {
 	res	1,(ix+$11)
 	jp	._9
 	
-	ld	hl,(#RAM_LEVEL_LEFT)
+	ld	hl,($.LEVEL_LEFT)
 	ld	de,$00e0
 	add	hl,de
 	ld	e,(ix+#object.X+0)
@@ -1171,7 +1172,7 @@ PROC :doObjectCode_boss_greenHill {
 	ld	(ix+#object.Yspeed+0),$60
 	ld	(ix+#object.Yspeed+1),$00
 	ld	(ix+#object.Ydirection),$00
-	ld	hl,(#RAM_CAMERA_Y)
+	ld	hl,($.CAMERA_Y)
 	ld	de,$0074
 	add	hl,de
 	ld	e,(ix+#object.Y+0)
@@ -1194,7 +1195,7 @@ PROC :doObjectCode_boss_greenHill {
 	ld	(ix+#object.Yspeed+0),$60
 	ld	(ix+#object.Yspeed+1),$00
 	ld	(ix+#object.Ydirection),$00
-	ld	hl,(#RAM_CAMERA_Y)
+	ld	hl,($.CAMERA_Y)
 	ld	de,$0074
 	add	hl,de
 	ld	e,(ix+#object.Y+0)
@@ -1231,7 +1232,7 @@ PROC :doObjectCode_boss_greenHill {
 	ld	(ix+#object.Yspeed+0),$00
 	ld	(ix+#object.Yspeed+1),$ff
 	ld	(ix+#object.Ydirection),$ff
-	ld	hl,(#RAM_CAMERA_Y)
+	ld	hl,($.CAMERA_Y)
 	ld	de,$001a
 	add	hl,de
 	ld	e,(ix+#object.Y+0)
@@ -1244,7 +1245,7 @@ PROC :doObjectCode_boss_greenHill {
 	jp	c,._9
 	ld	l,(ix+#object.X+0)
 	ld	h,(ix+#object.X+1)
-	ld	de,(#RAM_LEVEL_LEFT)
+	ld	de,($.LEVEL_LEFT)
 	xor	a
 	sbc	hl,de
 	ld	c,a
@@ -1264,7 +1265,7 @@ PROC :doObjectCode_boss_greenHill {
 ._9	ld	(ix+#object.Xspeed+0),l
 	ld	(ix+#object.Xspeed+1),h
 	ld	(ix+#object.Xdirection),c
-	ld	hl,(#RAM_TEMP6)
+	ld	hl,($.TEMP6)
 	ld	e,(hl)
 	ld	d,$00
 	ld	hl,:_72c8
@@ -1282,7 +1283,7 @@ PROC :doObjectCode_boss_greenHill {
 	ld	(ix+#object.spriteLayout+0),l
 	ld	(ix+#object.spriteLayout+1),h
 	ld	hl,$0012
-	ld	($D216),hl
+	ld	($.D216),hl
 	call	:_77be
 	call	:_79fa
 	inc	(ix+$13)
@@ -1340,7 +1341,7 @@ PROC :doObjectCode_boss_capsule {
 	bit	1,(ix+$18)
 	jr	z,._2
 	ld	hl,:_757c
-._2	ld	a,(#RAM_FRAMECOUNT)
+._2	ld	a,($.FRAMECOUNT)
 	rrca	
 	jr	nc,._3
 	ld	de,$000c
@@ -1353,46 +1354,46 @@ PROC :doObjectCode_boss_capsule {
 	ld	l,(ix+#object.X+0)
 	ld	h,(ix+#object.X+1)
 	add	hl,bc
-	ld	($D2AB),hl
+	ld	($.D2AB),hl
 	ex	de,hl
 	ld	c,(hl)
 	inc	hl
 	ld	b,(hl)
 	inc	hl
-	ld	($D2AF),hl
+	ld	($.D2AF),hl
 	ld	l,(ix+#object.Y+0)
 	ld	h,(ix+#object.Y+1)
 	add	hl,bc
-	ld	($D2AD),hl
+	ld	($.D2AD),hl
 	ld	hl,:_752e
-	ld	a,(#RAM_FRAMECOUNT)
+	ld	a,($.FRAMECOUNT)
 	and	$10
 	jr	z,._4
 	ld	hl,:_7552
 ._4	ld	(ix+#object.spriteLayout+0),l
 	ld	(ix+#object.spriteLayout+1),h
-	ld	hl,(#RAM_CAMERA_X)
-	ld	(#RAM_LEVEL_LEFT),hl
+	ld	hl,($.CAMERA_X)
+	ld	($.LEVEL_LEFT),hl
 	
 	`something to do with scrolling
 	ld	l,(ix+#object.X+0)
 	ld	h,(ix+#object.X+1)
 	ld	de,$FF90
 	add	hl,de
-	ld	(#RAM_LEVEL_RIGHT),hl
+	ld	($.LEVEL_RIGHT),hl
 	
 	ld	hl,$0002
-	ld	(#RAM_TEMP6),hl
+	ld	($.TEMP6),hl
 	call	:_LABEL_3956_11
 	jp	c,._8
 	
-	ld	a,(#RAM_SONIC.Ydirection)
+	ld	a,($.SONIC.Ydirection)
 	and	a
 	jp	m,._8
 	
 	ld	e,(ix+#object.Y+0)
 	ld	d,(ix+#object.Y+1)
-	ld	hl,(#RAM_SONIC.Y+0)
+	ld	hl,($.SONIC.Y+0)
 	and	a
 	sbc	hl,de
 	jr	c,._6
@@ -1401,7 +1402,7 @@ PROC :doObjectCode_boss_capsule {
 	ld	de,$0010
 	add	hl,de
 	ld	de,$ffea
-	ld	bc,(#RAM_SONIC.X)
+	ld	bc,($.SONIC.X)
 	and	a
 	sbc	hl,bc
 	jr	nc,._5
@@ -1409,10 +1410,10 @@ PROC :doObjectCode_boss_capsule {
 ._5	ld	l,(ix+#object.X+0)
 	ld	h,(ix+#object.X+1)
 	add	hl,de
-	ld	(#RAM_SONIC.X),hl
+	ld	($.SONIC.X),hl
 	jp	._7
 	
-._6	ld	hl,(#RAM_SONIC.X)
+._6	ld	hl,($.SONIC.X)
 	ld	bc,$000c
 	add	hl,bc
 	ld	c,l
@@ -1440,11 +1441,11 @@ PROC :doObjectCode_boss_capsule {
 	ld	de,$ffe0
 	add	hl,de
 	add	hl,bc
-	ld	(#RAM_SONIC.Y+0),hl
-	ld	a,($D2E8)
-	ld	hl,($D2E6)
-	ld	(#RAM_SONIC.Yspeed),hl
-	ld	(#RAM_SONIC.Ydirection),a
+	ld	($.SONIC.Y+0),hl
+	ld	a,($.D2E8)
+	ld	hl,($.D2E6)
+	ld	($.SONIC.Yspeed),hl
+	ld	($.SONIC.Ydirection),a
 	ld	hl,$D414
 	set	7,(hl)
 	ld	a,c
@@ -1458,8 +1459,8 @@ PROC :doObjectCode_boss_capsule {
 ._7	xor	a
 	ld	l,a
 	ld	h,a
-	ld	(#RAM_SONIC.Xspeed),hl
-	ld	(#RAM_SONIC.Xdirection),a
+	ld	($.SONIC.Xspeed),hl
+	ld	($.SONIC.Xdirection),a
 ._8	bit	1,(iy+#vars.flags6)
 	ret	z
 ._9	ld	a,(ix+$12)
@@ -1477,7 +1478,7 @@ PROC :doObjectCode_boss_capsule {
 ._10	bit	1,(ix+$18)
 	jr	nz,._11
 	ld	a,$a0
-	ld	($D289),a
+	ld	($.D289),a
 	
 	ld	a,#index_music_actComplete
 	rst	:rst_playMusic
@@ -1487,7 +1488,7 @@ PROC :doObjectCode_boss_capsule {
 	ld	(ix+#object.spriteLayout+0),a
 	ld	(ix+#object.spriteLayout+1),a
 	res	5,(iy+#vars.flags0)
-	ld	a,(#RAM_FRAMECOUNT)
+	ld	a,($.FRAMECOUNT)
 	and	$0f
 	ret	nz
 	call	:_LABEL_625_57
@@ -1506,7 +1507,7 @@ PROC :doObjectCode_boss_capsule {
 `Called only by `doObjectCode_boss_capsule`
 
 PROC :_74b6 {
-	ld	($D216),a
+	ld	($.D216),a
 	call	:_7c7b
 	ret	c
 	ld	e,(ix+#object.X+0)
@@ -1516,7 +1517,7 @@ PROC :_74b6 {
 	push	ix
 	push	hl
 	pop	ix
-	ld	a,($D216)
+	ld	a,($.D216)
 	ld	(ix+#object.type),a
 	xor	a			`set A to 0
 	ld	(ix+$16),a
@@ -1582,7 +1583,7 @@ PROC :doObjectCode_boss_freeBird {
 	ld	(ix+#object.Yspeed+1),$fd
 	ld	(ix+#object.Ydirection),$ff
 ._1	ld	de,$0012
-	ld	a,(#RAM_LEVEL_SOLIDITY)
+	ld	a,($.LEVEL_SOLIDITY)
 	cp	$03
 	jr	nz,._2
 	ld	de,$0038
@@ -1602,7 +1603,7 @@ PROC :doObjectCode_boss_freeBird {
 	ld	(ix+#object.Yspeed+1),h
 	ld	(ix+#object.Ydirection),c
 	ld	hl,$fe00
-	ld	a,(#RAM_LEVEL_SOLIDITY)
+	ld	a,($.LEVEL_SOLIDITY)
 	cp	$03
 	jr	nz,._4
 	ld	hl,$fe80
@@ -1610,7 +1611,7 @@ PROC :doObjectCode_boss_freeBird {
 	ld	(ix+#object.Xspeed+1),h
 	ld	(ix+#object.Xdirection),$ff
 	ld	bc,:_7629
-	ld	a,(#RAM_LEVEL_SOLIDITY)
+	ld	a,($.LEVEL_SOLIDITY)
 	and	a
 	jr	z,._5
 	ld	bc,:_762e
@@ -1623,7 +1624,7 @@ PROC :doObjectCode_boss_freeBird {
 	ld	h,(ix+#object.X+1)
 	ld	de,$0010
 	add	hl,de
-	ld	de,(#RAM_CAMERA_X)
+	ld	de,($.CAMERA_X)
 	and	a
 	sbc	hl,de
 	ret	nc
@@ -1671,7 +1672,7 @@ PROC :doObjectCode_boss_freeRabbit {
 	ld	(ix+#object.width),$0c
 	ld	(ix+#object.height),$20
 	ld	hl,:_7760
-	ld	a,(#RAM_LEVEL_SOLIDITY)
+	ld	a,($.LEVEL_SOLIDITY)
 	and	a
 	jr	z,._1
 	ld	hl,:_777b
@@ -1693,7 +1694,7 @@ PROC :doObjectCode_boss_freeRabbit {
 	ld	(ix+#object.Xspeed+1),a
 	ld	(ix+#object.Xdirection),a
 	ld	hl,:_7752
-	ld	a,(#RAM_LEVEL_SOLIDITY)
+	ld	a,($.LEVEL_SOLIDITY)
 	ld	c,a
 	and	a
 	jr	z,._2
@@ -1782,11 +1783,11 @@ PROC :_77be {
 	ld	a,($D2EC)
 	cp	$08
 	jr	nc,._4
-	ld	a,($D2B1)
+	ld	a,($.D2B1)
 	and	a
 	jp	nz,._2
 	ld	hl,$0c08
-	ld	(#RAM_TEMP6),hl
+	ld	($.TEMP6),hl
 	call	:_LABEL_3956_11
 	ret	c
 	bit	0,(iy+#vars.scrollRingFlags)
@@ -1797,37 +1798,37 @@ PROC :_77be {
 	and	$02
 	jp	z,:_35fd
 ._1	ld	de,$0001
-	ld	hl,(#RAM_SONIC.Yspeed)
+	ld	hl,($.SONIC.Yspeed)
 	ld	a,l
 	cpl	
 	ld	l,a
 	ld	a,h
 	cpl	
 	ld	h,a
-	ld	a,(#RAM_SONIC.Ydirection)
+	ld	a,($.SONIC.Ydirection)
 	cpl	
 	add	hl,de
 	adc	a,$00
-	ld	(#RAM_SONIC.Yspeed),hl
-	ld	(#RAM_SONIC.Ydirection),a
+	ld	($.SONIC.Yspeed),hl
+	ld	($.SONIC.Ydirection),a
 	
 	xor	a			`set A to 0
 	ld	l,a
 	ld	h,a
-	ld	(#RAM_SONIC.Xspeed),hl
-	ld	(#RAM_SONIC.Xdirection),a
+	ld	($.SONIC.Xspeed),hl
+	ld	($.SONIC.Xdirection),a
 	ld	a,$18
-	ld	($D2B1),a
+	ld	($.D2B1),a
 	ld	a,$8f
-	ld	($D2B2),a
+	ld	($.D2B1+1),a
 	ld	a,$3f
-	ld	($D2B3),a
+	ld	($.D2B3),a
 	ld	a,$01
 	rst	:rst_playSFX
 	ld	a,($D2EC)
 	inc	a
 	ld	($D2EC),a
-._2	ld	hl,($D216)
+._2	ld	hl,($.D216)
 	ld	de,:_7922
 	add	hl,de
 	bit	1,(ix+$18)
@@ -1850,7 +1851,7 @@ PROC :_77be {
 	ld	(ix+#object.Yspeed+1),a
 	ld	(ix+#object.Ydirection),a
 	ld	de,$0024
-	ld	hl,($D216)
+	ld	hl,($.D216)
 	bit	1,(ix+$18)
 	jr	z,._5
 	ld	de,$0036
@@ -1894,7 +1895,7 @@ PROC :_77be {
 ._8	jr	nz,._9
 	ld	(hl),$5b
 	
-	ld	a,(#RAM_LEVEL_MUSIC)
+	ld	a,($.LEVEL_MUSIC)
 	rst	:rst_playMusic
 	
 	ld	a,(iy+#vars.spriteUpdateCount)
@@ -1911,7 +1912,7 @@ PROC :_77be {
 	ld	(ix+#object.spriteLayout+1),:_7922.hi
 	ld	l,(ix+#object.X+0)
 	ld	h,(ix+#object.X+1)
-	ld	de,(#RAM_CAMERA_X)
+	ld	de,($.CAMERA_X)
 	inc	d
 	and	a
 	sbc	hl,de
@@ -1920,15 +1921,15 @@ PROC :_77be {
 	`unlocks the screen?
 	ld	(ix+#object.type),$FF	`remove object?
 	ld	hl,$2000		`8192 -- max width of a level in pixels
-	ld	(#RAM_LEVEL_RIGHT),hl
+	ld	($.LEVEL_RIGHT),hl
 	ld	hl,$0000
-	ld	(#RAM_CAMERA_X_GOTO),hl
+	ld	($.CAMERA_X_GOTO),hl
 	
 	set	5,(iy+#vars.flags0)
 	set	0,(iy+#vars.flags2)
 	res	1,(iy+#vars.flags2)
 	
-	ld	a,(#RAM_CURRENT_LEVEL)
+	ld	a,($.CURRENT_LEVEL)
 	cp	$0b
 	jr	nz,._10
 	
@@ -1998,16 +1999,16 @@ PROC :_79fa {
 	ld	a,(ix+#object.Xspeed+0)
 	or	(ix+#object.Xspeed+1)
 	ret	z
-	ld	a,(#RAM_FRAMECOUNT)
+	ld	a,($.FRAMECOUNT)
 	bit	0,a
 	ret	nz
 	and	$02
 	ld	l,(ix+#object.X+0)
 	ld	h,(ix+#object.X+1)
-	ld	(#RAM_TEMP1),hl
+	ld	($.TEMP1),hl
 	ld	l,(ix+#object.Y+0)
 	ld	h,(ix+#object.Y+1)
-	ld	(#RAM_TEMP3),hl
+	ld	($.TEMP3),hl
 	ld	hl,$fff8
 	ld	de,$0010
 	ld	c,$04
@@ -2015,8 +2016,8 @@ PROC :_79fa {
 	jr	z,._1
 	ld	hl,$0028
 	ld	c,$00
-._1	ld	(#RAM_TEMP4),hl
-	ld	(#RAM_TEMP6),de
+._1	ld	($.TEMP4),hl
+	ld	($.TEMP6),de
 	add	a,c
 	call	:_3581
 	ret
@@ -2032,12 +2033,12 @@ PROC :_7a3a {
 	and	$1f
 	ld	l,a
 	ld	h,$00
-	ld	(#RAM_TEMP1),hl
+	ld	($.TEMP1),hl
 	call	:_LABEL_625_57
 	and	$1f
 	ld	l,a
 	ld	h,$00
-	ld	(#RAM_TEMP3),hl
+	ld	($.TEMP3),hl
 	pop	hl
 	ld	e,(ix+#object.X+0)
 	ld	d,(ix+#object.X+1)
@@ -2049,12 +2050,12 @@ PROC :_7a3a {
 	xor	a			`set A to 0
 	ld	(ix+#object.type),$0A	`explosion
 	ld	(ix+$01),a
-	ld	hl,(#RAM_TEMP1)
+	ld	hl,($.TEMP1)
 	add	hl,de
 	ld	(ix+#object.X+0),l
 	ld	(ix+#object.X+1),h
 	ld	(ix+$04),a
-	ld	hl,(#RAM_TEMP3)
+	ld	hl,($.TEMP3)
 	add	hl,bc
 	ld	(ix+#object.Y+0),l
 	ld	(ix+#object.Y+1),h
@@ -2081,7 +2082,7 @@ PROC :doObjectCode_meta_trip {
 	ld	(ix+#object.width),$40
 	ld	(ix+#object.height),$40
 	ld	hl,$0000
-	ld	(#RAM_TEMP6),hl
+	ld	($.TEMP6),hl
 	call	:_LABEL_3956_11
 	ret	c
 	bit	6,(iy+#vars.flags6)
@@ -2091,12 +2092,12 @@ PROC :doObjectCode_meta_trip {
 	ret	z
 	ld	hl,$fffb
 	xor	a
-	ld	(#RAM_SONIC.Yspeed+0),a
-	ld	(#RAM_SONIC.Yspeed+1),hl
+	ld	($.SONIC.Yspeed+0),a
+	ld	($.SONIC.Yspeed+1),hl
 	ld	hl,$0003
 	xor	a
-	ld	(#RAM_SONIC.Xspeed+0),a
-	ld	(#RAM_SONIC.Xspeed+1),hl
+	ld	($.SONIC.Xspeed+0),a
+	ld	($.SONIC.Xspeed+1),hl
 	ld	hl,$D414
 	res	1,(hl)
 	set	6,(iy+#vars.flags6)
@@ -2119,16 +2120,16 @@ PROC :doObjectCode_flower {
 ._1	ld	bc,$0000
 	ld	l,(ix+#object.X+0)
 	ld	h,(ix+#object.X+1)
-	ld	($D2AB),hl
+	ld	($.D2AB),hl
 	ld	l,(ix+#object.Y+0)
 	ld	h,(ix+#object.Y+1)
-	ld	a,(#RAM_FRAMECOUNT)
+	ld	a,($.FRAMECOUNT)
 	rrca	
 	jr	nc,._2
 	ld	de,$0010
 	add	hl,de
 	inc	bc
-._2	ld	($D2AD),hl
+._2	ld	($.D2AD),hl
 	ld	a,(ix+$12)
 	add	a,a
 	add	a,a
@@ -2146,11 +2147,11 @@ PROC :doObjectCode_flower {
 	ld	d,$00
 	ld	hl,:_7b5d
 	add	hl,de
-	ld	($D2AF),hl
+	ld	($.D2AF),hl
 	pop	hl
 	inc	hl
 	inc	hl
-	ld	a,(#RAM_FRAMECOUNT)
+	ld	a,($.FRAMECOUNT)
 	rrca	
 	ret	c
 	dec	(ix+$11)
@@ -2178,7 +2179,7 @@ DATA $00, $01, $08, $00, $02, $03, $78, $00, $01, $04, $08, $00, $02, $03, $78, 
 PROC :_7b95 {
 	set	5,(ix+$18)
 	set	0,(iy+#vars.flags9)
-	ld	a,(#RAM_FRAMECOUNT)
+	ld	a,($.FRAMECOUNT)
 	and	$01
 	jp	z,._1
 	ld	a,(ix+$12)
@@ -2212,7 +2213,7 @@ PROC :_7b95 {
 	ld	(ix+#object.Ydirection),a
 	ld	e,(ix+#object.Y+0)
 	ld	d,(ix+#object.Y+1)
-	ld	hl,(#RAM_CAMERA_Y)
+	ld	hl,($.CAMERA_Y)
 	inc	h
 	xor	a
 	sbc	hl,de
@@ -2318,29 +2319,29 @@ PROC :_7c7b {
 PROC :_7c8c {
 `HL : ?
 `DE : ?
-	ld	(#RAM_CAMERA_X_GOTO),hl
-	ld	(#RAM_CAMERA_Y_GOTO),de
+	ld	($.CAMERA_X_GOTO),hl
+	ld	($.CAMERA_Y_GOTO),de
 	
-	ld	hl,(#RAM_CAMERA_X)
-	ld	(#RAM_LEVEL_LEFT),hl
-	ld	(#RAM_LEVEL_RIGHT),hl
+	ld	hl,($.CAMERA_X)
+	ld	($.LEVEL_LEFT),hl
+	ld	($.LEVEL_RIGHT),hl
 	
-	ld	hl,(#RAM_CAMERA_Y)
-	ld	(#RAM_LEVEL_TOP),hl
-	ld	(#RAM_LEVEL_BOTTOM),hl
+	ld	hl,($.CAMERA_Y)
+	ld	($.LEVEL_TOP),hl
+	ld	($.LEVEL_BOTTOM),hl
 	ret
 }
 
 `____________________________________________________________________________[$7CA6]___
 
 PROC :_7ca6 {
-	ld	hl,(#RAM_CAMERA_X_GOTO)
-	ld	de,(#RAM_CAMERA_X)
+	ld	hl,($.CAMERA_X_GOTO)
+	ld	de,($.CAMERA_X)
 	and	a
 	sbc	hl,de
 	ret	nz
-	ld	hl,(#RAM_CAMERA_Y_GOTO)
-	ld	de,(#RAM_CAMERA_Y)
+	ld	hl,($.CAMERA_Y_GOTO)
+	ld	de,($.CAMERA_Y)
 	and	a
 	sbc	hl,de
 	ret	nz
@@ -2373,11 +2374,11 @@ PROC :_LABEL_7CC1_12 {
 	xor	a
 	ld	b, a
 	sbc	hl, bc
-	ld	(#RAM_SONIC.Y+0), hl
-	ld	a, ($D2E8)
-	ld	hl, ($D2E6)
-	ld	(#RAM_SONIC.Yspeed), hl
-	ld	(#RAM_SONIC.Ydirection), a
+	ld	($.SONIC.Y+0), hl
+	ld	a, ($.D2E8)
+	ld	hl, ($.D2E6)
+	ld	($.SONIC.Yspeed), hl
+	ld	($.SONIC.Ydirection), a
 	
 	ld	hl, $D414
 	set	7, (hl)
@@ -2469,10 +2470,10 @@ PROC :doObjectCode_badnick_chopper {
 	ld	(ix+#object.spriteLayout+0),:_7df7.lo
 	ld	(ix+#object.spriteLayout+1),:_7df7.hi
 ._6	ld	hl,$0204
-	ld	(#RAM_TEMP6),hl
+	ld	($.TEMP6),hl
 	call	:_LABEL_3956_11
 	ld	hl,$0000
-	ld	(#RAM_TEMP1),hl
+	ld	($.TEMP1),hl
 	call	nc,:_35e5
 	ret
 }
@@ -2496,9 +2497,9 @@ DATA $FF, $FF, $FF, $FF, $FF
 PROC :doObjectCode_platform_fallVert {
 	set	5,(ix+$18)
 	ld	hl,$0030
-	ld	($D267),hl
+	ld	($.D267),hl
 	ld	hl,$0058
-	ld	($D269),hl
+	ld	($.D269),hl
 	ld	(ix+#object.width),$0c
 	ld	(ix+#object.height),$10
 	ld	(ix+#object.spriteLayout+0),:_7e89.lo
@@ -2517,19 +2518,19 @@ PROC :doObjectCode_platform_fallVert {
 	ld	(ix+#object.Yspeed+1), a
 	ld	(ix+#object.Ydirection), a
 	
-	ld	a, (#RAM_SONIC.Ydirection)
+	ld	a, ($.SONIC.Ydirection)
 	and	a
 	jp	m, ._1
 	
 	ld	hl, $0806
-	ld	(#RAM_TEMP6), hl
+	ld	($.TEMP6), hl
 	call	:_LABEL_3956_11
 	jr	c, ._1
 	ld	bc, $0010
 	ld	e, (ix+#object.Yspeed+0)
 	ld	d, (ix+#object.Yspeed+1)
 	call	:_LABEL_7CC1_12
-._1	ld	a, (#RAM_FRAMECOUNT)
+._1	ld	a, ($.FRAMECOUNT)
 	and	$03
 	ret	nz
 	inc	(ix+$11)
@@ -2558,9 +2559,9 @@ DATA $28, $2E, $FF, $FF, $FF, $FF
 PROC :doObjectCode_platform_fallHoriz {
 	set	5,(ix+$18)
 	ld	hl,$0030
-	ld	($D267),hl
+	ld	($.D267),hl
 	ld	hl,$0058
-	ld	($D269),hl
+	ld	($.D269),hl
 	ld	(ix+#object.width),$1a
 	ld	(ix+#object.height),$10
 	ld	(ix+#object.spriteLayout+0),:_7ed9.lo
@@ -2609,19 +2610,19 @@ PROC :doObjectCode_platform_roll {
 	ld	(ix+#object.Yspeed+1),$ff
 	ld	(ix+#object.Ydirection),$ff
 	
-._2	ld	a,(#RAM_SONIC.Ydirection)
+._2	ld	a,($.SONIC.Ydirection)
 	and	a
 	jp	m,:_8003
 	
 	ld	hl,$0806
-	ld	(#RAM_TEMP6),hl
+	ld	($.TEMP6),hl
 	call	:_LABEL_3956_11
 	jp	c,:_8003
 	ld	bc,$0010
 	ld	e,(ix+#object.Yspeed+0)
 	ld	d,(ix+#object.Yspeed+1)
 	call	:_LABEL_7CC1_12
-	ld	hl,(#RAM_SONIC.Xspeed)
+	ld	hl,($.SONIC.Xspeed)
 	ld	a,l
 	or	h
 	jr	z,._4
@@ -2633,7 +2634,7 @@ PROC :doObjectCode_platform_roll {
 	call	:getFloorLayoutRAMPositionForObject
 	ld	e,(hl)
 	ld	d,$00
-	ld	a,(#RAM_LEVEL_SOLIDITY)
+	ld	a,($.LEVEL_SOLIDITY)
 	add	a,a
 	ld	c,a
 	ld	b,d
@@ -2649,8 +2650,8 @@ PROC :doObjectCode_platform_roll {
 	ld	a,d
 	ld	e,d
 	jr	nz,._5
-._4	ld	a,(#RAM_SONIC.Xspeed+0)
-	ld	de,(#RAM_SONIC.Xspeed+1)
+._4	ld	a,($.SONIC.Xspeed+0)
+	ld	de,($.SONIC.Xspeed+1)
 	sra	d
 	rr	e
 	rra	
@@ -2664,8 +2665,8 @@ PROC :doObjectCode_platform_roll {
 	ld	($D3FD),a
 	ld	de,$fffc
 	add	hl,de
-	ld	(#RAM_SONIC.X),hl
-	ld	de,(#RAM_SONIC.Xspeed)
+	ld	($.SONIC.X),hl
+	ld	de,($.SONIC.Xspeed)
 	bit	7,d
 	jr	z,._6
 	ld	a,e
@@ -2755,7 +2756,7 @@ PROC :doObjectCode_boss_jungle {
 	ld	(ix+#object.height),$1c
 	bit	0,(ix+$18)
 	jr	nz,._1
-	ld	hl,(#RAM_SONIC.Y+0)
+	ld	hl,($.SONIC.Y+0)
 	ld	de,$00e0
 	and	a
 	sbc	hl,de
@@ -2781,17 +2782,17 @@ PROC :doObjectCode_boss_jungle {
 	
 	`there's a routine at `_7c8c` for setting the scroll positions that should
 	 `have been used here?
-	ld	hl,(#RAM_CAMERA_X)
-	ld	(#RAM_LEVEL_LEFT),hl
-	ld	(#RAM_LEVEL_RIGHT),hl
+	ld	hl,($.CAMERA_X)
+	ld	($.LEVEL_LEFT),hl
+	ld	($.LEVEL_RIGHT),hl
 	
-	ld	hl,(#RAM_CAMERA_Y)
-	ld	(#RAM_LEVEL_TOP),hl
-	ld	(#RAM_LEVEL_BOTTOM),hl
+	ld	hl,($.CAMERA_Y)
+	ld	($.LEVEL_TOP),hl
+	ld	($.LEVEL_BOTTOM),hl
 	ld	hl,$01f0
-	ld	(#RAM_CAMERA_X_GOTO),hl
+	ld	($.CAMERA_X_GOTO),hl
 	ld	hl,$0048
-	ld	(#RAM_CAMERA_Y_GOTO),hl
+	ld	($.CAMERA_Y_GOTO),hl
 	
 	set	0,(ix+$18)
 	
@@ -2909,7 +2910,7 @@ PROC :doObjectCode_boss_jungle {
 	ld	(ix+$12),a
 	pop	ix
 ._8	ld	hl,$005a
-	ld	($D216),hl
+	ld	($.D216),hl
 	call	:_77be
 	call	:_79fa
 	ret
@@ -2932,7 +2933,7 @@ PROC :_8218 {
 	ld	(ix+#object.width),$0c
 	ld	(ix+#object.height),$10
 	ld	hl,$0202
-	ld	(#RAM_TEMP6),hl
+	ld	($.TEMP6),hl
 	call	:_LABEL_3956_11
 	call	nc,:_35fd
 	ld	l,(ix+#object.Xspeed+0)
@@ -2964,7 +2965,7 @@ PROC :_8218 {
 ._2	ld	(ix+#object.Yspeed+0),l
 	ld	(ix+#object.Yspeed+1),h
 	ld	(ix+#object.Ydirection),c
-	ld	a,(#RAM_FRAMECOUNT)
+	ld	a,($.FRAMECOUNT)
 	and	$01
 	add	a,(ix+$11)
 	ld	(ix+$11),a
@@ -2977,7 +2978,7 @@ PROC :_8218 {
 	ret
 	
 ._3	jr	nz,._4
-	ld	a,(#RAM_FRAMECOUNT)
+	ld	a,($.FRAMECOUNT)
 	and	$01
 	ret	z
 	ld	(ix+$16),$00
@@ -3019,16 +3020,16 @@ PROC :doObjectCode_badnick_yadrin {
 	ld	(ix+#object.width),$10
 	ld	(ix+#object.height),$0f
 	ld	hl,$0408
-	ld	(#RAM_TEMP6),hl
+	ld	($.TEMP6),hl
 	call	:_LABEL_3956_11
 	call	nc,:_35fd
 	ld	(ix+#object.width),$14
 	ld	(ix+#object.height),$20
 	ld	hl,$1006
-	ld	(#RAM_TEMP6),hl
+	ld	($.TEMP6),hl
 	call	:_LABEL_3956_11
 	ld	hl,$0404
-	ld	(#RAM_TEMP1),hl
+	ld	($.TEMP1),hl
 	call	nc,:_35e5
 	ld	l,(ix+#object.Yspeed+0)
 	ld	h,(ix+#object.Yspeed+1)
@@ -3056,7 +3057,7 @@ PROC :doObjectCode_badnick_yadrin {
 	ld	de,:_837e
 	ld	bc,:_8374
 	call	:_7c41
-._2	ld	a,(#RAM_FRAMECOUNT)
+._2	ld	a,($.FRAMECOUNT)
 	and	$07
 	ret	nz
 	inc	(ix+$11)
@@ -3104,7 +3105,7 @@ PROC :doObjectCode_platform_bridge {
 	ld	(ix+#object.spriteLayout+1),a
 	ld	l,a
 	ld	h,a
-	ld	(#RAM_TEMP1),hl
+	ld	($.TEMP1),hl
 	bit	1,(ix+$18)
 	jr	nz,._1
 	call	:_LABEL_625_57
@@ -3115,19 +3116,19 @@ PROC :doObjectCode_platform_bridge {
 ._1	dec	(ix+$11)
 	jp	nz,._
 	ld	(ix+$11),$01
-	ld	a,($D2AC)
+	ld	a,($.D2AB+1)
 	and	$80
 	jp	z,._
 	ld	l,(ix+#object.X+0)
 	ld	h,(ix+#object.X+1)
-	ld	($D2AB),hl
+	ld	($.D2AB),hl
 	ld	l,(ix+#object.Y+0)
 	ld	h,(ix+#object.Y+1)
 	ld	de,$000e
 	add	hl,de
-	ld	($D2AD),hl
+	ld	($.D2AD),hl
 	ld	hl,:_848e
-	ld	($D2AF),hl
+	ld	($.D2AF),hl
 	set	0,(ix+$18)
 	ld	a,$20
 	rst	:rst_playSFX
@@ -3147,8 +3148,8 @@ PROC :doObjectCode_platform_bridge {
 ._3	ld	(ix+#object.Yspeed+0),l
 	ld	(ix+#object.Yspeed+1),h
 	ld	(ix+#object.Ydirection),c
-	ld	(#RAM_TEMP1),hl
-	ld	de,(#RAM_CAMERA_Y)
+	ld	($.TEMP1),hl
+	ld	de,($.CAMERA_Y)
 	inc	d
 	ld	l,(ix+#object.Y+0)
 	ld	h,(ix+#object.Y+1)
@@ -3159,15 +3160,15 @@ PROC :doObjectCode_platform_bridge {
 	ret
 	
 ._4	ld	hl,$0402
-	ld	(#RAM_TEMP6),hl
+	ld	($.TEMP6),hl
 	call	:_LABEL_3956_11
 	
 	ret	c
-	ld	a,(#RAM_SONIC.Ydirection)
+	ld	a,($.SONIC.Ydirection)
 	and	a
 	ret	m
 	
-	ld	de,(#RAM_TEMP1)
+	ld	de,($.TEMP1)
 	ld	bc,$0010
 	call	:_LABEL_7CC1_12
 	ret
@@ -3268,7 +3269,7 @@ PROC :doObjectCode_boss_bridge {
 	ld	a,($D2EC)
 	cp	$08
 	jr	nc,._6
-	ld	hl,(#RAM_SONIC.X)
+	ld	hl,($.SONIC.X)
 	ld	e,(ix+#object.X+0)
 	ld	d,(ix+#object.X+1)
 	and	a
@@ -3288,26 +3289,26 @@ PROC :doObjectCode_boss_bridge {
 	ld	l,(ix+#object.X+0)
 	ld	h,(ix+#object.X+1)
 	add	hl,de
-	ld	(#RAM_TEMP1),hl
+	ld	($.TEMP1),hl
 	ld	l,(ix+#object.Y+0)
 	ld	h,(ix+#object.Y+1)
 	add	hl,bc
-	ld	(#RAM_TEMP3),hl
+	ld	($.TEMP3),hl
 	pop	hl
 	ld	b,$03
 	
 .loop	push	bc
 	ld	a,(hl)
-	ld	(#RAM_TEMP4),a
+	ld	($.TEMP4),a
 	inc	hl
 	ld	a,(hl)
-	ld	(#RAM_TEMP5),a
+	ld	($.TEMP5),a
 	inc	hl
 	ld	a,(hl)
-	ld	(#RAM_TEMP6),a
+	ld	($.TEMP6),a
 	inc	hl
 	ld	a,(hl)
-	ld	(#RAM_TEMP7),a
+	ld	($.TEMP7),a
 	inc	hl
 	push	hl
 	ld	c,$10
@@ -3332,7 +3333,7 @@ PROC :doObjectCode_boss_bridge {
 	ld	(ix+$11),a
 	
 ._6	ld	hl,$00a2
-	ld	($D216),hl
+	ld	($.D216),hl
 	call	:_77be
 	ret
 }
@@ -3349,11 +3350,11 @@ PROC :_85d1 {
 	pop	ix
 	xor	a			`set A to 0
 	ld	(ix+#object.type),$0D	`unknown object
-	ld	hl,(#RAM_TEMP1)
+	ld	hl,($.TEMP1)
 	ld	(ix+$01),a
 	ld	(ix+#object.X+0),l
 	ld	(ix+#object.X+1),h
-	ld	hl,(#RAM_TEMP3)
+	ld	hl,($.TEMP3)
 	ld	(ix+$04),a
 	ld	(ix+#object.Y+0),l
 	ld	(ix+#object.Y+1),h
@@ -3363,7 +3364,7 @@ PROC :_85d1 {
 	ld	(ix+$15),a
 	ld	(ix+$16),a
 	ld	(ix+$17),a
-	ld	hl,(#RAM_TEMP4)
+	ld	hl,($.TEMP4)
 	xor	a
 	bit	7,h
 	jr	z,._1
@@ -3371,7 +3372,7 @@ PROC :_85d1 {
 ._1	ld	(ix+#object.Xspeed+0),l
 	ld	(ix+#object.Xspeed+1),h
 	ld	(ix+#object.Xdirection),a
-	ld	hl,(#RAM_TEMP6)
+	ld	hl,($.TEMP6)
 	xor	a
 	bit	7,h
 	jr	z,._2
@@ -3443,10 +3444,10 @@ PROC :doObjectCode_platform_balance {
 	ld	a,l
 	or	h
 	jr	nz,._3
-	ld	a,($D2E8)
-	ld	hl,($D2E6)
-	ld	(#RAM_SONIC.Yspeed),hl
-	ld	(#RAM_SONIC.Ydirection),a
+	ld	a,($.D2E8)
+	ld	hl,($.D2E6)
+	ld	($.SONIC.Yspeed),hl
+	ld	($.SONIC.Ydirection),a
 	jr	._4
 	
 ._3	ld	a,l
@@ -3456,12 +3457,12 @@ PROC :doObjectCode_platform_balance {
 	cpl	
 	ld	h,a
 	inc	hl
-	ld	de,($D2E6)
+	ld	de,($.D2E6)
 	add	hl,de
-	ld	(#RAM_SONIC.Yspeed),hl
+	ld	($.SONIC.Yspeed),hl
 	
 	ld	a,$FF
-	ld	(#RAM_SONIC.Ydirection),a	`set Sonic as currently jumping
+	ld	($.SONIC.Ydirection),a	`set Sonic as currently jumping
 	
 ._4	ld	a,$1c
 	sub	c
@@ -3481,57 +3482,57 @@ PROC :doObjectCode_platform_balance {
 	ld	(ix+$16),a
 ._7	ld	l,(ix+#object.X+0)
 	ld	h,(ix+#object.X+1)
-	ld	(#RAM_TEMP1),hl
+	ld	($.TEMP1),hl
 	ld	l,(ix+#object.Y+0)
 	ld	h,(ix+#object.Y+1)
-	ld	(#RAM_TEMP3),hl
+	ld	($.TEMP3),hl
 	ld	hl,$0000
-	ld	(#RAM_TEMP4),hl
+	ld	($.TEMP4),hl
 	ld	l,(ix+$11)
 	ld	de,$0010
 	add	hl,de
-	ld	(#RAM_TEMP6),hl
+	ld	($.TEMP6),hl
 	ld	hl,:_8830
 	call	:_881a
 	ld	hl,$0028
-	ld	(#RAM_TEMP4),hl
+	ld	($.TEMP4),hl
 	ld	a,$1c
 	sub	(ix+$11)
 	ld	l,a
 	ld	h,$00
 	ld	de,$0010
 	add	hl,de
-	ld	(#RAM_TEMP6),hl
+	ld	($.TEMP6),hl
 	ld	hl,:_8830
 	call	:_881a
 	ld	hl,$002c
-	ld	(#RAM_TEMP4),hl
+	ld	($.TEMP4),hl
 	ld	l,(ix+$15)
 	ld	h,(ix+$16)
-	ld	(#RAM_TEMP6),hl
+	ld	($.TEMP6),hl
 	ld	hl,:_8834
 	call	:_881a
 	res	1,(ix+$18)
 	ld	(ix+#object.width),$14
 	ld	a,$02
-	ld	(#RAM_TEMP6),a
+	ld	($.TEMP6),a
 	ld	a,(ix+$11)
 	ld	c,a
 	add	a,$08
 	ld	(ix+#object.height),a
 	ld	a,c
 	add	a,$04
-	ld	(#RAM_TEMP7),a
+	ld	($.TEMP7),a
 	call	:_LABEL_3956_11
 	jr	nc,._8
 	
-	ld	a,(#RAM_SONIC.Ydirection)
+	ld	a,($.SONIC.Ydirection)
 	and	a
 	ret	m
 	
 	ld	(ix+#object.width),$3c
 	ld	a,$2a
-	ld	(#RAM_TEMP6),a
+	ld	($.TEMP6),a
 	ld	a,$1c
 	sub	(ix+$11)
 	add	a,$08
@@ -3539,21 +3540,21 @@ PROC :doObjectCode_platform_balance {
 	ld	a,$1c
 	sub	(ix+$11)
 	add	a,$04
-	ld	(#RAM_TEMP7),a
+	ld	($.TEMP7),a
 	call	:_LABEL_3956_11
 	jr	nc,._9
 	ret
 	
 ._8	set	1,(ix+$18)
 	
-	ld	a,(#RAM_SONIC.Ydirection)
+	ld	a,($.SONIC.Ydirection)
 	and	a
 	ret	m
 	
 	ld	a,(ix+$11)
 	cp	$1c
 	jr	z,._9
-	ld	hl,(#RAM_SONIC.Yspeed)
+	ld	hl,($.SONIC.Yspeed)
 	ld	a,l
 	cpl	
 	ld	l,a
@@ -3563,21 +3564,21 @@ PROC :doObjectCode_platform_balance {
 	inc	hl
 	ld	(ix+$12),l
 	ld	(ix+$13),h
-	ld	a,(#RAM_SONIC.Yspeed+1)
+	ld	a,($.SONIC.Yspeed+1)
 	add	a,(ix+$11)
 	ld	(ix+$11),a
 	cp	$1c
 	jr	c,._10
 	ld	(ix+$11),$1c
-._9	ld	a,($D2E8)
-	ld	hl,($D2E6)
-	ld	(#RAM_SONIC.Yspeed),hl
-	ld	(#RAM_SONIC.Ydirection),a
+._9	ld	a,($.D2E8)
+	ld	hl,($.D2E6)
+	ld	($.SONIC.Yspeed),hl
+	ld	($.SONIC.Ydirection),a
 ._10	ld	l,(ix+#object.Y+0)
 	ld	h,(ix+#object.Y+1)
 	ld	bc,$0010
 	add	hl,bc
-	ld	a,(#RAM_TEMP7)
+	ld	a,($.TEMP7)
 	sub	$04
 	ld	c,a
 	add	hl,bc
@@ -3585,7 +3586,7 @@ PROC :doObjectCode_platform_balance {
 	ld	c,a
 	xor	a
 	sbc	hl,bc
-	ld	(#RAM_SONIC.Y+0),hl
+	ld	($.SONIC.Y+0),hl
 	ld	hl,$D414
 	set	7,(hl)
 	ret
@@ -3599,10 +3600,10 @@ PROC :_881a {
 	ret	m
 	push	hl
 	call	:_3581
-	ld	hl,(#RAM_TEMP4)
+	ld	hl,($.TEMP4)
 	ld	de,$0008
 	add	hl,de
-	ld	(#RAM_TEMP4),hl
+	ld	($.TEMP4),hl
 	pop	hl
 	inc	hl
 	jp	:_881a
@@ -3627,10 +3628,10 @@ PROC :doObjectCode_badnick_jaws {
 	ld	(ix+#object.width),$14
 	ld	(ix+#object.height),$0c
 	ld	hl,$0a02
-	ld	(#RAM_TEMP6),hl
+	ld	($.TEMP6),hl
 	call	:_LABEL_3956_11
 	ld	hl,$0008
-	ld	(#RAM_TEMP1),hl
+	ld	($.TEMP1),hl
 	call	nc,:_35e5
 	ld	de,:_88be
 	ld	bc,:_88b4
@@ -3643,15 +3644,15 @@ PROC :doObjectCode_badnick_jaws {
 	ld	(ix+#object.width),$0c
 	ld	(ix+#object.height),$0c
 	ld	hl,$0202
-	ld	(#RAM_TEMP6),hl
+	ld	($.TEMP6),hl
 	call	:_LABEL_3956_11
 	ld	hl,$0000
-	ld	(#RAM_TEMP1),hl
+	ld	($.TEMP1),hl
 	call	nc,:_35e5
 	ld	de,:_88be
 	ld	bc,:_88b9
 	call	:_7c41
-._2	ld	a,(#RAM_FRAMECOUNT)
+._2	ld	a,($.FRAMECOUNT)
 	and	$07
 	ret	nz
 	inc	(ix+$11)
@@ -3732,7 +3733,7 @@ PROC :doObjectCode_trap_spikeBall {
 	ld	(ix+#object.Y+0),l
 	ld	(ix+#object.Y+1),h
 	ld	hl,$0204
-	ld	(#RAM_TEMP6),hl
+	ld	($.TEMP6),hl
 	call	:_LABEL_3956_11
 	call	nc,:_35fd
 	ld	(ix+#object.spriteLayout+0),:_8987.lo
@@ -3950,19 +3951,19 @@ PROC :doObjectCode_trap_spear {
 	set	0,(ix+$18)
 ._1	ld	l,(ix+#object.X+0)
 	ld	h,(ix+#object.X+1)
-	ld	(#RAM_TEMP1),hl
+	ld	($.TEMP1),hl
 	ld	l,(ix+#object.Y+0)
 	ld	h,(ix+#object.Y+1)
-	ld	(#RAM_TEMP3),hl
+	ld	($.TEMP3),hl
 	ld	hl,$0000
-	ld	(#RAM_TEMP4),hl
-	ld	a,(#RAM_FRAMECOUNT)
+	ld	($.TEMP4),hl
+	ld	a,($.FRAMECOUNT)
 	rlca	
 	rlca	
 	and	$03
 	jr	nz,._2
 	ld	hl,:_8bbc
-	ld	a,(#RAM_FRAMECOUNT)
+	ld	a,($.FRAMECOUNT)
 	and	$3f
 	ld	e,a
 	cp	$08
@@ -3980,7 +3981,7 @@ PROC :doObjectCode_trap_spear {
 ._3	cp	$02
 	jr	nz,._4
 	ld	hl,:_8bc4
-	ld	a,(#RAM_FRAMECOUNT)
+	ld	a,($.FRAMECOUNT)
 	and	$3f
 	ld	e,a
 	cp	$08
@@ -4011,7 +4012,7 @@ PROC :doObjectCode_trap_spear {
 	jp	m,._6
 	push	hl
 	ld	d,$00
-	ld	(#RAM_TEMP6),de
+	ld	($.TEMP6),de
 	call	:_3581
 	pop	hl
 ._6	pop	bc
@@ -4021,14 +4022,14 @@ PROC :doObjectCode_trap_spear {
 	ld	(ix+#object.spriteLayout+1),b
 	ld	d,(hl)
 	ld	e,$04
-	ld	(#RAM_TEMP6),de
+	ld	($.TEMP6),de
 	inc	hl
 	ld	a,(hl)
 	ld	(ix+#object.width),$01
 	ld	(ix+#object.height),a
 	call	:_LABEL_3956_11
 	call	nc,:_35fd
-	ld	a,(#RAM_FRAMECOUNT)
+	ld	a,($.FRAMECOUNT)
 	cp	$80
 	ret	nz
 	ld	a,$1d
@@ -4123,18 +4124,18 @@ PROC :doObjectCode_trap_fireball {
 	bit	7,(ix+$18)
 	jr	nz,._7
 	ld	hl,$0402
-	ld	(#RAM_TEMP6),hl
+	ld	($.TEMP6),hl
 	call	:_LABEL_3956_11
 	call	nc,:_35fd
 	ld	e,(ix+#object.X+0)
 	ld	d,(ix+#object.X+1)
-	ld	hl,(#RAM_CAMERA_X)
+	ld	hl,($.CAMERA_X)
 	ld	bc,$fff0
 	add	hl,bc
 	and	a
 	sbc	hl,de
 	jr	nc,._7
-	ld	hl,(#RAM_CAMERA_X)
+	ld	hl,($.CAMERA_X)
 	ld	bc,$0110
 	add	hl,bc
 	and	a
@@ -4142,13 +4143,13 @@ PROC :doObjectCode_trap_fireball {
 	jr	c,._7
 	ld	e,(ix+#object.Y+0)
 	ld	d,(ix+#object.Y+1)
-	ld	hl,(#RAM_CAMERA_Y)
+	ld	hl,($.CAMERA_Y)
 	ld	bc,$fff0
 	add	hl,bc
 	and	a
 	sbc	hl,de
 	jr	nc,._7
-	ld	hl,(#RAM_CAMERA_Y)
+	ld	hl,($.CAMERA_Y)
 	ld	bc,$00d0
 	add	hl,bc
 	and	a
@@ -4201,7 +4202,7 @@ PROC :doObjectCode_meta_water {
 	ld	(ix+#object.Y+1),a
 	ld	l,h
 	ld	h,(ix+#object.Y+1)
-	ld	a,(#RAM_FRAMECOUNT)
+	ld	a,($.FRAMECOUNT)
 	and	$0f
 	jr	nz,._2
 	inc	(ix+$11)
@@ -4209,8 +4210,8 @@ PROC :doObjectCode_meta_water {
 	cp	$20
 	jr	c,._2
 	ld	(ix+$11),$00
-._2	ld	($D2DC),hl
-	ld	de,(#RAM_CAMERA_Y)
+._2	ld	($.D2DC),hl
+	ld	de,($.CAMERA_Y)
 	and	a
 	ld	a,$ff
 	sbc	hl,de
@@ -4225,7 +4226,7 @@ PROC :doObjectCode_meta_water {
 	sbc	hl,de
 	jr	c,._3
 	ld	a,e
-._3	ld	(#RAM_WATERLINE),a
+._3	ld	($.WATERLINE),a
 	and	a
 	ret	z
 	cp	$ff
@@ -4233,18 +4234,18 @@ PROC :doObjectCode_meta_water {
 	add	a,$09
 	ld	l,a
 	ld	h,$00
-	ld	(#RAM_TEMP6),hl
-	ld	hl,(#RAM_CAMERA_X)
-	ld	(#RAM_TEMP1),hl
-	ld	hl,(#RAM_CAMERA_Y)
-	ld	(#RAM_TEMP3),hl
+	ld	($.TEMP6),hl
+	ld	hl,($.CAMERA_X)
+	ld	($.TEMP1),hl
+	ld	hl,($.CAMERA_Y)
+	ld	($.TEMP3),hl
 	ld	a,(iy+#vars.spriteUpdateCount)
-	ld	hl,(#RAM_SPRITETABLE_CURRENT)
+	ld	hl,($.SPRITES_CURRENT)
 	push	af
 	push	hl
-	ld	hl,#RAM_SPRITETABLE
-	ld	(#RAM_SPRITETABLE_CURRENT),hl
-	ld	a,(#RAM_FRAMECOUNT)
+	ld	hl,$.SPRITES
+	ld	($.SPRITES_CURRENT),hl
+	ld	a,($.FRAMECOUNT)
 	and	$03
 	add	a,a
 	add	a,a
@@ -4258,18 +4259,18 @@ PROC :doObjectCode_meta_water {
 	ld	c,(hl)
 	inc	hl
 	push	hl
-	ld	a,(#RAM_FRAMECOUNT)
+	ld	a,($.FRAMECOUNT)
 	and	$0f
 	add	a,c
 	ld	l,a
 	ld	h,$00
-	ld	(#RAM_TEMP4),hl
+	ld	($.TEMP4),hl
 	ld	a,$00
 	call	:_3581
-	ld	hl,(#RAM_TEMP4)
+	ld	hl,($.TEMP4)
 	ld	de,$0008
 	add	hl,de
-	ld	(#RAM_TEMP4),hl
+	ld	($.TEMP4),hl
 	ld	a,$02
 	call	:_3581
 	pop	hl
@@ -4278,7 +4279,7 @@ PROC :doObjectCode_meta_water {
 	
 	pop	hl
 	pop	af
-	ld	(#RAM_SPRITETABLE_CURRENT),hl
+	ld	($.SPRITES_CURRENT),hl
 	ld	(iy+#vars.spriteUpdateCount),a
 	ret
 }
@@ -4308,10 +4309,10 @@ PROC :doObjectCode_powerUp_bubbles {
 	call	nz,:_91eb
 ._1	ld	l,(ix+#object.X+0)
 	ld	h,(ix+#object.X+1)
-	ld	(#RAM_TEMP1),hl
+	ld	($.TEMP1),hl
 	ld	l,(ix+#object.Y+0)
 	ld	h,(ix+#object.Y+1)
-	ld	(#RAM_TEMP3),hl
+	ld	($.TEMP3),hl
 	ld	a,(ix+$11)
 	add	a,a
 	ld	e,a
@@ -4319,14 +4320,14 @@ PROC :doObjectCode_powerUp_bubbles {
 	ld	hl,:_8eb6
 	add	hl,de
 	ld	e,(hl)
-	ld	(#RAM_TEMP4),de
+	ld	($.TEMP4),de
 	inc	hl
 	ld	e,(hl)
-	ld	(#RAM_TEMP6),de
+	ld	($.TEMP6),de
 	ld	a,$0c
 	call	:_3581
 	inc	(ix+$12)
-	ld	a,(#RAM_FRAMECOUNT)
+	ld	a,($.FRAMECOUNT)
 	and	$07
 	ret	nz
 	inc	(ix+$11)
@@ -4371,9 +4372,9 @@ PROC :_8eca {
 	ld	(ix+#object.Ydirection),$ff
 	ld	l,(ix+#object.X+0)
 	ld	h,(ix+#object.X+1)
-	ld	(#RAM_TEMP1),hl
+	ld	($.TEMP1),hl
 	ex	de,hl
-	ld	hl,(#RAM_CAMERA_X)
+	ld	hl,($.CAMERA_X)
 	ld	bc,$0008
 	xor	a
 	sbc	hl,bc
@@ -4383,7 +4384,7 @@ PROC :_8eca {
 ._3	and	a
 	sbc	hl,de
 	jr	nc,._4
-	ld	hl,(#RAM_CAMERA_X)
+	ld	hl,($.CAMERA_X)
 	ld	bc,$0100
 	add	hl,bc
 	and	a
@@ -4391,19 +4392,19 @@ PROC :_8eca {
 	jr	c,._4
 	ld	l,(ix+#object.Y+0)
 	ld	h,(ix+#object.Y+1)
-	ld	(#RAM_TEMP3),hl
+	ld	($.TEMP3),hl
 	ex	de,hl
-	ld	hl,($D2DC)
+	ld	hl,($.D2DC)
 	and	a
 	sbc	hl,de
 	jr	nc,._4
-	ld	hl,(#RAM_CAMERA_Y)
+	ld	hl,($.CAMERA_Y)
 	ld	bc,$fff0
 	add	hl,bc
 	and	a
 	sbc	hl,de
 	jr	nc,._4
-	ld	hl,(#RAM_CAMERA_Y)
+	ld	hl,($.CAMERA_Y)
 	ld	bc,$00c0
 	add	hl,bc
 	and	a
@@ -4411,8 +4412,8 @@ PROC :_8eca {
 	jr	nc,._5
 ._4	ld	(ix+#object.type),$FF	`remove object?
 ._5	ld	hl,$0000
-	ld	(#RAM_TEMP4),hl
-	ld	(#RAM_TEMP6),hl
+	ld	($.TEMP4),hl
+	ld	($.TEMP6),hl
 	ld	a,$0c
 	call	:_3581
 	inc	(ix+$11)
@@ -4433,10 +4434,10 @@ PROC :doObjectCode_badnick_burrobot {
 	ld	(ix+#object.width),$0c
 	ld	(ix+#object.height),$20
 	ld	hl,$0202
-	ld	(#RAM_TEMP6),hl
+	ld	($.TEMP6),hl
 	call	:_LABEL_3956_11
 	ld	hl,$0800
-	ld	(#RAM_TEMP1),hl
+	ld	($.TEMP1),hl
 	call	nc,:_35e5
 	ld	l,(ix+#object.Yspeed+0)
 	ld	h,(ix+#object.Yspeed+1)
@@ -4460,7 +4461,7 @@ PROC :doObjectCode_badnick_burrobot {
 	ld	l,(ix+#object.X+0)
 	ld	h,(ix+#object.X+1)
 	add	hl,de
-	ld	de,(#RAM_SONIC.X)
+	ld	de,($.SONIC.X)
 	and	a
 	sbc	hl,de
 	jr	nc,._2
@@ -4477,7 +4478,7 @@ PROC :doObjectCode_badnick_burrobot {
 	ld	(ix+#object.Ydirection),$ff
 ._2	ld	l,(ix+#object.X+0)
 	ld	h,(ix+#object.X+1)
-	ld	de,(#RAM_SONIC.X)
+	ld	de,($.SONIC.X)
 	and	a
 	sbc	hl,de
 	jr	c,._3
@@ -4575,7 +4576,7 @@ PROC :doObjectCode_platform_float {
 	call	:getFloorLayoutRAMPositionForObject
 	ld	e,(hl)
 	ld	d,$00
-	ld	a,(#RAM_LEVEL_SOLIDITY)
+	ld	a,($.LEVEL_SOLIDITY)
 	add	a,a
 	ld	c,a
 	ld	b,d
@@ -4613,26 +4614,26 @@ PROC :doObjectCode_platform_float {
 	ld	(ix+#object.Ydirection),c
 ._3	ld	e,(ix+#object.X+0)
 	ld	d,(ix+#object.X+1)
-	ld	hl,(#RAM_CAMERA_X)
+	ld	hl,($.CAMERA_X)
 	ld	bc,$ffe0
 	add	hl,bc
 	and	a
 	sbc	hl,de
 	jr	nc,._4
-	ld	hl,(#RAM_CAMERA_X)
+	ld	hl,($.CAMERA_X)
 	inc	h
 	and	a
 	sbc	hl,de
 	jr	c,._4
 	ld	e,(ix+#object.Y+0)
 	ld	d,(ix+#object.Y+1)
-	ld	hl,(#RAM_CAMERA_Y)
+	ld	hl,($.CAMERA_Y)
 	ld	bc,$ffe0
 	add	hl,bc
 	and	a
 	sbc	hl,de
 	jr	nc,._4
-	ld	hl,(#RAM_CAMERA_Y)
+	ld	hl,($.CAMERA_Y)
 	ld	bc,$00e0
 	add	hl,bc
 	and	a
@@ -4656,11 +4657,11 @@ PROC :doObjectCode_platform_float {
 	ret
 	
 ._5	ld	hl,$0e02
-	ld	(#RAM_TEMP6),hl
+	ld	($.TEMP6),hl
 	call	:_LABEL_3956_11
 	ret	c
 	set	0,(ix+$18)
-	ld	a,(#RAM_SONIC.Yspeed+1)
+	ld	a,($.SONIC.Yspeed+1)
 	and	a
 	jp	p,._6
 	neg	
@@ -4845,12 +4846,12 @@ PROC :doObjectCode_boss_labyrinth {
 	ld	h,(ix+#object.X+1)
 	ld	de,$000f
 	add	hl,de
-	ld	(#RAM_TEMP1),hl
+	ld	($.TEMP1),hl
 	ld	l,(ix+#object.Y+0)
 	ld	h,(ix+#object.Y+1)
 	ld	bc,$0022
 	add	hl,bc
-	ld	(#RAM_TEMP3),hl
+	ld	($.TEMP3),hl
 	ld	a,(ix+$13)
 	and	a
 	jp	z,._9432
@@ -4864,11 +4865,11 @@ PROC :doObjectCode_boss_labyrinth {
 	pop	ix
 	xor	a			`set A to 0
 	ld	(ix+#object.type),$2F	`unknown object
-	ld	hl,(#RAM_TEMP1)
+	ld	hl,($.TEMP1)
 	ld	(ix+$01),a
 	ld	(ix+#object.X+0),l
 	ld	(ix+#object.X+1),h
-	ld	hl,(#RAM_TEMP3)
+	ld	hl,($.TEMP3)
 	ld	(ix+$04),a
 	ld	(ix+#object.Y+0),l
 	ld	(ix+#object.Y+1),h
@@ -4915,7 +4916,7 @@ PROC :doObjectCode_boss_labyrinth {
 	jr	c,._
 	ld	(ix+$13),$00
 ._	ld      hl,$00a2
-	ld	($D216),hl
+	ld	($.D216),hl
 	call	:_77be
 	ld	a,($D2EC)
 	cp	$08
@@ -4924,15 +4925,15 @@ PROC :doObjectCode_boss_labyrinth {
 	ret	z
 	ld	l,(ix+#object.X+0)
 	ld	h,(ix+#object.X+1)
-	ld	(#RAM_TEMP1),hl
+	ld	($.TEMP1),hl
 	ld	l,(ix+#object.Y+0)
 	ld	h,(ix+#object.Y+1)
-	ld	(#RAM_TEMP3),hl
+	ld	($.TEMP3),hl
 	ld	hl,$0010
-	ld	(#RAM_TEMP4),hl
+	ld	($.TEMP4),hl
 	ld	hl,$0030
-	ld	(#RAM_TEMP6),hl
-	ld	a,(#RAM_FRAMECOUNT)
+	ld	($.TEMP6),hl
+	ld	a,($.FRAMECOUNT)
 	and	$02
 	call	:_3581
 	ret
@@ -4941,25 +4942,25 @@ PROC :doObjectCode_boss_labyrinth {
 	ld	h,(ix+#object.X+1)
 	ld	de,$0004
 	add	hl,de
-	ld	(#RAM_TEMP1),hl
+	ld	($.TEMP1),hl
 	ld	l,(ix+#object.Y+0)
 	ld	h,(ix+#object.Y+1)
 	ld	de,$fffa
 	add	hl,de
-	ld	(#RAM_TEMP3),hl
+	ld	($.TEMP3),hl
 	ld	hl,$ff00
-	ld	(#RAM_TEMP4),hl
+	ld	($.TEMP4),hl
 	ld	hl,$ff00
-	ld	(#RAM_TEMP6),hl
+	ld	($.TEMP6),hl
 	ld	c,$04
 	call	:_85d1
 	ld	l,(ix+#object.X+0)
 	ld	h,(ix+#object.X+1)
 	ld	de,$0020
 	add	hl,de
-	ld	(#RAM_TEMP1),hl
+	ld	($.TEMP1),hl
 	ld	hl,$0100
-	ld	(#RAM_TEMP4),hl
+	ld	($.TEMP4),hl
 	ld	c,$04
 	call	:_85d1
 	ld	a,$01
@@ -4988,13 +4989,13 @@ PROC :_94a5 {
 	ld	(ix+#object.width),$08
 	ld	(ix+#object.height),$0a
 	ld	hl,$0404
-	ld	(#RAM_TEMP6),hl
+	ld	($.TEMP6),hl
 	call	:_LABEL_3956_11
 	call	nc,:_35fd
 	bit	1,(ix+$18)
 	jr	nz,._1
 	set	1,(ix+$18)
-	ld	hl,(#RAM_SONIC.X)
+	ld	hl,($.SONIC.X)
 	ld	de,$000c
 	add	hl,de
 	ex	de,hl
@@ -5017,7 +5018,7 @@ PROC :_94a5 {
 	ld	hl,:_9688
 ._2	ld	(ix+#object.spriteLayout+0),l
 	ld	(ix+#object.spriteLayout+1),h
-	ld	hl,(#RAM_SONIC.Y+0)
+	ld	hl,($.SONIC.Y+0)
 	ld	e,(ix+#object.Y+0)
 	ld	d,(ix+#object.Y+1)
 	and	a
@@ -5030,7 +5031,7 @@ PROC :_94a5 {
 	ld	b,(ix+#object.X+1)
 	ld	hl,$fff0
 	add	hl,bc
-	ld	de,(#RAM_CAMERA_X)
+	ld	de,($.CAMERA_X)
 	and	a
 	sbc	hl,de
 	jr	c,._4
@@ -5044,7 +5045,7 @@ PROC :_94a5 {
 	ld	b,(ix+#object.Y+1)
 	ld	hl,$fff0
 	add	hl,bc
-	ld	de,(#RAM_CAMERA_Y)
+	ld	de,($.CAMERA_Y)
 	and	a
 	sbc	hl,de
 	jr	c,._4
@@ -5084,7 +5085,7 @@ PROC :_94a5 {
 ._8	ld	(ix+#object.Xspeed+0),l
 	ld	(ix+#object.Xspeed+1),h
 	ld	(ix+#object.Xdirection),c
-	ld	hl,(#RAM_SONIC.Y+0)
+	ld	hl,($.SONIC.Y+0)
 	ld	de,$0010
 	add	hl,de
 	ex	de,hl
@@ -5165,11 +5166,11 @@ PROC :_94a5 {
 	jr	z,._15
 	ld	de,$000f
 ._15	add	hl,de
-	ld	(#RAM_TEMP1),hl
+	ld	($.TEMP1),hl
 	ld	l,(ix+#object.Y+0)
 	ld	h,(ix+#object.Y+1)
-	ld	(#RAM_TEMP3),hl
-	ld	a,(#RAM_FRAMECOUNT)
+	ld	($.TEMP3),hl
+	ld	a,($.FRAMECOUNT)
 	and	$0f
 	ret	nz
 	call	:_7c7b
@@ -5179,11 +5180,11 @@ PROC :_94a5 {
 	pop	ix
 	xor	a			`set A to 0
 	ld	(ix+#object.type),$2A	`unknown object
-	ld	hl,(#RAM_TEMP1)
+	ld	hl,($.TEMP1)
 	ld	(ix+$01),a
 	ld	(ix+#object.X+0),l
 	ld	(ix+#object.X+1),h
-	ld	hl,(#RAM_TEMP3)
+	ld	hl,($.TEMP3)
 	ld	(ix+$04),a
 	ld	(ix+#object.Y+0),l
 	ld	(ix+#object.Y+1),h
@@ -5219,14 +5220,14 @@ PROC :_96a8 {
 	ld	(ix+#object.spriteLayout+1),a
 	ld	l,(ix+#object.X+0)
 	ld	h,(ix+#object.X+1)
-	ld	(#RAM_TEMP1),hl
+	ld	($.TEMP1),hl
 	ld	l,(ix+#object.Y+0)
 	ld	h,(ix+#object.Y+1)
-	ld	(#RAM_TEMP3),hl
+	ld	($.TEMP3),hl
 	ld	l,a
 	ld	h,a
-	ld	(#RAM_TEMP4),hl
-	ld	(#RAM_TEMP6),hl
+	ld	($.TEMP4),hl
+	ld	($.TEMP6),hl
 	ld	e,(ix+$12)
 	ld	d,$00
 	ld	hl,:_96f5
@@ -5258,50 +5259,50 @@ PROC :_96f8 {
 	ld	(ix+#object.spriteLayout+0),a
 	ld	(ix+#object.spriteLayout+1),a
 	ld	a,(iy+#vars.spriteUpdateCount)
-	ld	hl,(#RAM_SPRITETABLE_CURRENT)
+	ld	hl,($.SPRITES_CURRENT)
 	push	af
 	push	hl
-	ld	a,($D2DE)
+	ld	a,($.D2DE)
 	cp	$24
 	jr	nc,._3
 	ld	e,a
 	ld	d,$00
-	ld	hl,#RAM_SPRITETABLE
+	ld	hl,$.SPRITES
 	add	hl,de
-	ld	(#RAM_SPRITETABLE_CURRENT),hl
+	ld	($.SPRITES_CURRENT),hl
 	ld	l,(ix+#object.X+0)
 	ld	h,(ix+#object.X+1)
-	ld	(#RAM_TEMP1),hl
+	ld	($.TEMP1),hl
 	ld	l,(ix+#object.Y+0)
 	ld	h,(ix+#object.Y+1)
-	ld	(#RAM_TEMP3),hl
+	ld	($.TEMP3),hl
 	ld	hl,$0000
-	ld	(#RAM_TEMP4),hl
-	ld	(#RAM_TEMP6),hl
+	ld	($.TEMP4),hl
+	ld	($.TEMP6),hl
 	ld	a,(ix+$12)
 	and	a
 	jr	z,._1
 	cp	$08
 	jr	nc,._1
 	ld	hl,$0004
-	ld	(#RAM_TEMP4),hl
+	ld	($.TEMP4),hl
 	ld	a,$0c
 	jr	._2
 	
 ._1	ld	a,$40
 	call	:_3581
-	ld	hl,(#RAM_TEMP4)
+	ld	hl,($.TEMP4)
 	ld	de,$0008
 	add	hl,de
-	ld	(#RAM_TEMP4),hl
+	ld	($.TEMP4),hl
 	ld	a,$42
 ._2	call	:_3581
-	ld	a,($D2DE)
+	ld	a,($.D2DE)
 	add	a,$06
-	ld	($D2DE),a
+	ld	($.D2DE),a
 ._3	pop	hl
 	pop	af
-	ld	(#RAM_SPRITETABLE_CURRENT),hl
+	ld	($.SPRITES_CURRENT),hl
 	ld	(iy+#vars.spriteUpdateCount),a
 	ld	(ix+#object.width),$0a
 	ld	(ix+#object.height),$0c
@@ -5320,10 +5321,10 @@ PROC :_96f8 {
 	jp	._6
 	
 ._4	ld	hl,$0206
-	ld	(#RAM_TEMP6),hl
+	ld	($.TEMP6),hl
 	call	:_LABEL_3956_11
 	jr	c,._5
-	ld	bc,(#RAM_SONIC.Y+0)
+	ld	bc,($.SONIC.Y+0)
 	ld	e,(ix+#object.Y+0)
 	ld	d,(ix+#object.Y+1)
 	ld	hl,$fff8
@@ -5342,10 +5343,10 @@ PROC :_96f8 {
 	xor	a
 	ld	l,a
 	ld	h,a
-	ld	(#RAM_SONIC.Yspeed),hl
-	ld	(#RAM_SONIC.Ydirection),a
-	ld	($D28E),a
-	ld	($D29B),hl
+	ld	($.SONIC.Yspeed),hl
+	ld	($.SONIC.Ydirection),a
+	ld	($.D28E),a
+	ld	($.D29B),hl
 	set	2,(iy+#vars.unknown0)
 	ld	a,$20
 	ld	($D2FB),a
@@ -5372,7 +5373,7 @@ PROC :_96f8 {
 ._7	ld	l,(ix+#object.X+0)
 	ld	h,(ix+#object.X+1)
 	ex	de,hl
-	ld	hl,(#RAM_CAMERA_X)
+	ld	hl,($.CAMERA_X)
 	ld	bc,$0008
 	xor	a
 	sbc	hl,bc
@@ -5382,7 +5383,7 @@ PROC :_96f8 {
 ._8	and	a
 	sbc	hl,de
 	jr	nc,._9
-	ld	hl,(#RAM_CAMERA_X)
+	ld	hl,($.CAMERA_X)
 	ld	bc,$0100
 	add	hl,bc
 	and	a
@@ -5391,17 +5392,17 @@ PROC :_96f8 {
 	ld	l,(ix+#object.Y+0)
 	ld	h,(ix+#object.Y+1)
 	ex	de,hl
-	ld	hl,($D2DC)
+	ld	hl,($.D2DC)
 	and	a
 	sbc	hl,de
 	jr	nc,9
-	ld	hl,(#RAM_CAMERA_Y)
+	ld	hl,($.CAMERA_Y)
 	ld	bc,$fff0
 	add	hl,bc
 	and	a
 	sbc	hl,de
 	jr	nc,9
-	ld	hl,(#RAM_CAMERA_Y)
+	ld	hl,($.CAMERA_Y)
 	ld	bc,$00c0
 	add	hl,bc
 	and	a
@@ -5437,7 +5438,7 @@ PROC :doObjectCode_platform_flipper {
 	cp	$01
 	jr	nc,._3
 	ld	hl,$140c
-	ld	(#RAM_TEMP6),hl
+	ld	($.TEMP6),hl
 	ld	(ix+#object.width),$1e
 	ld	(ix+#object.height),$16
 	call	:_LABEL_3956_11
@@ -5445,17 +5446,17 @@ PROC :doObjectCode_platform_flipper {
 	ld	bc,:_999e
 	call	:_9aaf
 	ret	nc
-	ld	a,($D2E8)
-	ld	hl,($D2E6)
-	ld	(#RAM_SONIC.Yspeed),hl
-	ld	(#RAM_SONIC.Ydirection),a
+	ld	a,($.D2E8)
+	ld	hl,($.D2E6)
+	ld	($.SONIC.Yspeed),hl
+	ld	($.SONIC.Ydirection),a
 	ld	de,$fffc
-	ld	hl,(#RAM_SONIC.Xspeed)
-	ld	a,(#RAM_SONIC.Xdirection)
+	ld	hl,($.SONIC.Xspeed)
+	ld	a,($.SONIC.Xdirection)
 	add	hl,de
 	adc	a,$ff
-	ld	(#RAM_SONIC.Xspeed),hl
-	ld	(#RAM_SONIC.Xdirection),a
+	ld	($.SONIC.Xspeed),hl
+	ld	($.SONIC.Xdirection),a
 	ret
 	
 ._3	cp	$04
@@ -5463,7 +5464,7 @@ PROC :doObjectCode_platform_flipper {
 	ld	(ix+#object.spriteLayout+0),:_9a90.lo
 	ld	(ix+#object.spriteLayout+1),:_9a90.hi
 	ld	hl,$080f
-	ld	(#RAM_TEMP6),hl
+	ld	($.TEMP6),hl
 	ld	(ix+#object.width),$1e
 	ld	(ix+#object.height),$16
 	call	:_LABEL_3956_11
@@ -5474,7 +5475,7 @@ PROC :doObjectCode_platform_flipper {
 	ld	a,(ix+$12)
 	cp	(ix+$11)
 	ret	nc
-	ld	a,(#RAM_SONIC.X)
+	ld	a,($.SONIC.X)
 	add	a,$0c
 	and	$1f
 	add	a,a
@@ -5485,50 +5486,50 @@ PROC :doObjectCode_platform_flipper {
 	ld	e,(hl)
 	inc	hl
 	ld	d,(hl)
-	ld	hl,(#RAM_SONIC.Xspeed)
-	ld	a,(#RAM_SONIC.Xdirection)
+	ld	hl,($.SONIC.Xspeed)
+	ld	a,($.SONIC.Xdirection)
 	add	hl,de
 	adc	a,$ff
-	ld	(#RAM_SONIC.Xspeed),hl
-	ld	(#RAM_SONIC.Xdirection),a
+	ld	($.SONIC.Xspeed),hl
+	ld	($.SONIC.Xdirection),a
 	ld	hl,:_9a3e
 	add	hl,bc
 	ld	e,(hl)
 	inc	hl
 	ld	d,(hl)
-	ld	hl,(#RAM_SONIC.Yspeed)
+	ld	hl,($.SONIC.Yspeed)
 	ld	a,l
 	cpl	
 	ld	l,a
 	ld	a,h
 	cpl	
 	ld	h,a
-	ld	a,(#RAM_SONIC.Ydirection)
+	ld	a,($.SONIC.Ydirection)
 	cpl	
 	add	hl,de
 	adc	a,$ff
-	ld	(#RAM_SONIC.Yspeed),hl
-	ld	(#RAM_SONIC.Ydirection),a
+	ld	($.SONIC.Yspeed),hl
+	ld	($.SONIC.Ydirection),a
 	ret
 
 	`unused section of code?
-	ld	a,($D2E8)
-	ld	hl,($D2E6)
-	ld	(#RAM_SONIC.Yspeed),hl
-	ld	(#RAM_SONIC.Ydirection),a
+	ld	a,($.D2E8)
+	ld	hl,($.D2E6)
+	ld	($.SONIC.Yspeed),hl
+	ld	($.SONIC.Ydirection),a
 	ld	de,$0008
-	ld	hl,(#RAM_SONIC.Xspeed)
-	ld	a,(#RAM_SONIC.Xdirection)
+	ld	hl,($.SONIC.Xspeed)
+	ld	a,($.SONIC.Xdirection)
 	add	hl,de
 	adc	a,$00
-	ld	(#RAM_SONIC.Xspeed),hl
-	ld	(#RAM_SONIC.Xdirection),a
+	ld	($.SONIC.Xspeed),hl
+	ld	($.SONIC.Xdirection),a
 	ret
 	
 ._4	ld	(ix+#object.spriteLayout+0),:_9aa2.lo
 	ld	(ix+#object.spriteLayout+1),:_9aa2.hi
 	ld	hl,$021a
-	ld	(#RAM_TEMP6),hl
+	ld	($.TEMP6),hl
 	ld	(ix+#object.width),$1e
 	ld	(ix+#object.height),$16
 	call	:_LABEL_3956_11
@@ -5536,17 +5537,17 @@ PROC :doObjectCode_platform_flipper {
 	ld	bc,:_99de
 	call	:_9aaf
 	ret	nc
-	ld	a,($D2E8)
-	ld	hl,($D2E6)
-	ld	(#RAM_SONIC.Yspeed),hl
-	ld	(#RAM_SONIC.Ydirection),a
+	ld	a,($.D2E8)
+	ld	hl,($.D2E6)
+	ld	($.SONIC.Yspeed),hl
+	ld	($.SONIC.Ydirection),a
 	ld	de,$001a
-	ld	hl,(#RAM_SONIC.Xspeed)
-	ld	a,(#RAM_SONIC.Xdirection)
+	ld	hl,($.SONIC.Xspeed)
+	ld	a,($.SONIC.Xdirection)
 	add	hl,de
 	adc	a,$00
-	ld	(#RAM_SONIC.Xspeed),hl
-	ld	(#RAM_SONIC.Xdirection),a
+	ld	($.SONIC.Xspeed),hl
+	ld	($.SONIC.Xdirection),a
 	ret
 }
 
@@ -5587,11 +5588,11 @@ DATA $FF
 `____________________________________________________________________________[$9AAF]___
 
 PROC :_9aaf {
-	ld	a,(#RAM_SONIC.Ydirection)
+	ld	a,($.SONIC.Ydirection)
 	and	a
 	ret	m
 	
-	ld	a,(#RAM_SONIC.X)
+	ld	a,($.SONIC.X)
 	add	a,$0c
 	and	$1f
 	ld	l,a
@@ -5605,30 +5606,30 @@ PROC :_9aaf {
 ._1	ld	l,(ix+#object.Y+0)
 	ld	h,(ix+#object.Y+1)
 	add	hl,bc
-	ld	(#RAM_SONIC.Y+0),hl
-	ld	a,(#RAM_SONIC.Yspeed+1)
+	ld	($.SONIC.Y+0),hl
+	ld	a,($.SONIC.Yspeed+1)
 	cp	$03
 	jr	nc,._2
 	scf	
 	ret
 	
 ._2	ld	de,$0001
-	ld	hl,(#RAM_SONIC.Yspeed)
+	ld	hl,($.SONIC.Yspeed)
 	ld	a,l
 	cpl	
 	ld	l,a
 	ld	a,h
 	cpl	
 	ld	h,a
-	ld	a,(#RAM_SONIC.Ydirection)
+	ld	a,($.SONIC.Ydirection)
 	cpl	
 	add	hl,de
 	adc	a,$00
 	sra	a
 	rr	h
 	rr	l
-	ld	(#RAM_SONIC.Yspeed),hl
-	ld	(#RAM_SONIC.Ydirection),a
+	ld	($.SONIC.Yspeed),hl
+	ld	($.SONIC.Ydirection),a
 	and	a
 	ret
 }
@@ -5659,28 +5660,28 @@ PROC :doObjectCode_platform_bumper {
 	and	a
 	jr	nz,._3
 	ld	hl,$0602
-	ld	(#RAM_TEMP6),hl
+	ld	($.TEMP6),hl
 	call	:_LABEL_3956_11
 	ret	c
-	ld	a,($D2E8)
-	ld	de,($D2E6)
+	ld	a,($.D2E8)
+	ld	de,($.D2E6)
 	ld	c,a
-	ld	hl,(#RAM_SONIC.Yspeed)
+	ld	hl,($.SONIC.Yspeed)
 	ld	a,l
 	cpl	
 	ld	l,a
 	ld	a,h
 	cpl	
 	ld	h,a
-	ld	a,(#RAM_SONIC.Ydirection)
+	ld	a,($.SONIC.Ydirection)
 	cpl	
 	add	hl,de
 	adc	a,c
 	ld	de,$0001
 	add	hl,de
 	adc	a,$00
-	ld	(#RAM_SONIC.Yspeed),hl
-	ld	(#RAM_SONIC.Ydirection),a
+	ld	($.SONIC.Yspeed),hl
+	ld	($.SONIC.Ydirection),a
 	ld	(ix+$11),$08
 	ld	a,$07
 	rst	:rst_playSFX
@@ -5703,7 +5704,7 @@ PROC :_9b75 {
 	ld	(ix+#object.width),$1e
 	ld	(ix+#object.height),$60
 	ld	hl,$0000
-	ld	(#RAM_TEMP6),hl
+	ld	($.TEMP6),hl
 	call	:_LABEL_3956_11
 	jr	c,._2
 	ld	l,(ix+#object.X+0)
@@ -5738,9 +5739,9 @@ PROC :_9b75 {
 	jr	nz,._1
 	inc	hl
 	ld	a,(hl)
-	ld	($D2D3),a
+	ld	($.D2D3),a
 	ld	a,$01
-	ld	($D289),a
+	ld	($.D289),a
 	set	4,(iy+#vars.flags6)
 	jp	._2
 	
@@ -5784,7 +5785,7 @@ PROC :_9be8 {
 	cp	$64
 	jr	nc,._2
 	ld	hl,$0400
-	ld	(#RAM_TEMP6),hl
+	ld	($.TEMP6),hl
 	call	:_LABEL_3956_11
 	call	nc,:_35fd
 ._2	inc	(ix+$13)
@@ -5859,12 +5860,12 @@ PROC :doObjectCode_trap_flameThrower {
 	set	0,(ix+$18)
 ._1	ld	l,(ix+#object.X+0)
 	ld	h,(ix+#object.X+1)
-	ld	(#RAM_TEMP1),hl
+	ld	($.TEMP1),hl
 	ld	l,(ix+#object.Y+0)
 	ld	h,(ix+#object.Y+1)
-	ld	(#RAM_TEMP3),hl
+	ld	($.TEMP3),hl
 	ld	hl,$0000
-	ld	(#RAM_TEMP4),hl
+	ld	($.TEMP4),hl
 	ld	a,(ix+$11)
 	srl	a
 	srl	a
@@ -5905,7 +5906,7 @@ PROC :doObjectCode_trap_flameThrower {
 	inc	hl
 	ld	d,$00
 	push	hl
-	ld	(#RAM_TEMP6),de
+	ld	($.TEMP6),de
 	call	:_3581
 	pop	hl
 	pop	bc
@@ -5915,7 +5916,7 @@ PROC :doObjectCode_trap_flameThrower {
 	and	a
 	jr	z,._2
 	ld	hl,$0202
-	ld	(#RAM_TEMP6),hl
+	ld	($.TEMP6),hl
 	call	:_LABEL_3956_11
 	call	nc,:_35fd
 ._2	inc	(ix+$11)
@@ -5954,28 +5955,28 @@ PROC :doObjectCode_door_left {
 	cp	$28
 	jr	nc,._2
 	ld	hl,$0005
-	ld	(#RAM_TEMP6),hl
+	ld	($.TEMP6),hl
 	call	:_LABEL_3956_11
 	jr	c,._2
 	ld	de,$0005
-	ld	a,(#RAM_SONIC.Xdirection)
+	ld	a,($.SONIC.Xdirection)
 	and	a
 	jp	m,._1
 	ld	de,$ffec
 ._1	ld	l,(ix+#object.X+0)
 	ld	h,(ix+#object.X+1)
 	add	hl,de
-	ld	(#RAM_SONIC.X),hl
+	ld	($.SONIC.X),hl
 	xor	a
 	ld	l,a
 	ld	h,a
-	ld	(#RAM_SONIC.Xspeed),hl
-	ld	(#RAM_SONIC.Xdirection),a
+	ld	($.SONIC.Xspeed),hl
+	ld	($.SONIC.Xdirection),a
 ._2	ld	l,(ix+#object.X+0)
 	ld	h,(ix+#object.X+1)
 	ld	de,$ffc8
 	add	hl,de
-	ld	de,(#RAM_SONIC.X)
+	ld	de,($.SONIC.X)
 	xor	a
 	sbc	hl,de
 	jr	nc,._3
@@ -5988,7 +5989,7 @@ PROC :doObjectCode_door_left {
 	ld	h,(ix+#object.Y+1)
 	ld	de,$ffe0
 	add	hl,de
-	ld	de,(#RAM_SONIC.Y+0)
+	ld	de,($.SONIC.Y+0)
 	xor	a
 	sbc	hl,de
 	jr	nc,._3
@@ -6132,27 +6133,27 @@ PROC :doObjectCode_door_right {
 	cp	$28
 	jr	nc,._2
 	ld	hl,$0005
-	ld	(#RAM_TEMP6),hl
+	ld	($.TEMP6),hl
 	call	:_LABEL_3956_11
 	jr	c,._2
 	ld	de,$0005
-	ld	a,(#RAM_SONIC.Xdirection)
+	ld	a,($.SONIC.Xdirection)
 	and	a
 	jp	m,._1
 	ld	de,$ffec
 ._1	ld	l,(ix+#object.X+0)
 	ld	h,(ix+#object.X+1)
 	add	hl,de
-	ld	(#RAM_SONIC.X),hl
+	ld	($.SONIC.X),hl
 	xor	a
-	ld	(#RAM_SONIC.Xspeed+0),a
-	ld	(#RAM_SONIC.Xspeed+1),a
-	ld	(#RAM_SONIC.Xdirection),a
+	ld	($.SONIC.Xspeed+0),a
+	ld	($.SONIC.Xspeed+1),a
+	ld	($.SONIC.Xdirection),a
 ._2	ld	l,(ix+#object.X+0)
 	ld	h,(ix+#object.X+1)
 	ld	de,$fff0
 	add	hl,de
-	ld	de,(#RAM_SONIC.X)
+	ld	de,($.SONIC.X)
 	xor	a
 	sbc	hl,de
 	jr	nc,._3
@@ -6167,7 +6168,7 @@ PROC :doObjectCode_door_right {
 	ld	h,(ix+#object.Y+1)
 	ld	de,$ffe0
 	add	hl,de
-	ld	de,(#RAM_SONIC.Y+0)
+	ld	de,($.SONIC.Y+0)
 	xor	a
 	sbc	hl,de
 	jr	nc,._3
@@ -6210,27 +6211,27 @@ PROC :doObjectCode_door {
 	cp	$28
 	jr	nc,._2
 	ld	hl,$0005
-	ld	(#RAM_TEMP6),hl
+	ld	($.TEMP6),hl
 	call	:_LABEL_3956_11
 	jr	c,._2
 	ld	de,$0005
-	ld	a,(#RAM_SONIC.Xdirection)
+	ld	a,($.SONIC.Xdirection)
 	and	a
 	jp	m,._1
 	ld	de,$ffec
 ._1	ld	l,(ix+#object.X+0)
 	ld	h,(ix+#object.X+1)
 	add	hl,de
-	ld	(#RAM_SONIC.X),hl
+	ld	($.SONIC.X),hl
 	xor	a
-	ld	(#RAM_SONIC.Xspeed+0),a
-	ld	(#RAM_SONIC.Xspeed+1),a
-	ld	(#RAM_SONIC.Xdirection),a
+	ld	($.SONIC.Xspeed+0),a
+	ld	($.SONIC.Xspeed+1),a
+	ld	($.SONIC.Xdirection),a
 ._2	ld	l,(ix+#object.X+0)
 	ld	h,(ix+#object.X+1)
 	ld	de,$ffc8
 	add	hl,de
-	ld	de,(#RAM_SONIC.X)
+	ld	de,($.SONIC.X)
 	xor	a
 	sbc	hl,de
 	jr	nc,._3
@@ -6245,7 +6246,7 @@ PROC :doObjectCode_door {
 	ld	h,(ix+#object.Y+1)
 	ld	de,$ffe0
 	add	hl,de
-	ld	de,(#RAM_SONIC.Y+0)
+	ld	de,($.SONIC.Y+0)
 	xor	a
 	sbc	hl,de
 	jr	nc,._3
@@ -6308,7 +6309,7 @@ PROC :doObjectCode_trap_electric {
 	ld	a,$13
 	rst	:rst_playSFX
 ._2	ld	hl,$0000
-	ld	(#RAM_TEMP6),hl
+	ld	($.TEMP6),hl
 	call	:_LABEL_3956_11
 	call	nc,:_35fd
 	ld	de,:_a173
@@ -6361,10 +6362,10 @@ PROC :doObjectCode_badnick_ballHog {
 	ld	(ix+#object.width),$0a
 	ld	(ix+#object.height),$20
 	ld	hl,$0803
-	ld	(#RAM_TEMP6),hl
+	ld	($.TEMP6),hl
 	call	:_LABEL_3956_11
 	ld	hl,$0e00
-	ld	(#RAM_TEMP1),hl
+	ld	($.TEMP1),hl
 	call	nc,:_35e5
 	ld	(ix+#object.Yspeed+0),$00
 	ld	(ix+#object.Yspeed+1),$01
@@ -6374,7 +6375,7 @@ PROC :doObjectCode_badnick_ballHog {
 	ld	de,$000a
 	add	hl,de
 	ex	de,hl
-	ld	hl,(#RAM_SONIC.X)
+	ld	hl,($.SONIC.X)
 	ld	bc,$000c
 	add	hl,bc
 	and	a
@@ -6508,7 +6509,7 @@ PROC :_a33c {
 	ld	(ix+#object.width),$0a
 	ld	(ix+#object.height),$0f
 	ld	hl,$0101
-	ld	(#RAM_TEMP6),hl
+	ld	($.TEMP6),hl
 	call	:_LABEL_3956_11
 	call	nc,:_35fd
 	bit	7,(ix+$18)
@@ -6586,17 +6587,17 @@ PROC :doObjectCode_switch {
 	ld	(ix+#object.X+1),h
 	set	0,(ix+$18)
 ._1	ld	hl,$0001
-	ld	(#RAM_TEMP6),hl
+	ld	($.TEMP6),hl
 	call	:_LABEL_3956_11
 	jr	c,._3
 	
-	ld	a,(#RAM_SONIC.Ydirection)
+	ld	a,($.SONIC.Ydirection)
 	and	a
 	jp	m,._3
 	
 	ld	(ix+#object.spriteLayout+0),:_a48b.lo
 	ld	(ix+#object.spriteLayout+1),:_a48b.hi
-	ld	a,(#RAM_LEVEL_SOLIDITY)
+	ld	a,($.LEVEL_SOLIDITY)
 	cp	$03
 	jr	nz,._2
 	ld	(ix+#object.spriteLayout+0),:_a49b.lo
@@ -6619,7 +6620,7 @@ PROC :doObjectCode_switch {
 ._3	res	1,(ix+$18)
 	ld	(ix+#object.spriteLayout+0),:_a493.lo
 	ld	(ix+#object.spriteLayout+1),:_a493.hi
-	ld	a,(#RAM_LEVEL_SOLIDITY)
+	ld	a,($.LEVEL_SOLIDITY)
 	cp	$03
 	jr	nz,._4
 	ld	(ix+#object.spriteLayout+0),$a3
@@ -6653,22 +6654,22 @@ PROC :doObjectCode_door_switchActivated {
 	cp	$28
 	jr	nc,._2
 	ld	hl,$0005
-	ld	(#RAM_TEMP6),hl
+	ld	($.TEMP6),hl
 	call	:_LABEL_3956_11
 	jr	c,._2
 	ld	de,$0005
-	ld	a,(#RAM_SONIC.Xdirection)
+	ld	a,($.SONIC.Xdirection)
 	and	a
 	jp	m,._1
 	ld	de,$ffec
 ._1	ld	l,(ix+#object.X+0)
 	ld	h,(ix+#object.X+1)
 	add	hl,de
-	ld	(#RAM_SONIC.X),hl
+	ld	($.SONIC.X),hl
 	xor	a
-	ld	(#RAM_SONIC.Xspeed+0),a
-	ld	(#RAM_SONIC.Xspeed+1),a
-	ld	(#RAM_SONIC.Xdirection),a
+	ld	($.SONIC.Xspeed+0),a
+	ld	($.SONIC.Xspeed+1),a
+	ld	($.SONIC.Xdirection),a
 	
 ._2	ld	hl,$D317
 	call	:getLevelBitFlag
@@ -6721,7 +6722,7 @@ DATA $FF
 PROC :doObjectCode_badnick_caterkiller {
 	ld	(ix+#object.width),$06
 	ld	(ix+#object.height),$10
-	ld	a,(#RAM_FRAMECOUNT)
+	ld	a,($.FRAMECOUNT)
 	and	$01
 	jr	nz,._5
 	ld	hl,:_a6b9
@@ -6765,10 +6766,10 @@ PROC :doObjectCode_badnick_caterkiller {
 ._4	ld	(ix+$14),c
 ._5	ld	l,(ix+#object.X+0)
 	ld	h,(ix+#object.X+1)
-	ld	(#RAM_TEMP1),hl
+	ld	($.TEMP1),hl
 	ld	l,(ix+#object.Y+0)
 	ld	h,(ix+#object.Y+1)
-	ld	(#RAM_TEMP3),hl
+	ld	($.TEMP3),hl
 	bit	1,(ix+$18)
 	jr	nz,._7
 	ld	hl,:_a711
@@ -6785,17 +6786,17 @@ PROC :doObjectCode_badnick_caterkiller {
 	call	:_a6a2
 	ld	(ix+#object.width),$06
 	ld	hl,$0802
-	ld	(#RAM_TEMP6),hl
+	ld	($.TEMP6),hl
 	call	:_LABEL_3956_11
 	ld	hl,$0000
-	ld	(#RAM_TEMP1),hl
+	ld	($.TEMP1),hl
 	jr	c,._6
 	call	:_35e5
 	jr	._9
 	
 ._6	ld	(ix+#object.width),$16
 	ld	hl,$0806
-	ld	(#RAM_TEMP6),hl
+	ld	($.TEMP6),hl
 	call	:_LABEL_3956_11
 	call	nc,:_35fd
 	jr	._9
@@ -6814,7 +6815,7 @@ PROC :doObjectCode_badnick_caterkiller {
 	call	:_a6a2
 	ld	(ix+#object.width),$10
 	ld	hl,$0401
-	ld	(#RAM_TEMP6),hl
+	ld	($.TEMP6),hl
 	call	:_LABEL_3956_11
 	jr	c,._8
 	call	:_35fd
@@ -6822,13 +6823,13 @@ PROC :doObjectCode_badnick_caterkiller {
 	
 ._8	ld	(ix+#object.width),$16
 	ld	hl,$0410
-	ld	(#RAM_TEMP6),hl
+	ld	($.TEMP6),hl
 	call	:_LABEL_3956_11
 	ld	hl,$0000
-	ld	(#RAM_TEMP1),hl
+	ld	($.TEMP1),hl
 	call	nc,:_35e5
 ._9	ld	(ix+#object.Yspeed+1),$01
-	ld	a,(#RAM_FRAMECOUNT)
+	ld	a,($.FRAMECOUNT)
 	and	$01
 	ret	nz
 	inc	(ix+$11)
@@ -6853,10 +6854,10 @@ PROC :_a688 {
 	push	hl
 	ld	e,(hl)
 	ld	d,$00
-	ld	(#RAM_TEMP4),de
+	ld	($.TEMP4),de
 	ld	l,(ix+$13)
 	ld	h,(ix+$14)
-	ld	(#RAM_TEMP6),hl
+	ld	($.TEMP6),hl
 	call	:_3581
 	pop	hl
 	ld	de,$0016
@@ -6870,9 +6871,9 @@ PROC :_a6a2 {
 	push	hl
 	ld	e,(hl)
 	ld	d,$00
-	ld	(#RAM_TEMP4),de
+	ld	($.TEMP4),de
 	ld	hl,$0000
-	ld	(#RAM_TEMP6),hl
+	ld	($.TEMP6),hl
 	call	:_3581
 	pop	hl
 	ld	de,$0016
@@ -6916,18 +6917,18 @@ PROC :doObjectCode_boss_scrapBrain {
 	bit	0,(ix+$18)
 	jr	nz,._1
 	ld	hl,$0340
-	ld	(#RAM_LEVEL_LEFT),hl
+	ld	($.LEVEL_LEFT),hl
 	
 	`lock the screen at 1344 pixels, 42 blocks
 	 `(near the boss lift in Scrap Brain Act 3)
 	ld	hl,$0540
-	ld	(#RAM_LEVEL_RIGHT),hl
+	ld	($.LEVEL_RIGHT),hl
 	
-	ld	hl,(#RAM_CAMERA_Y)
-	ld	(#RAM_LEVEL_TOP),hl
-	ld	(#RAM_LEVEL_BOTTOM),hl
+	ld	hl,($.CAMERA_Y)
+	ld	($.LEVEL_TOP),hl
+	ld	($.LEVEL_BOTTOM),hl
 	ld	hl,$0220
-	ld	(#RAM_CAMERA_Y_GOTO),hl
+	ld	($.CAMERA_Y_GOTO),hl
 
 	`UNKNOWN
 	ld	hl,$ef3f
@@ -6945,19 +6946,19 @@ PROC :doObjectCode_boss_scrapBrain {
 	set	0,(ix+$18)
 ._1	bit	1,(ix+$18)
 	jr	nz,._4
-	ld	hl,(#RAM_CAMERA_X)
-	ld	(#RAM_LEVEL_LEFT),hl
+	ld	hl,($.CAMERA_X)
+	ld	($.LEVEL_LEFT),hl
 	ld	de,:_baf9
 	ld	bc,:_a9b7
 	call	:_7c41
 	ld	l,(ix+#object.X+0)
 	ld	h,(ix+#object.X+1)
-	ld	de,(#RAM_SONIC.X)
+	ld	de,($.SONIC.X)
 	xor	a
 	sbc	hl,de
 	ld	de,$0040
 	xor	a
-	ld	bc,(#RAM_SONIC.Xspeed)
+	ld	bc,($.SONIC.Xspeed)
 	bit	7,b
 	jr	nz,._2
 	sbc	hl,de
@@ -6977,8 +6978,8 @@ PROC :doObjectCode_boss_scrapBrain {
 	ld	h,a
 	ld	(ix+#object.Xspeed+0),a
 	ld	(ix+#object.Xspeed+1),a
-	ld	(#RAM_SONIC.Xspeed),hl
-	ld	(#RAM_SONIC.Xdirection),a
+	ld	($.SONIC.Xspeed),hl
+	ld	($.SONIC.Xdirection),a
 	set	1,(ix+$18)
 	jp	._9
 	
@@ -7016,7 +7017,7 @@ PROC :doObjectCode_boss_scrapBrain {
 	
 ._6	bit	4,(ix+$18)
 	jr	nz,._8
-	ld	de,(#RAM_SONIC.X)
+	ld	de,($.SONIC.X)
 	ld	hl,$0596
 	and	a
 	sbc	hl,de
@@ -7027,19 +7028,19 @@ PROC :doObjectCode_boss_scrapBrain {
 	jr	c,._9
 	or	(ix+$11)
 	jr	nz,._7
-	ld	hl,(#RAM_SONIC.Y+0)
+	ld	hl,($.SONIC.Y+0)
 	ld	de,$028d
 	xor	a
 	sbc	hl,de
 	jr	c,._9
 	ld	l,a
 	ld	h,a
-	ld	(#RAM_SONIC.Xspeed),hl
-	ld	(#RAM_SONIC.Xdirection),a
+	ld	($.SONIC.Xspeed),hl
+	ld	($.SONIC.Xdirection),a
 ._7	ld	a,$80
 	ld	($D414),a
 	ld	hl,$05a0
-	ld	(#RAM_SONIC.X),hl
+	ld	($.SONIC.X),hl
 	ld	(iy+#vars.joypad),$ff
 	ld	e,(ix+$11)
 	ld	d,$00
@@ -7047,25 +7048,25 @@ PROC :doObjectCode_boss_scrapBrain {
 	xor	a			`set A to 0
 	sbc	hl,de
 	ld	($D400),a
-	ld	(#RAM_SONIC.Y+0),hl
-	ld	a,($D2E8)
-	ld	hl,($D2E6)
-	ld	(#RAM_SONIC.Yspeed),hl
-	ld	(#RAM_SONIC.Ydirection),a
+	ld	($.SONIC.Y+0),hl
+	ld	a,($.D2E8)
+	ld	hl,($.D2E6)
+	ld	($.SONIC.Yspeed),hl
+	ld	($.SONIC.Ydirection),a
 	inc	(ix+$11)
 	ld	a,(ix+$11)
 	cp	$c0
 	jr	nz,._9
-	ld	hl,(#RAM_CAMERA_X)
+	ld	hl,($.CAMERA_X)
 	inc	h
-	ld	(#RAM_SONIC.X),hl
+	ld	($.SONIC.X),hl
 	set	4,(ix+$18)
 	
 	ld	a,#index_music_actComplete
 	rst	:rst_playMusic
 	
 	ld	a,$a0
-	ld	($D289),a
+	ld	($.D289),a
 	set	1,(iy+#vars.flags6)
 	ret
 	
@@ -7086,12 +7087,12 @@ PROC :doObjectCode_boss_scrapBrain {
 	ld	hl,$02af
 	and	a
 	sbc	hl,de
-	ld	bc,(#RAM_CAMERA_Y)
+	ld	bc,($.CAMERA_Y)
 	and	a
 	sbc	hl,bc
 	ex	de,hl
 	ld	hl,$05a0
-	ld	bc,(#RAM_CAMERA_X)
+	ld	bc,($.CAMERA_X)
 	and	a
 	sbc	hl,bc
 	ld	bc,:_a9c0		`address of sprite layout
@@ -7119,20 +7120,20 @@ DATA $FF
 PROC :doObjectCode_meta_clouds {
 	set	5,(ix+$18)
 	ld	a,(iy+#vars.spriteUpdateCount)
-	ld	hl,(#RAM_SPRITETABLE_CURRENT)
+	ld	hl,($.SPRITES_CURRENT)
 	push	af
 	push	hl
-	ld	a,($D2DE)
+	ld	a,($.D2DE)
 	cp	$24
 	jr	nc,._1
 	ld	e,a
 	ld	d,$00
-	ld	hl,#RAM_SPRITETABLE
+	ld	hl,$.SPRITES
 	add	hl,de
-	ld	(#RAM_SPRITETABLE_CURRENT),hl
-	ld	a,($D2A3)
+	ld	($.SPRITES_CURRENT),hl
+	ld	a,($.D2A3)
 	ld	c,a
-	ld	de,($D2A1)
+	ld	de,($.D2A1)
 	ld	l,(ix+$04)
 	ld	h,(ix+#object.Y+0)
 	ld	a,(ix+#object.Y+1)
@@ -7140,25 +7141,25 @@ PROC :doObjectCode_meta_clouds {
 	adc	a,c
 	ld	l,h
 	ld	h,a
-	ld	bc,(#RAM_CAMERA_Y)
+	ld	bc,($.CAMERA_Y)
 	and	a
 	sbc	hl,bc
 	ex	de,hl
 	ld	l,(ix+#object.X+0)
 	ld	h,(ix+#object.X+1)
-	ld	bc,(#RAM_CAMERA_X)
+	ld	bc,($.CAMERA_X)
 	and	a
 	sbc	hl,bc
 	ld	bc,:_aa63		`address of sprite layout
 	call	:processSpriteLayout
-	ld	a,($D2DE)
+	ld	a,($.D2DE)
 	add	a,$0c
-	ld	($D2DE),a
+	ld	($.D2DE),a
 ._1	pop	hl
 	pop	af
-	ld	(#RAM_SPRITETABLE_CURRENT),hl
+	ld	($.SPRITES_CURRENT),hl
 	ld	(iy+#vars.spriteUpdateCount),a
-	ld	hl,(#RAM_CAMERA_X)
+	ld	hl,($.CAMERA_X)
 	ld	de,$ffe0
 	add	hl,de
 	ex	de,hl
@@ -7172,7 +7173,7 @@ PROC :doObjectCode_meta_clouds {
 	add	a,a
 	ld	c,a
 	rl	b
-	ld	hl,(#RAM_CAMERA_X)
+	ld	hl,($.CAMERA_X)
 	ld	de,$01b4
 	add	hl,de
 	add	hl,bc
@@ -7215,10 +7216,10 @@ PROC :doObjectCode_trap_propeller {
 	set	0,(ix+$18)
 ._1	ld	l,(ix+#object.X+0)
 	ld	h,(ix+#object.X+1)
-	ld	(#RAM_TEMP1),hl
+	ld	($.TEMP1),hl
 	ld	l,(ix+#object.Y+0)
 	ld	h,(ix+#object.Y+1)
-	ld	(#RAM_TEMP3),hl
+	ld	($.TEMP3),hl
 	ld	e,(ix+$11)
 	ld	d,$00
 	ld	hl,:_ab01
@@ -7232,11 +7233,11 @@ PROC :doObjectCode_trap_propeller {
 	ld	a,(de)
 	ld	l,a
 	ld	h,$00
-	ld	(#RAM_TEMP4),hl
+	ld	($.TEMP4),hl
 	inc	de
 	ld	a,(de)
 	ld	l,a
-	ld	(#RAM_TEMP6),hl
+	ld	($.TEMP6),hl
 	inc	de
 	ld	a,(de)
 	inc	de
@@ -7249,7 +7250,7 @@ PROC :doObjectCode_trap_propeller {
 	djnz	.loop
 	
 	ld	hl,$0202
-	ld	(#RAM_TEMP6),hl
+	ld	($.TEMP6),hl
 	call	:_LABEL_3956_11
 	call	nc,:_35fd
 	ld	(ix+#object.spriteLayout+0),$00
@@ -7282,7 +7283,7 @@ PROC :doObjectCode_badnick_bomb {
 	ld	de,$ffc8
 	add	hl,de
 	ex	de,hl
-	ld	hl,(#RAM_SONIC.X)
+	ld	hl,($.SONIC.X)
 	and	a
 	sbc	hl,de
 	jr	c,._1
@@ -7291,7 +7292,7 @@ PROC :doObjectCode_badnick_bomb {
 	ld	de,$002c
 	add	hl,de
 	ex	de,hl
-	ld	hl,(#RAM_SONIC.X)
+	ld	hl,($.SONIC.X)
 	and	a
 	sbc	hl,de
 	jr	nc,._1
@@ -7325,9 +7326,9 @@ PROC :doObjectCode_badnick_bomb {
 	cp	$67
 	jp	nz,._7
 	ld	hl,$fffe
-	ld	(#RAM_TEMP4),hl
+	ld	($.TEMP4),hl
 	ld	hl,$fffc
-	ld	(#RAM_TEMP6),hl
+	ld	($.TEMP6),hl
 	call	:_7c7b
 	jp	c,._8
 	ld	de,$0000
@@ -7335,27 +7336,27 @@ PROC :doObjectCode_badnick_bomb {
 	ld	b,d
 	call	:_ac96
 	ld	hl,$0003
-	ld	(#RAM_TEMP4),hl
+	ld	($.TEMP4),hl
 	ld	hl,$fffc
-	ld	(#RAM_TEMP6),hl
+	ld	($.TEMP6),hl
 	call	:_7c7b
 	jp	c,._8
 	ld	de,$0008
 	ld	bc,$0000
 	call	:_ac96
 	ld	hl,$fffe
-	ld	(#RAM_TEMP4),hl
+	ld	($.TEMP4),hl
 	ld	hl,$fffe
-	ld	(#RAM_TEMP6),hl
+	ld	($.TEMP6),hl
 	call	:_7c7b
 	jp	c,._8
 	ld	de,$0000
 	ld	bc,$0008
 	call	:_ac96
 	ld	hl,$0003
-	ld	(#RAM_TEMP4),hl
+	ld	($.TEMP4),hl
 	ld	hl,$fffe
-	ld	(#RAM_TEMP6),hl
+	ld	($.TEMP6),hl
 	call	:_7c7b
 	jp	c,._8
 	ld	de,$0008
@@ -7398,10 +7399,10 @@ PROC :doObjectCode_badnick_bomb {
 	ld	(ix+#object.Yspeed+1),$00
 	ld	(ix+#object.Ydirection),$00
 ._8	ld	hl,$0202
-	ld	(#RAM_TEMP6),hl
+	ld	($.TEMP6),hl
 	call	:_LABEL_3956_11
 	call	nc,:_35fd
-	ld	a,(#RAM_FRAMECOUNT)
+	ld	a,($.FRAMECOUNT)
 	and	$3f
 	ret	nz
 	inc	(ix+$11)
@@ -7442,11 +7443,11 @@ PROC :_ac96 {
 	ld	(ix+$16),a
 	ld	(ix+$17),a
 	ld	(ix+#object.Xspeed+0),a
-	ld	hl,(#RAM_TEMP4)
+	ld	hl,($.TEMP4)
 	ld	(ix+#object.Xspeed+1),l
 	ld	(ix+#object.Xdirection),h
 	ld	(ix+#object.Yspeed+0),a
-	ld	hl,(#RAM_TEMP6)
+	ld	hl,($.TEMP6)
 	ld	(ix+#object.Yspeed+1),l
 	ld	(ix+#object.Ydirection),h
 	pop	ix
@@ -7575,7 +7576,7 @@ PROC :doObjectCode_trap_cannonBall {
 	set	5,(ix+$18)
 	ld	(ix+#object.width),$0c
 	ld	(ix+#object.height),$0c
-	ld	hl,(#RAM_CAMERA_X)
+	ld	hl,($.CAMERA_X)
 	ld	de,$0110
 	add	hl,de
 	ld	e,(ix+#object.X+0)
@@ -7585,7 +7586,7 @@ PROC :doObjectCode_trap_cannonBall {
 	jr	nc,._1
 	ld	(ix+#object.type),$FF	`remove object?
 ._1	ld	hl,$0202
-	ld	(#RAM_TEMP6),hl
+	ld	($.TEMP6),hl
 	call	:_LABEL_3956_11
 	call	nc,:_35fd
 	xor	a
@@ -7619,7 +7620,7 @@ PROC :doObjectCode_badnick_unidos {
 	set	0,(ix+$18)
 ._1	ld	l,(ix+#object.X+0)
 	ld	h,(ix+#object.X+1)
-	ld	de,(#RAM_SONIC.X)
+	ld	de,($.SONIC.X)
 	and	a
 	sbc	hl,de
 	jr	c,._2
@@ -7629,7 +7630,7 @@ PROC :doObjectCode_badnick_unidos {
 	ld	(ix+#object.spriteLayout+0),:_b0d5.lo
 	ld	(ix+#object.spriteLayout+1),:_b0d5.hi
 	ld	hl,$ff80
-	ld	($D216),hl
+	ld	($.D216),hl
 	call	:_af98
 	ld	(ix+$16),$01
 	jr	._3
@@ -7640,23 +7641,23 @@ PROC :doObjectCode_badnick_unidos {
 	ld	(ix+#object.spriteLayout+0),:_b0e7.lo
 	ld	(ix+#object.spriteLayout+1),:_b0e7.hi
 	ld	hl,$0080
-	ld	($D216),hl
+	ld	($.D216),hl
 	call	:_af98
 	ld	(ix+$16),$ff
 ._3	ld	(ix+#object.width),$1c
 	ld	(ix+#object.height),$1c
 	ld	hl,$1212
-	ld	(#RAM_TEMP6),hl
+	ld	($.TEMP6),hl
 	call	:_LABEL_3956_11
 	ld	hl,$1010
-	ld	(#RAM_TEMP1),hl
+	ld	($.TEMP1),hl
 	call	nc,:_35e5
 	ld	l,(ix+#object.X+0)
 	ld	h,(ix+#object.X+1)
-	ld	(#RAM_TEMP1),hl
+	ld	($.TEMP1),hl
 	ld	l,(ix+#object.Y+0)
 	ld	h,(ix+#object.Y+1)
-	ld	(#RAM_TEMP3),hl
+	ld	($.TEMP3),hl
 	push	ix
 	pop	hl
 	ld	de,$0011
@@ -7675,24 +7676,24 @@ PROC :doObjectCode_badnick_unidos {
 	add	hl,de
 	push	hl
 	ld	e,(hl)
-	ld	(#RAM_TEMP4),de
+	ld	($.TEMP4),de
 	inc	hl
 	ld	e,(hl)
-	ld	(#RAM_TEMP6),de
+	ld	($.TEMP6),de
 	ld	a,$24
 	call	:_3581
 	pop	hl
 	ld	a,(hl)
 	inc	a
 	inc	a
-	ld	(#RAM_TEMP6),a
+	ld	($.TEMP6),a
 	add	a,$04
 	ld	(ix+#object.width),a
 	inc	hl
 	ld	a,(hl)
 	inc	a
 	inc	a
-	ld	(#RAM_TEMP7),a
+	ld	($.TEMP7),a
 	add	a,$04
 	ld	(ix+#object.height),a
 	call	:_LABEL_3956_11
@@ -7715,7 +7716,7 @@ PROC :doObjectCode_badnick_unidos {
 	inc	hl
 	djnz	.loop
 	
-	ld	a,(#RAM_FRAMECOUNT)
+	ld	a,($.FRAMECOUNT)
 	and	$07
 	ret	z
 	ld	a,(ix+$15)
@@ -7731,14 +7732,14 @@ PROC :_af98 {
 	ld	a,(ix+$15)
 	cp	$c8
 	ret	nz
-	ld	a,(#RAM_LEVEL_SOLIDITY)
+	ld	a,($.LEVEL_SOLIDITY)
 	cp	$03
 	ret	nz
 	ld	l,(ix+#object.Y+0)
 	ld	h,(ix+#object.Y+1)
 	ld	de,$ffd0
 	add	hl,de
-	ld	de,(#RAM_SONIC.Y+0)
+	ld	de,($.SONIC.Y+0)
 	and	a
 	sbc	hl,de
 	ret	nc
@@ -7793,7 +7794,7 @@ PROC :_afdb {
 	add	hl,bc
 	ld	(ix+#object.Y+0),l
 	ld	(ix+#object.Y+1),h
-	ld	hl,($D216)
+	ld	hl,($.D216)
 	ld	(ix+#object.Xspeed+0),l
 	ld	(ix+#object.Xspeed+1),h
 	xor	a
@@ -7843,20 +7844,20 @@ PROC :_b0f4 {
 	ld	(ix+#object.width),$04
 	ld	(ix+#object.height),$0a
 	ld	hl,$0602
-	ld	(#RAM_TEMP6),hl
+	ld	($.TEMP6),hl
 	call	:_LABEL_3956_11
 	call	nc,:_35fd
 	ld	l,(ix+#object.X+0)
 	ld	h,(ix+#object.X+1)
-	ld	(#RAM_TEMP1),hl
+	ld	($.TEMP1),hl
 	ex	de,hl
-	ld	hl,(#RAM_CAMERA_X)
+	ld	hl,($.CAMERA_X)
 	ld	bc,$fff0
 	add	hl,bc
 	and	a
 	sbc	hl,de
 	jr	nc,._1
-	ld	hl,(#RAM_CAMERA_X)
+	ld	hl,($.CAMERA_X)
 	ld	bc,$0110
 	add	hl,bc
 	and	a
@@ -7864,23 +7865,23 @@ PROC :_b0f4 {
 	jr	c,._1
 	ld	l,(ix+#object.Y+0)
 	ld	h,(ix+#object.Y+1)
-	ld	(#RAM_TEMP3),hl
+	ld	($.TEMP3),hl
 	ex	de,hl
-	ld	hl,(#RAM_CAMERA_Y)
+	ld	hl,($.CAMERA_Y)
 	ld	bc,$fff0
 	add	hl,bc
 	and	a
 	sbc	hl,de
 	jr	nc,._1
-	ld	hl,(#RAM_CAMERA_Y)
+	ld	hl,($.CAMERA_Y)
 	ld	bc,$00d0
 	add	hl,bc
 	and	a
 	sbc	hl,de
 	jr	c,._1
 	ld	hl,$0000
-	ld	(#RAM_TEMP4),hl
-	ld	(#RAM_TEMP6),hl
+	ld	($.TEMP4),hl
+	ld	($.TEMP6),hl
 	ld	a,$24
 	call	:_3581
 	ret
@@ -7904,10 +7905,10 @@ PROC :doObjectCode_trap_turretRotating {
 	ld	(ix+#object.spriteLayout+1),$00
 	ld	l,(ix+#object.X+0)
 	ld	h,(ix+#object.X+1)
-	ld	(#RAM_TEMP1),hl
+	ld	($.TEMP1),hl
 	ld	l,(ix+#object.Y+0)
 	ld	h,(ix+#object.Y+1)
-	ld	(#RAM_TEMP3),hl
+	ld	($.TEMP3),hl
 	ld	a,(ix+$11)
 	add	a,a
 	add	a,a
@@ -7924,14 +7925,14 @@ PROC :doObjectCode_trap_turretRotating {
 	bit	7,e
 	jr	z,._2
 	ld	d,$ff
-._2	ld	(#RAM_TEMP4),de
+._2	ld	($.TEMP4),de
 	inc	hl
 	ld	d,$00
 	ld	e,(hl)
 	bit	7,e
 	jr	z,._3
 	ld	d,$ff
-._3	ld	(#RAM_TEMP6),de
+._3	ld	($.TEMP6),de
 	inc	hl
 	ld	a,(hl)
 	inc	hl
@@ -7944,7 +7945,7 @@ PROC :doObjectCode_trap_turretRotating {
 ._4	pop	bc
 	djnz	.loop
 	
-	ld	a,(#RAM_FRAMECOUNT)
+	ld	a,($.FRAMECOUNT)
 	and	$3f
 	jr	nz,._5
 	ld	a,(ix+$11)
@@ -7969,11 +7970,11 @@ PROC :doObjectCode_trap_turretRotating {
 	inc	hl
 	ld	d,(hl)
 	inc	hl
-	ld	(#RAM_TEMP4),de
+	ld	($.TEMP4),de
 	ld	e,(hl)
 	inc	hl
 	ld	d,(hl)
-	ld	(#RAM_TEMP6),de
+	ld	($.TEMP6),de
 	inc	hl
 	ld	e,(hl)
 	ld	d,$00
@@ -8019,9 +8020,9 @@ PROC :doObjectCode_platform_flyingRight {
 	
 	set	0,(ix+$18)
 	
-._1	ld	a,($D2A3)
+._1	ld	a,($.D2A3)
 	ld	c,a
-	ld	de,($D2A1)
+	ld	de,($.D2A1)
 	ld	l,(ix+$12)
 	ld	h,(ix+$13)
 	ld	a,(ix+$14)
@@ -8031,21 +8032,21 @@ PROC :doObjectCode_platform_flyingRight {
 	ld	(ix+#object.Y+0),h
 	ld	(ix+#object.Y+1),a
 	
-	ld	a,(#RAM_SONIC.Ydirection)
+	ld	a,($.SONIC.Ydirection)
 	and	a
 	jp	m,._2
 	
 	ld	(ix+#object.width),$1e
 	ld	(ix+#object.height),$10
 	ld	hl,$0a02
-	ld	(#RAM_TEMP6),hl
+	ld	($.TEMP6),hl
 	call	:_LABEL_3956_11
 	jr	c,._2
 	
 	ld	hl,$0030
-	ld	($D26B),hl
+	ld	($.D26B),hl
 	ld	hl,$0030
-	ld	($D26D),hl
+	ld	($.D26D),hl
 	ld	bc,$0010
 	ld	de,$0000
 	call	:_LABEL_7CC1_12
@@ -8059,19 +8060,19 @@ PROC :doObjectCode_platform_flyingRight {
 	ld	(ix+#object.X+0),h
 	ld	(ix+#object.X+1),a
 	ld	hl,($D3FD)
-	ld	a,(#RAM_SONIC.X+1)
+	ld	a,($.SONIC.X+1)
 	add	hl,de
 	adc	a,$00
 	ld	($D3FD),hl
-	ld	(#RAM_SONIC.X+1),a
+	ld	($.SONIC.X+1),a
 ._2	ld	l,(ix+#object.X+0)
 	ld	h,(ix+#object.X+1)
-	ld	(#RAM_TEMP1),hl
+	ld	($.TEMP1),hl
 	ld	l,(ix+#object.Y+0)
 	ld	h,(ix+#object.Y+1)
-	ld	(#RAM_TEMP3),hl
+	ld	($.TEMP3),hl
 	ld	hl,$fff8
-	ld	(#RAM_TEMP4),hl
+	ld	($.TEMP4),hl
 	ld	e,(ix+$11)
 	ld	d,$00
 	ld	hl,:_b388
@@ -8082,7 +8083,7 @@ PROC :doObjectCode_platform_flyingRight {
 	ld	e,(hl)
 	ld	d,$00
 	inc	hl
-	ld	(#RAM_TEMP6),de
+	ld	($.TEMP6),de
 	ld	a,(hl)
 	inc	hl
 	cp	$ff
@@ -8130,7 +8131,7 @@ PROC :_b398 {
 	ld	(ix+#object.spriteLayout+0),:_b45b.lo
 	ld	(ix+#object.spriteLayout+1),:_b45b.hi
 	ld	hl,$0202
-	ld	(#RAM_TEMP6),hl
+	ld	($.TEMP6),hl
 
 	call	:_LABEL_3956_11
 	call	nc,:_35fd
@@ -8142,18 +8143,18 @@ PROC :_b398 {
 	adc	a,$00
 	ld	l,h
 	ld	h,a
-	ld	(#RAM_TEMP1),hl
+	ld	($.TEMP1),hl
 	ld	l,(ix+#object.Y+0)
 	ld	h,(ix+#object.Y+1)
-	ld	(#RAM_TEMP3),hl
+	ld	($.TEMP3),hl
 	ld	hl,$0000
-	ld	(#RAM_TEMP4),hl
+	ld	($.TEMP4),hl
 	ld	hl,$fff0
-	ld	(#RAM_TEMP6),hl
+	ld	($.TEMP6),hl
 	ld	a,$16
 	call	:_3581
 	ld	hl,$0008
-	ld	(#RAM_TEMP4),hl
+	ld	($.TEMP4),hl
 	ld	a,$18
 	call	:_3581
 	ld	l,(ix+#object.X+0)
@@ -8169,7 +8170,7 @@ PROC :_b398 {
 	ld	b,(ix+#object.Y+1)
 	ld	hl,$0040
 	add	hl,bc
-	ld	de,(#RAM_CAMERA_Y)
+	ld	de,($.CAMERA_Y)
 	and	a
 	sbc	hl,de
 	jr	nc,._2
@@ -8177,7 +8178,7 @@ PROC :_b398 {
 	ld	(ix+#object.X+0),a
 	ld	a,(ix+$12)
 	ld	(ix+#object.X+1),a
-._2	ld	de,(#RAM_SONIC.Y+0)
+._2	ld	de,($.SONIC.Y+0)
 	ld	hl,$ffe0
 	add	hl,bc
 	xor	a
@@ -8237,12 +8238,12 @@ PROC :doObjectCode_trap_turretFixed {
 	inc	hl
 	ld	d,(hl)
 	inc	hl
-	ld	(#RAM_TEMP4),de
+	ld	($.TEMP4),de
 	ld	e,(hl)
 	inc	hl
 	ld	d,(hl)
 	inc	hl
-	ld	(#RAM_TEMP6),de
+	ld	($.TEMP6),de
 	ld	e,(hl)
 	inc	hl
 	ld	d,(hl)
@@ -8254,7 +8255,7 @@ PROC :doObjectCode_trap_turretFixed {
 	exx	
 	ld	e,(ix+#object.X+0)
 	ld	d,(ix+#object.X+1)
-	ld	hl,(#RAM_SONIC.X)
+	ld	hl,($.SONIC.X)
 	and	a
 	sbc	hl,de
 	ld	a,h
@@ -8265,7 +8266,7 @@ PROC :doObjectCode_trap_turretFixed {
 	exx	
 	ld	e,(ix+#object.Y+0)
 	ld	d,(ix+#object.Y+1)
-	ld	hl,(#RAM_SONIC.Y+0)
+	ld	hl,($.SONIC.Y+0)
 	and	a
 	sbc	hl,de
 	ld	a,h
@@ -8287,14 +8288,14 @@ DATA $80, $01, $18, $00, $10, $00, $00, $00
 PROC :doObjectCode_platform_flyingUpDown {
 	set	5,(ix+$18)
 	ld	hl,:_b37b
-	ld	a,(#RAM_LEVEL_SOLIDITY)
+	ld	a,($.LEVEL_SOLIDITY)
 	cp	$01
 	jr	nz,._1
 	ld	hl,:_b5b5
 ._1	ld	(ix+#object.spriteLayout+0),l
 	ld	(ix+#object.spriteLayout+1),h
 	ld	a,$50
-	ld	($D216),a
+	ld	($.D216),a
 	call	:_b53b
 	inc	(ix+$11)
 	ld	a,(ix+$11)
@@ -8307,7 +8308,7 @@ PROC :doObjectCode_platform_flyingUpDown {
 `----------------------------------------------------------------------------[$B53B]---
 
 PROC :_b53b {
-	ld	a,($D216)
+	ld	a,($.D216)
 	ld	l,a
 	ld	de,$0010
 	ld	c,$00
@@ -8348,14 +8349,14 @@ PROC :_b53b {
 	ld	(ix+#object.Yspeed+1),$02
 	ld	(ix+#object.Ydirection),$00
 	
-._3	ld	a,(#RAM_SONIC.Ydirection)
+._3	ld	a,($.SONIC.Ydirection)
 	and	a
 	ret	m
 	
 	ld	(ix+#object.width),$1e
 	ld	(ix+#object.height),$1c
 	ld	hl,$0802
-	ld	(#RAM_TEMP6),hl
+	ld	($.TEMP6),hl
 	call	:_LABEL_3956_11
 	ret	c
 	ld	e,(ix+#object.Yspeed+0)
@@ -8406,7 +8407,7 @@ PROC :_b5c2 {
 	ld	(ix+$15),a
 	ld	(ix+$16),a
 	ld	(ix+$17),a
-	ld	hl,(#RAM_TEMP4)
+	ld	hl,($.TEMP4)
 	bit	7,h
 	jr	z,._1
 	ld	a,$ff
@@ -8414,7 +8415,7 @@ PROC :_b5c2 {
 	ld	(ix+#object.Xspeed+1),h
 	ld	(ix+#object.Xdirection),a
 	xor	a
-	ld	hl,(#RAM_TEMP6)
+	ld	hl,($.TEMP6)
 	bit	7,h
 	jr	z,._2
 	ld	a,$ff
@@ -8473,7 +8474,7 @@ PROC :doObjectCode_boss_skyBase {
 	and	a
 	jp	nz,._4
 	call	:_b99f
-	ld	a,(#RAM_FRAMECOUNT)
+	ld	a,($.FRAMECOUNT)
 	and	$07
 	jp	nz,._8
 	ld	a,(ix+$16)
@@ -8570,7 +8571,7 @@ PROC :doObjectCode_boss_skyBase {
 	bit	1,(ix+$18)
 	jr	z,._9
 	ld	hl,:_ba3b
-._9	ld	de,#RAM_TEMP1
+._9	ld	de,$.TEMP1
 	ldi	
 	ldi	
 	ldi	
@@ -8583,10 +8584,10 @@ PROC :doObjectCode_boss_skyBase {
 	inc	hl
 	push	hl
 	call	:_3581
-	ld	hl,(#RAM_TEMP4)
+	ld	hl,($.TEMP4)
 	ld	de,$0008
 	add	hl,de
-	ld	(#RAM_TEMP4),hl
+	ld	($.TEMP4),hl
 	pop	hl
 	ld	a,(hl)
 	call	:_3581
@@ -8611,7 +8612,7 @@ PROC :doObjectCode_boss_skyBase {
 `____________________________________________________________________________[$B7E6]___	
 
 PROC :_b7e6 {
-	ld	a,($D2B1)
+	ld	a,($.D2B1)
 	and	a
 	ret	nz
 	bit	0,(iy+#vars.scrollRingFlags)
@@ -8621,16 +8622,16 @@ PROC :_b7e6 {
 	jr	c,._1
 	and	$02
 	ret	z
-._1	ld	hl,(#RAM_SONIC.X)
+._1	ld	hl,($.SONIC.X)
 	ld	de,$0410
 	and	a
 	sbc	hl,de
 	ret	c
 	ld	hl,$fd00
 	ld	a,$ff
-	ld	(#RAM_SONIC.Xspeed),hl
-	ld	(#RAM_SONIC.Xdirection),a
-	ld	hl,$D2B1
+	ld	($.SONIC.Xspeed),hl
+	ld	($.SONIC.Xdirection),a
+	ld	hl,$.D2B1
 	ld	(hl),$18
 	inc	hl
 	ld	(hl),$0c
@@ -8665,13 +8666,13 @@ PROC :_b821 {
 	inc	hl
 	ld	d,(hl)
 	inc	hl
-	ld	($D2AB),de
+	ld	($.D2AB),de
 	ld	e,(hl)
 	inc	hl
 	ld	d,(hl)
 	inc	hl
-	ld	($D2AD),de
-	ld	($D2AF),hl
+	ld	($.D2AD),de
+	ld	($.D2AF),hl
 	inc	(ix+$11)
 	ld	a,(ix+$11)
 	cp	$0f
@@ -8681,7 +8682,7 @@ PROC :_b821 {
 	
 	`something to do with scrolling
 	ld	hl,$0550
-	ld	(#RAM_LEVEL_RIGHT),hl
+	ld	($.LEVEL_RIGHT),hl
 	
 ._1	ld	e,(ix+#object.X+0)
 	ld	d,(ix+#object.X+1)
@@ -8694,12 +8695,12 @@ PROC :_b821 {
 	jp	._5
 	
 ._2	ex	de,hl
-	ld	de,(#RAM_SONIC.X)
+	ld	de,($.SONIC.X)
 	xor	a
 	sbc	hl,de
 	ld	de,$0040
 	xor	a
-	ld	bc,(#RAM_SONIC.Xspeed)
+	ld	bc,($.SONIC.Xspeed)
 	bit	7,b
 	jr	nz,._3
 	sbc	hl,de
@@ -8788,7 +8789,7 @@ PROC :_b821 {
 	cp	$30
 	jr	nc,._12
 	ld	c,a
-	ld	a,(#RAM_FRAMECOUNT)
+	ld	a,($.FRAMECOUNT)
 	and	$07
 	jr	nz,._11
 	ld	a,(ix+$17)
@@ -8943,7 +8944,7 @@ DATA $FF
 PROC :doObjectCode_boss_electricBeam {
 	set	5,(ix+$18)
 	ld	hl,$0008
-	ld	($D26B),hl
+	ld	($.D26B),hl
 	bit	0,(ix+$18)
 	jr	nz,._1
 
@@ -8956,18 +8957,18 @@ PROC :doObjectCode_boss_electricBeam {
 	ld	(ix+$12),$01
 	set	0,(ix+$18)
 ._1	ld	hl,$0390
-	ld	(#RAM_TEMP1),hl
+	ld	($.TEMP1),hl
 	ld	l,(ix+$11)
 	ld	h,$00
-	ld	(#RAM_TEMP4),hl
+	ld	($.TEMP4),hl
 	ld	l,h
-	ld	(#RAM_TEMP6),hl
+	ld	($.TEMP6),hl
 	ld	de,$011a
 	ld	hl,:_bcdd
 	call	:_bca5
 	ld	e,(ix+$11)
 	ld	d,$00
-	ld	(#RAM_TEMP4),de
+	ld	($.TEMP4),de
 	ld	de,$01d2
 	ld	hl,:_bcdd
 	call	:_bca5
@@ -8975,7 +8976,7 @@ PROC :doObjectCode_boss_electricBeam {
 	ret	z
 	bit	1,(ix+$18)
 	jr	z,._2
-	ld	a,(#RAM_FRAMECOUNT)
+	ld	a,($.FRAMECOUNT)
 	bit	0,a
 	ret	nz
 	and	$02
@@ -9006,7 +9007,7 @@ PROC :doObjectCode_boss_electricBeam {
 	ld	b,h
 	ld	hl,$000c
 	add	hl,bc
-	ld	de,(#RAM_SONIC.X)
+	ld	de,($.SONIC.X)
 	and	a
 	sbc	hl,de
 	jr	c,._2
@@ -9028,14 +9029,14 @@ PROC :doObjectCode_boss_electricBeam {
 	ld	(ix+$11),a
 	cp	$80
 	ret	c
-	ld	a,(#RAM_FRAMECOUNT)
+	ld	a,($.FRAMECOUNT)
 	ld	c,a
 	and	$01
 	ret	nz
 	set	1,(ix+$18)
 	ret
 	
-._3	ld	a,(#RAM_FRAMECOUNT)
+._3	ld	a,($.FRAMECOUNT)
 	and	$0f
 	jr	nz,._4
 	ld	a,$13
@@ -9046,7 +9047,7 @@ PROC :doObjectCode_boss_electricBeam {
 	res	1,(ix+$18)
 	ret
 	
-._5	ld	hl,(#RAM_SONIC.X)
+._5	ld	hl,($.SONIC.X)
 	ld	e,(ix+#object.X+0)
 	ld	d,(ix+#object.X+1)
 	and	a
@@ -9063,7 +9064,7 @@ PROC :doObjectCode_boss_electricBeam {
 	jr	nc,._7
 	inc	(ix+$11)
 ._7	res	1,(ix+$18)
-	ld	a,(#RAM_FRAMECOUNT)
+	ld	a,($.FRAMECOUNT)
 	ld	c,a
 	and	$40
 	ret	nz
@@ -9082,7 +9083,7 @@ PROC :doObjectCode_boss_electricBeam {
 `____________________________________________________________________________[$BAC5]___
 
 PROC :_bca5 {
-	ld	(#RAM_TEMP3),de
+	ld	($.TEMP3),de
 	ld	a,(hl)
 	inc	hl
 	push	hl
@@ -9091,14 +9092,14 @@ PROC :_bca5 {
 	ld	a,(hl)
 	inc	hl
 	push	hl
-	ld	hl,(#RAM_TEMP4)
+	ld	hl,($.TEMP4)
 	push	hl
 	ld	de,$0008
 	add	hl,de
-	ld	(#RAM_TEMP4),hl
+	ld	($.TEMP4),hl
 	call	:_3581
 	pop	hl
-	ld	(#RAM_TEMP4),hl
+	ld	($.TEMP4),hl
 	pop	hl
 	ret
 }
@@ -9116,7 +9117,7 @@ PROC :_bcdf {
 	set	5,(ix+$18)
 	set	5,(iy+#vars.unknown0)
 	ld	hl,$0202
-	ld	(#RAM_TEMP6),hl
+	ld	($.TEMP6),hl
 	call	:_LABEL_3956_11
 	jr	c,._1
 	bit	0,(iy+#vars.scrollRingFlags)
@@ -9128,18 +9129,18 @@ PROC :_bcdf {
 	jp	c,._6
 	ld	e,(ix+#object.X+0)
 	ld	d,(ix+#object.X+1)
-	ld	hl,(#RAM_CAMERA_X)
+	ld	hl,($.CAMERA_X)
 	ld	bc,$fff4
 	add	hl,bc
 	and	a
 	sbc	hl,de
 	jp	nc,._8
-	ld	hl,(#RAM_CAMERA_X)
+	ld	hl,($.CAMERA_X)
 	inc	h
 	and	a
 	sbc	hl,de
 	jp	c,._8
-	ld	hl,(#RAM_SONIC.X)
+	ld	hl,($.SONIC.X)
 	and	a
 	sbc	hl,de
 	ld	l,(ix+#object.Xspeed+0)
@@ -9165,19 +9166,19 @@ PROC :_bcdf {
 	ld	(ix+#object.Xdirection),a
 	ld	e,(ix+#object.Y+0)
 	ld	d,(ix+#object.Y+1)
-	ld	hl,(#RAM_CAMERA_Y)
+	ld	hl,($.CAMERA_Y)
 	ld	bc,$fff4
 	add	hl,bc
 	and	a
 	sbc	hl,de
 	jr	nc,._8
-	ld	hl,(#RAM_CAMERA_Y)
+	ld	hl,($.CAMERA_Y)
 	ld	bc,$00c0
 	add	hl,de
 	and	a
 	sbc	hl,de
 	jr	c,._8
-	ld	hl,(#RAM_SONIC.Y+0)
+	ld	hl,($.SONIC.Y+0)
 	and	a
 	sbc	hl,de
 	ld	l,(ix+#object.Yspeed+0)
@@ -9241,13 +9242,13 @@ PROC :doObjectCode_anim_final {
 	ld	a,%00000010
 	call	:loadPaletteOnInterrupt
 	ld	a,$FF
-	ld	(#RAM_SONIC),a
+	ld	($.SONIC),a
 	ld	hl,$0000
-	ld	(#RAM_SONIC.Y+0),hl
+	ld	($.SONIC.Y+0),hl
 	ld	(ix+$12),$ff
 	set	6,(iy+#vars.timeLightningFlags)
 	set	1,(ix+$18)
-._1	ld	a,(#RAM_FRAMECOUNT)
+._1	ld	a,($.FRAMECOUNT)
 	rrca	
 	jr	c,._2
 	ld	a,(ix+$12)
@@ -9259,14 +9260,14 @@ PROC :doObjectCode_anim_final {
 	ld	h,(ix+#object.X+1)
 	ld	de,$003c
 	add	hl,de
-	ld	(#RAM_SONIC.X),hl
+	ld	($.SONIC.X),hl
 	ld	l,(ix+#object.Y+0)
 	ld	h,(ix+#object.Y+1)
 	ld	de,$ffc0
 	add	hl,de
-	ld	(#RAM_SONIC.Y+0),hl
+	ld	($.SONIC.Y+0),hl
 	xor	a			`set A to 0
-	ld	(#RAM_SONIC),a
+	ld	($.SONIC),a
 	set	6,(iy+#vars.unknown0)
 	ld	a,$06
 	rst	:rst_playSFX
@@ -9281,7 +9282,7 @@ PROC :doObjectCode_anim_final {
 	ld	(ix+#object.Ydirection),a
 	bit	6,(iy+#vars.timeLightningFlags)
 	jr	z,._3
-	ld	de,(#RAM_CAMERA_X)
+	ld	de,($.CAMERA_X)
 	ld	hl,$0040
 	add	hl,de
 	ld	c,(ix+#object.X+0)
@@ -9290,29 +9291,29 @@ PROC :doObjectCode_anim_final {
 	sbc	hl,bc
 	jr	nc,._3
 	inc	de
-	ld	(#RAM_CAMERA_X),de
+	ld	($.CAMERA_X),de
 ._3	ld	(ix+#object.spriteLayout+0),._bf21.lo
 	ld	(ix+#object.spriteLayout+1),._bf21.hi
 	bit	0,(ix+$18)
 	jr	nz,._4
 	ld	hl,$1008
-	ld	(#RAM_TEMP6),hl
+	ld	($.TEMP6),hl
 	call	:_LABEL_3956_11
 	jr	c,+
 	ld	de,$0001
-	ld	hl,(#RAM_SONIC.Yspeed)
+	ld	hl,($.SONIC.Yspeed)
 	ld	a,l
 	cpl	
 	ld	l,a
 	ld	a,h
 	cpl	
 	ld	h,a
-	ld	a,(#RAM_SONIC.Ydirection)
+	ld	a,($.SONIC.Ydirection)
 	cpl	
 	add	hl,de
 	adc	a,$00
-	ld	(#RAM_SONIC.Yspeed),hl
-	ld	(#RAM_SONIC.Ydirection),a
+	ld	($.SONIC.Yspeed),hl
+	ld	($.SONIC.Ydirection),a
 	res	6,(iy+#vars.timeLightningFlags)
 	set	0,(ix+$18)
 	ld	(ix+$11),$01
@@ -9335,18 +9336,18 @@ PROC :doObjectCode_anim_final {
 	ld	a,(ix+$13)
 	cp	$0a
 	ret	c
-	ld	a,($D27F)
+	ld	a,($.D27F)
 	cp	$06
 	jr	c,._5
 	set	7,(iy+#vars.unknown0)
 	ret
 	
-._5	ld	a,($D289)
+._5	ld	a,($.D289)
 	and	a
 	ret	nz
 	ld	a,$20
-	ld	($D289),a
-	set	2,(iy+$0d)
+	ld	($.D289),a
+	set	2,(iy+#vars.unknown_0D)
 	ret
 
 ._bf21
@@ -9397,43 +9398,43 @@ PROC :doObjectCode_anim_emeralds {
 	ld	(ix+#object.Yspeed+1),$ff
 	ld	(ix+#object.Ydirection),$ff
 ._3	ld	hl,:_bff1
-	ld	a,(#RAM_FRAMECOUNT)
+	ld	a,($.FRAMECOUNT)
 	rrca	
 	jr	nc,._4
 	ld	a,(iy+#vars.spriteUpdateCount)
-	ld	hl,(#RAM_SPRITETABLE_CURRENT)
+	ld	hl,($.SPRITES_CURRENT)
 	push	af
 	push	hl
-	ld	hl,#RAM_SPRITETABLE
-	ld	(#RAM_SPRITETABLE_CURRENT),hl
+	ld	hl,$.SPRITES
+	ld	($.SPRITES_CURRENT),hl
 	ld	l,(ix+#object.Y+0)
 	ld	h,(ix+#object.Y+1)
-	ld	de,(#RAM_CAMERA_Y)
+	ld	de,($.CAMERA_Y)
 	and	a
 	sbc	hl,de
 	ex	de,hl
 	ld	l,(ix+#object.X+0)
 	ld	h,(ix+#object.X+1)
-	ld	bc,(#RAM_CAMERA_X)
+	ld	bc,($.CAMERA_X)
 	and	a
 	sbc	hl,bc
 	ld	bc,._bff1		`address of sprite layout
 	call	:processSpriteLayout
 	pop	hl
 	pop	af
-	ld	(#RAM_SPRITETABLE_CURRENT),hl
+	ld	($.SPRITES_CURRENT),hl
 	ld	(iy+#vars.spriteUpdateCount),a
 ._4	ld	l,(ix+#object.Y+0)
 	ld	h,(ix+#object.Y+1)
 	ld	de,$0020
 	add	hl,de
-	ld	de,(#RAM_CAMERA_Y)
+	ld	de,($.CAMERA_Y)
 	and	a
 	sbc	hl,de
 	ret	nc
 	ld	a,$01
-	ld	($D289),a
-	set	2,(iy+$0d)
+	ld	($.D289),a
+	set	2,(iy+#vars.unknown_0D)
 	ret
 
 `sprite layout

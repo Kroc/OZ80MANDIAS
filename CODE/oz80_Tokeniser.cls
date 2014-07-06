@@ -27,47 +27,6 @@ Option Compare Text
 'This class only represents one source code file. The assembler handles the specifics _
  of including additional source code files and spawns more TokenStream instances
 
-'/// API //////////////////////////////////////////////////////////////////////////////
-
-'Cast String to Array: _
- --------------------------------------------------------------------------------------
-'By manipulating some pointers we can cast a VB string directly into an array without _
- having to make a copy of the string, nor waste memory on a separate array. _
- This is obviously very fast, especially for long strings
-'<vbforums.com/showthread.php?729385>
-
-'This is VB6's internal structure used for VB arrays _
- <msdn.microsoft.com/en-us/library/ms221482(v=vs.85).aspx>
-Private Type SAFEARRAY1D
-    cDims      As Integer   'The count of dimensions
-    fFeatures  As Integer   'Flags used by the SafeArray
-    cbElements As Long      'The size of an array element
-    cLocks     As Long      'Lock count
-    pvData     As Long      'Pointer to the data
-    cElements  As Long      'The number of elements in the dimension
-    lLbound    As Long      'The lower bound of the dimension
-End Type
-
-'- An array that is allocated on the stack
-Private Const FADF_AUTO      As Integer = &H1
-'- An array that may not be resized or reallocated
-Private Const FADF_FIXEDSIZE As Integer = &H10
-
-'Undocumented VB6 API to get at the array pointer
-Private Declare Function msvbvm60_VarPtr Lib "msvbvm60.dll" Alias "VarPtr" ( _
-    ByRef ArrayVar() As Any _
-) As Long
-
-'Undocumented VB6 API to write 4-bytes (Long) of memory
-Private Declare Sub msvbvm60_PutMem4 Lib "msvbvm60.dll" Alias "PutMem4" ( _
-    ByVal Addr As Long, _
-    ByVal NewVal As Long _
-)
-
-Private CastStrSA1D As SAFEARRAY1D      'A dummy VB6 array header
-Private CastStrPtr  As Long             'Pointer to our dummy array
-Private CastStrArr() As Integer         'Empty array that will be hacked
-
 '/// PUBLIC CONSTANTS /////////////////////////////////////////////////////////////////
 'These are defined here (instead of in 'oz80_Assembler') to avoid circular references _
  due to the way the assembler sinks events from this class
@@ -206,8 +165,9 @@ Public Enum OZ80_TOKEN
     TOKEN_OPERATOR_POW                  'Power "^"
     TOKEN_OPERATOR_MOD                  'Modulus "\"
     TOKEN_OPERATOR_REP                  'Repeat "x"
-    TOKEN_OPERATOR_OR                   'Bitwise Or "|"
-    TOKEN_OPERATOR_AND                  'Bitwise And "&"
+    TOKEN_OPERATOR_OR                   'Bitwise OR "|"
+    TOKEN_OPERATOR_AND                  'Bitwise AND "&"
+    TOKEN_OPERATOR_NOT                  'Bitwise NOT "!"
     [_TOKEN_OPERATORS_END]
     
     'Keywords .........................................................................
@@ -262,6 +222,47 @@ Public Enum OZ80_TOKEN
     TOKEN_RAM
 End Enum
 
+'/// API //////////////////////////////////////////////////////////////////////////////
+
+'Cast String to Array: _
+ --------------------------------------------------------------------------------------
+'By manipulating some pointers we can cast a VB string directly into an array without _
+ having to make a copy of the string, nor waste memory on a separate array. _
+ This is obviously very fast, especially for long strings
+'<vbforums.com/showthread.php?729385>
+
+'This is VB6's internal structure used for VB arrays _
+ <msdn.microsoft.com/en-us/library/ms221482(v=vs.85).aspx>
+Private Type SAFEARRAY1D
+    cDims      As Integer   'The count of dimensions
+    fFeatures  As Integer   'Flags used by the SafeArray
+    cbElements As Long      'The size of an array element
+    cLocks     As Long      'Lock count
+    pvData     As Long      'Pointer to the data
+    cElements  As Long      'The number of elements in the dimension
+    lLbound    As Long      'The lower bound of the dimension
+End Type
+
+'- An array that is allocated on the stack
+Private Const FADF_AUTO      As Integer = &H1
+'- An array that may not be resized or reallocated
+Private Const FADF_FIXEDSIZE As Integer = &H10
+
+'Undocumented VB6 API to get at the array pointer
+Private Declare Function msvbvm60_VarPtr Lib "msvbvm60.dll" Alias "VarPtr" ( _
+    ByRef ArrayVar() As Any _
+) As Long
+
+'Undocumented VB6 API to write 4-bytes (Long) of memory
+Private Declare Sub msvbvm60_PutMem4 Lib "msvbvm60.dll" Alias "PutMem4" ( _
+    ByVal Addr As Long, _
+    ByVal NewVal As Long _
+)
+
+Private CastStrSA1D As SAFEARRAY1D      'A dummy VB6 array header
+Private CastStrPtr  As Long             'Pointer to our dummy array
+Private CastStrArr() As Integer         'Empty array that will be hacked
+
 '/// PRIVATE DEFS /////////////////////////////////////////////////////////////////////
 
 'This makes life a whole lot easier
@@ -300,18 +301,19 @@ Private Enum SYNTAX
     SYNTAX_NUMBER_HEX = 36      ' $ - hexadecimal number, e.g. `$FFFF`
     SYNTAX_NUMBER_BIN = 37      ' % - binary number, e.g. `%10101011`
     SYNTAX_NEXT = 44            ' , - item seperator, optional
-    SYNTAX_PAREN_OPEN = 40      ' (
-    SYNTAX_PAREN_CLOSE = 41     ' )
-    SYNTAX_BLOCK_OPEN = 123     ' {
-    SYNTAX_BLOCK_CLOSE = 125    ' }
-    SYNTAX_OPERATOR_ADD = 43    ' +
-    SYNTAX_OPERATOR_SUB = 45    ' -
-    SYNTAX_OPERATOR_MUL = 42    ' *
-    SYNTAX_OPERATOR_DIV = 47    ' /
-    SYNTAX_OPERATOR_POW = 94    ' ^
-    SYNTAX_OPERATOR_MOD = 92    ' \
-    SYNTAX_OPERATOR_OR = 124    ' |
-    SYNTAX_OPERATOR_AND = 38    ' &
+    SYNTAX_PAREN_OPEN = 40      ' ( - memory reference open parenthesis
+    SYNTAX_PAREN_CLOSE = 41     ' ) - memory reference close parenthesis
+    SYNTAX_BLOCK_OPEN = 123     ' { - block open brace
+    SYNTAX_BLOCK_CLOSE = 125    ' } - block close brace
+    SYNTAX_OPERATOR_ADD = 43    ' + - Add
+    SYNTAX_OPERATOR_SUB = 45    ' - - Subtract
+    SYNTAX_OPERATOR_MUL = 42    ' * - Multiply
+    SYNTAX_OPERATOR_DIV = 47    ' / - Divide
+    SYNTAX_OPERATOR_POW = 94    ' ^ - Power
+    SYNTAX_OPERATOR_MOD = 92    ' \ - Modulus
+    SYNTAX_OPERATOR_OR = 124    ' | - Bitwise OR
+    SYNTAX_OPERATOR_AND = 38    ' & - Bitwise AND
+    SYNTAX_OPERATOR_NOT = 33    ' ! - Bitwise NOT
 End Enum
 
 'Use a 100'000 item initial buffer for the token stream
@@ -362,11 +364,13 @@ Private LineBegin As Long, ColBegin As Long
  these are exposed publicly through properties so other classes and do quick checks
 Private My_IsInstruction(0 To 255) As Boolean
 Private My_IsRegister(0 To 255) As Boolean
-Private My_Is8BitRegister(0 To 255) As Boolean
-Private My_Is16BitRegister(0 To 255) As Boolean
+Private My_IsRegister8Bit(0 To 255) As Boolean
+Private My_IsRegister16Bit(0 To 255) As Boolean
 Private My_IsFlag(0 To 255) As Boolean
 Private My_IsKeyword(0 To 255) As Boolean
 Private My_IsOperator(0 To 255) As Boolean
+Private My_IsExpression(0 To 255) As Boolean
+Private My_IsParameter(0 To 255) As Boolean
 
 '/// EVENTS ///////////////////////////////////////////////////////////////////////////
 
@@ -435,7 +439,7 @@ Private Sub Class_Initialize()
              we need context for that and we can't gaurantee the Token Stream is _
              valid until we begin assembling, therefore we treat Register C and _
              Flag C as the same and the assembler will sort out the difference
-            Let My_Is8BitRegister(ii) = True
+            Let My_IsRegister8Bit(ii) = True
             Let My_IsRegister(ii) = True
             Let My_IsFlag(ii) = True
         
@@ -446,7 +450,7 @@ Private Sub Class_Initialize()
                (ii = TOKEN_Z80_IXL) Or (ii = TOKEN_Z80_IXH) Or _
                (ii = TOKEN_Z80_IYL) Or (ii = TOKEN_Z80_IYH) _
         Then
-            Let My_Is8BitRegister(ii) = True
+            Let My_IsRegister8Bit(ii) = True
             Let My_IsRegister(ii) = True
         
         '16-Bit registers:
@@ -454,7 +458,7 @@ Private Sub Class_Initialize()
                (ii = TOKEN_Z80_HL) Or (ii = TOKEN_Z80_IX) Or (ii = TOKEN_Z80_IY) Or _
                (ii = TOKEN_Z80_SP) Or (ii = TOKEN_Z80_PC) _
         Then
-            Let My_Is16BitRegister(ii) = True
+            Let My_IsRegister16Bit(ii) = True
             Let My_IsRegister(ii) = True
         
         'Condition flags:
@@ -463,6 +467,12 @@ Private Sub Class_Initialize()
                (ii = TOKEN_Z80_NZ) _
         Then
             Let My_IsFlag(ii) = True
+        
+        'If the token consititutes an expression (a calculable value)
+        ElseIf (ii = TOKEN_LABEL) Or (ii = TOKEN_NUMBER) Or _
+               (ii = TOKEN_PROPERTY) Or (ii = TOKEN_VARIABLE) _
+        Then
+            Let My_IsExpression(ii) = True
         End If
     Next ii
     
@@ -488,8 +498,8 @@ Private Sub Class_Terminate()
     Set Stopwatch = Nothing
     'Clean up the look up tables
     Erase LowCase, IsNumber, IsHex, IsAlpha, IsAlphaNum
-    Erase My_IsInstruction, My_IsRegister, My_Is8BitRegister, My_Is16BitRegister, _
-          My_IsFlag, My_IsKeyword, My_IsOperator
+    Erase My_IsInstruction, My_IsRegister, My_IsRegister8Bit, My_IsRegister16Bit, _
+          My_IsFlag, My_IsKeyword, My_IsOperator, My_IsExpression, My_IsParameter
     'The `Tokenise` method will clean this up, but just be doubly sure
     Erase Text
     'Empty the token stream
@@ -503,6 +513,12 @@ Private Sub Class_Terminate()
 End Sub
 
 '/// PUBLIC INTERFACE /////////////////////////////////////////////////////////////////
+
+'PROPERTY Col : Column number in the source of the current token _
+ ======================================================================================
+Public Property Get Col() As Long
+    If EOF = True Then Let Col = 0 Else Let Col = Tokens(TokenIndex).Col
+End Property
 
 'PROPERTY Count : Number of tokens _
  ======================================================================================
@@ -531,34 +547,22 @@ Public Property Let Index(ByVal Value As Long)
     End If
 End Property
 
-'PROPERTY IsInstruction : Is this token number a Z80 instruction? _
+'PROPERTY IsExpression : Is this token number considered a calculable value? _
  ======================================================================================
-Public Property Get IsInstruction() As Boolean
-    Let IsInstruction = My_IsInstruction(Me.Kind)
-End Property
-
-'PROPERTY IsRegister : Is this token number a Register (8 or 16-Bit)? _
- ======================================================================================
-Public Property Get IsRegister() As Boolean
-    Let IsRegister = My_IsRegister(Me.Kind)
-End Property
-
-'PROPERTY Is8BitRegister : Is this token number an 8-bit Register? _
- ======================================================================================
-Public Property Get Is8BitRegister() As Boolean
-    Let Is8BitRegister = My_Is8BitRegister(Me.Kind)
-End Property
-
-'PROPERTY Is16BitRegister : Is this token number a 16-bit Register? _
- ======================================================================================
-Public Property Get Is16BitRegister() As Boolean
-    Let Is16BitRegister = My_Is16BitRegister(Me.Kind)
+Public Property Get IsExpression() As Boolean
+    Let IsExpression = My_IsExpression(Me.Kind)
 End Property
 
 'PROPERTY IsFlag : Is this token number a condition flag? _
  ======================================================================================
 Public Property Get IsFlag() As Boolean
     Let IsFlag = My_IsFlag(Me.Kind)
+End Property
+
+'PROPERTY IsInstruction : Is this token number a Z80 instruction? _
+ ======================================================================================
+Public Property Get IsInstruction() As Boolean
+    Let IsInstruction = My_IsInstruction(Me.Kind)
 End Property
 
 'PROPERTY IsKeyword : Is this token number a OZ80 Keyword? _
@@ -573,16 +577,28 @@ Public Property Get IsOperator() As Boolean
     Let IsOperator = My_IsOperator(Me.Kind)
 End Property
 
+'PROPERTY IsRegister : Is this token number a Register (8 or 16-Bit)? _
+ ======================================================================================
+Public Property Get IsRegister() As Boolean
+    Let IsRegister = My_IsRegister(Me.Kind)
+End Property
+
+'PROPERTY IsRegister8Bit : Is this token number an 8-bit Register? _
+ ======================================================================================
+Public Property Get IsRegister8Bit() As Boolean
+    Let IsRegister8Bit = My_IsRegister8Bit(Me.Kind)
+End Property
+
+'PROPERTY IsRegister16Bit : Is this token number a 16-bit Register? _
+ ======================================================================================
+Public Property Get IsRegister16Bit() As Boolean
+    Let IsRegister16Bit = My_IsRegister16Bit(Me.Kind)
+End Property
+
 'PROPERTY Kind : Token Kind of current token _
  ======================================================================================
 Public Property Get Kind() As OZ80_TOKEN
     If EOF = True Then Let Kind = 0 Else Let Kind = Tokens(TokenIndex).Kind
-End Property
-
-'PROPERTY Value : Token Value of current token _
- ======================================================================================
-Public Property Get Value() As Long
-    If EOF = True Then Let Value = 0 Else Let Value = Tokens(TokenIndex).Value
 End Property
 
 'PROPERTY Line : Line number in the source of the current token _
@@ -591,10 +607,10 @@ Public Property Get Line() As Long
     If EOF = True Then Let Line = 0 Else Let Line = Tokens(TokenIndex).Line
 End Property
 
-'PROPERTY Col : Column number in the source of the current token _
+'PROPERTY Value : Token Value of current token _
  ======================================================================================
-Public Property Get Col() As Long
-    If EOF = True Then Let Col = 0 Else Let Col = Tokens(TokenIndex).Col
+Public Property Get Value() As Long
+    If EOF = True Then Let Value = 0 Else Let Value = Tokens(TokenIndex).Value
 End Property
 
 'Forward : Move onto the next token, returns false if the TokenStream hit the end _
@@ -702,7 +718,7 @@ ReadChar:
     End If
     
     'Read a character:
-    Dim AscChar As Long
+    Dim AscChar As SYNTAX
     Let AscChar = Text(TextPos)
     
     'Keep track of line and column position in the source file _
@@ -804,6 +820,7 @@ ReadChar:
             If AscChar = SYNTAX_OPERATOR_MOD Then GoTo WordBreak
             If AscChar = SYNTAX_OPERATOR_OR Then GoTo WordBreak
             If AscChar = SYNTAX_OPERATOR_AND Then GoTo WordBreak
+            If AscChar = SYNTAX_OPERATOR_NOT Then GoTo WordBreak
         End If
         
         'Is this a quote? (in which case, ignore wordbreaks until quote end). _
@@ -1257,6 +1274,8 @@ TokenWord:
         Call Add(TOKEN_OPERATOR_OR): GoTo NextWord
     ElseIf Asc1 = SYNTAX_OPERATOR_AND Then '................................... `&` ...
         Call Add(TOKEN_OPERATOR_AND): GoTo NextWord
+    ElseIf Asc1 = SYNTAX_OPERATOR_NOT Then '................................... `!` ...
+        Call Add(TOKEN_OPERATOR_NOT): GoTo NextWord
     End If
     
     'Z80 Registers: _

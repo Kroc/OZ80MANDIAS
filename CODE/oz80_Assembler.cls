@@ -385,7 +385,7 @@ Continue:
         'Move forward to the value parameter
         'NOTE: the value parameter is optional, and the file could end right here -- _
                if so, it'll skip over retreiving the value
-        If NextToken() = True And IsExpression = True Then
+        If NextToken() = True And TokenStream.IsExpression Then
             'Calculate the value of the expression
             Let ScopeRoot = ScopeExpression(ReturnValue, ValueIsIndefinite)
             'If the expression is faulty, an error will already have been raised, _
@@ -828,7 +828,7 @@ Private Function GetParameter(ByRef Result As oz80Param) As OZ80_ERROR
         If GetParameter <> OZ80_ERROR_NONE Then Stop
         
     'Anything else classes as an expression (number / labels / variables / operators)
-    ElseIf IsExpression() Then '........................................................
+    ElseIf TokenStream.IsExpression Then '.............................................
         Let Result.Kind = PARAM_VAL
         Let GetParameter = ScopeExpression(Result.Value, Result.ValueIndefinite)
         'TODO: Error - the expression is invalid
@@ -865,23 +865,6 @@ Private Function IsParameter() As Boolean
         Let IsParameter = True
     ElseIf TokenKind = TOKEN_VARIABLE Then
         Let IsParameter = True
-    End If
-End Function
-
-'IsExpression : Check if the current token would be considered an expression _
- ======================================================================================
-Private Function IsExpression() As Boolean
-    'If the stream ended, always return false
-    If TokenStream.EOF = True Then Exit Function
-    'A parameter can be a number or label/variable/property
-    If TokenKind = OZ80_TOKEN.TOKEN_LABEL Then
-        Let IsExpression = True
-    ElseIf TokenKind = OZ80_TOKEN.TOKEN_NUMBER Then
-        Let IsExpression = True
-    ElseIf TokenKind = OZ80_TOKEN.TOKEN_PROPERTY Then
-        Let IsExpression = True
-    ElseIf TokenKind = OZ80_TOKEN.TOKEN_VARIABLE Then
-        Let IsExpression = True
     End If
 End Function
 

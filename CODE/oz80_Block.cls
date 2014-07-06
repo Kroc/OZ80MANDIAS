@@ -44,83 +44,6 @@ Private At As Long
 
 '/// CONSTANTS ////////////////////////////////////////////////////////////////////////
 
-'These are the Z80 instructions this class can assemble, _
- these are *NOT* opcodes
-
-Public Enum OZ80_Z80
-    [_NONE]
-    Z80_ADC                             'Add with Carry
-    Z80_ADD                             'Add
-    Z80_AND                             'Bitwise AND
-    Z80_BIT                             'Bit test
-    Z80_CALL                            'Call routine
-    Z80_CCF                             'Clear Carry Flag
-    Z80_CP                              'Compare
-    Z80_CPD                             'Compare and Decrement
-    Z80_CPDR                            'Compare, Decrement and Repeat
-    Z80_CPI                             'Compare and Increment
-    Z80_CPIR                            'Compare, Increment and Repeat
-    Z80_CPL                             'Complement (bitwise NOT)
-    Z80_DAA                             'Decimal Adjust Accumulator
-    Z80_DEC                             'Decrement
-    Z80_DI                              'Disable Interrupts
-    Z80_DJNZ                            'Decrement and Jump if Not Zero
-    Z80_EI                              'Enable Inettupts
-    Z80_EX                              'Exchange
-    Z80_EXX                             'Exchange shadow registers
-    Z80_HALT                            'Stop CPU (wait for interrupt)
-    Z80_IM                              'Interrupt Mode
-    Z80_IN                              'Input from port
-    Z80_INC                             'Increment
-    Z80_IND                             'Input and Decrement
-    Z80_INDR                            'Input, Decrement and Repeat
-    Z80_INI                             'Input and Increment
-    Z80_INIR                            'Input, Increment and Repeat
-    Z80_JP                              'Jump
-    Z80_JR                              'Jump Relative
-    Z80_LD                              'Load
-    Z80_LDD                             'Load and Decrement
-    Z80_LDDR                            'Load, Decrement and Repeat
-    Z80_LDI                             'Load and Increment
-    Z80_LDIR                            'Load, Increment and Repeat
-    Z80_NEG                             'Negate (flip the sign)
-    Z80_NOP                             'No Operation (do nothing)
-    Z80_OR                              'Bitwise OR
-    Z80_OUT                             'Output to port
-    Z80_OUTD                            'Output and Decrement
-    Z80_OTDR                            'Output, Decrement and Repeat
-    Z80_OUTI                            'Output and Increment
-    Z80_OTIR                            'Output, Increment and Repeat
-    Z80_POP                             'Pull from stack
-    Z80_PUSH                            'Push onto stack
-    Z80_RES                             'Reset bit
-    Z80_RET                             'Return from routine
-    Z80_RETI                            'Return from Interrupt
-    Z80_RETN                            'Return from NMI
-    Z80_RLA                             'Rotate Left (Accumulator)
-    Z80_RL                              'Rotate Left
-    Z80_RLCA                            'Rotate Left Circular (Accumulator)
-    Z80_RLC                             'Rotate Left Circular
-    Z80_RLD                             'Rotate Left 4-bits
-    Z80_RRA                             'Rotate Right (Accumulator)
-    Z80_RR                              'Rotate Right
-    Z80_RRCA                            'Rotate Right Circular (Accumulator)
-    Z80_RRC                             'Rotate Right Circular
-    Z80_RRD                             'Rotate Right 4-bits
-    Z80_RST                             '"Restart" -- Call a page 0 routine
-    Z80_SBC                             'Subtract with Carry
-    Z80_SCF                             'Set Carry Flag
-    Z80_SET                             'Set bit
-    Z80_SLA                             'Shift Left Arithmetic
-    Z80_SRA                             'Shift Right Arithmetic
-    Z80_SLL                             'Shift Left Logical
-    Z80_SRL                             'Shift Right Logical
-    Z80_SUB                             'Subtract
-    Z80_XOR                             'Bitwise XOR
-End Enum
-
-'--------------------------------------------------------------------------------------
-
 Public Enum OZ80_PARAM
     PARAM_A = 2 ^ 0                     'Accumulator
     PARAM_B = 2 ^ 1                     'B register
@@ -155,7 +78,7 @@ End Enum
 
 Private TestParam1Type As OZ80_PARAM
 Private TestParam2Type As OZ80_PARAM
-Private TestInstruction As OZ80_Z80
+Private TestInstruction As OZ80_TOKEN
 
 '--------------------------------------------------------------------------------------
 
@@ -234,7 +157,7 @@ End Sub
 'AddInstruction : Assemble a Z80 mneomic _
  ======================================================================================
 Public Sub AddInstruction( _
-             ByRef Instruction As OZ80_Z80, _
+             ByRef Instruction As OZ80_TOKEN, _
     Optional ByRef Param1Type As OZ80_PARAM, _
     Optional ByRef Param1Value As Long, _
     Optional ByRef Param2Type As OZ80_PARAM, _
@@ -489,7 +412,7 @@ Public Sub AddInstruction( _
     Let TestParam1Type = Param1Type
     Let TestParam2Type = Param2Type
     
-    Call TestOpcode(Z80_ADC, 2, 1, 0, PARAM_A)
+    Call TestOpcode(TOKEN_Z80_ADC, 2, 1, 0, PARAM_A)
 End Sub
 
 Private Function TestParams( _
@@ -504,7 +427,7 @@ Private Function TestParams( _
 End Function
 
 Private Function TestOpcode( _
-             ByRef Instruction As OZ80_Z80, _
+             ByRef Instruction As OZ80_TOKEN, _
     Optional ByRef x As Byte, Optional ByRef y As Byte, Optional ByRef z As Byte, _
     Optional ByRef Param1Test As OZ80_PARAM, _
     Optional ByRef Param2Test As OZ80_PARAM _

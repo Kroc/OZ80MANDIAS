@@ -97,7 +97,7 @@ Attribute TokenStream.VB_VarHelpID = -1
 
 'Caches of the current token information since dereferencing the object is slow
 Private TokenKind As OZ80_TOKEN
-Private TokenData As OZ80_TOKEN_DATA
+Private TokenValue As Long
 Private TokenLine As Long
 Private TokenCol As Long
 
@@ -343,7 +343,7 @@ Private Function ScopeRoot() As OZ80_ERROR
     
 Continue:
     'ERROR: Not a keyword on root scope
-    If TokenKind <> TOKEN_KEYWORD Then Let ScopeRoot = RaiseError( _
+    If Not TokenStream.IsKeyword Then Let ScopeRoot = RaiseError( _
         OZ80_ERROR_UNEXPECTED, _
         "Unexpected content at this position", _
         "Only the keywords INCLUDE, OBJECT, PROC, STRUCT, TABLE or VAR " & _
@@ -351,8 +351,8 @@ Continue:
     ): Exit Function
     
     'Remember the keyword before we move past it
-    Dim Keyword As OZ80_TOKEN_DATA
-    Let Keyword = TokenData
+    Dim Keyword As OZ80_TOKEN
+    Let Keyword = TokenKind
     'Move forward past the keyword into the first parameter
     'ERROR: The file ended before the first parameter
     If NextToken() = False Then GoTo ErrEndOfFile
@@ -380,7 +380,7 @@ Continue:
         'Fetch the key for the label name in the string database, _
          (i.e. remember the label name before moving past the token)
         Dim NameKey As Long
-        Let NameKey = TokenData
+        Let NameKey = TokenValue
         
         'Move forward to the value parameter
         'NOTE: the value parameter is optional, and the file could end right here -- _
@@ -489,7 +489,7 @@ Private Function ScopeExpression( _
 ) As OZ80_ERROR
     Dim Operand1 As Long                'First value in an expression
     Dim Operand2 As Long                'Next value in an expression
-    Dim Operator As OZ80_TOKEN_DATA     'Operator to use with the expressions
+    Dim Operator As OZ80_TOKEN          'Operator to use with the expressions
     
     Let ValueIsIndefinite = False
     
@@ -505,11 +505,11 @@ Private Function ScopeExpression( _
     
     'If next token is not an operator assume the expression has finished, _
       the parent will handle whatever the next token is used for
-    If TokenKind <> OZ80_TOKEN.TOKEN_OPERATOR Then Exit Function
+    If Not TokenStream.IsOperator Then Exit Function
     
 Continue:
     'Remember the operator for after we have operand 2 to work with
-    Let Operator = TokenData
+    Let Operator = TokenKind
     
     'Get the second operand
     'TODO: Error - unexpected end
@@ -565,7 +565,7 @@ Continue:
 '    If NextToken() = False Then Exit Function
     
     'Does the expression continue?
-    If TokenKind = OZ80_TOKEN.TOKEN_OPERATOR Then
+    If TokenStream.IsOperator Then
         'Set the current result as the first operand and go around again
         Let Operand1 = ReturnValue
         GoTo Continue
@@ -584,30 +584,30 @@ Private Function ScopeMemory( _
     End If
     
     'The first item in the expression can be a register, typically HL, IX or IY
-    If TokenKind = OZ80_TOKEN.TOKEN_REGISTER Then
+    If TokenStream.IsRegister Then
         'The `IN` & `OUT` instructions accept only the C register
-        If TokenData = TOKEN_REGISTER_C Then
+        If TokenKind = TOKEN_Z80_C Then
             Let Kind = PARAM_C
         
         '`LD` accepts registers BC & DE
-        ElseIf TokenData = TOKEN_REGISTER_BC Then
+        ElseIf TokenKind = TOKEN_Z80_BC Then
             Let Kind = PARAM_BC
-        ElseIf TokenData = TOKEN_REGISTER_DE Then
+        ElseIf TokenKind = TOKEN_Z80_DE Then
             Let Kind = PARAM_DE
-        ElseIf TokenData = TOKEN_REGISTER_HL Then
+        ElseIf TokenKind = TOKEN_Z80_HL Then
             Let Kind = PARAM_HL
             
-        ElseIf TokenData = TOKEN_REGISTER_IX Then
+        ElseIf TokenKind = TOKEN_Z80_IX Then
             Let Kind = PARAM_IX
             'IX can have an additional expression, e.g. `ld a, (ix+$8)`
             GoTo AddExpr
             
-        ElseIf TokenData = TOKEN_REGISTER_IY Then
+        ElseIf TokenKind = TOKEN_Z80_IY Then
             Let Kind = PARAM_IY
             'IY can also have an additional expression, e.g. `ld a, (ix+$8)`
             GoTo AddExpr
             
-        ElseIf TokenData = TOKEN_REGISTER_SP Then
+        ElseIf TokenKind = TOKEN_Z80_SP Then
             Let Kind = PARAM_SP
         Else
             'ERROR: register not allowed here
@@ -623,8 +623,8 @@ AddExpr:
         'Look for the `+` following the register name
         If NextToken() = False Then Stop
         'If present, skip over it and check for an expression
-        If TokenKind = OZ80_TOKEN.TOKEN_OPERATOR Then
-            If TokenData = TOKEN_OPERATOR_ADD Then
+        If TokenStream.IsOperator Then
+            If TokenKind = TOKEN_OPERATOR_ADD Then
                 If NextToken() = False Then Stop
             End If
             
@@ -667,24 +667,24 @@ Private Function ScopeOperand( _
         
         'If the named value is not yet known, the expression cannot be evaluated _
          until it is defined later on
-        If Labels.Exists(TokenData) = False Then
+        If Labels.Exists(TokenValue) = False Then
             Let ValueIsIndefinite = True
         Else
-            Let ReturnValue = Variables(TokenData)
+            Let ReturnValue = Variables(TokenValue)
         End If
         
     ElseIf TokenKind = TOKEN_VARIABLE Then
         'If the named value is not yet known, the expression cannot be evaluated _
          until it is defined later on
-        If Variables.Exists(TokenData) = False Then
+        If Variables.Exists(TokenValue) = False Then
             Let ValueIsIndefinite = True
         Else
-            Let ReturnValue = Variables(TokenData)
+            Let ReturnValue = Variables(TokenValue)
         End If
         
     'This is an easy one
     ElseIf TokenKind = TOKEN_NUMBER Then
-        Let ReturnValue = TokenData
+        Let ReturnValue = TokenValue
         
     Else
         'ERROR: Not a valid operand. We won't produce an error message here as the _
@@ -703,7 +703,7 @@ End Function
  ======================================================================================
 Private Function ScopeZ80() As OZ80_ERROR
     'Remember which Z80 instruction is being processed
-    Dim Instruction As OZ80_TOKEN_DATA: Let Instruction = TokenData
+    Dim Instruction As OZ80_TOKEN: Let Instruction = TokenKind
     'Remember the line number of this since a label or property on a different line _
      will be a definition, not a parameter
     Dim Line As Long: Let Line = TokenLine
@@ -798,29 +798,29 @@ Private Function GetParameter(ByRef Result As oz80Param) As OZ80_ERROR
     End With
     
     'If the current token is a register, map this to the parameter kind
-    If TokenKind = OZ80_TOKEN.TOKEN_REGISTER Then '...................................
-        If TokenData = TOKEN_REGISTER_A Then Let Result.Kind = PARAM_A
-        If TokenData = TOKEN_REGISTER_B Then Let Result.Kind = PARAM_B
-        If TokenData = TOKEN_REGISTER_C Then Let Result.Kind = PARAM_C
-        If TokenData = TOKEN_REGISTER_D Then Let Result.Kind = PARAM_D
-        If TokenData = TOKEN_REGISTER_E Then Let Result.Kind = PARAM_E
-        If TokenData = TOKEN_REGISTER_H Then Let Result.Kind = PARAM_H
-        If TokenData = TOKEN_REGISTER_L Then Let Result.Kind = PARAM_L
-        If TokenData = TOKEN_REGISTER_I Then Let Result.Kind = PARAM_I
-        If TokenData = TOKEN_REGISTER_R Then Let Result.Kind = PARAM_R
-        If TokenData = TOKEN_REGISTER_AF Then Let Result.Kind = PARAM_AF
-        If TokenData = TOKEN_REGISTER_BC Then Let Result.Kind = PARAM_BC
-        If TokenData = TOKEN_REGISTER_DE Then Let Result.Kind = PARAM_DE
-        If TokenData = TOKEN_REGISTER_HL Then Let Result.Kind = PARAM_HL
-        If TokenData = TOKEN_REGISTER_IX Then Let Result.Kind = PARAM_IX
-        If TokenData = TOKEN_REGISTER_IY Then Let Result.Kind = PARAM_IY
-        If TokenData = TOKEN_REGISTER_SP Then Let Result.Kind = PARAM_SP
+    If TokenStream.IsRegister Then '...................................................
+        If TokenKind = TOKEN_Z80_A Then Let Result.Kind = PARAM_A
+        If TokenKind = TOKEN_Z80_B Then Let Result.Kind = PARAM_B
+        If TokenKind = TOKEN_Z80_C Then Let Result.Kind = PARAM_C
+        If TokenKind = TOKEN_Z80_D Then Let Result.Kind = PARAM_D
+        If TokenKind = TOKEN_Z80_E Then Let Result.Kind = PARAM_E
+        If TokenKind = TOKEN_Z80_H Then Let Result.Kind = PARAM_H
+        If TokenKind = TOKEN_Z80_L Then Let Result.Kind = PARAM_L
+        If TokenKind = TOKEN_Z80_I Then Let Result.Kind = PARAM_I
+        If TokenKind = TOKEN_Z80_R Then Let Result.Kind = PARAM_R
+        If TokenKind = TOKEN_Z80_AF Then Let Result.Kind = PARAM_AF
+        If TokenKind = TOKEN_Z80_BC Then Let Result.Kind = PARAM_BC
+        If TokenKind = TOKEN_Z80_DE Then Let Result.Kind = PARAM_DE
+        If TokenKind = TOKEN_Z80_HL Then Let Result.Kind = PARAM_HL
+        If TokenKind = TOKEN_Z80_IX Then Let Result.Kind = PARAM_IX
+        If TokenKind = TOKEN_Z80_IY Then Let Result.Kind = PARAM_IY
+        If TokenKind = TOKEN_Z80_SP Then Let Result.Kind = PARAM_SP
         'Now move beyond the register token
         Call NextToken
     
     'If the token is a memory reference, such as `(ix+$8)`, _
      then get the associated register and value
-    ElseIf TokenKind = OZ80_TOKEN.TOKEN_PARENOPEN Then '..............................
+    ElseIf TokenKind = TOKEN_PARENOPEN Then '..........................................
         Let GetParameter = ScopeMemory( _
             Result.Kind, Result.Value, Result.ValueIndefinite _
         )
@@ -851,19 +851,19 @@ Private Function IsParameter() As Boolean
     If TokenStream.EOF = True Then Exit Function
     'A parameter can be a number, label/variable/property, register _
      or memory reference
-    If TokenKind = OZ80_TOKEN.TOKEN_LABEL Then
+    If TokenKind = TOKEN_LABEL Then
         'A label on a new line is a definition, not a parameter
         If TokenLine = PrevLine Then Let IsParameter = True
-    ElseIf TokenKind = OZ80_TOKEN.TOKEN_NUMBER Then
+    ElseIf TokenKind = TOKEN_NUMBER Then
         Let IsParameter = True
-    ElseIf TokenKind = OZ80_TOKEN.TOKEN_PARENOPEN Then
+    ElseIf TokenKind = TOKEN_PARENOPEN Then
         Let IsParameter = True
-    ElseIf TokenKind = OZ80_TOKEN.TOKEN_PROPERTY Then
+    ElseIf TokenKind = TOKEN_PROPERTY Then
         'A property on a new line is a definition, not a parameter
         If TokenLine = PrevLine Then Let IsParameter = True
-    ElseIf TokenKind = OZ80_TOKEN.TOKEN_REGISTER Then
+    ElseIf TokenStream.IsRegister Then
         Let IsParameter = True
-    ElseIf TokenKind = OZ80_TOKEN.TOKEN_VARIABLE Then
+    ElseIf TokenKind = TOKEN_VARIABLE Then
         Let IsParameter = True
     End If
 End Function
@@ -896,7 +896,7 @@ Private Function NextToken() As Boolean
         Let NextToken = .Forward()
         'Cache the token information as dereferencing the object every time is slow
         Let TokenKind = .Kind
-        Let TokenData = .Data
+        Let TokenValue = .Value
         Let TokenLine = .Line
         Let TokenCol = .Col
     End With
@@ -987,7 +987,7 @@ Private Sub RewindTokenStream()
         Call .Rewind
         Let PrevLine = 0
         Let TokenKind = .Kind
-        Let TokenData = .Data
+        Let TokenValue = .Value
         Let TokenLine = .Line
         Let TokenCol = .Col
     End With

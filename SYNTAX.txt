@@ -1,7 +1,7 @@
 =======================================================================================
 OZ80MANDIAS: a Z80 assembler; Copyright (C) Kroc Camen, 2013-14
 Licenced under a Creative Commons 3.0 Attribution Licence
---You may use and modify this code how you see fit as long as you give credit
+--You may use and modify this document how you see fit as long as you give credit
 =======================================================================================
 
 				TABLE OF CONTENTS
@@ -138,15 +138,16 @@ fashion.
 Numbers are assumed to be positive and filling the full space of the 8 or 16-bits
 available, i.e. 0-255 or 0-65535.
 
-8-bit negative numbers are represented on the Master System by having bit 7 set.
-This limits a negative number to -127.
+8-bit negative numbers are represented on the Master System by having the upper-most
+but set. This limits a negative number to -127 (8-bit) or -32767 (16-bit)
 
 
 3.      Encapsulating Z80 Code:
 =======================================================================================
-When writing assembly code flexibility in the assembler is needed to handle the
+When writing assembly code, flexibility in the assembler is needed to handle the
 inherit in-flexibility of assembly language. With pure assembly, inserting a single
-instruction would throw off every consequent memory address!
+instruction would throw off every consequent memory address and break the entire
+code-base beyond repair!
 
 Labels allow you to point to an address in the ROM in a flexible & safe manner so that
 your code can expand, contract or even change order without breaking the ROM addresses
@@ -256,6 +257,22 @@ procedures (such as "loop") from clashing with other procedures' internal labell
 Outside of "myProcedure", it is referred to via the full label name.
 
 
+#       Storing Data
+=======================================================================================
+#.#.    Data Tables
+---------------------------------------------------------------------------------------
+Format:
+        TABLE :<tableName> {
+                [...]
+        }
+
+#.#.    Data Statements
+---------------------------------------------------------------------------------------
+...
+
+#.#.    Binary Data
+---------------------------------------------------------------------------------------
+...
 
 
 #.	Memory Management:
@@ -323,9 +340,10 @@ To make your life easier, the assembler will do all the necessary translation of
 addresses for you automatically, however you must divide your code into SECTIONs
 to alert the assembler when a particular bank or slot is required for a piece of code.
 
+
 #.      RAM
 =======================================================================================
-#.#.    Naming RAM
+#.#.    Naming RAM Addresses
 ---------------------------------------------------------------------------------------
 Format:
         RAM [<expr>] {
@@ -333,51 +351,49 @@ Format:
                 [...]
         }
 
-#.#.    Using RAM Names
+Your assembly code will contain numerous references to the Master System's RAM
+(Located from $C000 to $DFFF and mirrored at $E000 to $FFFF). Manually managing the
+RAM addresses is difficult, and could make using 3rd party code untenable.
+
+Help is at hand! With OZ80 you can define a name for each RAM address and the assembler
+will choose the address for you. Begin by defining a RAM block as such:
+
+        RAM {
+                .someRAM as BYTE
+                .moreRAM as WORD
+                .lotsaRAM as BYTE x 1 KB
+        }
+        
+Here, a RAM constant ".someRAM" is defined to be a byte in length. The assembler will
+automatically choose the RAM address for it and move on to the next address based on
+the size of the constant. The second constant ".moreRAM" is 2-bytes in length and the
+third is 1 KB (1024 Bytes) in length.
+
+You can have multiple RAM blocks throughout your code, so as to define relevant RAM use
+near the relevant code. The assembler chooses the RAM addresses starting from $C000,
+but can you can override this on a RAM block by specifying a different starting point:
+
+        RAM $D700 {
+                [...]
+        }
+
+Here, the addressing will begin from $D700 in memory, for this particular RAM block.
+
+#.#.    Using RAM Constants
 ---------------------------------------------------------------------------------------
 Format:
         $.<name>
 
+Once a RAM constant is defined, it can be accessed in your Z80 code with the special
+prefix "$.", e.g.
 
+        ld a, ($.someRAM)
+        
+An additional ".size" property is defined on the RAM constant that provides the size
+of the RAM constant in bytes (useful perhaps for setting up loop limits), e.g.
 
-#.#.	Sections
-=======================================================================================
-For larger ROMs, your Z80 code will need to specifically page in the desired banks
-where the data is stored. The assembler allows you to do this in such a way that you
-do not have to manually manage the bank numbers yourself.
-	
-	SECTION ::code {
-		ld a, ::data.bank
-		ld ($FFFE), a
-	}
-	
-	SECTION ::data {
-		DATA 1, 2, 3
-	}
-
-In this example, the code loads the bank containing the data section into the first
-slot (`$FFFE` on the Master System). `::data.bank` is automatically filled in with
-the correct bank number by the assembler. Thankfully, your code will continue to
-assemble even as your program grows and the data section moves into increasing bank
-numbers!
-
-For any Section, you can provide a specific Bank number to use and Slot number to
-apply. For example:
-
-	SECTION ::code BANK 10 {
-		ld a, ::data.bank
-		ld ($FFFD+::data.slot), a
-	}
-	
-	SECTION ::data BANK 14 SLOT 1 {
-		DATA 1, 2, 3
-	}
-
-Here, the data section will be located in Bank 14 in the ROM and references to its
-content will be addressed through Slot 1 ($4000-$7FFF). This is a good example of
-writing portable code that will adapt automatically to changes.
-
-
+        ld bc, ($.lotsaRAM.size)                `loads BC with 1024
+        
 
 #.	Variables
 =======================================================================================
@@ -499,8 +515,13 @@ previously filled with the `FILL` value.
 #.	Includes
 =======================================================================================
 Format:
-	INCLUDE [BINARY] <expr> [START <expr> [LENGTH <expr>|STOP <expr>]]
+	INCLUDE <expr>
 ...
+
+Format:
+        BINARY <expr> [START <expr> [LENGTH <expr>|STOP <expr>]]
+...
+
 
 
 #.	Data Tables

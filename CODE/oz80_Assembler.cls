@@ -101,10 +101,6 @@ Private TokenValue As Long
 Private TokenLine As Long
 Private TokenCol As Long
 
-'The line number of the previous token, so that we can tell when a label/property _
- definition occurs on a new line and isn't therefore part of a list
-Private PrevLine As Long
-
 'The token stream doesn't store the text of named items, merely a reference to the _
  string stored here. We use this for error messages and concatenating properties to _
  their parent variable / label
@@ -662,7 +658,7 @@ Private Function ScopeOperand( _
     'Is it a named value?
     'TODO: Handle scope expansion for names
     If TokenKind = TOKEN_LABEL _
-    Or TokenKind = TOKEN_PROPERTY Then
+    Or TokenKind = TOKEN_PROPERTY_USE Then
         'TODO: get the full label from the property
         
         'If the named value is not yet known, the expression cannot be evaluated _
@@ -711,7 +707,7 @@ Private Function ScopeZ80() As OZ80_ERROR
     If NextToken() = False Then Stop
     
     'If there appears to be a parameter, skip over doing parameterless instructions
-    If IsParameter() = True Then GoTo With1Parameter
+    If TokenStream.IsParameter = True Then GoTo With1Parameter
     
     'TODO: Error handling return
     Call Block.AddInstruction(Instruction)
@@ -729,7 +725,7 @@ With1Parameter:
     If ScopeZ80 <> OZ80_ERROR_NONE Then Stop
     
     'Check if a second parameter exists
-    If IsParameter() = True Then GoTo With2Parameters
+    If TokenStream.IsParameter = True Then GoTo With2Parameters
     
     'TODO: Error handling return
     Call Block.AddInstruction(Instruction, Param1.Kind, Param1.Value)
@@ -844,37 +840,12 @@ Private Function GetParameter(ByRef Result As oz80Param) As OZ80_ERROR
     End If
 End Function
 
-'IsParameter : Check if the current token would be considered a Z80 parameter _
- ======================================================================================
-Private Function IsParameter() As Boolean
-    'If the stream ended, always return false
-    If TokenStream.EOF = True Then Exit Function
-    'A parameter can be a number, label/variable/property, register _
-     or memory reference
-    If TokenKind = TOKEN_LABEL Then
-        'A label on a new line is a definition, not a parameter
-        If TokenLine = PrevLine Then Let IsParameter = True
-    ElseIf TokenKind = TOKEN_NUMBER Then
-        Let IsParameter = True
-    ElseIf TokenKind = TOKEN_PARENOPEN Then
-        Let IsParameter = True
-    ElseIf TokenKind = TOKEN_PROPERTY Then
-        'A property on a new line is a definition, not a parameter
-        If TokenLine = PrevLine Then Let IsParameter = True
-    ElseIf TokenStream.IsRegister Then
-        Let IsParameter = True
-    ElseIf TokenKind = TOKEN_VARIABLE Then
-        Let IsParameter = True
-    End If
-End Function
-
 'NextToken : Move to the next token in the token stream _
  ======================================================================================
 Private Function NextToken() As Boolean
     'This function is a mere wrapper simply because we need to track when a new line _
      occurs between tokens to diferentiate label definitions and parameters
     With TokenStream
-        Let PrevLine = .Line
         'We return false if the stream comes to an end
         Let NextToken = .Forward()
         'Cache the token information as dereferencing the object every time is slow
@@ -968,7 +939,6 @@ End Function
 Private Sub RewindTokenStream()
     With TokenStream
         Call .Rewind
-        Let PrevLine = 0
         Let TokenKind = .Kind
         Let TokenValue = .Value
         Let TokenLine = .Line

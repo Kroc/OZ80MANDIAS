@@ -217,7 +217,8 @@ Public Enum OZ80_TOKEN
     
     TOKEN_QUOTE
     TOKEN_LABEL
-    TOKEN_PROPERTY
+    TOKEN_PROPERTY_USE
+    TOKEN_PROPERTY_NEW
     TOKEN_VARIABLE
     TOKEN_RAM
 End Enum
@@ -360,6 +361,12 @@ Public SourceFile As String
 Private WordBegin As Long, WordLen As Long
 Private LineBegin As Long, ColBegin As Long
 
+'We need to be able to tell the difference between a property being used as a _
+ parameter on a Z80 instruction, and a label-property definition (within a block) _
+ which occurs on a new line. We keep track of the previous line number used and _
+ look for a property occuring on a new line
+Private PrevLine As Long
+
 'Look up tables to determine what category a Token belongs to, _
  these are exposed publicly through properties so other classes and do quick checks
 Private My_IsInstruction(0 To 255) As Boolean
@@ -442,6 +449,7 @@ Private Sub Class_Initialize()
             Let My_IsRegister8Bit(ii) = True
             Let My_IsRegister(ii) = True
             Let My_IsFlag(ii) = True
+            Let My_IsParameter(ii) = True
         
         '8-Bit registers:
         ElseIf (ii = TOKEN_Z80_A) Or (ii = TOKEN_Z80_B) Or (ii = TOKEN_Z80_C) Or _
@@ -452,6 +460,7 @@ Private Sub Class_Initialize()
         Then
             Let My_IsRegister8Bit(ii) = True
             Let My_IsRegister(ii) = True
+            Let My_IsParameter(ii) = True
         
         '16-Bit registers:
         ElseIf (ii = TOKEN_Z80_AF) Or (ii = TOKEN_Z80_BC) Or (ii = TOKEN_Z80_DE) Or _
@@ -460,6 +469,7 @@ Private Sub Class_Initialize()
         Then
             Let My_IsRegister16Bit(ii) = True
             Let My_IsRegister(ii) = True
+            Let My_IsParameter(ii) = True
         
         'Condition flags:
         ElseIf (ii = TOKEN_Z80_NC) Or (ii = TOKEN_Z80_M) Or (ii = TOKEN_Z80_P) Or _
@@ -467,12 +477,17 @@ Private Sub Class_Initialize()
                (ii = TOKEN_Z80_NZ) _
         Then
             Let My_IsFlag(ii) = True
+            Let My_IsParameter(ii) = True
         
         'If the token consititutes an expression (a calculable value)
         ElseIf (ii = TOKEN_LABEL) Or (ii = TOKEN_NUMBER) Or _
-               (ii = TOKEN_PROPERTY) Or (ii = TOKEN_VARIABLE) _
+               (ii = TOKEN_PROPERTY_USE) Or (ii = TOKEN_VARIABLE) _
         Then
             Let My_IsExpression(ii) = True
+            Let My_IsParameter(ii) = True
+        
+        ElseIf (ii = TOKEN_PARENOPEN) Then
+            Let My_IsParameter(ii) = True
         End If
     Next ii
     
@@ -575,6 +590,12 @@ End Property
  ======================================================================================
 Public Property Get IsOperator() As Boolean
     Let IsOperator = My_IsOperator(Me.Kind)
+End Property
+
+'PROPERTY IsPrameter : Is this token number a Z80 instruction parameter? _
+ ======================================================================================
+Public Property Get IsParameter() As Boolean
+    Let IsParameter = My_IsParameter(Me.Kind)
 End Property
 
 'PROPERTY IsRegister : Is this token number a Register (8 or 16-Bit)? _
@@ -697,7 +718,7 @@ Public Function Tokenise(ByRef FilePath As String) As OZ80_ERROR
     'Line and column number in the source text. Used to record the position in the _
      original file of each word for producing helpful error messages. 1-based
     Dim Line As Long, Col As Long
-    Let Line = 1
+    Let Line = 1: Let PrevLine = 1
     
     'Begin parsing words: _
      ----------------------------------------------------------------------------------
@@ -931,7 +952,7 @@ TokenWord:
         'A label can be `:` only, without a name (when used within a PROC)
         If Asc2 = 0 Then
             'This is tokenised as having a label index of 0
-            Call Add(TOKEN_LABEL, 0)
+            Call Add(TOKEN_LABEL)
             GoTo NextWord
         
         'A label cannot begin with a number but must otherwise be A-Z, 0-9 and "_"
@@ -960,7 +981,13 @@ TokenWord:
             GoTo ErrorInvalidName
         Else
             GoSub GetWord
-            Call AddString(TOKEN_PROPERTY, Word)
+            'If the property appears on a new line, it's a label-property definition _
+             i.e. it defines a new sub-label of a block
+            If LineBegin <> PrevLine Then
+                Call AddString(TOKEN_PROPERTY_NEW, Word)
+            Else
+                Call AddString(TOKEN_PROPERTY_USE, Word)
+            End If
             GoTo NextWord
         End If
     
@@ -1430,6 +1457,10 @@ Private Sub Add( _
         Let .Line = LineBegin
         Let .Col = ColBegin
     End With
+    
+    'Remember the line number used for this token to check for properties occuring _
+     on a new line -- this constitutes a property definition in a block
+    Let PrevLine = LineBegin
     
     'Move to the next token number
     Let TokenIndex = TokenIndex + 1

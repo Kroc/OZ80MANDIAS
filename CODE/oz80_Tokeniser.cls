@@ -27,202 +27,6 @@ Option Compare Text
 'This class only represents one source code file. The assembler handles the specifics _
  of including additional source code files and spawns more TokenStream instances
 
-'/// PUBLIC CONSTANTS /////////////////////////////////////////////////////////////////
-'These are defined here (instead of in 'oz80_Assembler') to avoid circular references _
- due to the way the assembler sinks events from this class
-
-Public Enum OZ80_ERROR
-    OZ80_ERROR_NONE                     'Assembly completed successfully
-    OZ80_ERROR_FILENOTFOUND             'Requested file does not exist
-    OZ80_ERROR_FILEREAD                 'Some kind of problem with file handle open
-    OZ80_ERROR_INVALIDNAME              'Invalid label/property/variable name
-    OZ80_ERROR_BADWORD                  'Couldn't parse a word
-    OZ80_ERROR_BADNUMBER_DEC            'Not a valid decimal number
-    OZ80_ERROR_OVERFLOW                 'A number overflowed the maximum
-    OZ80_ERROR_Z80_PARAMETER            'An unexpected parameter for a z80 instruction
-    OZ80_ERROR_OPERAND                  'Not a valid operand for an expression
-    OZ80_ERROR_EXPRESSION               'Not a valid expression
-    OZ80_ERROR_DUPLICATE                'A name has been defined twice
-    OZ80_ERROR_UNEXPECTED               'Incorrect content at the current scope
-    OZ80_ERROR_ENDOFFILE                'Unexpected end of file
-    OZ80_ERROR_INDEFINITEVALUE          'Indefinite value cannot be used here
-End Enum
-
-'--------------------------------------------------------------------------------------
-
-Public Enum OZ80_TOKEN
-    TOKEN_NONE
-    
-    'These are just the mnemonic tokens -- the assembler itself checks the
-     'parameters and determines which opcode should be used
-    [_TOKEN_INSTRUCTIONS_BEGIN]
-    TOKEN_Z80_ADC                       'Add with Carry
-    TOKEN_Z80_ADD                       'Add
-    TOKEN_Z80_AND                       'Bitwise AND
-    TOKEN_Z80_BIT                       'Bit test
-    TOKEN_Z80_CALL                      'Call routine
-    TOKEN_Z80_CCF                       'Clear Carry Flag
-    TOKEN_Z80_CP                        'Compare
-    TOKEN_Z80_CPD                       'Compare and Decrement
-    TOKEN_Z80_CPDR                      'Compare, Decrement and Repeat
-    TOKEN_Z80_CPI                       'Compare and Increment
-    TOKEN_Z80_CPIR                      'Compare, Increment and Repeat
-    TOKEN_Z80_CPL                       'Complement (bitwise NOT)
-    TOKEN_Z80_DAA                       'Decimal Adjust Accumulator
-    TOKEN_Z80_DEC                       'Decrement
-    TOKEN_Z80_DI                        'Disable Interrupts
-    TOKEN_Z80_DJNZ                      'Decrement and Jump if Not Zero
-    TOKEN_Z80_EI                        'Enable Inettupts
-    TOKEN_Z80_EX                        'Exchange
-    TOKEN_Z80_EXX                       'Exchange shadow registers
-    TOKEN_Z80_HALT                      'Stop CPU (wait for interrupt)
-    TOKEN_Z80_IM                        'Interrupt Mode
-    TOKEN_Z80_IN                        'Input from port
-    TOKEN_Z80_INC                       'Increment
-    TOKEN_Z80_IND                       'Input and Decrement
-    TOKEN_Z80_INDR                      'Input, Decrement and Repeat
-    TOKEN_Z80_INI                       'Input and Increment
-    TOKEN_Z80_INIR                      'Input, Increment and Repeat
-    TOKEN_Z80_JP                        'Jump
-    TOKEN_Z80_JR                        'Jump Relative
-    TOKEN_Z80_LD                        'Load
-    TOKEN_Z80_LDD                       'Load and Decrement
-    TOKEN_Z80_LDDR                      'Load, Decrement and Repeat
-    TOKEN_Z80_LDI                       'Load and Increment
-    TOKEN_Z80_LDIR                      'Load, Increment and Repeat
-    TOKEN_Z80_NEG                       'Negate (flip the sign)
-    TOKEN_Z80_NOP                       'No Operation (do nothing)
-    TOKEN_Z80_OR                        'Bitwise OR
-    TOKEN_Z80_OUT                       'Output to port
-    TOKEN_Z80_OUTD                      'Output and Decrement
-    TOKEN_Z80_OTDR                      'Output, Decrement and Repeat
-    TOKEN_Z80_OUTI                      'Output and Increment
-    TOKEN_Z80_OTIR                      'Output, Increment and Repeat
-    TOKEN_Z80_POP                       'Pull from stack
-    TOKEN_Z80_PUSH                      'Push onto stack
-    TOKEN_Z80_RES                       'Reset bit
-    TOKEN_Z80_RET                       'Return from routine
-    TOKEN_Z80_RETI                      'Return from Interrupt
-    TOKEN_Z80_RETN                      'Return from NMI
-    TOKEN_Z80_RLA                       'Rotate Left (Accumulator)
-    TOKEN_Z80_RL                        'Rotate Left
-    TOKEN_Z80_RLCA                      'Rotate Left Circular (Accumulator)
-    TOKEN_Z80_RLC                       'Rotate Left Circular
-    TOKEN_Z80_RLD                       'Rotate Left 4-bits
-    TOKEN_Z80_RRA                       'Rotate Right (Accumulator)
-    TOKEN_Z80_RR                        'Rotate Right
-    TOKEN_Z80_RRCA                      'Rotate Right Circular (Accumulator)
-    TOKEN_Z80_RRC                       'Rotate Right Circular
-    TOKEN_Z80_RRD                       'Rotate Right 4-bits
-    TOKEN_Z80_RST                       '"Restart" -- Call a page 0 routine
-    TOKEN_Z80_SBC                       'Subtract with Carry
-    TOKEN_Z80_SCF                       'Set Carry Flag
-    TOKEN_Z80_SET                       'Set bit
-    TOKEN_Z80_SLA                       'Shift Left Arithmetic
-    TOKEN_Z80_SRA                       'Shift Right Arithmetic
-    TOKEN_Z80_SLL                       'Shift Left Logical
-    TOKEN_Z80_SRL                       'Shift Right Logical
-    TOKEN_Z80_SUB                       'Subtract
-    TOKEN_Z80_XOR                       'Bitwise XOR
-    [_TOKEN_INSTRUCTIONS_END]
-    
-    'Z80 Registers ....................................................................
-    TOKEN_Z80_A                         'Accumulator
-    TOKEN_Z80_AF
-    TOKEN_Z80_B                         'Register B
-    TOKEN_Z80_C                         'Register C and Carry flag
-    TOKEN_Z80_NC                        'Carry unset flag
-    TOKEN_Z80_BC
-    TOKEN_Z80_D
-    TOKEN_Z80_E
-    TOKEN_Z80_DE
-    TOKEN_Z80_H
-    TOKEN_Z80_L
-    TOKEN_Z80_HL
-    TOKEN_Z80_I                         'Interrupt - not to be confused with IX & IY
-    TOKEN_Z80_IX
-    TOKEN_Z80_IXL
-    TOKEN_Z80_IXH
-    TOKEN_Z80_IY
-    TOKEN_Z80_IYL
-    TOKEN_Z80_IYH
-    TOKEN_Z80_M                         'Sign is set
-    TOKEN_Z80_P                         'Sign is not set
-    TOKEN_Z80_PC                        'Program Counter
-    TOKEN_Z80_PE                        'Parity/Overflow is set
-    TOKEN_Z80_PO                        'Parity/Overflow is not set
-    TOKEN_Z80_R                         'Refresh register (pseudo-random)
-    TOKEN_Z80_SP                        'Stack Pointer
-    TOKEN_Z80_Z                         'Zero set
-    TOKEN_Z80_NZ                        'Zero not set
-    
-    'Operators ........................................................................
-    [_TOKEN_OPERATORS_BEGIN]
-    TOKEN_OPERATOR_ADD                  'Add "+"
-    TOKEN_OPERATOR_SUB                  'Subtract "-"
-    TOKEN_OPERATOR_MUL                  'Multiply "*"
-    TOKEN_OPERATOR_DIV                  'Divide "/"
-    TOKEN_OPERATOR_POW                  'Power "^"
-    TOKEN_OPERATOR_MOD                  'Modulus "\"
-    TOKEN_OPERATOR_REP                  'Repeat "x"
-    TOKEN_OPERATOR_OR                   'Bitwise OR "|"
-    TOKEN_OPERATOR_AND                  'Bitwise AND "&"
-    TOKEN_OPERATOR_NOT                  'Bitwise NOT "!"
-    [_TOKEN_OPERATORS_END]
-    
-    'Keywords .........................................................................
-    [_TOKEN_KEYWORDS_BEGIN]
-    TOKEN_KEYWORD_AT
-    TOKEN_KEYWORD_AS
-    TOKEN_KEYWORD_BANK
-    TOKEN_KEYWORD_BINARY
-    TOKEN_KEYWORD_BYTE
-    TOKEN_KEYWORD_DATA
-    TOKEN_KEYWORD_DEFAULT
-    TOKEN_KEYWORD_ECHO
-    TOKEN_KEYWORD_ELSE
-    TOKEN_KEYWORD_EXISTS
-    TOKEN_KEYWORD_FAIL
-    TOKEN_KEYWORD_FILL
-    TOKEN_KEYWORD_IF
-    TOKEN_KEYWORD_INCLUDE
-    TOKEN_KEYWORD_LENGTH
-    TOKEN_KEYWORD_OBJECT
-    TOKEN_KEYWORD_PARAMS
-    TOKEN_KEYWORD_PROC
-    TOKEN_KEYWORD_RETURN
-    TOKEN_KEYWORD_SECTION
-    TOKEN_KEYWORD_SLOT
-    TOKEN_KEYWORD_START
-    TOKEN_KEYWORD_STOP
-    TOKEN_KEYWORD_STRUCT
-    TOKEN_KEYWORD_TABLE
-    TOKEN_KEYWORD_VAR
-    TOKEN_KEYWORD_WORD
-    [_TOKEN_KEYWORDS_END]
-    
-    'The parser automatically converts hexadecimal/binary numbers, so we only store
-     'a 32-bit long (data field) in the token stream
-    TOKEN_NUMBER
-    'Number prefixes ("K", "KB" & "Kbit")
-    TOKEN_PREFIX_K                      'x1000
-    TOKEN_PREFIX_KB                     'x1024
-    TOKEN_PREFIX_KBIT                   'x128 (1024 bits)
-    
-    'Grouping: (i.e. parenthesis, braces)
-    TOKEN_PARENOPEN
-    TOKEN_PARENCLOSE
-    TOKEN_BLOCKOPEN
-    TOKEN_BLOCKCLOSE
-    
-    TOKEN_QUOTE
-    TOKEN_LABEL
-    TOKEN_PROPERTY_USE
-    TOKEN_PROPERTY_NEW
-    TOKEN_VARIABLE
-    TOKEN_RAM
-End Enum
-
 '/// API //////////////////////////////////////////////////////////////////////////////
 
 'Cast String to Array: _
@@ -268,22 +72,43 @@ Private CastStrArr() As Integer         'Empty array that will be hacked
 
 'This makes life a whole lot easier
 Private Enum ASCII
-    UNDRSCR = 95
+    ASC_UNDRSCR = 95
     
-    NUM0 = 48
-    NUM1 = 49
-    NUM9 = 57
+    ASC_0 = 48
+    ASC_1 = 49
+    ASC_9 = 57
     
-    a = 97:     B = 98:     C = 99:     D = 100:    E = 101:    F = 102
-    G = 103:    H = 104:    i = 105:    J = 106:    K = 107:    L = 108
-    M = 109:    N = 110:    O = 111:    p = 112:    q = 113:    R = 114
-    S = 115:    T = 116:    U = 117:    V = 118:    W = 119:    x = 120
-    y = 121:    z = 122
+    ASC_A = 97
+    ASC_B
+    ASC_C
+    ASC_D
+    ASC_E
+    ASC_F
+    ASC_G
+    ASC_H
+    ASC_I
+    ASC_J
+    ASC_K
+    ASC_L
+    ASC_M
+    ASC_N
+    ASC_O
+    ASC_P
+    ASC_Q
+    ASC_R
+    ASC_S
+    ASC_T
+    ASC_U
+    ASC_V
+    ASC_W
+    ASC_X
+    ASC_Y
+    ASC_Z
     
-    aSPC = 32
-    aTAB = 9
-    aCR = 10
-    aLF = 13
+    ASC_SPC = 32
+    ASC_TAB = 9
+    ASC_CR = 10
+    ASC_LF = 13
 End Enum
 
 '--------------------------------------------------------------------------------------
@@ -331,9 +156,7 @@ Private IsAlphaNum(0 To 255) As Boolean 'Validate alphanumeric chars (both cases
 'Used for time measurement
 Private Stopwatch As PerformanceCounter
 
-'Object to calculate the CRC of the file during load _
- (will be used by the assembler to determine if a file has already been passed)
-Private CRC32 As oz80_CRC32
+Private TokenStrings(0 To OZ80_TOKEN.[_TOKEN_LAST] - 1) As String
 
 '/// CLASS STORAGE ////////////////////////////////////////////////////////////////////
 
@@ -383,7 +206,11 @@ Private My_IsParameter(0 To 255) As Boolean
 
 'Progress messages are passed through an event, the handler can choose to show them _
  or not. I didn't want to spam `Debug.Print` output
-Event Message(ByRef Text As String)
+Event Message( _
+    ByRef Depth As Long, _
+    ByRef LogLevel As OZ80_LOG, _
+    ByRef Text As String _
+)
 
 'A class event is used to communicate error details beyond a simple error number
 Event Error( _
@@ -400,24 +227,184 @@ Event StringAdded(ByRef Key As Long, ByRef StringData As String)
 Private Sub Class_Initialize()
     Set Stopwatch = New PerformanceCounter
     
+    Let TokenStrings(TOKEN_Z80_ADC) = "adc"
+    Let TokenStrings(TOKEN_Z80_ADD) = "add"
+    Let TokenStrings(TOKEN_Z80_AND) = "and"
+    Let TokenStrings(TOKEN_Z80_BIT) = "bit"
+    Let TokenStrings(TOKEN_Z80_CALL) = "call"
+    Let TokenStrings(TOKEN_Z80_CCF) = "ccf"
+    Let TokenStrings(TOKEN_Z80_CP) = "cp"
+    Let TokenStrings(TOKEN_Z80_CPD) = "cpd"
+    Let TokenStrings(TOKEN_Z80_CPDR) = "cpdr"
+    Let TokenStrings(TOKEN_Z80_CPI) = "cpi"
+    Let TokenStrings(TOKEN_Z80_CPIR) = "cpir"
+    Let TokenStrings(TOKEN_Z80_CPL) = "cpl"
+    Let TokenStrings(TOKEN_Z80_DAA) = "daa"
+    Let TokenStrings(TOKEN_Z80_DEC) = "dec"
+    Let TokenStrings(TOKEN_Z80_DI) = "di"
+    Let TokenStrings(TOKEN_Z80_DJNZ) = "djnz"
+    Let TokenStrings(TOKEN_Z80_EI) = "ei"
+    Let TokenStrings(TOKEN_Z80_EX) = "ex"
+    Let TokenStrings(TOKEN_Z80_EXX) = "exx"
+    Let TokenStrings(TOKEN_Z80_HALT) = "halt"
+    Let TokenStrings(TOKEN_Z80_IM) = "im"
+    Let TokenStrings(TOKEN_Z80_IN) = "in"
+    Let TokenStrings(TOKEN_Z80_INC) = "inc"
+    Let TokenStrings(TOKEN_Z80_IND) = "ind"
+    Let TokenStrings(TOKEN_Z80_INDR) = "indr"
+    Let TokenStrings(TOKEN_Z80_INI) = "ini"
+    Let TokenStrings(TOKEN_Z80_INIR) = "inir"
+    Let TokenStrings(TOKEN_Z80_JP) = "jp"
+    Let TokenStrings(TOKEN_Z80_JR) = "jr"
+    Let TokenStrings(TOKEN_Z80_LD) = "ld"
+    Let TokenStrings(TOKEN_Z80_LDD) = "ldd"
+    Let TokenStrings(TOKEN_Z80_LDDR) = "lddr"
+    Let TokenStrings(TOKEN_Z80_LDI) = "ldi"
+    Let TokenStrings(TOKEN_Z80_LDIR) = "ldir"
+    Let TokenStrings(TOKEN_Z80_NEG) = "neg"
+    Let TokenStrings(TOKEN_Z80_NOP) = "nop"
+    Let TokenStrings(TOKEN_Z80_OR) = "or"
+    Let TokenStrings(TOKEN_Z80_OUT) = "out"
+    Let TokenStrings(TOKEN_Z80_OUTD) = "outd"
+    Let TokenStrings(TOKEN_Z80_OTDR) = "otdr"
+    Let TokenStrings(TOKEN_Z80_OUTI) = "outi"
+    Let TokenStrings(TOKEN_Z80_OTIR) = "otir"
+    Let TokenStrings(TOKEN_Z80_POP) = "pop"
+    Let TokenStrings(TOKEN_Z80_PUSH) = "push"
+    Let TokenStrings(TOKEN_Z80_RES) = "res"
+    Let TokenStrings(TOKEN_Z80_RET) = "ret"
+    Let TokenStrings(TOKEN_Z80_RETI) = "reti"
+    Let TokenStrings(TOKEN_Z80_RETN) = "retn"
+    Let TokenStrings(TOKEN_Z80_RLA) = "rla"
+    Let TokenStrings(TOKEN_Z80_RL) = "rl"
+    Let TokenStrings(TOKEN_Z80_RLCA) = "rlca"
+    Let TokenStrings(TOKEN_Z80_RLC) = "rlc"
+    Let TokenStrings(TOKEN_Z80_RLD) = "rld"
+    Let TokenStrings(TOKEN_Z80_RRA) = "rra"
+    Let TokenStrings(TOKEN_Z80_RR) = "rr"
+    Let TokenStrings(TOKEN_Z80_RRCA) = "rrca"
+    Let TokenStrings(TOKEN_Z80_RRC) = "rrc"
+    Let TokenStrings(TOKEN_Z80_RRD) = "rrd"
+    Let TokenStrings(TOKEN_Z80_RST) = "rst"
+    Let TokenStrings(TOKEN_Z80_SBC) = "sbc"
+    Let TokenStrings(TOKEN_Z80_SCF) = "scf"
+    Let TokenStrings(TOKEN_Z80_SET) = "set"
+    Let TokenStrings(TOKEN_Z80_SLA) = "sla"
+    Let TokenStrings(TOKEN_Z80_SRA) = "sra"
+    Let TokenStrings(TOKEN_Z80_SLL) = "sll"
+    Let TokenStrings(TOKEN_Z80_SRL) = "srl"
+    Let TokenStrings(TOKEN_Z80_SUB) = "sub"
+    Let TokenStrings(TOKEN_Z80_XOR) = "xor"
+    
+    'Z80 Registers ....................................................................
+    Let TokenStrings(TOKEN_Z80_A) = "a"
+    Let TokenStrings(TOKEN_Z80_AF) = "af"
+    Let TokenStrings(TOKEN_Z80_B) = "b"
+    Let TokenStrings(TOKEN_Z80_C) = "c"
+    Let TokenStrings(TOKEN_Z80_NC) = "nc"
+    Let TokenStrings(TOKEN_Z80_BC) = "bc"
+    Let TokenStrings(TOKEN_Z80_D) = "d"
+    Let TokenStrings(TOKEN_Z80_E) = "e"
+    Let TokenStrings(TOKEN_Z80_DE) = "de"
+    Let TokenStrings(TOKEN_Z80_H) = "h"
+    Let TokenStrings(TOKEN_Z80_L) = "l"
+    Let TokenStrings(TOKEN_Z80_HL) = "hl"
+    Let TokenStrings(TOKEN_Z80_I) = "i"
+    Let TokenStrings(TOKEN_Z80_IX) = "ix"
+    Let TokenStrings(TOKEN_Z80_IXL) = "ixl"
+    Let TokenStrings(TOKEN_Z80_IXH) = "ixh"
+    Let TokenStrings(TOKEN_Z80_IY) = "iy"
+    Let TokenStrings(TOKEN_Z80_IYL) = "iyl"
+    Let TokenStrings(TOKEN_Z80_IYH) = "iyh"
+    Let TokenStrings(TOKEN_Z80_M) = "m"
+    Let TokenStrings(TOKEN_Z80_P) = "p"
+    Let TokenStrings(TOKEN_Z80_PC) = "pc"
+    Let TokenStrings(TOKEN_Z80_PE) = "pe"
+    Let TokenStrings(TOKEN_Z80_PO) = "po"
+    Let TokenStrings(TOKEN_Z80_R) = "r"
+    Let TokenStrings(TOKEN_Z80_SP) = "sp"
+    Let TokenStrings(TOKEN_Z80_Z) = "Z"
+    Let TokenStrings(TOKEN_Z80_NZ) = "nz"
+    
+    'Operators ........................................................................
+    Let TokenStrings(TOKEN_OPERATOR_ADD) = Chr$(SYNTAX.SYNTAX_OPERATOR_ADD)
+    Let TokenStrings(TOKEN_OPERATOR_SUB) = Chr$(SYNTAX.SYNTAX_OPERATOR_SUB)
+    Let TokenStrings(TOKEN_OPERATOR_MUL) = Chr$(SYNTAX.SYNTAX_OPERATOR_MUL)
+    Let TokenStrings(TOKEN_OPERATOR_DIV) = Chr$(SYNTAX.SYNTAX_OPERATOR_DIV)
+    Let TokenStrings(TOKEN_OPERATOR_POW) = Chr$(SYNTAX.SYNTAX_OPERATOR_POW)
+    Let TokenStrings(TOKEN_OPERATOR_MOD) = Chr$(SYNTAX.SYNTAX_OPERATOR_MOD)
+    Let TokenStrings(TOKEN_OPERATOR_REP) = "x"
+    Let TokenStrings(TOKEN_OPERATOR_OR) = Chr$(SYNTAX.SYNTAX_OPERATOR_OR)
+    Let TokenStrings(TOKEN_OPERATOR_AND) = Chr$(SYNTAX.SYNTAX_OPERATOR_AND)
+    Let TokenStrings(TOKEN_OPERATOR_NOT) = Chr$(SYNTAX.SYNTAX_OPERATOR_NOT)
+    
+    'Keywords .........................................................................
+    Let TokenStrings(TOKEN_KEYWORD_AT) = "at"
+    Let TokenStrings(TOKEN_KEYWORD_AS) = "as"
+    Let TokenStrings(TOKEN_KEYWORD_BANK) = "bank"
+    Let TokenStrings(TOKEN_KEYWORD_BINARY) = "binary"
+    Let TokenStrings(TOKEN_KEYWORD_BYTE) = "byte"
+    Let TokenStrings(TOKEN_KEYWORD_DATA) = "data"
+    Let TokenStrings(TOKEN_KEYWORD_DEFAULT) = "default"
+    Let TokenStrings(TOKEN_KEYWORD_ECHO) = "echo"
+    Let TokenStrings(TOKEN_KEYWORD_ELSE) = "else"
+    Let TokenStrings(TOKEN_KEYWORD_EXISTS) = "exists"
+    Let TokenStrings(TOKEN_KEYWORD_FAIL) = "fail"
+    Let TokenStrings(TOKEN_KEYWORD_FILL) = "fill"
+    Let TokenStrings(TOKEN_KEYWORD_IF) = "if"
+    Let TokenStrings(TOKEN_KEYWORD_INCLUDE) = "include"
+    Let TokenStrings(TOKEN_KEYWORD_LENGTH) = "length"
+    Let TokenStrings(TOKEN_KEYWORD_OBJECT) = "object"
+    Let TokenStrings(TOKEN_KEYWORD_PARAMS) = "params"
+    Let TokenStrings(TOKEN_KEYWORD_PROC) = "proc"
+    Let TokenStrings(TOKEN_KEYWORD_RAM) = "ram"
+    Let TokenStrings(TOKEN_KEYWORD_RETURN) = "return"
+    Let TokenStrings(TOKEN_KEYWORD_SECTION) = "section"
+    Let TokenStrings(TOKEN_KEYWORD_SLOT) = "slot"
+    Let TokenStrings(TOKEN_KEYWORD_START) = "start"
+    Let TokenStrings(TOKEN_KEYWORD_STOP) = "stop"
+    Let TokenStrings(TOKEN_KEYWORD_STRUCT) = "struct"
+    Let TokenStrings(TOKEN_KEYWORD_TABLE) = "table"
+    Let TokenStrings(TOKEN_KEYWORD_VAR) = "var"
+    Let TokenStrings(TOKEN_KEYWORD_WORD) = "word"
+    
+    Let TokenStrings(TOKEN_PREFIX_K) = "k"
+    Let TokenStrings(TOKEN_PREFIX_KB) = "kb"
+    Let TokenStrings(TOKEN_PREFIX_KBIT) = "kbit"
+    
+    Let TokenStrings(TOKEN_PARENOPEN) = Chr$(SYNTAX.SYNTAX_PAREN_OPEN)
+    Let TokenStrings(TOKEN_PARENCLOSE) = Chr$(SYNTAX.SYNTAX_PAREN_CLOSE)
+    Let TokenStrings(TOKEN_BLOCKOPEN) = Chr$(SYNTAX.SYNTAX_BLOCK_OPEN)
+    Let TokenStrings(TOKEN_BLOCKCLOSE) = Chr$(SYNTAX.SYNTAX_BLOCK_CLOSE)
+    
+    Let TokenStrings(TOKEN_QUOTE) = Chr$(SYNTAX.SYNTAX_QUOTE)
+    Let TokenStrings(TOKEN_LABEL) = Chr$(SYNTAX.SYNTAX_LABEL)
+    Let TokenStrings(TOKEN_PROPERTY_USE) = Chr$(SYNTAX.SYNTAX_PROPERTY)
+    Let TokenStrings(TOKEN_PROPERTY_NEW) = Chr$(SYNTAX.SYNTAX_PROPERTY)
+    Let TokenStrings(TOKEN_RAM) = Chr$(SYNTAX.SYNTAX_NUMBER_HEX) & Chr$(SYNTAX.SYNTAX_PROPERTY)
+    Let TokenStrings(TOKEN_SECTION) = String(2, Chr$(SYNTAX.SYNTAX_LABEL))
+    Let TokenStrings(TOKEN_VARIABLE) = Chr$(SYNTAX.SYNTAX_VARIABLE)
+    
+    '----------------------------------------------------------------------------------
+    
     'Save time doing and/or comparisons by compiling look up tables of ASCII _
      codes that count as numeric / hex / alpha and alphanumeric
     Dim ii As OZ80_TOKEN
     For ii = 0 To 255
         'Is this a number?
-        If ii >= NUM0 And ii <= NUM9 Then
+        If ii >= ASC_0 And ii <= ASC_9 Then
             Let LowCase(ii) = ii        'Is already lower case
             Let IsNumber(ii) = True     'Is a valid number digit
             Let IsHex(ii) = True        'Is a valid hexadecimal digit
             Let IsAlphaNum(ii) = True   'Is alphanumeric
         
         'Is this lowercase a-z?
-        ElseIf ii >= a And ii <= z Then
+        ElseIf ii >= ASC_A And ii <= ASC_Z Then
             Let LowCase(ii) = ii        'Is already lower case
             Let IsAlpha(ii) = True      'Is alpha
             Let IsAlphaNum(ii) = True   'Is alphanumeric too
             'If a-f then also hexadecimal
-            If ii <= F Then Let IsHex(ii) = True
+            If ii <= ASC_F Then Let IsHex(ii) = True
         
         'Is uppercase A-Z?
         ElseIf ii >= 65 And ii <= 90 Then
@@ -486,6 +473,8 @@ Private Sub Class_Initialize()
             Let My_IsExpression(ii) = True
             Let My_IsParameter(ii) = True
         
+        'Z80 parameters are expressions, with the addition of Z80 register / memory _
+         references, e.g. `(ix+$FF)`
         ElseIf (ii = TOKEN_PARENOPEN) Then
             Let My_IsParameter(ii) = True
         End If
@@ -628,6 +617,12 @@ Public Property Get Line() As Long
     If EOF = True Then Let Line = 0 Else Let Line = Tokens(TokenIndex).Line
 End Property
 
+'PROPERTY TokenString : Get the textual representation of a token (for logging) _
+ ======================================================================================
+Public Property Get TokenString(ByRef Token As OZ80_TOKEN) As String
+    Let TokenString = TokenStrings(Token)
+End Property
+
 'PROPERTY Value : Token Value of current token _
  ======================================================================================
 Public Property Get Value() As Long
@@ -679,8 +674,6 @@ Public Function Tokenise(ByRef FilePath As String) As OZ80_ERROR
         "The file '" & FilePath & "' could not be found." _
     ): GoTo Finish
     
-    RaiseEvent Message("* Parsing file: " & FilePath)
-    
     'Once the file is open, ensure it's closed upon error
     On Error GoTo ErrorOpenFile
     Open FilePath For Input Access Read Lock Write As #FileNumber
@@ -694,11 +687,17 @@ Public Function Tokenise(ByRef FilePath As String) As OZ80_ERROR
     
     'Cache this for speed, we'll be referring to it every loop
     Dim TextLen As Long: Let TextLen = UBound(Text)
-    RaiseEvent Message("- Length: " & Format$(TextLen, "#,#") & " bytes")
     
     'Continue error handling normally
     Close #FileNumber
     On Error GoTo 0
+    
+    RaiseEvent Message(1, OZ80_LOG_ACTION, _
+        "Tokenising " & Chr(34) & FilePath & Chr(34) _
+    )
+    RaiseEvent Message(2, OZ80_LOG_INFO, _
+        "Length: " & Format$(TextLen, "#,#") & " bytes" _
+    )
     
     Dim IsQuote As Boolean
     Dim IsComment As Boolean
@@ -744,13 +743,13 @@ ReadChar:
     
     'Keep track of line and column position in the source file _
      (for helpful error messages, even at the assembling stage)
-    If AscChar = aLF Then
+    If AscChar = ASC_LF Then
         Let Line = Line + 1: Let Col = 0
-    ElseIf AscChar = aTAB Then
+    ElseIf AscChar = ASC_TAB Then
         'Tab goes to the next 8 char boundary
         'TODO: Could do with a lookup here for speed?
         Let Col = Col + 8 - (Col Mod 8)
-    ElseIf AscChar = aCR Then
+    ElseIf AscChar = ASC_CR Then
         GoTo SkipChar
     Else
         Let Col = Col + 1
@@ -769,7 +768,7 @@ ReadChar:
              (we only mark as next line on LF so as to avoid double-lines on Windows _
               which uses CR+LF to mark end of line, whilst staying compatible with _
               the Unix-only LF end of line marker)
-            If AscChar = aLF Then Let IsComment = False: GoTo ReadWord
+            If AscChar = ASC_LF Then Let IsComment = False: GoTo ReadWord
         
         'For multi-line comments, check for backtick:
         ElseIf AscChar = SYNTAX_COMMENT Then
@@ -789,9 +788,9 @@ ReadChar:
         'Special handling for the beginning of a word
         If IsWord = 0 Then
             'Skip whitespace before the word begins
-            If AscChar = aSPC Then GoTo SkipChar
-            If AscChar = aTAB Then GoTo SkipChar
-            If AscChar = aLF Then GoTo SkipChar
+            If AscChar = ASC_SPC Then GoTo SkipChar
+            If AscChar = ASC_TAB Then GoTo SkipChar
+            If AscChar = ASC_LF Then GoTo SkipChar
             
             'Punctuation characters that are only one letter long. _
              When we hit one of these we need to end the word immediately, but parsing _
@@ -810,10 +809,11 @@ ReadChar:
             If AscChar = SYNTAX_OPERATOR_MOD Then GoTo Punctuation
             If AscChar = SYNTAX_OPERATOR_OR Then GoTo Punctuation
             If AscChar = SYNTAX_OPERATOR_AND Then GoTo Punctuation
+            If AscChar = SYNTAX_OPERATOR_NOT Then GoTo Punctuation
         Else
             'A word is underway, check for end of line (note the `Else`, we don't _
              want to test line endings twice when the Word is currently empty)
-            If AscChar = aLF Then
+            If AscChar = ASC_LF Then
                 'The end of a line ends a single-line comment:
                 If IsCommentMulti = False Then
                     If IsComment = True Then Let IsComment = False: GoTo ReadWord
@@ -823,8 +823,8 @@ ReadChar:
             End If
             
             'End the word on a space
-            If AscChar = aSPC Then GoTo EndWord
-            If AscChar = aTAB Then GoTo EndWord
+            If AscChar = ASC_SPC Then GoTo EndWord
+            If AscChar = ASC_TAB Then GoTo EndWord
             
             'Symbols that can break a word in the middle without spaces to separate
             If AscChar = SYNTAX_NEXT Then GoTo WordBreak
@@ -922,7 +922,19 @@ TokenWord:
                valid at all (could have a number in completely the wrong place)
         GoTo NextWord
     
-    'Hexadecimal number?
+    'RAM constant, e.g. `$.gamevar`
+    ElseIf Asc1 = SYNTAX_NUMBER_HEX _
+       And Asc2 = SYNTAX_PROPERTY Then '...................................... `$.` ...
+        'ERROR: Invalid name?
+        If Not IsValidName(WordBegin, WordBegin + WordLen) Then
+            GoTo ErrorInvalidName
+        End If
+        
+        'TODO: Define RAM constant
+        
+        GoTo NextWord
+        
+    'Hexadecimal number
     ElseIf Asc1 = SYNTAX_NUMBER_HEX Then '..................................... `$` ...
         'Validate the number
         Let Number = 0: Let Multiplier = 1
@@ -931,8 +943,8 @@ TokenWord:
             If IsHex(Text(ii)) = False Then
                 'ERROR: Invalid hexadecimal number!
                 GoSub GetWord
-                Let Tokenise = RaiseError(OZ80_ERROR_BADNUMBER_DEC, _
-                    "Invalid number", _
+                Let Tokenise = RaiseError( _
+                    OZ80_ERROR_INVALIDNUMBER, "Invalid number", _
                     "Not a valid hexadecimal number! '" & Word & "'", _
                     LineBegin, ColBegin _
                 ): GoTo Finish
@@ -956,11 +968,16 @@ TokenWord:
             GoTo NextWord
         
         'A label cannot begin with a number but must otherwise be A-Z, 0-9 and "_"
-        ElseIf IsValidName(WordBegin + 1, WordBegin + WordLen) = False Then
+        ElseIf Not IsValidName(WordBegin, WordBegin + WordLen) Then
             GoTo ErrorInvalidName
         Else
             GoSub GetWord
-            Call AddString(TOKEN_LABEL, Word)
+            'Is this a section name (`::section`) or regular label (`:label`)?
+            If Asc2 = SYNTAX_LABEL Then
+                Call AddString(TOKEN_SECTION, Word)
+            Else
+                Call AddString(TOKEN_LABEL, Word)
+            End If
             GoTo NextWord
         End If
     
@@ -977,7 +994,7 @@ TokenWord:
             GoTo NextWord
         
         'A property cannot begin with a number but must otherwise be A-Z, 0-9 and "_"
-        ElseIf IsValidName(WordBegin + 1, WordBegin + WordLen) = False Then
+        ElseIf IsValidName(WordBegin, WordBegin + WordLen) = False Then
             GoTo ErrorInvalidName
         Else
             GoSub GetWord
@@ -997,7 +1014,7 @@ TokenWord:
             GoTo ErrorInvalidName
         
         'A variable cannot begin with a number but must otherwise be A-Z, 0-9 and "_"
-        ElseIf IsValidName(WordBegin + 1, WordBegin + WordLen) = False Then
+        ElseIf IsValidName(WordBegin, WordBegin + WordLen) = False Then
             GoTo ErrorInvalidName
         Else
             GoSub GetWord
@@ -1005,7 +1022,7 @@ TokenWord:
             GoTo NextWord
         End If
         
-    ElseIf Asc1 = a Then '..................................................... `a` ...
+    ElseIf Asc1 = ASC_A Then '................................................. `a` ...
         'Z80 instructions
         If CompStr("adc") Then Call Add(TOKEN_Z80_ADC): GoTo NextWord
         If CompStr("add") Then Call Add(TOKEN_Z80_ADD): GoTo NextWord
@@ -1014,7 +1031,7 @@ TokenWord:
         If CompStr("as") Then Call Add(TOKEN_KEYWORD_AS): GoTo NextWord
         If CompStr("at") Then Call Add(TOKEN_KEYWORD_AT): GoTo NextWord
          
-    ElseIf Asc1 = B Then '..................................................... `b` ...
+    ElseIf Asc1 = ASC_B Then '................................................. `b` ...
         'Z80 instructions
         If CompStr("bit") Then Call Add(TOKEN_Z80_BIT): GoTo NextWord
         'Keywords
@@ -1022,7 +1039,7 @@ TokenWord:
         If CompStr("binary") Then Call Add(TOKEN_KEYWORD_BINARY): GoTo NextWord
         If CompStr("byte") Then Call Add(TOKEN_KEYWORD_BYTE): GoTo NextWord
         
-    ElseIf Asc1 = C Then '..................................................... `c` ...
+    ElseIf Asc1 = ASC_C Then '................................................. `c` ...
         'Z80 instructions
         If CompStr("call") Then Call Add(TOKEN_Z80_CALL): GoTo NextWord
         If CompStr("ccf") Then Call Add(TOKEN_Z80_CCF): GoTo NextWord
@@ -1035,7 +1052,7 @@ TokenWord:
         'Z80 flag condition
         If Asc2 = 0 Then Call Add(TOKEN_Z80_C): GoTo NextWord
         
-    ElseIf Asc1 = D Then '..................................................... `d` ...
+    ElseIf Asc1 = ASC_D Then '................................................. `d` ...
         'Z80 instructions
         If CompStr("daa") Then Call Add(TOKEN_Z80_DAA): GoTo NextWord
         If CompStr("dec") Then Call Add(TOKEN_Z80_DEC): GoTo NextWord
@@ -1045,7 +1062,7 @@ TokenWord:
         If CompStr("data") Then Call Add(TOKEN_KEYWORD_DATA): GoTo NextWord
         If CompStr("default") Then Call Add(TOKEN_KEYWORD_DEFAULT): GoTo NextWord
         
-    ElseIf Asc1 = E Then '..................................................... `e` ...
+    ElseIf Asc1 = ASC_E Then '................................................. `e` ...
         'Z80 instructions
         If CompStr("ei") Then Call Add(TOKEN_Z80_EI): GoTo NextWord
         If CompStr("ex") Then Call Add(TOKEN_Z80_EX): GoTo NextWord
@@ -1055,18 +1072,22 @@ TokenWord:
         If CompStr("else") Then Call Add(TOKEN_KEYWORD_ELSE): GoTo NextWord
         If CompStr("exists") Then Call Add(TOKEN_KEYWORD_EXISTS): GoTo NextWord
         
-    ElseIf Asc1 = F Then '..................................................... `f` ...
+    ElseIf Asc1 = ASC_F Then '................................................. `f` ...
         'Keywords
         If CompStr("fail") Then Call Add(TOKEN_KEYWORD_FAIL): GoTo NextWord
         If CompStr("fill") Then Call Add(TOKEN_KEYWORD_FILL): GoTo NextWord
         'You can't refer to the `f` register directly (only `af`)
         GoTo WordError
         
-    ElseIf Asc1 = H Then '..................................................... `h` ...
+    ElseIf Asc1 = ASC_G Then '................................................. `g` ...
+        'There's nothing that begins with G
+        GoTo WordError
+        
+    ElseIf Asc1 = ASC_H Then '................................................. `h` ...
         'Z80 instructions
         If CompStr("halt") Then Call Add(TOKEN_Z80_HALT): GoTo NextWord
         
-    ElseIf Asc1 = i Then '..................................................... `i` ...
+    ElseIf Asc1 = ASC_I Then '................................................. `i` ...
         'Z80 instructions
         If CompStr("im") Then Call Add(TOKEN_Z80_IM): GoTo NextWord
         If CompStr("in") Then Call Add(TOKEN_Z80_IN): GoTo NextWord
@@ -1079,19 +1100,19 @@ TokenWord:
         If CompStr("if") Then Call Add(TOKEN_KEYWORD_IF): GoTo NextWord
         If CompStr("include") Then Call Add(TOKEN_KEYWORD_INCLUDE): GoTo NextWord
         
-    ElseIf Asc1 = J Then '..................................................... `j` ...
+    ElseIf Asc1 = ASC_J Then '................................................. `j` ...
         'Z80 instructions
         If CompStr("jp") Then Call Add(TOKEN_Z80_JP): GoTo NextWord
         If CompStr("jr") Then Call Add(TOKEN_Z80_JR): GoTo NextWord
         'There are no `j` registers
         GoTo WordError
         
-    ElseIf Asc1 = K Then '..................................................... `k` ...
+    ElseIf Asc1 = ASC_K Then '................................................. `k` ...
         'Number suffixes K, KB & Kbit
         If Asc2 = 0 Then    'Just `K`
             Call Add(TOKEN_PREFIX_K): GoTo NextWord
             'B must be next for `KB` and `Kbit`
-        ElseIf Asc2 = B Then
+        ElseIf Asc2 = ASC_B Then
             'If only two letters, then it's `KB`
             If Asc3 = 0 Then Call Add(TOKEN_PREFIX_KB): GoTo NextWord
             'verify ...`Kbit`, we don't have Asc5 so avoid things like `Kbitty`
@@ -1100,7 +1121,7 @@ TokenWord:
         'There are no `k` registers
         GoTo WordError
         
-    ElseIf Asc1 = L Then '..................................................... `l` ...
+    ElseIf Asc1 = ASC_L Then '................................................. `l` ...
         'Z80 instructions
         If CompStr("ld") Then Call Add(TOKEN_Z80_LD): GoTo NextWord
         If CompStr("ldd") Then Call Add(TOKEN_Z80_LDD): GoTo NextWord
@@ -1110,25 +1131,25 @@ TokenWord:
         'Keywords
         If CompStr("length") Then Call Add(TOKEN_KEYWORD_LENGTH): GoTo NextWord
     
-    ElseIf Asc1 = M Then '..................................................... `m` ...
+    ElseIf Asc1 = ASC_M Then '................................................. `m` ...
         'Z80 flag conditions
         If Asc2 = 0 Then Call Add(TOKEN_Z80_M): GoTo NextWord
         'There is no `m` register
         GoTo WordError
         
-    ElseIf Asc1 = N Then '..................................................... `n` ...
+    ElseIf Asc1 = ASC_N Then '................................................. `n` ...
         'Z80 instructions
         If CompStr("neg") Then Call Add(TOKEN_Z80_NEG): GoTo NextWord
         If CompStr("nop") Then Call Add(TOKEN_Z80_NOP): GoTo NextWord
         'Z80 flag conditions
         If Asc3 = 0 Then
-            If Asc2 = C Then Call Add(TOKEN_Z80_NC): GoTo NextWord
-            If Asc2 = z Then Call Add(TOKEN_Z80_NZ): GoTo NextWord
+            If Asc2 = ASC_C Then Call Add(TOKEN_Z80_NC): GoTo NextWord
+            If Asc2 = ASC_Z Then Call Add(TOKEN_Z80_NZ): GoTo NextWord
         End If
         'There are no `n` registers
         GoTo WordError
         
-    ElseIf Asc1 = O Then '..................................................... `o` ...
+    ElseIf Asc1 = ASC_O Then '................................................. `o` ...
         'Z80 instructions
         If CompStr("or") Then Call Add(TOKEN_Z80_OR): GoTo NextWord
         If CompStr("out") Then Call Add(TOKEN_Z80_OUT): GoTo NextWord
@@ -1141,21 +1162,21 @@ TokenWord:
         'There are no `o` registers
         GoTo WordError
         
-    ElseIf Asc1 = p Then '..................................................... `p` ...
+    ElseIf Asc1 = ASC_P Then '................................................. `p` ...
         'Z80 instructions
         If CompStr("pop") Then Call Add(TOKEN_Z80_POP): GoTo NextWord
         If CompStr("push") Then Call Add(TOKEN_Z80_PUSH): GoTo NextWord
         'Z80 flag conditions
         If Asc2 = 0 Then Call Add(TOKEN_Z80_P): GoTo NextWord
         If Asc3 = 0 Then
-            If Asc2 = E Then Call Add(TOKEN_Z80_PE): GoTo NextWord
-            If Asc2 = O Then Call Add(TOKEN_Z80_PO): GoTo NextWord
+            If Asc2 = ASC_E Then Call Add(TOKEN_Z80_PE): GoTo NextWord
+            If Asc2 = ASC_O Then Call Add(TOKEN_Z80_PO): GoTo NextWord
         End If
         'Keywords
         If CompStr("params") Then Call Add(TOKEN_KEYWORD_PARAMS): GoTo NextWord
         If CompStr("proc") Then Call Add(TOKEN_KEYWORD_PROC): GoTo NextWord
         
-    ElseIf Asc1 = R Then '..................................................... `r` ...
+    ElseIf Asc1 = ASC_R Then '................................................. `r` ...
         'Z80 instructions
         If CompStr("res") Then Call Add(TOKEN_Z80_RES): GoTo NextWord
         If CompStr("ret") Then Call Add(TOKEN_Z80_RET): GoTo NextWord
@@ -1175,7 +1196,7 @@ TokenWord:
         'Keywords
         If CompStr("return") Then Call Add(TOKEN_KEYWORD_RETURN): GoTo NextWord
         
-    ElseIf Asc1 = S Then '..................................................... `s` ...
+    ElseIf Asc1 = ASC_S Then '................................................. `s` ...
         'Z80 instructions
         If CompStr("sbc") Then Call Add(TOKEN_Z80_SBC): GoTo NextWord
         If CompStr("scf") Then Call Add(TOKEN_Z80_SCF): GoTo NextWord
@@ -1192,24 +1213,24 @@ TokenWord:
         If CompStr("stop") Then Call Add(TOKEN_KEYWORD_STOP): GoTo NextWord
         If CompStr("struct") Then Call Add(TOKEN_KEYWORD_STRUCT): GoTo NextWord
     
-    ElseIf Asc1 = T Then '..................................................... `t` ...
+    ElseIf Asc1 = ASC_T Then '................................................. `t` ...
         'Keywords
         If CompStr("table") Then Call Add(TOKEN_KEYWORD_TABLE): GoTo NextWord
         'There is no `t` register
         GoTo WordError
     
-    ElseIf Asc1 = V Then '..................................................... `v` ...
+    ElseIf Asc1 = ASC_V Then '................................................. `v` ...
         'Keywords
         If CompStr("var") Then Call Add(TOKEN_KEYWORD_VAR): GoTo NextWord
         GoTo WordError
         
-    ElseIf Asc1 = W Then '..................................................... `w` ...
+    ElseIf Asc1 = ASC_W Then '................................................. `w` ...
         'Keywords
         If CompStr("word") Then Call Add(TOKEN_KEYWORD_WORD): GoTo NextWord
         'There is no `w` register
         GoTo WordError
         
-    ElseIf Asc1 = x Then '..................................................... `x` ...
+    ElseIf Asc1 = ASC_X Then '................................................. `x` ...
         'If only `x`, then it's the repeat operator
         If WordLen = 0 Then Call Add(TOKEN_OPERATOR_REP): GoTo NextWord
         'Z80 instructions
@@ -1217,7 +1238,7 @@ TokenWord:
         'There is no `x` register
         GoTo WordError
     
-    ElseIf Asc1 = z Then '..................................................... `z` ...
+    ElseIf Asc1 = ASC_Z Then '................................................. `z` ...
         'Z80 flag conditions
         If Asc2 = 0 Then Call Add(TOKEN_Z80_Z): GoTo NextWord
         'There is no 'z' register
@@ -1241,8 +1262,8 @@ TokenWord:
             If IsNumber(Text(ii)) = False Then
                 'ERROR: Invalid number!
                 GoSub GetWord
-                Let Tokenise = RaiseError(OZ80_ERROR_BADNUMBER_DEC, _
-                    "Invalid number", _
+                Let Tokenise = RaiseError( _
+                    OZ80_ERROR_INVALIDNUMBER, "Invalid number", _
                     "Not a valid decimal number! '" & Word & "'", _
                     LineBegin, ColBegin _
                 ): GoTo Finish
@@ -1250,7 +1271,7 @@ TokenWord:
                 'Convert the number from ASCII codes into a value
                 On Error GoTo ErrorOverflow
                 'I've tried a lookup table here and it's exactly the same speed
-                Let Number = Number + (Text(ii) - NUM0) * Multiplier
+                Let Number = Number + (Text(ii) - ASC_0) * Multiplier
                 'Don't allow the multiplier to overflow when the number doesn't
                 If ii > WordBegin Then Let Multiplier = Multiplier * 10
                 On Error GoTo 0
@@ -1266,9 +1287,9 @@ TokenWord:
         If WordLen > 31 Then GoTo ErrorOverflow
         Let Number = 0: Let Multiplier = 0
         For ii = WordBegin + WordLen To WordBegin + 1 Step -1
-            If Text(ii) = NUM1 Then
+            If Text(ii) = ASC_1 Then
                 Let Number = Number + 2 ^ Multiplier
-            ElseIf Text(ii) <> NUM0 Then
+            ElseIf Text(ii) <> ASC_0 Then
                 'Error - not a valid binary number
                 Stop
             End If
@@ -1308,9 +1329,9 @@ TokenWord:
     'Z80 Registers: _
      ----------------------------------------------------------------------------------
     'Ignore anything beginning with a letter before A
-    If Asc1 < a Then GoTo WordError
+    If Asc1 < ASC_A Then GoTo WordError
     'No register has a first letter higher than S
-    If Asc1 > S Then GoTo WordError
+    If Asc1 > ASC_S Then GoTo WordError
     'If there's only 1 letter total, then it's obviously a 1-letter register
     If Asc2 = 0 Then GoTo OneLetter
     'If a semi-colon occurs at the second letter, then the register must be 1 letter
@@ -1328,33 +1349,33 @@ TokenWord:
     GoTo WordError
 
 OneLetter:
-    If Asc1 = a Then Call Add(TOKEN_Z80_A): GoTo NextWord
-    If Asc1 = B Then Call Add(TOKEN_Z80_B): GoTo NextWord
-    If Asc1 = C Then Call Add(TOKEN_Z80_C): GoTo NextWord
-    If Asc1 = D Then Call Add(TOKEN_Z80_D): GoTo NextWord
-    If Asc1 = E Then Call Add(TOKEN_Z80_E): GoTo NextWord
-    If Asc1 = H Then Call Add(TOKEN_Z80_H): GoTo NextWord
-    If Asc1 = i Then Call Add(TOKEN_Z80_I): GoTo NextWord
-    If Asc1 = L Then Call Add(TOKEN_Z80_L): GoTo NextWord
-    If Asc1 = R Then Call Add(TOKEN_Z80_R): GoTo NextWord
+    If Asc1 = ASC_A Then Call Add(TOKEN_Z80_A): GoTo NextWord
+    If Asc1 = ASC_B Then Call Add(TOKEN_Z80_B): GoTo NextWord
+    If Asc1 = ASC_C Then Call Add(TOKEN_Z80_C): GoTo NextWord
+    If Asc1 = ASC_D Then Call Add(TOKEN_Z80_D): GoTo NextWord
+    If Asc1 = ASC_E Then Call Add(TOKEN_Z80_E): GoTo NextWord
+    If Asc1 = ASC_H Then Call Add(TOKEN_Z80_H): GoTo NextWord
+    If Asc1 = ASC_I Then Call Add(TOKEN_Z80_I): GoTo NextWord
+    If Asc1 = ASC_L Then Call Add(TOKEN_Z80_L): GoTo NextWord
+    If Asc1 = ASC_R Then Call Add(TOKEN_Z80_R): GoTo NextWord
     GoTo WordError
 
 TwoLetters:
-    If Asc1 = a Then       '"af"
-        If Asc2 = F Then Call Add(TOKEN_Z80_AF): GoTo NextWord
-    ElseIf Asc1 = B Then   '"bc"
-        If Asc2 = C Then Call Add(TOKEN_Z80_BC): GoTo NextWord
-    ElseIf Asc1 = D Then  '"de"
-        If Asc2 = E Then Call Add(TOKEN_Z80_DE): GoTo NextWord
-    ElseIf Asc1 = H Then  '"hl"
-        If Asc2 = L Then Call Add(TOKEN_Z80_HL): GoTo NextWord
-    ElseIf Asc1 = i Then  '"ix"/"iy"
-        If Asc2 = x Then Call Add(TOKEN_Z80_IX): GoTo NextWord
-        If Asc2 = y Then Call Add(TOKEN_Z80_IY): GoTo NextWord
-    ElseIf Asc1 = p Then  '"pc"
-        If Asc2 = C Then Call Add(TOKEN_Z80_PC): GoTo NextWord
-    ElseIf Asc1 = S Then  '"sp"
-        If Asc2 = p Then Call Add(TOKEN_Z80_SP): GoTo NextWord
+    If Asc1 = ASC_A Then                '"af"
+        If Asc2 = ASC_F Then Call Add(TOKEN_Z80_AF): GoTo NextWord
+    ElseIf Asc1 = ASC_B Then            '"bc"
+        If Asc2 = ASC_C Then Call Add(TOKEN_Z80_BC): GoTo NextWord
+    ElseIf Asc1 = ASC_D Then            '"de"
+        If Asc2 = ASC_E Then Call Add(TOKEN_Z80_DE): GoTo NextWord
+    ElseIf Asc1 = ASC_H Then            '"hl"
+        If Asc2 = ASC_L Then Call Add(TOKEN_Z80_HL): GoTo NextWord
+    ElseIf Asc1 = ASC_I Then            '"ix"/"iy"
+        If Asc2 = ASC_X Then Call Add(TOKEN_Z80_IX): GoTo NextWord
+        If Asc2 = ASC_Y Then Call Add(TOKEN_Z80_IY): GoTo NextWord
+    ElseIf Asc1 = ASC_P Then            '"pc"
+        If Asc2 = ASC_C Then Call Add(TOKEN_Z80_PC): GoTo NextWord
+    ElseIf Asc1 = ASC_S Then            '"sp"
+        If Asc2 = ASC_P Then Call Add(TOKEN_Z80_SP): GoTo NextWord
     End If
     GoTo WordError
     
@@ -1392,9 +1413,12 @@ ErrorInvalidName: '.............................................................
         "Invalid item name", _
         "Failure parsing '" & Word & "'; " & _
             "Variable, label and property names can contain A-Z, 0-9 underscore and " & _
-            "dot with the exceptions that the first letter cannot be a number or a " & _
-            "dot, two dots cannot occur in a row nor can a number follow a dot and " & _
-            "the name cannot end in a dot" _
+                "dot with the following exceptions: " & _
+                "1. the first letter cannot be a number or a dot, " & _
+                "2. two dots cannot occur in a row " & _
+                "3. a number cannot follow a dot, and " & _
+                "4. the name cannot end in a dot", _
+        LineBegin, ColBegin _
     ): GoTo Finish
 
 ErrorOverflow: '.......................................................................
@@ -1403,16 +1427,18 @@ ErrorOverflow: '................................................................
     Let Tokenise = RaiseError(OZ80_ERROR_OVERFLOW, _
         "Overflow", _
         "Number too large! ('" & Word & "') Numbers are limited to a maximum of " & _
-            "31-bits (" & Format$((2 ^ 31) - 1, "#,#") & ")." _
+            "31-bits (" & Format$((2 ^ 31) - 1, "#,#") & ").", _
+        LineBegin, ColBegin _
     ): GoTo Finish
     
 WordError: '...........................................................................
     GoSub GetWord
-    Let Tokenise = RaiseError(OZ80_ERROR_BADWORD, _
+    Let Tokenise = RaiseError(OZ80_ERROR_INVALIDWORD, _
         "Invalid content", _
         "Faliure parsing '" & Word & "'; " & _
             "Not a known keyword, Z80 instruction, register or other known word. " & _
-            "Typo, perhaps?" _
+            "Typo, perhaps?", _
+        LineBegin, ColBegin _
     ): GoTo Finish
     
     '----------------------------------------------------------------------------------
@@ -1428,9 +1454,9 @@ Finish:
         Let Me.SourceFile = FilePath
         
         Erase Text
-        RaiseEvent Message("- Words: " & Format$(WordCount, "#,#"))
-        RaiseEvent Message("- Tokens: " & Format$(TokenCount, "#,#"))
-        RaiseEvent Message("- Time: " & Format$(Stopwatch.Elapsed / 1000, "0.000") & "s")
+        RaiseEvent Message(2, OZ80_LOG_INFO, "Words: " & Format$(WordCount, "#,#"))
+        RaiseEvent Message(2, OZ80_LOG_INFO, "Tokens: " & Format$(TokenCount, "#,#"))
+        RaiseEvent Message(2, OZ80_LOG_INFO, "Time: " & Format$(Stopwatch.Elapsed / 1000, "0.000") & "s")
     Else
         'clean up!
         Erase Text, Tokens
@@ -1444,19 +1470,47 @@ End Function
 'Add : Add a token (any) to the stream _
  ======================================================================================
 Private Sub Add( _
-             ByRef Kind As OZ80_TOKEN, _
+             ByRef Token As OZ80_TOKEN, _
     Optional ByRef Value As Long = 0 _
 )
     'The `Kind` param MUST be 0-255, but is given as long for speed reasons; _
      the rest of this class will ensure that this is never out of bounds
     With Tokens(TokenIndex)
-        Let .Kind = Kind And &HFF
+        Let .Kind = Token And &HFF
         Let .Value = Value
         'Note that the line and column numbers are global to this class to avoid _
          having to use them in calls hundreds of times over
         Let .Line = LineBegin
         Let .Col = ColBegin
     End With
+    
+    'Generate a debug message. We don't show string-based tokens (such as labels) _
+     since we can't access the string database in the Assembler from here. Those _
+     tokens are displayed in `AddString` below which has the text to hand
+    Dim Msg As String
+    If My_IsRegister(Token) Then
+        Let Msg = "[REGISTER] " & TokenStrings(Token)
+    ElseIf Token = TOKEN_NUMBER Then
+        Let Msg = "[  NUMBER] " & Format$(Value, "#,#")
+    ElseIf My_IsKeyword(Token) Then
+        Let Msg = "[ KEYWORD] " & UCase(TokenStrings(Token))
+    ElseIf My_IsOperator(Token) Then
+        Let Msg = "[OPERATOR] " & TokenStrings(Token)
+    ElseIf Token = TOKEN_BLOCKOPEN Or Token = TOKEN_BLOCKCLOSE Then
+        Let Msg = "[   BLOCK] " & TokenStrings(Token)
+    ElseIf My_IsInstruction(Token) Then
+        Let Msg = "[     Z80] " & TokenStrings(Token)
+    ElseIf Token = TOKEN_PARENOPEN Or Token = TOKEN_PARENCLOSE Then
+        Let Msg = "[  Z80MEM] " & TokenStrings(Token)
+    ElseIf Token = TOKEN_PREFIX_K Or Token = TOKEN_PREFIX_KB _
+        Or Token = TOKEN_PREFIX_KBIT Then
+        Let Msg = "[  PREFIX] " & TokenStrings(Token)
+    End If
+    If Msg <> vbNullString Then RaiseEvent Message(2, OZ80_LOG_DEBUG, _
+        "<tkn> " & Format$(TokenIndex + 1, "#,#") & _
+            " " & FormatLineCol & _
+            " " & FormatLong(Value) & " " & Msg _
+    )
     
     'Remember the line number used for this token to check for properties occuring _
      on a new line -- this constitutes a property definition in a block
@@ -1480,7 +1534,7 @@ End Sub
 'AddString : Strings are stored outside of the token stream and referenced by number _
  ======================================================================================
 Private Sub AddString( _
-    ByRef TokenType As OZ80_TOKEN, ByRef Data As String _
+    ByRef Token As OZ80_TOKEN, ByRef Data As String _
 )
     'Note Line & Col numbers are global variables to this class to save having to _
      use them in calls hundreds of times over
@@ -1491,8 +1545,32 @@ Private Sub AddString( _
     'Note that the assembler will produce the key for us and pass it back
     RaiseEvent StringAdded(Key, Data)
     
+    Dim TokenType As String * 8
+    If Token = TOKEN_LABEL Then
+        Let TokenType = "   LABEL"
+    ElseIf Token = TOKEN_PROPERTY_NEW Or Token = TOKEN_PROPERTY_USE Then
+        Let TokenType = "PROPERTY"
+    ElseIf Token = TOKEN_QUOTE Then
+        Let TokenType = "   QUOTE"
+    ElseIf Token = TOKEN_RAM Then
+        Let TokenType = "     RAM"
+    ElseIf Token = TOKEN_SECTION Then
+        Let TokenType = " SECTION"
+    ElseIf Token = TOKEN_VARIABLE Then
+        Let TokenType = "VARIABLE"
+    Else
+        Stop
+    End If
+    
+    RaiseEvent Message(2, OZ80_LOG_DEBUG, _
+        "<tkn> " & Format$(TokenIndex + 1, "#,#") & _
+            " " & FormatLineCol & _
+            " " & FormatLong(Key) & " " & _
+            "[" & TokenType & "] " & Chr(34) & Data & Chr(34) _
+    )
+    
     'Add the index key to the token so that we can retrieve the string later
-    Call Add(TokenType, Key)
+    Call Add(Token, Key)
 End Sub
 
 'CompStr : Compare a word from the byte array to a string _
@@ -1530,6 +1608,21 @@ Private Function FileExists(ByRef Path As String) As Boolean
     Let FileExists = CBool(Dir$(Path) <> vbNullString)
 End Function
 
+'FormatLineCol : Formats the current line and column number being parsed for logging _
+ ======================================================================================
+Private Function FormatLineCol() As String
+    Let FormatLineCol = "(" & _
+        Right$("    " & LineBegin, 5) & "," & Left$(ColBegin & "  ", 3) & _
+    ")"
+End Function
+
+'FormatLong : Format a 32-bit hexadecimal number for logging _
+ ======================================================================================
+Private Function FormatLong(ByRef Value As Long) As String
+    Let FormatLong = "$" & Right$("0000000" & Hex(Value), 8)
+    Let FormatLong = Left$(FormatLong, 5) & "-" & Right$(FormatLong, 4)
+End Function
+
 'IsValidName : Check validity for variables, labels & properties _
  ======================================================================================
 Private Function IsValidName(ByRef First As Long, ByRef Last As Long) As Boolean
@@ -1537,32 +1630,52 @@ Private Function IsValidName(ByRef First As Long, ByRef Last As Long) As Boolean
      the exceptions that the first letter cannot be a number or a dot, two dots cannot _
      occur in a row nor can a number follow a dot and the name cannot end in a dot
     
-    'NOTE: This function assumes that you have skipped over the prefix (`#`/`:`/`.`)
+    'The first letter must be the type identifier; _
+     :label, ?function, @macro, .property, #variable, $.RAMconstant
+    If Text(First) <> SYNTAX_LABEL And _
+       Text(First) <> SYNTAX_FUNCT And _
+       Text(First) <> SYNTAX_MACRO And _
+       Text(First) <> SYNTAX_PROPERTY And _
+       Text(First) <> SYNTAX_VARIABLE And _
+       Text(First) <> SYNTAX_NUMBER_HEX _
+    Then
+        Exit Function
+    End If
+    
+    'Check for special names with two character prefixes, _
+     e.g. "::section" and "$.RAMconstant"
+    Dim Begin As Long
+    If (Text(First) = SYNTAX_LABEL And Text(First + 1) = SYNTAX_LABEL) _
+    Or (Text(First) = SYNTAX_NUMBER_HEX And Text(First + 1) = SYNTAX_PROPERTY) Then
+        Let Begin = First + 2
+    Else
+        Let Begin = First + 1
+    End If
     
     'The name cannot begin with a number or a dot
-    If Text(First) = SYNTAX_PROPERTY Then Exit Function
-    If IsNumber(Text(First)) Then Exit Function
+    If Text(Begin) = SYNTAX_PROPERTY Then Exit Function
+    If IsNumber(Text(Begin)) Then Exit Function
     'Cannot end in a dot
     If Text(Last) = SYNTAX_PROPERTY Then Exit Function
     
-    Dim ii As Long
-    For ii = First To Last
+    Dim i As Long
+    For i = Begin To Last
         'Not a dot?
-        If Text(ii) <> SYNTAX_PROPERTY Then
+        If Text(i) <> SYNTAX_PROPERTY Then
             'Is letter not alphanumeric?
-            If IsAlphaNum(Text(ii)) = False Then
+            If IsAlphaNum(Text(i)) = False Then
                 'Finally, not an underscore?
-                If Text(ii) <> UNDRSCR Then Exit Function
+                If Text(i) <> ASC_UNDRSCR Then Exit Function
             End If
         Else
             'If a dot, ensure that the next letter is not a number. _
              (the check for the last letter as a dot has already been done, _
               so we can safely assume there remains at least one letter)
-            If IsNumber(Text(ii + 1)) Then Exit Function
+            If IsNumber(Text(i + 1)) Then Exit Function
             'Two dots in a row not allowed
-            If Text(ii + 1) = SYNTAX_PROPERTY Then Exit Function
+            If Text(i + 1) = SYNTAX_PROPERTY Then Exit Function
         End If
-    Next ii
+    Next i
     
     Let IsValidName = True
 End Function
@@ -1570,9 +1683,8 @@ End Function
 'RiaseError : provide error details through an event _
  ======================================================================================
 Private Function RaiseError( _
-    ByRef Number As OZ80_ERROR, _
-    ByRef Title As String, _
-    ByRef Description As String, _
+             ByRef Number As OZ80_ERROR, _
+             ByRef Title As String, ByRef Description As String, _
     Optional ByRef Line As Long = 0, Optional ByRef Col As Long = 0 _
 ) As OZ80_ERROR
     'Send the error to the controller (if it sinks events)

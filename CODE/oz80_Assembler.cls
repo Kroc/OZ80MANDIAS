@@ -64,7 +64,23 @@ Private CastStrSA1D As SAFEARRAY1D      'A dummy VB6 array header
 Private CastStrPtr  As Long             'Pointer to our dummy array
 Private CastStrArr() As Byte            'Empty array that will be hacked
 
-'/// CONSTANTS ////////////////////////////////////////////////////////////////////////
+'/// CLASS VARIABLES //////////////////////////////////////////////////////////////////
+
+'Store a look up table for the CRC calculations
+Private CRCTable(0 To 255) As Long
+'This is the official polynomial used by CRC32 in PKZip. _
+ Often the polynomial is shown reversed (04C11DB7)
+Private Const CRC_POLYNOMIAL As Long = &HEDB88320
+
+'For timing this process
+Private Stopwatch As PerformanceCounter
+
+'--------------------------------------------------------------------------------------
+
+'Each source code file is broken down into a machine-readable representation which _
+ we store here. When parsing one file and we come across an `INCLUDE` statement, _
+ another token stream gets added here
+Private Files As Scripting.Dictionary
 
 'This structure is used when parsing parameters of Z80 instructions
 Private Type oz80Param
@@ -72,23 +88,6 @@ Private Type oz80Param
     Value As Long                       'The numerical value for the parameter
     ValueIndefinite As Boolean          'If the parameter has unknown values (labels)
 End Type
-
-'This is the official polynomial used by CRC32 in PKZip. _
- Often the polynomial is shown reversed (04C11DB7)
-Private Const CRC_POLYNOMIAL As Long = &HEDB88320
-
-'/// CLASS VARIABLES //////////////////////////////////////////////////////////////////
-
-'Store a look up table for the CRC calculations
-Private CRCTable(0 To 255) As Long
-
-'For timing this process
-Private Stopwatch As PerformanceCounter
-
-'Each source code file is broken down into a machine-readable representation which _
- we store here. When parsing one file and we come across an `INCLUDE` statement, _
- another token stream gets added here
-Private Files As Scripting.Dictionary
 
 'The current source file being processed, attached such that we can get the _
  message and error events from it
@@ -133,8 +132,10 @@ Private ROMSize As Long                 'Size of the ROM (32/64/128/256/512/1024
 '/// EVENTS ///////////////////////////////////////////////////////////////////////////
 
 'Progress messages are passed through an event, the handler can choose to show them _
- or not. I didn't want to spam `Debug.Print` output
-Event Message(ByRef Text As String)
+ or not, and in what format. I don't want to spam unwanted `Debug.Print` output
+Event Message( _
+    ByRef Depth As Long, ByRef LogLevel As OZ80_LOG, ByRef Text As String _
+)
 
 'A class event is used to communicate error details beyond a simple error number
 Event Error( _
@@ -166,6 +167,8 @@ Private Sub Class_Initialize()
         Next
         Let CRCTable(i) = Value
     Next
+    
+    '----------------------------------------------------------------------------------
     
     With CastStrSA1D
         .cDims = 1
@@ -207,10 +210,11 @@ End Sub
 
 'EVENT <TokenStream> Message : Basic progress message from a TokenStream object _
  ======================================================================================
-Private Sub TokenStream_Message(Text As String)
-    'It's up to the controller to decide to display (or `Debug.Print` any messages), _
-     we're not going to unnecessarily spam their console
-    RaiseEvent Message(Text)
+Private Sub TokenStream_Message( _
+    ByRef Depth As Long, ByRef LogLevel As OZ80_LOG, ByRef Text As String _
+)   'It's up to the controller to decide to display (or `Debug.Print` any messages), _
+     we 're not going to unnecessarily spam their console
+    RaiseEvent Message(Depth, LogLevel, Text)
 End Sub
 
 'EVENT <TokenStream> StringAdded : While parsing a source file, a string name was read _
@@ -229,8 +233,8 @@ End Sub
  ======================================================================================
 Public Function Assemble(ByVal FilePath As String) As OZ80_ERROR
     'Announce ourselves
-    RaiseEvent Message("OZ80MANDIAS v" & App.Major & "." & App.Minor & "," & App.Revision)
-    RaiseEvent Message("* Assembling token stream")
+    RaiseEvent Message(0, OZ80_LOG_INFO, _
+        "OZ80MANDIAS v" & App.Major & "." & App.Minor & "," & App.Revision)
     
     'We'll measure the time this takes
     Call Stopwatch.Reset
@@ -242,6 +246,9 @@ Public Function Assemble(ByVal FilePath As String) As OZ80_ERROR
     
     'Stage 1: Parse Source _
      ----------------------------------------------------------------------------------
+    RaiseEvent Message(0, OZ80_LOG_ACTION, "Assembling " & Chr(34) & FilePath & Chr(34))
+    RaiseEvent Message(0, OZ80_LOG_ACTION, "Phase 1")
+    
     'Start with parsing the given file into a TokenStream; the assembler does not _
      work with the original text directly
     Let Assemble = ParseFile(FilePath)
@@ -262,10 +269,12 @@ Public Function Assemble(ByVal FilePath As String) As OZ80_ERROR
     
     'Phase 2: _
      ..................................................................................
+    RaiseEvent Message(0, OZ80_LOG_ACTION, "Phase 2")
     'TODO
     
-    RaiseEvent Message("- Final ROM size is " & (ROMSize \ 1024) & " KB")
-    RaiseEvent Message("- Time: " & Format$(Stopwatch.Elapsed / 1000, "0.000") & "s")
+    RaiseEvent Message(0, OZ80_LOG_ACTION, "Assembly Complete")
+    RaiseEvent Message(1, OZ80_LOG_INFO, "ROM size: " & (ROMSize \ 1024) & " KB")
+    RaiseEvent Message(1, OZ80_LOG_INFO, "Time: " & Format$(Stopwatch.Elapsed / 1000, "0.000") & "s")
     
 ErrorOut:
     'Clean up
@@ -336,12 +345,13 @@ Private Function ScopeRoot() As OZ80_ERROR
     
     'These are used for evaluating expressions in parameters
     Dim ReturnValue As Long, ValueIsIndefinite As Boolean
+    'For remembering label names
+    Dim NameKey As Long
     
 Continue:
     'ERROR: Not a keyword on root scope
     If Not TokenStream.IsKeyword Then Let ScopeRoot = RaiseError( _
         OZ80_ERROR_UNEXPECTED, _
-        "Unexpected content at this position", _
         "Only the keywords INCLUDE, OBJECT, PROC, STRUCT, TABLE or VAR " & _
         "are allowed here.", TokenLine, TokenCol _
     ): Exit Function
@@ -369,19 +379,17 @@ Continue:
         'ERROR: Not a variable name for `VAR`
         If TokenKind <> TOKEN_VARIABLE Then Let ScopeRoot = RaiseError( _
             OZ80_ERROR_UNEXPECTED, _
-            "Unexpected content at this point", _
             "Expected a variable name.", TokenLine, TokenCol _
         ): Exit Function
         
         'Fetch the key for the label name in the string database, _
          (i.e. remember the label name before moving past the token)
-        Dim NameKey As Long
         Let NameKey = TokenValue
         
         'Move forward to the value parameter
         'NOTE: the value parameter is optional, and the file could end right here -- _
                if so, it'll skip over retreiving the value
-        If NextToken() = True And TokenStream.IsExpression Then
+        If NextToken() And TokenStream.IsExpression Then
             'Calculate the value of the expression
             Let ScopeRoot = ScopeExpression(ReturnValue, ValueIsIndefinite)
             'If the expression is faulty, an error will already have been raised, _
@@ -389,9 +397,8 @@ Continue:
             If ScopeRoot <> OZ80_ERROR_NONE Then Exit Function
             'ERROR: A value must be known in order to define a variable, i.e. _
              yet-unknown values, such as label addresses, cannot be used
-            If ValueIsIndefinite = True Then Let ScopeRoot = RaiseError( _
+            If ValueIsIndefinite Then Let ScopeRoot = RaiseError( _
                 OZ80_ERROR_INDEFINITEVALUE, _
-                "Indefinite value cannot be used here", _
                 "A variable cannot be defined with an indefinite value, that is, " & _
                     "an expression containing a yet-unknown value, such as a label. " & _
                     "label addresses are not set until after assembly.", _
@@ -400,7 +407,7 @@ Continue:
         Else
             'There is no given value for the label, re-use the existing value, _
              otherwise use zero
-            If Variables.Exists(NameKey) = True Then
+            If Variables.Exists(NameKey) Then
                 Let ReturnValue = Variables.Item(NameKey)
             Else
                 Let ReturnValue = 0
@@ -417,7 +424,12 @@ Continue:
             Call Variables.Add(NameKey, ReturnValue)
         End If
         
-        RaiseEvent Message("= VAR " & Strings(NameKey) & " " & ReturnValue)
+        'Log the result of this
+        RaiseEvent Message(1, OZ80_LOG_DEBUG, _
+            "VAR " & Strings(NameKey) & " " & _
+                Right$(Space(40) & ReturnValue, 40 - Len(Strings(NameKey))) & _
+                " $" & Right$("000" & Hex(ReturnValue), 4) _
+        )
         
         'TODO: Are we on the next token? If no value parameter, then NO!
         GoTo Continue
@@ -432,22 +444,33 @@ Continue:
     '`PROC :<name> [SECTION ::<name>] [PARAMS <list>] [RETURN <list>] { [...] }` _
      ----------------------------------------------------------------------------------
     ElseIf Keyword = TOKEN_KEYWORD_PROC Then
+        RaiseEvent Message(1, OZ80_LOG_DEBUG, "<root> PROC")
+        
         'ERROR: No label name for procedure
         If TokenKind <> TOKEN_LABEL Then Let ScopeRoot = RaiseError( _
             OZ80_ERROR_UNEXPECTED, _
-            "Unexpected content at this point", _
             "A label name must always follow the `PROC` keyword", _
             TokenLine, TokenCol _
         ): Exit Function
         
-        'TODO: Capture the label name
+        'Remember the String ID of the label name
+        Let NameKey = TokenValue
         
-        'TODO: Section? (normalise the label name)
+        'Check for the optional parameters for a PROC, _
+         namely "SECTION", "PARAMS", "RETURN" _
+         ..............................................................................
+        'The file cannot end until the block has been opened and closed
+        If Not NextToken() Then GoTo ErrEndOfFile
         
-        'TODO: Skip through the params list
+        If TokenKind = TOKEN_KEYWORD_SECTION Then
+            'TODO: Section? (normalise the label name)
+        ElseIf TokenKind = TOKEN_KEYWORD_PARAMS Then
+            'TODO: Skip through the params list
+        ElseIf TokenKind = TOKEN_KEYWORD_RETURN Then
+            'TODO: Skip through the returns list
+        End If
         
-        'TODO: Skip through the returns list
-        
+        'TODO: Look for the opening brace
         'TODO: Create the new block
         
         
@@ -470,12 +493,11 @@ ErrUnexpected:
 ErrEndOfFile:
         Let ScopeRoot = RaiseError( _
             OZ80_ERROR_ENDOFFILE, _
-            "Unexpected end of file", _
             "Parameter expected!", TokenLine, TokenCol _
         ): Exit Function
     End If
     
-    If NextToken() = True Then GoTo Continue
+    If NextToken() Then GoTo Continue
 End Function
 
 'ScopeExpression: Evaluate a calculation into a value _
@@ -688,7 +710,7 @@ Private Function ScopeOperand( _
          whomever knows best will deal with the error
         Debug.Print TokenLine & ", " & TokenCol
         Stop
-        Let ScopeOperand = OZ80_ERROR_OPERAND
+        Let ScopeOperand = OZ80_ERROR_EXPRESSION
     End If
     
     'Move beyond the current token now it's been processed
@@ -833,7 +855,6 @@ Private Function GetParameter(ByRef Result As oz80Param) As OZ80_ERROR
     Else
         'ERROR: Not an expression
         Let GetParameter = RaiseError(OZ80_ERROR_EXPRESSION, _
-            "Unexpected content at this point", _
             "Z80 instruction parameter expected. Not a valid parameter expression.", _
             TokenLine, TokenCol _
         )
@@ -897,7 +918,6 @@ Private Function ParseFile(ByRef FilePath As String) As OZ80_ERROR
     'ERROR: File Not Found
     If FSO.FileExists(TestPath) = False Then Let ParseFile = RaiseError( _
         OZ80_ERROR_FILENOTFOUND, _
-        "File not found", _
         "There is no file '" & TestPath & "'. " & _
             "Note that files are included relative to the parent file.", _
         TokenLine, TokenCol _
@@ -950,12 +970,28 @@ End Sub
  ======================================================================================
 Private Function RaiseError( _
     ByRef Number As OZ80_ERROR, _
-    ByRef Title As String, _
     ByRef Description As String, _
     Optional ByRef Line As Long = 0, Optional ByRef Col As Long = 0 _
 ) As OZ80_ERROR
+    'Select the title (these are standardised) based on the error number. _
+     These must be in the exact order of the error number enum in "oz80.bas"
+    Dim Title As String
+    Let Title = Choose(Number, _
+        OZ80_ERT_FILENOTFOUND, _
+        OZ80_ERT_FILEREAD, _
+        OZ80_ERT_INVALIDWORD, _
+        OZ80_ERT_INVALIDNAME, _
+        OZ80_ERT_INVALIDNUMBER, _
+        OZ80_ERT_OVERFLOW, _
+        OZ80_ERT_EXPRESSION, _
+        OZ80_ERT_DUPLICATE, _
+        OZ80_ERT_UNEXPECTED, _
+        OZ80_ERT_ENDOFFILE, _
+        OZ80_ERT_INDEFINITEVALUE _
+    )
+    
     'Pass the error up to the controller
-    RaiseEvent Error(Number, Description, Title, Line, Col)
+    RaiseEvent Error(Number, Title, Description, Line, Col)
     
     'We return the same error number we were given only to make the tail recursion _
      simpler, e.g. `let ScopeRoot = RaiseError(OZ80_ERROR_...`

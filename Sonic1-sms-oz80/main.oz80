@@ -779,10 +779,10 @@ PROC    :fillOverscrollCache            SECTION ::main
 	
 	di	
 	`switch pages 1 & 2 ($4000-$BFFF) to banks 4 & 5 ($10000-$17FFF)
-	ld	a,:S1_BlockMappings#bank
+	ld	a,:S1_BlockMappings.bank
 	ld	(#SMS_PAGE_1),a
 	ld	($.PAGE_1),a
-	ld	a,:S1_BlockMappings#bank+1
+	ld	a,:S1_BlockMappings.bank+1
 	ld	(#SMS_PAGE_2),a
 	ld	($.PAGE_2),a
 	ei	
@@ -1287,10 +1287,10 @@ PROC    :fillScreenWithFloorLayout      SECTION ::main
 {        
 	`page in banks 4 & 5 (containing the block mappings)
 	di				`disable interrupts
-	ld	a,:S1_BlockMappings#bank
+	ld	a,:S1_BlockMappings.bank
 	ld	(#SMS_PAGE_1),a
 	ld	($.PAGE_1),a
-	ld	a,:S1_BlockMappings#bank + 1
+	ld	a,:S1_BlockMappings.bank + 1
 	ld	(#SMS_PAGE_2),a
 	ld	($.PAGE_2),a
 	

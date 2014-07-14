@@ -23,59 +23,13 @@ Option Explicit
  <www.vbaccelerator.com/home/VB/Code/Libraries/CRC32/article.asp> which was _
  derived from from the VB.NET CRC32 algorithm by Paul Caton
 
-'/// API //////////////////////////////////////////////////////////////////////////////
-
-'Cast String to Array: _
- --------------------------------------------------------------------------------------
-'By manipulating some pointers we can cast a VB string directly into an array without _
- having to make a copy of the string, nor waste memory on a separate array. _
- This is obviously very fast, especially for long strings
-'<vbforums.com/showthread.php?729385>
-
-'This is VB6's internal structure used for VB arrays _
- <msdn.microsoft.com/en-us/library/ms221482(v=vs.85).aspx>
-Private Type SAFEARRAY1D
-    cDims      As Integer   'The count of dimensions
-    fFeatures  As Integer   'Flags used by the SafeArray
-    cbElements As Long      'The size of an array element
-    cLocks     As Long      'Lock count
-    pvData     As Long      'Pointer to the data
-    cElements  As Long      'The number of elements in the dimension
-    lLbound    As Long      'The lower bound of the dimension
-End Type
-
-'- An array that is allocated on the stack
-Private Const FADF_AUTO      As Integer = &H1
-'- An array that may not be resized or reallocated
-Private Const FADF_FIXEDSIZE As Integer = &H10
-
-'Undocumented VB6 API to get at the array pointer
-Private Declare Function msvbvm60_VarPtr Lib "msvbvm60.dll" Alias "VarPtr" ( _
-    ByRef ArrayVar() As Any _
-) As Long
-
-'Undocumented VB6 API to write 4-bytes (Long) of memory
-Private Declare Sub msvbvm60_PutMem4 Lib "msvbvm60.dll" Alias "PutMem4" ( _
-    ByVal Addr As Long, _
-    ByVal NewVal As Long _
-)
-
-Private CastStrSA1D As SAFEARRAY1D      'A dummy VB6 array header
-Private CastStrPtr  As Long             'Pointer to our dummy array
-Private CastStrArr() As Byte            'Empty array that will be hacked
-
 '/// CLASS VARIABLES //////////////////////////////////////////////////////////////////
-
-'Store a look up table for the CRC calculations
-Private CRCTable(0 To 255) As Long
-'This is the official polynomial used by CRC32 in PKZip. _
- Often the polynomial is shown reversed (04C11DB7)
-Private Const CRC_POLYNOMIAL As Long = &HEDB88320
 
 'For timing this process
 Private Stopwatch As PerformanceCounter
 
-'--------------------------------------------------------------------------------------
+'Parsing: _
+ --------------------------------------------------------------------------------------
 
 'Each source code file is broken down into a machine-readable representation which _
  we store here. When parsing one file and we come across an `INCLUDE` statement, _
@@ -102,7 +56,7 @@ Private TokenCol As Long
 
 'The token stream doesn't store the text of named items, merely a reference to the _
  string stored here. We use this for error messages and concatenating properties to _
- their parent variable / label
+ their parent label
 Private Strings As Scripting.Dictionary
 
 'The numerical values of variables / labels / properties &c. will be stored here. _
@@ -117,14 +71,15 @@ Private Strings As Scripting.Dictionary
 Private Variables As Scripting.Dictionary
 Private Labels As Scripting.Dictionary
 
+'Assembling / Output: _
+ --------------------------------------------------------------------------------------
+
 'Each block of code / data is assembled separately from the others and with no final _
  position in the ROM in mind until all source has been parsed. Once all source is _
  parsed, the banks are chosen for the blocks and the assembly copied into the ROM
 Private Blocks As Scripting.Dictionary
 'The current block being assembled into
 Private Block As oz80_Block
-
-'--------------------------------------------------------------------------------------
 
 Private ROM() As Byte                   'The output!
 Private ROMSize As Long                 'Size of the ROM (32/64/128/256/512/1024 KB)
@@ -149,63 +104,28 @@ Private Sub Class_Initialize()
     Set Stopwatch = New PerformanceCounter
     Set Variables = New Scripting.Dictionary
     Set Labels = New Scripting.Dictionary
-    
-    'Create the CRC look-up table _
-     (I will not pretend to understand how this works other than it goes through _
-      shifting and flipping bits, make of that what you will)
-    Dim i As Long, Value As Long
-    For i = 0 To 255
-        Value = i
-        Dim ii As Long
-        For ii = 8 To 1 Step -1
-            If (Value And 1) Then
-                Let Value = ((Value And &HFFFFFFFE) \ 2&) And &H7FFFFFFF
-                Let Value = Value Xor CRC_POLYNOMIAL
-            Else
-                Let Value = ((Value And &HFFFFFFFE) \ 2&) And &H7FFFFFFF
-            End If
-        Next
-        Let CRCTable(i) = Value
-    Next
-    
-    '----------------------------------------------------------------------------------
-    
-    With CastStrSA1D
-        .cDims = 1
-        .fFeatures = FADF_AUTO Or FADF_FIXEDSIZE
-        .cbElements = 2&
-        .cLocks = 1&
-        .lLbound = 0&
-    End With
-    
-    Let CastStrPtr = msvbvm60_VarPtr(CastStrArr())
-    Call msvbvm60_PutMem4(CastStrPtr, VarPtr(CastStrSA1D))
+    Set Blocks = New Scripting.Dictionary
 End Sub
 
 'CLASS Terminate _
  ======================================================================================
 Private Sub Class_Terminate()
+    Set Stopwatch = Nothing
     Set Variables = Nothing
     Set Labels = Nothing
     Set Strings = Nothing
-    Set Blocks = Nothing
-    Set Stopwatch = Nothing
-    Set TokenStream = Nothing
-    Set Files = Nothing
-    Erase ROM, CRCTable
-    
-    'Clean up our array hacking (for casting a string to an array) _
-     otherwise VB will crash when it frees up the memory
-    Call msvbvm60_PutMem4(CastStrPtr, 0&)
+    Set Block = Nothing: Set Blocks = Nothing
+    Set TokenStream = Nothing: Set Files = Nothing
+    Erase ROM
 End Sub
 
 'EVENT <TokenStream> Error : Detailed error message from a TokenStream object _
  ======================================================================================
 Private Sub TokenStream_Error( _
-    ByVal Number As OZ80_ERROR, ByRef Title As String, ByRef Description As String, _
-    ByVal Line As Long, ByVal Col As Long _
-)   'Pass this up to the controller, this class will shortly end processing
-    RaiseEvent Error(Number, Title, Description, Line, Col)
+    ByVal Number As OZ80_ERROR, ByVal Line As Long, ByVal Col As Long _
+)   'Pass this up to the controller, this class will shortly end processing. _
+     The `RaiseError` function will select the standard error title from the number
+    Call RaiseError(Number, Line, Col)
 End Sub
 
 'EVENT <TokenStream> Message : Basic progress message from a TokenStream object _
@@ -222,7 +142,7 @@ End Sub
 Private Sub TokenStream_StringAdded(ByRef Key As Long, ByRef StringData As String)
     'We need to provide a unique key, we use the CRC32 of the string. _
      When this event finishes, the TokenStream will add a token using this key
-    Let Key = CRCString(StringData)
+    Let Key = oz80.CRC.Calculate(StringData)
     'Add the label/variable/property name to the string storage
     If Strings.Exists(Key) = False Then Call Strings.Add(Key, StringData)
 End Sub
@@ -308,6 +228,8 @@ End Function
 '<list>     <text>      [,          <list>]
 '           <expr>      [,          <list>]
 '
+'......................................................................................
+'
 '<root>     PROC        :label      [PARAMS register
 '                                           number]
 '                                   [RETURN register
@@ -345,15 +267,13 @@ Private Function ScopeRoot() As OZ80_ERROR
     
     'These are used for evaluating expressions in parameters
     Dim ReturnValue As Long, ValueIsIndefinite As Boolean
-    'For remembering label names
-    Dim NameKey As Long
+    'For remembering item names (labels, variables &c.)
+    Dim StringKey As Long
     
 Continue:
     'ERROR: Not a keyword on root scope
     If Not TokenStream.IsKeyword Then Let ScopeRoot = RaiseError( _
-        OZ80_ERROR_UNEXPECTED, _
-        "Only the keywords INCLUDE, OBJECT, PROC, STRUCT, TABLE or VAR " & _
-        "are allowed here.", TokenLine, TokenCol _
+        OZ80_ERROR_UNEXPECTED, TokenLine, TokenCol _
     ): Exit Function
     
     'Remember the keyword before we move past it
@@ -378,13 +298,12 @@ Continue:
         
         'ERROR: Not a variable name for `VAR`
         If TokenKind <> TOKEN_VARIABLE Then Let ScopeRoot = RaiseError( _
-            OZ80_ERROR_UNEXPECTED, _
-            "Expected a variable name.", TokenLine, TokenCol _
+            OZ80_ERROR_UNEXPECTED_VAR_NAME, TokenLine, TokenCol _
         ): Exit Function
         
         'Fetch the key for the label name in the string database, _
          (i.e. remember the label name before moving past the token)
-        Let NameKey = TokenValue
+        Let StringKey = TokenValue
         
         'Move forward to the value parameter
         'NOTE: the value parameter is optional, and the file could end right here -- _
@@ -398,17 +317,13 @@ Continue:
             'ERROR: A value must be known in order to define a variable, i.e. _
              yet-unknown values, such as label addresses, cannot be used
             If ValueIsIndefinite Then Let ScopeRoot = RaiseError( _
-                OZ80_ERROR_INDEFINITEVALUE, _
-                "A variable cannot be defined with an indefinite value, that is, " & _
-                    "an expression containing a yet-unknown value, such as a label. " & _
-                    "label addresses are not set until after assembly.", _
-                    TokenLine, TokenCol _
+                OZ80_ERROR_INDEFINITEVALUE, TokenLine, TokenCol _
             ): Exit Function
         Else
             'There is no given value for the label, re-use the existing value, _
              otherwise use zero
-            If Variables.Exists(NameKey) Then
-                Let ReturnValue = Variables.Item(NameKey)
+            If Variables.Exists(StringKey) Then
+                Let ReturnValue = Variables.Item(StringKey)
             Else
                 Let ReturnValue = 0
             End If
@@ -416,18 +331,18 @@ Continue:
         End If
         
         'Is the variable already defined?
-        If Variables.Exists(NameKey) Then
+        If Variables.Exists(StringKey) Then
             'Update the value
-            Let Variables(NameKey) = ReturnValue
+            Let Variables(StringKey) = ReturnValue
         Else
             'Create the named value
-            Call Variables.Add(NameKey, ReturnValue)
+            Call Variables.Add(StringKey, ReturnValue)
         End If
         
         'Log the result of this
         RaiseEvent Message(1, OZ80_LOG_DEBUG, _
-            "VAR " & Strings(NameKey) & " " & _
-                Right$(Space(40) & ReturnValue, 40 - Len(Strings(NameKey))) & _
+            "VAR " & Strings(StringKey) & " " & _
+                Right$(Space(40) & ReturnValue, 40 - Len(Strings(StringKey))) & _
                 " $" & Right$("000" & Hex(ReturnValue), 4) _
         )
         
@@ -448,25 +363,49 @@ Continue:
         
         'ERROR: No label name for procedure
         If TokenKind <> TOKEN_LABEL Then Let ScopeRoot = RaiseError( _
-            OZ80_ERROR_UNEXPECTED, _
-            "A label name must always follow the `PROC` keyword", _
-            TokenLine, TokenCol _
+            OZ80_ERROR_UNEXPECTED_PROC_NAME, TokenLine, TokenCol _
         ): Exit Function
         
+        'TODO: Normalise the label name and add to the label database _
+         (we shouldn't be basing things off of the string database IDs)
+        
         'Remember the String ID of the label name
-        Let NameKey = TokenValue
+        Let StringKey = TokenValue
+        
+        'Create the new block to assemble into
+        Call AddBlock(StringKey)
         
         'Check for the optional parameters for a PROC, _
-         namely "SECTION", "PARAMS", "RETURN" _
-         ..............................................................................
+         namely "SECTION", "PARAMS", "RETURN"
+        
         'The file cannot end until the block has been opened and closed
         If Not NextToken() Then GoTo ErrEndOfFile
         
-        If TokenKind = TOKEN_KEYWORD_SECTION Then
-            'TODO: Section? (normalise the label name)
-        ElseIf TokenKind = TOKEN_KEYWORD_PARAMS Then
+ProcParams:
+        If TokenKind = TOKEN_KEYWORD_SECTION Then '....................................
+            RaiseEvent Message(1, OZ80_LOG_DEBUG, "<proc> SECTION")
+            
+            'Move forward to get the section name
+            'ERROR: file ended before the section name?
+            If Not NextToken() Then Let ScopeRoot = RaiseError( _
+                OZ80_ERROR_ENDOFFILE, TokenLine, TokenCol _
+            ): Exit Function
+            
+            'ERROR: Not a section name following the section keyword
+            If TokenKind <> TOKEN_SECTION Then Let ScopeRoot = RaiseError( _
+                OZ80_ERROR_UNEXPECTED_SECTION_NAME, TokenLine, TokenCol _
+            ): Exit Function
+            
+            'TODO: Has the section been defined?
+            
+            'TODO: Normalise the section name?
+            
+            'Provide the block with the section ID
+            Let Block.Section = TokenValue
+            
+        ElseIf TokenKind = TOKEN_KEYWORD_PARAMS Then '.................................
             'TODO: Skip through the params list
-        ElseIf TokenKind = TOKEN_KEYWORD_RETURN Then
+        ElseIf TokenKind = TOKEN_KEYWORD_RETURN Then '.................................
             'TODO: Skip through the returns list
         End If
         
@@ -492,8 +431,7 @@ Continue:
 ErrUnexpected:
 ErrEndOfFile:
         Let ScopeRoot = RaiseError( _
-            OZ80_ERROR_ENDOFFILE, _
-            "Parameter expected!", TokenLine, TokenCol _
+            OZ80_ERROR_ENDOFFILE, TokenLine, TokenCol _
         ): Exit Function
     End If
     
@@ -777,34 +715,6 @@ Private Sub AddBlock(ByRef StringID As Long)
     Call Blocks.Add(StringID, Block)
 End Sub
 
-'CRCString : Calculate a unique hash for a string _
- ======================================================================================
-Private Function CRCString(ByRef Data As String) As Long
-    Dim Length As Long
-    
-    'Cast the string to an array by attaching its pointer to our dummy VB array header
-    With CastStrSA1D
-       Let .pvData = StrPtr(Data)
-       Let .cElements = LenB(Data)
-       Let Length = .cElements
-    End With
-
-    'Calculate the CRC by twiddling the bits
-    
-    Dim i As Long
-    Dim iLookup As Byte
-
-    Let CRCString = &HFFFFFFFF
-    Let Length = Length - 1
-    For i = 0 To Length
-        Let iLookup = (CRCString And &HFF) Xor CastStrArr(i)
-        Let CRCString = ((CRCString And &HFFFFFF00) \ &H100) And 16777215
-        Let CRCString = CRCString Xor CRCTable(iLookup)
-    Next
-
-    Let CRCString = Not (CRCString)
-End Function
-
 'GetParameter : Fetch the type / value of a Z80 instruction parameter _
  ======================================================================================
 Private Function GetParameter(ByRef Result As oz80Param) As OZ80_ERROR
@@ -854,9 +764,8 @@ Private Function GetParameter(ByRef Result As oz80Param) As OZ80_ERROR
     
     Else
         'ERROR: Not an expression
-        Let GetParameter = RaiseError(OZ80_ERROR_EXPRESSION, _
-            "Z80 instruction parameter expected. Not a valid parameter expression.", _
-            TokenLine, TokenCol _
+        Let GetParameter = RaiseError( _
+            OZ80_ERROR_EXPRESSION_Z80, TokenLine, TokenCol _
         )
     End If
 End Function
@@ -917,17 +826,14 @@ Private Function ParseFile(ByRef FilePath As String) As OZ80_ERROR
      ----------------------------------------------------------------------------------
     'ERROR: File Not Found
     If FSO.FileExists(TestPath) = False Then Let ParseFile = RaiseError( _
-        OZ80_ERROR_FILENOTFOUND, _
-        "There is no file '" & TestPath & "'. " & _
-            "Note that files are included relative to the parent file.", _
-        TokenLine, TokenCol _
+        OZ80_ERROR_FILENOTFOUND, TokenLine, TokenCol _
     ): GoTo Finish
     
     '[3] Parse the file into a TokenStream: _
      ----------------------------------------------------------------------------------
     'We'll use the CRC of the filepath string as its key/ID
     Dim CRC As Long
-    Let CRC = CRCString(TestPath)
+    Let CRC = oz80.CRC.Calculate(TestPath)
     
     'If the file has already been parsed, re-use it
     If Files.Exists(CRC) = True Then
@@ -969,26 +875,124 @@ End Sub
 'RiaseError : provide error details through an event _
  ======================================================================================
 Private Function RaiseError( _
-    ByRef Number As OZ80_ERROR, _
-    ByRef Description As String, _
-    Optional ByRef Line As Long = 0, Optional ByRef Col As Long = 0 _
+    ByRef Number As OZ80_ERROR, ByRef Line As Long, ByRef Col As Long _
 ) As OZ80_ERROR
-    'Select the title (these are standardised) based on the error number. _
-     These must be in the exact order of the error number enum in "oz80.bas"
-    Dim Title As String
-    Let Title = Choose(Number, _
-        OZ80_ERT_FILENOTFOUND, _
-        OZ80_ERT_FILEREAD, _
-        OZ80_ERT_INVALIDWORD, _
-        OZ80_ERT_INVALIDNAME, _
-        OZ80_ERT_INVALIDNUMBER, _
-        OZ80_ERT_OVERFLOW, _
-        OZ80_ERT_EXPRESSION, _
-        OZ80_ERT_DUPLICATE, _
-        OZ80_ERT_UNEXPECTED, _
-        OZ80_ERT_ENDOFFILE, _
-        OZ80_ERT_INDEFINITEVALUE _
-    )
+    'Error messages are centralised here so as to be easier to locate and maintain
+    Dim Title As String, Description As String
+    Select Case Number
+        Case OZ80_ERROR_FILENOTFOUND '-------------------------------------------------
+            Let Title = "File Not Found"
+            'TODO
+            Let Description = ""
+            
+        Case OZ80_ERROR_FILEREAD '-----------------------------------------------------
+            Let Title = "Cannot Read File"
+            'TODO
+            Let Description = ""
+            
+        Case OZ80_ERROR_INVALIDWORD '--------------------------------------------------
+            Let Title = "Invalid Word"
+            'TODO
+            Let Description = ""
+            
+        Case OZ80_ERROR_INVALIDNAME '--------------------------------------------------
+            Let Title = "Invalid Name"
+            Let Description = _
+                "Variable, label and property names can contain A-Z, 0-9 underscore " & _
+                "and dot with the following exceptions: " & _
+                "1. the first letter cannot be a number or a dot, " & _
+                "2. two dots cannot occur in a row " & _
+                "3. a number cannot follow a dot, and " & _
+                "4. the name cannot end in a dot" _
+        
+        Case OZ80_ERROR_INVALIDNAME_RAM '----------------------------------------------
+            Let Title = "Invalid Name"
+            Let Description = _
+                "RAM names must begin with '$.' and follow standard naming rules " & _
+                "beyond that, i.e." & _
+                "1. the first letter cannot be a number or a dot " & _
+                  "(this does not include the dot that follows the dollar sign)" & _
+                "2. two dots cannot occur in a row " & _
+                "3. a number cannot follow a dot, and " & _
+                "4. the name cannot end in a dot" _
+            
+        Case OZ80_ERROR_INVALIDNUMBER '------------------------------------------------
+            Let Title = "Invalid Number"
+            'TODO
+            Let Description = ""
+            
+        Case OZ80_ERROR_INVALIDNUMBER_DEC '--------------------------------------------
+            Let Title = "Invalid Number"
+            'TODO
+            Let Description = ""
+            
+        Case OZ80_ERROR_INVALIDNUMBER_HEX '--------------------------------------------
+            Let Title = "Invalid Number"
+            'TODO
+            Let Description = ""
+        
+        Case OZ80_ERROR_INVALIDNUMBER_BIN '--------------------------------------------
+            Let Title = "Invalid Number"
+            'TODO
+            Let Description = ""
+        
+        Case OZ80_ERROR_OVERFLOW '-----------------------------------------------------
+            Let Title = "Overflow"
+            'TODO
+            Let Description = ""
+            
+        Case OZ80_ERROR_EXPRESSION '---------------------------------------------------
+            Let Title = "Invalid Expression"
+            Let Description = _
+                "An expression can be any Number, Label, Property, RAM Name or " & _
+                "calculation (via operators) of these."
+            
+        Case OZ80_ERROR_EXPRESSION_Z80 '-----------------------------------------------
+            Let Title = "Invalid Z80 Instruction Parameter"
+            Let Description = _
+                "Parameters following a Z80 instruction must be either " & _
+                "a Z80 Register (`a`, `b`, `c` etc.), a Z80 memory expression " & _
+                "`(ix+$FF)` or a valid numerical expression, i.e. a calculation, " & _
+                "a label name or RAM name."
+            
+        Case OZ80_ERROR_DUPLICATE '----------------------------------------------------
+            Let Title = "Duplicate Definition"
+            'TODO
+            Let Description = ""
+            
+        Case OZ80_ERROR_UNEXPECTED '---------------------------------------------------
+            Let Title = "Unexpected Content"
+            Let Description = _
+                "Only the keywords INCLUDE, OBJECT, PROC, STRUCT, TABLE or VAR " & _
+                "are allowed here."
+            
+        Case OZ80_ERROR_UNEXPECTED_PROC_NAME '-----------------------------------------
+            Let Title = "Unexpected Content"
+            Let Description = _
+                "A label name must follow the `PROC` statement. " & _
+                "E.g. `PROC :myProcedure`"
+        
+        Case OZ80_ERROR_UNEXPECTED_SECTION_NAME '--------------------------------------
+            Let Title = "Unexpected Content"
+            Let Description = _
+                "A section name must follow the `SECTION` statement. " & _
+                "E.g. `SECTION ::graphics`"
+        
+        Case OZ80_ERROR_ENDOFFILE '----------------------------------------------------
+            Let Title = "Unexpected End of File"
+            'TODO
+            Let Description = "The file ended "
+            
+        Case OZ80_ERROR_INDEFINITEVALUE '----------------------------------------------
+            Let Title = "Cannot Use Indefinite Value"
+            Let Description = _
+                "A variable cannot be defined with an indefinite value, that is, " & _
+                "an expression containing a yet-unknown value, such as a label. " & _
+                "label addresses are not set until after assembly."
+        
+        Case Else
+            Stop
+    End Select
     
     'Pass the error up to the controller
     RaiseEvent Error(Number, Title, Description, Line, Col)

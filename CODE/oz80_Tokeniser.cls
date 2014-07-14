@@ -27,47 +27,6 @@ Option Compare Text
 'This class only represents one source code file. The assembler handles the specifics _
  of including additional source code files and spawns more TokenStream instances
 
-'/// API //////////////////////////////////////////////////////////////////////////////
-
-'Cast String to Array: _
- --------------------------------------------------------------------------------------
-'By manipulating some pointers we can cast a VB string directly into an array without _
- having to make a copy of the string, nor waste memory on a separate array. _
- This is obviously very fast, especially for long strings
-'<vbforums.com/showthread.php?729385>
-
-'This is VB6's internal structure used for VB arrays _
- <msdn.microsoft.com/en-us/library/ms221482(v=vs.85).aspx>
-Private Type SAFEARRAY1D
-    cDims      As Integer   'The count of dimensions
-    fFeatures  As Integer   'Flags used by the SafeArray
-    cbElements As Long      'The size of an array element
-    cLocks     As Long      'Lock count
-    pvData     As Long      'Pointer to the data
-    cElements  As Long      'The number of elements in the dimension
-    lLbound    As Long      'The lower bound of the dimension
-End Type
-
-'- An array that is allocated on the stack
-Private Const FADF_AUTO      As Integer = &H1
-'- An array that may not be resized or reallocated
-Private Const FADF_FIXEDSIZE As Integer = &H10
-
-'Undocumented VB6 API to get at the array pointer
-Private Declare Function msvbvm60_VarPtr Lib "msvbvm60.dll" Alias "VarPtr" ( _
-    ByRef ArrayVar() As Any _
-) As Long
-
-'Undocumented VB6 API to write 4-bytes (Long) of memory
-Private Declare Sub msvbvm60_PutMem4 Lib "msvbvm60.dll" Alias "PutMem4" ( _
-    ByVal Addr As Long, _
-    ByVal NewVal As Long _
-)
-
-Private CastStrSA1D As SAFEARRAY1D      'A dummy VB6 array header
-Private CastStrPtr  As Long             'Pointer to our dummy array
-Private CastStrArr() As Integer         'Empty array that will be hacked
-
 '/// PRIVATE DEFS /////////////////////////////////////////////////////////////////////
 
 'This makes life a whole lot easier
@@ -214,8 +173,7 @@ Event Message( _
 
 'A class event is used to communicate error details beyond a simple error number
 Event Error( _
-    ByVal Number As OZ80_ERROR, ByRef Title As String, ByRef Description As String, _
-    ByVal Line As Long, ByVal Col As Long _
+    ByVal Number As OZ80_ERROR, ByVal Line As Long, ByVal Col As Long _
 )
 
 'We raise an event each time we come across a string so that the assembler can pool _
@@ -479,20 +437,6 @@ Private Sub Class_Initialize()
             Let My_IsParameter(ii) = True
         End If
     Next ii
-    
-    '----------------------------------------------------------------------------------
-    
-    'Initialise the array used within the `CompStr` function
-    With CastStrSA1D
-        .cDims = 1
-        .fFeatures = FADF_AUTO Or FADF_FIXEDSIZE
-        .cbElements = 2&
-        .cLocks = 1&
-        .lLbound = 0&
-    End With
-    
-    Let CastStrPtr = msvbvm60_VarPtr(CastStrArr())
-    Call msvbvm60_PutMem4(CastStrPtr, VarPtr(CastStrSA1D))
 End Sub
 
 'CLASS Terminate _
@@ -510,10 +454,6 @@ Private Sub Class_Terminate()
     Erase Tokens
     'Clear the original source file path
     Let Me.SourceFile = vbNullString
-    
-    'Clean up our array hacking (for casting a string to an array) _
-     otherwise VB will crash when it frees up the memory
-    If CastStrPtr <> 0 Then Call msvbvm60_PutMem4(CastStrPtr, 0&)
 End Sub
 
 '/// PUBLIC INTERFACE /////////////////////////////////////////////////////////////////
@@ -669,9 +609,7 @@ Public Function Tokenise(ByRef FilePath As String) As OZ80_ERROR
     
     'Check the file even exists first...
     If FileExists(FilePath) = False Then Let Tokenise = RaiseError( _
-        OZ80_ERROR_FILENOTFOUND, _
-        "File not found", _
-        "The file '" & FilePath & "' could not be found." _
+        OZ80_ERROR_FILENOTFOUND _
     ): GoTo Finish
     
     'Once the file is open, ensure it's closed upon error
@@ -922,12 +860,13 @@ TokenWord:
                valid at all (could have a number in completely the wrong place)
         GoTo NextWord
     
-    'RAM constant, e.g. `$.gamevar`
+    'RAM name, e.g. `$.gamevar`
     ElseIf Asc1 = SYNTAX_NUMBER_HEX _
        And Asc2 = SYNTAX_PROPERTY Then '...................................... `$.` ...
-        'ERROR: Invalid name?
+        'ERROR: Invalid RAM name?
         If Not IsValidName(WordBegin, WordBegin + WordLen) Then
-            GoTo ErrorInvalidName
+            Let Tokenise = RaiseError(OZ80_ERROR_INVALIDNAME_RAM)
+            GoTo Finish
         End If
         
         'TODO: Define RAM constant
@@ -940,15 +879,10 @@ TokenWord:
         Let Number = 0: Let Multiplier = 1
         For ii = WordBegin + WordLen To WordBegin + 1 Step -1
             'Check the digits are 0-9, A-F
-            If IsHex(Text(ii)) = False Then
-                'ERROR: Invalid hexadecimal number!
-                GoSub GetWord
-                Let Tokenise = RaiseError( _
-                    OZ80_ERROR_INVALIDNUMBER, "Invalid number", _
-                    "Not a valid hexadecimal number! '" & Word & "'", _
-                    LineBegin, ColBegin _
-                ): GoTo Finish
-            End If
+            'ERROR: Invalid hexadecimal number!
+            If IsHex(Text(ii)) = False Then Let Tokenise = RaiseError( _
+                OZ80_ERROR_INVALIDNUMBER_HEX _
+            ): GoTo Finish
         Next ii
         'The digits are valid, but it could be an overflow
         On Error GoTo ErrorOverflow
@@ -969,7 +903,9 @@ TokenWord:
         
         'A label cannot begin with a number but must otherwise be A-Z, 0-9 and "_"
         ElseIf Not IsValidName(WordBegin, WordBegin + WordLen) Then
-            GoTo ErrorInvalidName
+            'TODO: Label specific error message
+            Let Tokenise = RaiseError(OZ80_ERROR_INVALIDNAME)
+            GoTo Finish
         Else
             GoSub GetWord
             'Is this a section name (`::section`) or regular label (`:label`)?
@@ -990,12 +926,16 @@ TokenWord:
         'A property can be `.` only, without a name (when used within a PROC)
         '-- currently undecided about this
         If Asc2 = 0 Then
-            GoTo ErrorInvalidName
+            'TODO: Property specific error message
+            Let Tokenise = RaiseError(OZ80_ERROR_INVALIDNAME)
+            GoTo Finish
             GoTo NextWord
         
         'A property cannot begin with a number but must otherwise be A-Z, 0-9 and "_"
         ElseIf IsValidName(WordBegin, WordBegin + WordLen) = False Then
-            GoTo ErrorInvalidName
+            'TODO: Property specific error message
+            Let Tokenise = RaiseError(OZ80_ERROR_INVALIDNAME)
+            GoTo Finish
         Else
             GoSub GetWord
             'If the property appears on a new line, it's a label-property definition _
@@ -1010,12 +950,11 @@ TokenWord:
     
     ElseIf Asc1 = SYNTAX_VARIABLE Then '....................................... `#` ...
         'A variable name cannot be just '#'
-        If Asc2 = 0 Then
-            GoTo ErrorInvalidName
-        
         'A variable cannot begin with a number but must otherwise be A-Z, 0-9 and "_"
-        ElseIf IsValidName(WordBegin, WordBegin + WordLen) = False Then
-            GoTo ErrorInvalidName
+        If (Asc2 = 0) Or (Not IsValidName(WordBegin, WordBegin + WordLen)) Then
+            'TODO: Variable specific error message
+            Let Tokenise = RaiseError(OZ80_ERROR_INVALIDNAME)
+            GoTo Finish
         Else
             GoSub GetWord
             Call AddString(TOKEN_VARIABLE, Word)
@@ -1175,6 +1114,10 @@ TokenWord:
         'Keywords
         If CompStr("params") Then Call Add(TOKEN_KEYWORD_PARAMS): GoTo NextWord
         If CompStr("proc") Then Call Add(TOKEN_KEYWORD_PROC): GoTo NextWord
+    
+    ElseIf Asc1 = ASC_Q Then '................................................. `q` ...
+        'There's nothing that begins with Q
+        GoTo WordError
         
     ElseIf Asc1 = ASC_R Then '................................................. `r` ...
         'Z80 instructions
@@ -1219,6 +1162,10 @@ TokenWord:
         'There is no `t` register
         GoTo WordError
     
+    ElseIf Asc1 = ASC_U Then '................................................. `u` ...
+        'There's nothing that begins with U
+        GoTo WordError
+    
     ElseIf Asc1 = ASC_V Then '................................................. `v` ...
         'Keywords
         If CompStr("var") Then Call Add(TOKEN_KEYWORD_VAR): GoTo NextWord
@@ -1236,6 +1183,10 @@ TokenWord:
         'Z80 instructions
         If CompStr("xor") Then Call Add(TOKEN_Z80_XOR): GoTo NextWord
         'There is no `x` register
+        GoTo WordError
+    
+    ElseIf Asc1 = ASC_Y Then '................................................. `y` ...
+        'There's nothing that begins with Y
         GoTo WordError
     
     ElseIf Asc1 = ASC_Z Then '................................................. `z` ...
@@ -1261,12 +1212,8 @@ TokenWord:
             'If not a 0-9 digit then this is not a decimal number!
             If IsNumber(Text(ii)) = False Then
                 'ERROR: Invalid number!
-                GoSub GetWord
-                Let Tokenise = RaiseError( _
-                    OZ80_ERROR_INVALIDNUMBER, "Invalid number", _
-                    "Not a valid decimal number! '" & Word & "'", _
-                    LineBegin, ColBegin _
-                ): GoTo Finish
+                Let Tokenise = RaiseError(OZ80_ERROR_INVALIDNUMBER_DEC)
+                GoTo Finish
             Else
                 'Convert the number from ASCII codes into a value
                 On Error GoTo ErrorOverflow
@@ -1399,47 +1346,19 @@ ErrorOpenFile:
     'If an error occured during file reading, ensure the file handle is closed
     On Error GoTo 0
     Close #FileNumber
-    Let Tokenise = RaiseError(OZ80_ERROR_FILEREAD, _
-        "Unknown file system error", _
-        "A problem occured when reading the file '" & FilePath & "', " & _
-            "the system says: " & vbCrLf & vbCrLf & _
-            "Err #" & Err.Number & ": " & Err.Description _
-    ): GoTo Finish
-
-ErrorInvalidName: '....................................................................
-    On Error GoTo 0
-    GoSub GetWord
-    Let Tokenise = RaiseError(OZ80_ERROR_INVALIDNAME, _
-        "Invalid item name", _
-        "Failure parsing '" & Word & "'; " & _
-            "Variable, label and property names can contain A-Z, 0-9 underscore and " & _
-                "dot with the following exceptions: " & _
-                "1. the first letter cannot be a number or a dot, " & _
-                "2. two dots cannot occur in a row " & _
-                "3. a number cannot follow a dot, and " & _
-                "4. the name cannot end in a dot", _
-        LineBegin, ColBegin _
-    ): GoTo Finish
+    'TODO: Send the system error details, Err.Number / Err.Description
+    Let Tokenise = RaiseError(OZ80_ERROR_FILEREAD)
+    GoTo Finish
 
 ErrorOverflow: '.......................................................................
     On Error GoTo 0
-    GoSub GetWord
-    Let Tokenise = RaiseError(OZ80_ERROR_OVERFLOW, _
-        "Overflow", _
-        "Number too large! ('" & Word & "') Numbers are limited to a maximum of " & _
-            "31-bits (" & Format$((2 ^ 31) - 1, "#,#") & ").", _
-        LineBegin, ColBegin _
-    ): GoTo Finish
+    Let Tokenise = RaiseError(OZ80_ERROR_OVERFLOW)
+    GoTo Finish
     
 WordError: '...........................................................................
-    GoSub GetWord
-    Let Tokenise = RaiseError(OZ80_ERROR_INVALIDWORD, _
-        "Invalid content", _
-        "Faliure parsing '" & Word & "'; " & _
-            "Not a known keyword, Z80 instruction, register or other known word. " & _
-            "Typo, perhaps?", _
-        LineBegin, ColBegin _
-    ): GoTo Finish
+    On Error GoTo 0
+    Let Tokenise = RaiseError(OZ80_ERROR_INVALIDWORD)
+    GoTo Finish
     
     '----------------------------------------------------------------------------------
 Finish:
@@ -1454,9 +1373,9 @@ Finish:
         Let Me.SourceFile = FilePath
         
         Erase Text
-        RaiseEvent Message(2, OZ80_LOG_INFO, "Words: " & Format$(WordCount, "#,#"))
-        RaiseEvent Message(2, OZ80_LOG_INFO, "Tokens: " & Format$(TokenCount, "#,#"))
-        RaiseEvent Message(2, OZ80_LOG_INFO, "Time: " & Format$(Stopwatch.Elapsed / 1000, "0.000") & "s")
+        RaiseEvent Message(2, OZ80_LOG_INFO, "Words  " & Format$(WordCount, "#,#"))
+        RaiseEvent Message(2, OZ80_LOG_INFO, "Tokens " & Format$(TokenCount, "#,#"))
+        RaiseEvent Message(2, OZ80_LOG_INFO, "Time   " & Format$(Stopwatch.Elapsed / 1000, "0.000") & "s")
     Else
         'clean up!
         Erase Text, Tokens
@@ -1587,15 +1506,13 @@ Private Function CompStr( _
     'If the lengths don't match then they can't be the same. _
      Note that Length is 0-based here
     If WordLen <> Len(CompText) - 1 Then Exit Function
-
-    With CastStrSA1D
-       .pvData = StrPtr(CompText)
-       .cElements = Len(CompText)
-    End With
+    
+    Dim TextArray() As Byte
+    Let TextArray = oz80.CRC.CastStringToArray(CompText)
     
     Dim ii As Long
     For ii = 0 To WordLen
-        If LowCase(Text(WordBegin + ii)) <> CastStrArr(ii) Then Exit Function
+        If LowCase(Text(WordBegin + ii)) <> TextArray(ii * 2) Then Exit Function
     Next ii
     
     Let CompStr = True
@@ -1682,13 +1599,9 @@ End Function
 
 'RiaseError : provide error details through an event _
  ======================================================================================
-Private Function RaiseError( _
-             ByRef Number As OZ80_ERROR, _
-             ByRef Title As String, ByRef Description As String, _
-    Optional ByRef Line As Long = 0, Optional ByRef Col As Long = 0 _
-) As OZ80_ERROR
+Private Function RaiseError(ByRef Number As OZ80_ERROR) As OZ80_ERROR
     'Send the error to the controller (if it sinks events)
-    RaiseEvent Error(Number, Title, Description, Line, Col)
+    RaiseEvent Error(Number, LineBegin, ColBegin)
     
     'We return the same error number we were given only to make the tail recursion _
      simpler, e.g. `let TokeniseFile = RaiseError(OZ80_ERROR_...`

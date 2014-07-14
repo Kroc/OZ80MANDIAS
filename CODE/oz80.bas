@@ -9,41 +9,39 @@ Option Explicit
 
 'Public, shared stuff
 
+'For speed, we'll be hashing strings into numerical IDs, which both the Assembler _
+ and TokenStream classes need to do
+Public CRC As New CRC32
+
+'/// ENUMS ////////////////////////////////////////////////////////////////////////////
+
+Public Enum OZ80_LOG
+    OZ80_LOG_ACTION                     'The key important happenings
+    OZ80_LOG_INFO                       'Optional information, not actions happening
+    OZ80_LOG_DEBUG                      'Internal information for debugging purposes
+End Enum
+
 Public Enum OZ80_ERROR
     OZ80_ERROR_NONE                     'Assembly completed successfully
     OZ80_ERROR_FILENOTFOUND             'Requested file does not exist
     OZ80_ERROR_FILEREAD                 'Some kind of problem with file handle open
     OZ80_ERROR_INVALIDWORD              'Couldn't parse a word
     OZ80_ERROR_INVALIDNAME              'Invalid label/property/variable name
+    OZ80_ERROR_INVALIDNAME_RAM          '- Invalid RAM name, i.e. `$.name`
     OZ80_ERROR_INVALIDNUMBER            'Not a valid binary/hex/decimal number
+    OZ80_ERROR_INVALIDNUMBER_DEC        '- Invalid decimal number
+    OZ80_ERROR_INVALIDNUMBER_HEX        '- Invalid hexadecimal number
+    OZ80_ERROR_INVALIDNUMBER_BIN        '- Invalid binary number
     OZ80_ERROR_OVERFLOW                 'A number overflowed the maximum
     OZ80_ERROR_EXPRESSION               'Not a valid expression
+    OZ80_ERROR_EXPRESSION_Z80           '- Not a valid Z80 instruction parameter
     OZ80_ERROR_DUPLICATE                'A name has been defined twice
     OZ80_ERROR_UNEXPECTED               'Incorrect content at the current scope
+    OZ80_ERROR_UNEXPECTED_PROC_NAME     '- A label name must follow `PROC`
+    OZ80_ERROR_UNEXPECTED_SECTION_NAME  '- A section name must follow `SECTION`
+    OZ80_ERROR_UNEXPECTED_VAR_NAME      '- A variable name must follow `VAR`
     OZ80_ERROR_ENDOFFILE                'Unexpected end of file
     OZ80_ERROR_INDEFINITEVALUE          'Indefinite value cannot be used here
-End Enum
-
-'Error titles are standardised based on the error number, _
- the error description will be more specific to the context. _
- (VB6 allows neither string enums or looping over enums, so we have to resort to _
-  rather clunky methods of pairing these up)
-Public Const OZ80_ERT_FILENOTFOUND      As String = "File Not Found"
-Public Const OZ80_ERT_FILEREAD          As String = "Cannot Read File"
-Public Const OZ80_ERT_INVALIDWORD       As String = "Invalid Word"
-Public Const OZ80_ERT_INVALIDNAME       As String = "Invalid Name"
-Public Const OZ80_ERT_INVALIDNUMBER     As String = "Invalid Number"
-Public Const OZ80_ERT_OVERFLOW          As String = "Overflow"
-Public Const OZ80_ERT_EXPRESSION        As String = "Invalid Expression"
-Public Const OZ80_ERT_DUPLICATE         As String = "Duplicate Definition"
-Public Const OZ80_ERT_UNEXPECTED        As String = "Unexpected Content"
-Public Const OZ80_ERT_ENDOFFILE         As String = "Unexpected End of File"
-Public Const OZ80_ERT_INDEFINITEVALUE   As String = "Cannot Use Indefinite Value"
-
-Public Enum OZ80_LOG
-    OZ80_LOG_ACTION                     'The key important happenings
-    OZ80_LOG_INFO                       'Optional information, not actions happening
-    OZ80_LOG_DEBUG                      'Internal information for debugging purposes
 End Enum
 
 '--------------------------------------------------------------------------------------

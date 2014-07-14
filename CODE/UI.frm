@@ -144,4 +144,3 @@ Private Sub Log( _
         ByVal 0, Text _
     )
 End Sub
-

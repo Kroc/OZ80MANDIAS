@@ -54,11 +54,6 @@ Private TokenValue As Long
 Private TokenLine As Long
 Private TokenCol As Long
 
-'The token stream doesn't store the text of named items, merely a reference to the _
- string stored here. We use this for error messages and concatenating properties to _
- their parent label
-Private Strings As Scripting.Dictionary
-
 'The numerical values of variables / labels / properties &c. will be stored here. _
  The key for a name is the CRC32 of the string (from `Strings` above)
 
@@ -113,7 +108,6 @@ Private Sub Class_Terminate()
     Set Stopwatch = Nothing
     Set Variables = Nothing
     Set Labels = Nothing
-    Set Strings = Nothing
     Set Block = Nothing: Set Blocks = Nothing
     Set TokenStream = Nothing: Set Files = Nothing
     Erase ROM
@@ -137,16 +131,6 @@ Private Sub TokenStream_Message( _
     RaiseEvent Message(Depth, LogLevel, Text)
 End Sub
 
-'EVENT <TokenStream> StringAdded : While parsing a source file, a string name was read _
- ======================================================================================
-Private Sub TokenStream_StringAdded(ByRef Key As Long, ByRef StringData As String)
-    'We need to provide a unique key, we use the CRC32 of the string. _
-     When this event finishes, the TokenStream will add a token using this key
-    Let Key = oz80.CRC.Calculate(StringData)
-    'Add the label/variable/property name to the string storage
-    If Strings.Exists(Key) = False Then Call Strings.Add(Key, StringData)
-End Sub
-
 '/// PUBLIC INTERFACE /////////////////////////////////////////////////////////////////
 
 'Assemble : Compile a Z80 binary from a given starting source code file _
@@ -159,8 +143,6 @@ Public Function Assemble(ByVal FilePath As String) As OZ80_ERROR
     'We'll measure the time this takes
     Call Stopwatch.Reset
     
-    'Initialise the storage for label/variable/property names
-    Set Strings = New Scripting.Dictionary
     'Initialise the storage for the TokenStream representations of the source files
     Set Files = New Scripting.Dictionary
     
@@ -341,8 +323,8 @@ Continue:
         
         'Log the result of this
         RaiseEvent Message(1, OZ80_LOG_DEBUG, _
-            "VAR " & Strings(StringKey) & " " & _
-                Right$(Space(40) & ReturnValue, 40 - Len(Strings(StringKey))) & _
+            "VAR " & TokenStream.Strings(StringKey) & " " & _
+                Right$(Space(40) & ReturnValue, 40 - Len(TokenStream.Strings(StringKey))) & _
                 " $" & Right$("000" & Hex(ReturnValue), 4) _
         )
         

@@ -115,9 +115,14 @@ Private IsAlphaNum(0 To 255) As Boolean 'Validate alphanumeric chars (both cases
 'Used for time measurement
 Private Stopwatch As PerformanceCounter
 
-Private TokenStrings(0 To OZ80_TOKEN.[_TOKEN_LAST] - 1) As String
+'For logging, we will want to get a text representation of any of the Tokens
+Private TokenNames(0 To OZ80_TOKEN.[_TOKEN_LAST] - 1) As String
 
 '/// CLASS STORAGE ////////////////////////////////////////////////////////////////////
+
+'Remember where the original source file is as the assembler will need to change to _
+ its directory when handling relative references with includes
+Public SourceFile As String
 
 'The source text file is held here as a byte-array whilst it gets parsed
 Private Text() As Byte
@@ -134,10 +139,6 @@ Private Type oz80Token
     Col As Long                         'Column number in the original source text
 End Type
 
-'Remember where the original source file is as the assembler will need to change to _
- its directory when handling relative references with includes
-Public SourceFile As String
-
 'When parsing source text, we can save having to pass these through function calls _
  hundreds of times by making them global to this class
 Private WordBegin As Long, WordLen As Long
@@ -148,6 +149,12 @@ Private LineBegin As Long, ColBegin As Long
  which occurs on a new line. We keep track of the previous line number used and _
  look for a property occuring on a new line
 Private PrevLine As Long
+
+'We could just unfold strings into a series of number tokens, but for quick access _
+ to filenames with INCLUDE directives, we store strings in their own database
+'NOTE: This is public so that the assembler can access the right string for a token _
+ in order to normalise name items, e.g. `::section:label.property`
+Public Strings As Scripting.Dictionary
 
 'Look up tables to determine what category a Token belongs to, _
  these are exposed publicly through properties so other classes and do quick checks
@@ -176,172 +183,172 @@ Event Error( _
     ByVal Number As OZ80_ERROR, ByVal Line As Long, ByVal Col As Long _
 )
 
-'We raise an event each time we come across a string so that the assembler can pool _
- together all strings across all source files
-Event StringAdded(ByRef Key As Long, ByRef StringData As String)
-
 'CLASS Initialize _
  ======================================================================================
 Private Sub Class_Initialize()
     Set Stopwatch = New PerformanceCounter
     
-    Let TokenStrings(TOKEN_Z80_ADC) = "adc"
-    Let TokenStrings(TOKEN_Z80_ADD) = "add"
-    Let TokenStrings(TOKEN_Z80_AND) = "and"
-    Let TokenStrings(TOKEN_Z80_BIT) = "bit"
-    Let TokenStrings(TOKEN_Z80_CALL) = "call"
-    Let TokenStrings(TOKEN_Z80_CCF) = "ccf"
-    Let TokenStrings(TOKEN_Z80_CP) = "cp"
-    Let TokenStrings(TOKEN_Z80_CPD) = "cpd"
-    Let TokenStrings(TOKEN_Z80_CPDR) = "cpdr"
-    Let TokenStrings(TOKEN_Z80_CPI) = "cpi"
-    Let TokenStrings(TOKEN_Z80_CPIR) = "cpir"
-    Let TokenStrings(TOKEN_Z80_CPL) = "cpl"
-    Let TokenStrings(TOKEN_Z80_DAA) = "daa"
-    Let TokenStrings(TOKEN_Z80_DEC) = "dec"
-    Let TokenStrings(TOKEN_Z80_DI) = "di"
-    Let TokenStrings(TOKEN_Z80_DJNZ) = "djnz"
-    Let TokenStrings(TOKEN_Z80_EI) = "ei"
-    Let TokenStrings(TOKEN_Z80_EX) = "ex"
-    Let TokenStrings(TOKEN_Z80_EXX) = "exx"
-    Let TokenStrings(TOKEN_Z80_HALT) = "halt"
-    Let TokenStrings(TOKEN_Z80_IM) = "im"
-    Let TokenStrings(TOKEN_Z80_IN) = "in"
-    Let TokenStrings(TOKEN_Z80_INC) = "inc"
-    Let TokenStrings(TOKEN_Z80_IND) = "ind"
-    Let TokenStrings(TOKEN_Z80_INDR) = "indr"
-    Let TokenStrings(TOKEN_Z80_INI) = "ini"
-    Let TokenStrings(TOKEN_Z80_INIR) = "inir"
-    Let TokenStrings(TOKEN_Z80_JP) = "jp"
-    Let TokenStrings(TOKEN_Z80_JR) = "jr"
-    Let TokenStrings(TOKEN_Z80_LD) = "ld"
-    Let TokenStrings(TOKEN_Z80_LDD) = "ldd"
-    Let TokenStrings(TOKEN_Z80_LDDR) = "lddr"
-    Let TokenStrings(TOKEN_Z80_LDI) = "ldi"
-    Let TokenStrings(TOKEN_Z80_LDIR) = "ldir"
-    Let TokenStrings(TOKEN_Z80_NEG) = "neg"
-    Let TokenStrings(TOKEN_Z80_NOP) = "nop"
-    Let TokenStrings(TOKEN_Z80_OR) = "or"
-    Let TokenStrings(TOKEN_Z80_OUT) = "out"
-    Let TokenStrings(TOKEN_Z80_OUTD) = "outd"
-    Let TokenStrings(TOKEN_Z80_OTDR) = "otdr"
-    Let TokenStrings(TOKEN_Z80_OUTI) = "outi"
-    Let TokenStrings(TOKEN_Z80_OTIR) = "otir"
-    Let TokenStrings(TOKEN_Z80_POP) = "pop"
-    Let TokenStrings(TOKEN_Z80_PUSH) = "push"
-    Let TokenStrings(TOKEN_Z80_RES) = "res"
-    Let TokenStrings(TOKEN_Z80_RET) = "ret"
-    Let TokenStrings(TOKEN_Z80_RETI) = "reti"
-    Let TokenStrings(TOKEN_Z80_RETN) = "retn"
-    Let TokenStrings(TOKEN_Z80_RLA) = "rla"
-    Let TokenStrings(TOKEN_Z80_RL) = "rl"
-    Let TokenStrings(TOKEN_Z80_RLCA) = "rlca"
-    Let TokenStrings(TOKEN_Z80_RLC) = "rlc"
-    Let TokenStrings(TOKEN_Z80_RLD) = "rld"
-    Let TokenStrings(TOKEN_Z80_RRA) = "rra"
-    Let TokenStrings(TOKEN_Z80_RR) = "rr"
-    Let TokenStrings(TOKEN_Z80_RRCA) = "rrca"
-    Let TokenStrings(TOKEN_Z80_RRC) = "rrc"
-    Let TokenStrings(TOKEN_Z80_RRD) = "rrd"
-    Let TokenStrings(TOKEN_Z80_RST) = "rst"
-    Let TokenStrings(TOKEN_Z80_SBC) = "sbc"
-    Let TokenStrings(TOKEN_Z80_SCF) = "scf"
-    Let TokenStrings(TOKEN_Z80_SET) = "set"
-    Let TokenStrings(TOKEN_Z80_SLA) = "sla"
-    Let TokenStrings(TOKEN_Z80_SRA) = "sra"
-    Let TokenStrings(TOKEN_Z80_SLL) = "sll"
-    Let TokenStrings(TOKEN_Z80_SRL) = "srl"
-    Let TokenStrings(TOKEN_Z80_SUB) = "sub"
-    Let TokenStrings(TOKEN_Z80_XOR) = "xor"
+    'Initialise the string database. _
+     Since it's public, we want to ensure it's instantiated from the off
+    Set Strings = New Scripting.Dictionary
+    
+    Let TokenNames(TOKEN_Z80_ADC) = "adc"
+    Let TokenNames(TOKEN_Z80_ADD) = "add"
+    Let TokenNames(TOKEN_Z80_AND) = "and"
+    Let TokenNames(TOKEN_Z80_BIT) = "bit"
+    Let TokenNames(TOKEN_Z80_CALL) = "call"
+    Let TokenNames(TOKEN_Z80_CCF) = "ccf"
+    Let TokenNames(TOKEN_Z80_CP) = "cp"
+    Let TokenNames(TOKEN_Z80_CPD) = "cpd"
+    Let TokenNames(TOKEN_Z80_CPDR) = "cpdr"
+    Let TokenNames(TOKEN_Z80_CPI) = "cpi"
+    Let TokenNames(TOKEN_Z80_CPIR) = "cpir"
+    Let TokenNames(TOKEN_Z80_CPL) = "cpl"
+    Let TokenNames(TOKEN_Z80_DAA) = "daa"
+    Let TokenNames(TOKEN_Z80_DEC) = "dec"
+    Let TokenNames(TOKEN_Z80_DI) = "di"
+    Let TokenNames(TOKEN_Z80_DJNZ) = "djnz"
+    Let TokenNames(TOKEN_Z80_EI) = "ei"
+    Let TokenNames(TOKEN_Z80_EX) = "ex"
+    Let TokenNames(TOKEN_Z80_EXX) = "exx"
+    Let TokenNames(TOKEN_Z80_HALT) = "halt"
+    Let TokenNames(TOKEN_Z80_IM) = "im"
+    Let TokenNames(TOKEN_Z80_IN) = "in"
+    Let TokenNames(TOKEN_Z80_INC) = "inc"
+    Let TokenNames(TOKEN_Z80_IND) = "ind"
+    Let TokenNames(TOKEN_Z80_INDR) = "indr"
+    Let TokenNames(TOKEN_Z80_INI) = "ini"
+    Let TokenNames(TOKEN_Z80_INIR) = "inir"
+    Let TokenNames(TOKEN_Z80_JP) = "jp"
+    Let TokenNames(TOKEN_Z80_JR) = "jr"
+    Let TokenNames(TOKEN_Z80_LD) = "ld"
+    Let TokenNames(TOKEN_Z80_LDD) = "ldd"
+    Let TokenNames(TOKEN_Z80_LDDR) = "lddr"
+    Let TokenNames(TOKEN_Z80_LDI) = "ldi"
+    Let TokenNames(TOKEN_Z80_LDIR) = "ldir"
+    Let TokenNames(TOKEN_Z80_NEG) = "neg"
+    Let TokenNames(TOKEN_Z80_NOP) = "nop"
+    Let TokenNames(TOKEN_Z80_OR) = "or"
+    Let TokenNames(TOKEN_Z80_OUT) = "out"
+    Let TokenNames(TOKEN_Z80_OUTD) = "outd"
+    Let TokenNames(TOKEN_Z80_OTDR) = "otdr"
+    Let TokenNames(TOKEN_Z80_OUTI) = "outi"
+    Let TokenNames(TOKEN_Z80_OTIR) = "otir"
+    Let TokenNames(TOKEN_Z80_POP) = "pop"
+    Let TokenNames(TOKEN_Z80_PUSH) = "push"
+    Let TokenNames(TOKEN_Z80_RES) = "res"
+    Let TokenNames(TOKEN_Z80_RET) = "ret"
+    Let TokenNames(TOKEN_Z80_RETI) = "reti"
+    Let TokenNames(TOKEN_Z80_RETN) = "retn"
+    Let TokenNames(TOKEN_Z80_RLA) = "rla"
+    Let TokenNames(TOKEN_Z80_RL) = "rl"
+    Let TokenNames(TOKEN_Z80_RLCA) = "rlca"
+    Let TokenNames(TOKEN_Z80_RLC) = "rlc"
+    Let TokenNames(TOKEN_Z80_RLD) = "rld"
+    Let TokenNames(TOKEN_Z80_RRA) = "rra"
+    Let TokenNames(TOKEN_Z80_RR) = "rr"
+    Let TokenNames(TOKEN_Z80_RRCA) = "rrca"
+    Let TokenNames(TOKEN_Z80_RRC) = "rrc"
+    Let TokenNames(TOKEN_Z80_RRD) = "rrd"
+    Let TokenNames(TOKEN_Z80_RST) = "rst"
+    Let TokenNames(TOKEN_Z80_SBC) = "sbc"
+    Let TokenNames(TOKEN_Z80_SCF) = "scf"
+    Let TokenNames(TOKEN_Z80_SET) = "set"
+    Let TokenNames(TOKEN_Z80_SLA) = "sla"
+    Let TokenNames(TOKEN_Z80_SRA) = "sra"
+    Let TokenNames(TOKEN_Z80_SLL) = "sll"
+    Let TokenNames(TOKEN_Z80_SRL) = "srl"
+    Let TokenNames(TOKEN_Z80_SUB) = "sub"
+    Let TokenNames(TOKEN_Z80_XOR) = "xor"
     
     'Z80 Registers ....................................................................
-    Let TokenStrings(TOKEN_Z80_A) = "a"
-    Let TokenStrings(TOKEN_Z80_AF) = "af"
-    Let TokenStrings(TOKEN_Z80_B) = "b"
-    Let TokenStrings(TOKEN_Z80_C) = "c"
-    Let TokenStrings(TOKEN_Z80_NC) = "nc"
-    Let TokenStrings(TOKEN_Z80_BC) = "bc"
-    Let TokenStrings(TOKEN_Z80_D) = "d"
-    Let TokenStrings(TOKEN_Z80_E) = "e"
-    Let TokenStrings(TOKEN_Z80_DE) = "de"
-    Let TokenStrings(TOKEN_Z80_H) = "h"
-    Let TokenStrings(TOKEN_Z80_L) = "l"
-    Let TokenStrings(TOKEN_Z80_HL) = "hl"
-    Let TokenStrings(TOKEN_Z80_I) = "i"
-    Let TokenStrings(TOKEN_Z80_IX) = "ix"
-    Let TokenStrings(TOKEN_Z80_IXL) = "ixl"
-    Let TokenStrings(TOKEN_Z80_IXH) = "ixh"
-    Let TokenStrings(TOKEN_Z80_IY) = "iy"
-    Let TokenStrings(TOKEN_Z80_IYL) = "iyl"
-    Let TokenStrings(TOKEN_Z80_IYH) = "iyh"
-    Let TokenStrings(TOKEN_Z80_M) = "m"
-    Let TokenStrings(TOKEN_Z80_P) = "p"
-    Let TokenStrings(TOKEN_Z80_PC) = "pc"
-    Let TokenStrings(TOKEN_Z80_PE) = "pe"
-    Let TokenStrings(TOKEN_Z80_PO) = "po"
-    Let TokenStrings(TOKEN_Z80_R) = "r"
-    Let TokenStrings(TOKEN_Z80_SP) = "sp"
-    Let TokenStrings(TOKEN_Z80_Z) = "Z"
-    Let TokenStrings(TOKEN_Z80_NZ) = "nz"
+    Let TokenNames(TOKEN_Z80_A) = "a"
+    Let TokenNames(TOKEN_Z80_AF) = "af"
+    Let TokenNames(TOKEN_Z80_B) = "b"
+    Let TokenNames(TOKEN_Z80_C) = "c"
+    Let TokenNames(TOKEN_Z80_NC) = "nc"
+    Let TokenNames(TOKEN_Z80_BC) = "bc"
+    Let TokenNames(TOKEN_Z80_D) = "d"
+    Let TokenNames(TOKEN_Z80_E) = "e"
+    Let TokenNames(TOKEN_Z80_DE) = "de"
+    Let TokenNames(TOKEN_Z80_H) = "h"
+    Let TokenNames(TOKEN_Z80_L) = "l"
+    Let TokenNames(TOKEN_Z80_HL) = "hl"
+    Let TokenNames(TOKEN_Z80_I) = "i"
+    Let TokenNames(TOKEN_Z80_IX) = "ix"
+    Let TokenNames(TOKEN_Z80_IXL) = "ixl"
+    Let TokenNames(TOKEN_Z80_IXH) = "ixh"
+    Let TokenNames(TOKEN_Z80_IY) = "iy"
+    Let TokenNames(TOKEN_Z80_IYL) = "iyl"
+    Let TokenNames(TOKEN_Z80_IYH) = "iyh"
+    Let TokenNames(TOKEN_Z80_M) = "m"
+    Let TokenNames(TOKEN_Z80_P) = "p"
+    Let TokenNames(TOKEN_Z80_PC) = "pc"
+    Let TokenNames(TOKEN_Z80_PE) = "pe"
+    Let TokenNames(TOKEN_Z80_PO) = "po"
+    Let TokenNames(TOKEN_Z80_R) = "r"
+    Let TokenNames(TOKEN_Z80_SP) = "sp"
+    Let TokenNames(TOKEN_Z80_Z) = "Z"
+    Let TokenNames(TOKEN_Z80_NZ) = "nz"
     
     'Operators ........................................................................
-    Let TokenStrings(TOKEN_OPERATOR_ADD) = Chr$(SYNTAX.SYNTAX_OPERATOR_ADD)
-    Let TokenStrings(TOKEN_OPERATOR_SUB) = Chr$(SYNTAX.SYNTAX_OPERATOR_SUB)
-    Let TokenStrings(TOKEN_OPERATOR_MUL) = Chr$(SYNTAX.SYNTAX_OPERATOR_MUL)
-    Let TokenStrings(TOKEN_OPERATOR_DIV) = Chr$(SYNTAX.SYNTAX_OPERATOR_DIV)
-    Let TokenStrings(TOKEN_OPERATOR_POW) = Chr$(SYNTAX.SYNTAX_OPERATOR_POW)
-    Let TokenStrings(TOKEN_OPERATOR_MOD) = Chr$(SYNTAX.SYNTAX_OPERATOR_MOD)
-    Let TokenStrings(TOKEN_OPERATOR_REP) = "x"
-    Let TokenStrings(TOKEN_OPERATOR_OR) = Chr$(SYNTAX.SYNTAX_OPERATOR_OR)
-    Let TokenStrings(TOKEN_OPERATOR_AND) = Chr$(SYNTAX.SYNTAX_OPERATOR_AND)
-    Let TokenStrings(TOKEN_OPERATOR_NOT) = Chr$(SYNTAX.SYNTAX_OPERATOR_NOT)
+    Let TokenNames(TOKEN_OPERATOR_ADD) = Chr$(SYNTAX.SYNTAX_OPERATOR_ADD)
+    Let TokenNames(TOKEN_OPERATOR_SUB) = Chr$(SYNTAX.SYNTAX_OPERATOR_SUB)
+    Let TokenNames(TOKEN_OPERATOR_MUL) = Chr$(SYNTAX.SYNTAX_OPERATOR_MUL)
+    Let TokenNames(TOKEN_OPERATOR_DIV) = Chr$(SYNTAX.SYNTAX_OPERATOR_DIV)
+    Let TokenNames(TOKEN_OPERATOR_POW) = Chr$(SYNTAX.SYNTAX_OPERATOR_POW)
+    Let TokenNames(TOKEN_OPERATOR_MOD) = Chr$(SYNTAX.SYNTAX_OPERATOR_MOD)
+    Let TokenNames(TOKEN_OPERATOR_REP) = "x"
+    Let TokenNames(TOKEN_OPERATOR_OR) = Chr$(SYNTAX.SYNTAX_OPERATOR_OR)
+    Let TokenNames(TOKEN_OPERATOR_AND) = Chr$(SYNTAX.SYNTAX_OPERATOR_AND)
+    Let TokenNames(TOKEN_OPERATOR_NOT) = Chr$(SYNTAX.SYNTAX_OPERATOR_NOT)
     
     'Keywords .........................................................................
-    Let TokenStrings(TOKEN_KEYWORD_AT) = "at"
-    Let TokenStrings(TOKEN_KEYWORD_AS) = "as"
-    Let TokenStrings(TOKEN_KEYWORD_BANK) = "bank"
-    Let TokenStrings(TOKEN_KEYWORD_BINARY) = "binary"
-    Let TokenStrings(TOKEN_KEYWORD_BYTE) = "byte"
-    Let TokenStrings(TOKEN_KEYWORD_DATA) = "data"
-    Let TokenStrings(TOKEN_KEYWORD_DEFAULT) = "default"
-    Let TokenStrings(TOKEN_KEYWORD_ECHO) = "echo"
-    Let TokenStrings(TOKEN_KEYWORD_ELSE) = "else"
-    Let TokenStrings(TOKEN_KEYWORD_EXISTS) = "exists"
-    Let TokenStrings(TOKEN_KEYWORD_FAIL) = "fail"
-    Let TokenStrings(TOKEN_KEYWORD_FILL) = "fill"
-    Let TokenStrings(TOKEN_KEYWORD_IF) = "if"
-    Let TokenStrings(TOKEN_KEYWORD_INCLUDE) = "include"
-    Let TokenStrings(TOKEN_KEYWORD_LENGTH) = "length"
-    Let TokenStrings(TOKEN_KEYWORD_OBJECT) = "object"
-    Let TokenStrings(TOKEN_KEYWORD_PARAMS) = "params"
-    Let TokenStrings(TOKEN_KEYWORD_PROC) = "proc"
-    Let TokenStrings(TOKEN_KEYWORD_RAM) = "ram"
-    Let TokenStrings(TOKEN_KEYWORD_RETURN) = "return"
-    Let TokenStrings(TOKEN_KEYWORD_SECTION) = "section"
-    Let TokenStrings(TOKEN_KEYWORD_SLOT) = "slot"
-    Let TokenStrings(TOKEN_KEYWORD_START) = "start"
-    Let TokenStrings(TOKEN_KEYWORD_STOP) = "stop"
-    Let TokenStrings(TOKEN_KEYWORD_STRUCT) = "struct"
-    Let TokenStrings(TOKEN_KEYWORD_TABLE) = "table"
-    Let TokenStrings(TOKEN_KEYWORD_VAR) = "var"
-    Let TokenStrings(TOKEN_KEYWORD_WORD) = "word"
+    Let TokenNames(TOKEN_KEYWORD_AT) = "at"
+    Let TokenNames(TOKEN_KEYWORD_AS) = "as"
+    Let TokenNames(TOKEN_KEYWORD_BANK) = "bank"
+    Let TokenNames(TOKEN_KEYWORD_BINARY) = "binary"
+    Let TokenNames(TOKEN_KEYWORD_BYTE) = "byte"
+    Let TokenNames(TOKEN_KEYWORD_DATA) = "data"
+    Let TokenNames(TOKEN_KEYWORD_DEFAULT) = "default"
+    Let TokenNames(TOKEN_KEYWORD_ECHO) = "echo"
+    Let TokenNames(TOKEN_KEYWORD_ELSE) = "else"
+    Let TokenNames(TOKEN_KEYWORD_EXISTS) = "exists"
+    Let TokenNames(TOKEN_KEYWORD_FAIL) = "fail"
+    Let TokenNames(TOKEN_KEYWORD_FILL) = "fill"
+    Let TokenNames(TOKEN_KEYWORD_IF) = "if"
+    Let TokenNames(TOKEN_KEYWORD_INCLUDE) = "include"
+    Let TokenNames(TOKEN_KEYWORD_LENGTH) = "length"
+    Let TokenNames(TOKEN_KEYWORD_OBJECT) = "object"
+    Let TokenNames(TOKEN_KEYWORD_PARAMS) = "params"
+    Let TokenNames(TOKEN_KEYWORD_PROC) = "proc"
+    Let TokenNames(TOKEN_KEYWORD_RAM) = "ram"
+    Let TokenNames(TOKEN_KEYWORD_RETURN) = "return"
+    Let TokenNames(TOKEN_KEYWORD_SECTION) = "section"
+    Let TokenNames(TOKEN_KEYWORD_SLOT) = "slot"
+    Let TokenNames(TOKEN_KEYWORD_START) = "start"
+    Let TokenNames(TOKEN_KEYWORD_STOP) = "stop"
+    Let TokenNames(TOKEN_KEYWORD_STRUCT) = "struct"
+    Let TokenNames(TOKEN_KEYWORD_TABLE) = "table"
+    Let TokenNames(TOKEN_KEYWORD_VAR) = "var"
+    Let TokenNames(TOKEN_KEYWORD_WORD) = "word"
     
-    Let TokenStrings(TOKEN_PREFIX_K) = "k"
-    Let TokenStrings(TOKEN_PREFIX_KB) = "kb"
-    Let TokenStrings(TOKEN_PREFIX_KBIT) = "kbit"
+    Let TokenNames(TOKEN_PREFIX_K) = "k"
+    Let TokenNames(TOKEN_PREFIX_KB) = "kb"
+    Let TokenNames(TOKEN_PREFIX_KBIT) = "kbit"
     
-    Let TokenStrings(TOKEN_PARENOPEN) = Chr$(SYNTAX.SYNTAX_PAREN_OPEN)
-    Let TokenStrings(TOKEN_PARENCLOSE) = Chr$(SYNTAX.SYNTAX_PAREN_CLOSE)
-    Let TokenStrings(TOKEN_BLOCKOPEN) = Chr$(SYNTAX.SYNTAX_BLOCK_OPEN)
-    Let TokenStrings(TOKEN_BLOCKCLOSE) = Chr$(SYNTAX.SYNTAX_BLOCK_CLOSE)
+    Let TokenNames(TOKEN_PARENOPEN) = Chr$(SYNTAX.SYNTAX_PAREN_OPEN)
+    Let TokenNames(TOKEN_PARENCLOSE) = Chr$(SYNTAX.SYNTAX_PAREN_CLOSE)
+    Let TokenNames(TOKEN_BLOCKOPEN) = Chr$(SYNTAX.SYNTAX_BLOCK_OPEN)
+    Let TokenNames(TOKEN_BLOCKCLOSE) = Chr$(SYNTAX.SYNTAX_BLOCK_CLOSE)
     
-    Let TokenStrings(TOKEN_QUOTE) = Chr$(SYNTAX.SYNTAX_QUOTE)
-    Let TokenStrings(TOKEN_LABEL) = Chr$(SYNTAX.SYNTAX_LABEL)
-    Let TokenStrings(TOKEN_PROPERTY_USE) = Chr$(SYNTAX.SYNTAX_PROPERTY)
-    Let TokenStrings(TOKEN_PROPERTY_NEW) = Chr$(SYNTAX.SYNTAX_PROPERTY)
-    Let TokenStrings(TOKEN_RAM) = Chr$(SYNTAX.SYNTAX_NUMBER_HEX) & Chr$(SYNTAX.SYNTAX_PROPERTY)
-    Let TokenStrings(TOKEN_SECTION) = String(2, Chr$(SYNTAX.SYNTAX_LABEL))
-    Let TokenStrings(TOKEN_VARIABLE) = Chr$(SYNTAX.SYNTAX_VARIABLE)
+    Let TokenNames(TOKEN_QUOTE) = Chr$(SYNTAX.SYNTAX_QUOTE)
+    Let TokenNames(TOKEN_LABEL) = Chr$(SYNTAX.SYNTAX_LABEL)
+    Let TokenNames(TOKEN_PROPERTY_USE) = Chr$(SYNTAX.SYNTAX_PROPERTY)
+    Let TokenNames(TOKEN_PROPERTY_NEW) = Chr$(SYNTAX.SYNTAX_PROPERTY)
+    Let TokenNames(TOKEN_RAM) = Chr$(SYNTAX.SYNTAX_NUMBER_HEX) & Chr$(SYNTAX.SYNTAX_PROPERTY)
+    Let TokenNames(TOKEN_SECTION) = String(2, Chr$(SYNTAX.SYNTAX_LABEL))
+    Let TokenNames(TOKEN_VARIABLE) = Chr$(SYNTAX.SYNTAX_VARIABLE)
     
     '----------------------------------------------------------------------------------
     
@@ -376,6 +383,8 @@ Private Sub Class_Initialize()
         Else
             Let LowCase(ii) = ii        'Is already lowercase
         End If
+        
+        '..............................................................................
         
         'Using this number as a Token number, check what token category it belongs to
         Let My_IsInstruction(ii) = (ii > [_TOKEN_INSTRUCTIONS_BEGIN]) And _
@@ -452,6 +461,8 @@ Private Sub Class_Terminate()
     Erase Text
     'Empty the token stream
     Erase Tokens
+    'Clear the string database
+    Set Strings = Nothing
     'Clear the original source file path
     Let Me.SourceFile = vbNullString
 End Sub
@@ -560,7 +571,7 @@ End Property
 'PROPERTY TokenString : Get the textual representation of a token (for logging) _
  ======================================================================================
 Public Property Get TokenString(ByRef Token As OZ80_TOKEN) As String
-    Let TokenString = TokenStrings(Token)
+    Let TokenString = TokenNames(Token)
 End Property
 
 'PROPERTY Value : Token Value of current token _
@@ -637,6 +648,11 @@ Public Function Tokenise(ByRef FilePath As String) As OZ80_ERROR
         "Length: " & Format$(TextLen, "#,#") & " bytes" _
     )
     
+    'Clear the string database, just to be extra safe
+    Call Strings.RemoveAll
+    
+    'Begin parsing words: _
+     ----------------------------------------------------------------------------------
     Dim IsQuote As Boolean
     Dim IsComment As Boolean
     Dim IsCommentMulti As Boolean
@@ -657,8 +673,6 @@ Public Function Tokenise(ByRef FilePath As String) As OZ80_ERROR
     Dim Line As Long, Col As Long
     Let Line = 1: Let PrevLine = 1
     
-    'Begin parsing words: _
-     ----------------------------------------------------------------------------------
 ReadWord:
     'If the word has begun (first letter is read)
     Dim IsWord As Long
@@ -1408,22 +1422,22 @@ Private Sub Add( _
      tokens are displayed in `AddString` below which has the text to hand
     Dim Msg As String
     If My_IsRegister(Token) Then
-        Let Msg = "[REGISTER] " & TokenStrings(Token)
+        Let Msg = "[REGISTER] " & TokenNames(Token)
     ElseIf Token = TOKEN_NUMBER Then
         Let Msg = "[  NUMBER] " & Format$(Value, "#,#")
     ElseIf My_IsKeyword(Token) Then
-        Let Msg = "[ KEYWORD] " & UCase(TokenStrings(Token))
+        Let Msg = "[ KEYWORD] " & UCase(TokenNames(Token))
     ElseIf My_IsOperator(Token) Then
-        Let Msg = "[OPERATOR] " & TokenStrings(Token)
+        Let Msg = "[OPERATOR] " & TokenNames(Token)
     ElseIf Token = TOKEN_BLOCKOPEN Or Token = TOKEN_BLOCKCLOSE Then
-        Let Msg = "[   BLOCK] " & TokenStrings(Token)
+        Let Msg = "[   BLOCK] " & TokenNames(Token)
     ElseIf My_IsInstruction(Token) Then
-        Let Msg = "[     Z80] " & TokenStrings(Token)
+        Let Msg = "[     Z80] " & TokenNames(Token)
     ElseIf Token = TOKEN_PARENOPEN Or Token = TOKEN_PARENCLOSE Then
-        Let Msg = "[  Z80MEM] " & TokenStrings(Token)
+        Let Msg = "[  Z80MEM] " & TokenNames(Token)
     ElseIf Token = TOKEN_PREFIX_K Or Token = TOKEN_PREFIX_KB _
         Or Token = TOKEN_PREFIX_KBIT Then
-        Let Msg = "[  PREFIX] " & TokenStrings(Token)
+        Let Msg = "[  PREFIX] " & TokenNames(Token)
     End If
     If Msg <> vbNullString Then RaiseEvent Message(2, OZ80_LOG_DEBUG, _
         "<tkn> " & Format$(TokenIndex + 1, "#,#") & _
@@ -1459,10 +1473,10 @@ Private Sub AddString( _
      use them in calls hundreds of times over
     Dim Key As Long
     
-    'Pass the string back to the assembler. It'll want to pool together all of the _
-     strings used across all files for the purpose of label lookups
-    'Note that the assembler will produce the key for us and pass it back
-    RaiseEvent StringAdded(Key, Data)
+'    'Pass the string back to the assembler. It'll want to pool together all of the _
+'     strings used across all files for the purpose of label lookups
+'    'Note that the assembler will produce the key for us and pass it back
+'    RaiseEvent StringAdded(Key, Data)
     
     Dim TokenType As String * 8
     If Token = TOKEN_LABEL Then
@@ -1487,6 +1501,10 @@ Private Sub AddString( _
             " " & FormatLong(Key) & " " & _
             "[" & TokenType & "] " & Chr(34) & Data & Chr(34) _
     )
+    
+    'Hash the string to quickly identify if it has already been added
+    Let Key = oz80.CRC.Calculate(Data)
+    If Not Strings.Exists(Key) Then Call Strings.Add(Key, Data)
     
     'Add the index key to the token so that we can retrieve the string later
     Call Add(Token, Key)

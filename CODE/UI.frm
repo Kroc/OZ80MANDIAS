@@ -61,7 +61,7 @@ Private Sub Form_Load()
     Set Assembler = New oz80_Assembler
         
     'TODO: This will obviously be converted to use the command arguments
-    Call Assembler.Assemble(App.Path & "\Sonic1-sms-oz80\main.oz80")
+    Call Assembler.Assemble(App.Path & "\Test\test.oz80")
     
     'Do something that only faults in the IDE
     On Error GoTo Err_True
@@ -128,7 +128,9 @@ Private Sub Log( _
     Optional ByRef Text As String = vbNullString, _
     Optional ByRef LogLevel As OZ80_LOG = OZ80_LOG_ACTION _
 )
-'    If LogLevel > OZ80_LOG_INFO Then Exit Sub
+    Debug.Print Text
+    
+    If LogLevel > OZ80_LOG_INFO Then Exit Sub
     Let Text = Text & vbCrLf
     
     'Thanks to Jdo300 for this execllent tip to prevent flicker _

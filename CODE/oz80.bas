@@ -15,39 +15,112 @@ Public CRC As New CRC32
 
 '/// ENUMS ////////////////////////////////////////////////////////////////////////////
 
+'This makes life a whole lot easier when processing text as ASCII codes
+Public Enum ASCII
+    'Non-visible control codes:
+:   ASC_NUL:    ASC_SOH:    ASC_STX:    ASC_ETX:    ASC_EOT:    ASC_ENQ:    ASC_ACK
+:   ASC_BEL:    ASC_BS:     ASC_TAB:    ASC_LF:     ASC_VT:     ASC_FF:     ASC_CR
+:   ASC_SO:     ASC_SI:     ASC_DLE:    ASC_DC1:    ASC_DC2:    ASC_DC3:    ASC_DC4
+:   ASC_NAK:    ASC_SYN:    ASC_ETB:    ASC_CAN:    ASC_EM:     ASC_SUB:    ASC_ESC
+:   ASC_FS:     ASC_GS:     ASC_RS:     ASC_US
+
+    ASC_SPC                             '` ` Space
+    ASC_EXC                             '`!` Exclamation Mark
+    ASC_QUOT                            '`"` Quote
+    ASC_HASH                            '`#` Hash / Pound / Octothorpe
+    ASC_DOL                             '`$` Dollar
+    ASC_PERC                            '`%` Per-Cent
+    ASC_AMP                             '`&` Ampersand
+    ASC_APOS                            '`'` Single-Quote / Apostrophe
+    ASC_LP                              '`(` Left Parenthesis
+    ASC_RP                              '`)` Right Parenthesis
+    ASC_STAR                            '`*` Asterisk
+    ASC_PLUS                            '`+` Plus
+    ASC_COM                             '`,` Comma
+    ASC_HYP                             '`-` Hyphen
+    ASC_DOT                             '`.` Dot
+    ASC_FSL                             '`/` Forward-Slash
+
+:   ASC_0:      ASC_1:      ASC_2:      ASC_3:      ASC_4:      ASC_5:      ASC_6
+:   ASC_7:      ASC_8:      ASC_9
+    
+    ASC_COL                             '`:` Colon
+    ASC_SCOL                            '`;` Semi-Colon
+    ASC_LT                              '`<` Less-Than
+    ASC_EQ                              '`=` Equals
+    ASC_GT                              '`>` Greater-Than
+    ASC_QM                              '`?` Question Mark
+    ASC_AT                              '`@` At-Mark
+    
+:   ASC_A:      ASC_B:      ASC_C:      ASC_D:      ASC_E:      ASC_F:      ASC_G
+:   ASC_H:      ASC_I:      ASC_J:      ASC_K:      ASC_L:      ASC_M:      ASC_N
+:   ASC_O:      ASC_P:      ASC_Q:      ASC_R:      ASC_S:      ASC_T:      ASC_U
+:   ASC_V:      ASC_W:      ASC_X:      ASC_Y:      ASC_Z
+    
+    ASC_LSB                             '`[` Left Square-Bracket
+    ASC_BSL                             '`\` Back-Slash
+    ASC_RSB                             '`]` Right Square-Bracket
+    ASC_CRT                             '`^` Caret / Circumflex
+    ASC_USC                             '`_` Underscore
+    ASC_BTK                             '``` Backtick / Grave Accent
+
+    'Lower-case letters
+:   ASC_a_:     ASC_b_:     ASC_c_:     ASC_d_:     ASC_e_:     ASC_f_:     ASC_g_
+:   ASC_h_:     ASC_i_:     ASC_j_:     ASC_k_:     ASC_l_:     ASC_m_:     ASC_n_
+:   ASC_o_:     ASC_p_:     ASC_q_:     ASC_r_:     ASC_s_:     ASC_t_:     ASC_u_
+:   ASC_v_:     ASC_w_:     ASC_x_:     ASC_y_:     ASC_z_:
+
+    ASC_LB                              '`{` Left Brace
+    ASC_VB                              '`|` Vertical Bar / Pipe
+    ASC_RB                              '`}` Right Brace
+    
+    ASC_DEL                             '"Delete" -- non-visible
+End Enum
+
+'--------------------------------------------------------------------------------------
+
 Public Enum OZ80_LOG
     OZ80_LOG_ACTION                     'The key important happenings
     OZ80_LOG_INFO                       'Optional information, not actions happening
     OZ80_LOG_DEBUG                      'Internal information for debugging purposes
 End Enum
 
+Public Enum OZ80_WARNING
+    OZ80_WARNING_NONE                   'Skip "0"
+    
+End Enum
+
 Public Enum OZ80_ERROR
     OZ80_ERROR_NONE                     'Assembly completed successfully
+    OZ80_ERROR_DUPLICATE                'A name has been defined twice
+    OZ80_ERROR_DUPLICATE_BANK           '- Duplicate `BANK` parameter
+    OZ80_ERROR_DUPLICATE_SECTION        '- Can't define a section twice
+    OZ80_ERROR_DUPLICATE_SLOT           '- Duplicate `SLOT` parameter
+    OZ80_ERROR_ENDOFFILE                'Unexpected end of file
+    OZ80_ERROR_EXPECTED                 'Incorrect content at the current scope
+    OZ80_ERROR_EXPECTED_PROC_NAME       '- A label name must follow `PROC`
+    OZ80_ERROR_EXPECTED_ROOT            '- Only certain keywords allowed at root
+    OZ80_ERROR_EXPECTED_SECTION_NAME    '- A section name must follow `SECTION`
+    OZ80_ERROR_EXPECTED_VAR_NAME        '- A variable name must follow `VAR`
+    OZ80_ERROR_EXPRESSION               'Not a valid expression
+    OZ80_ERROR_EXPRESSION_Z80           '- Not a valid Z80 instruction parameter
     OZ80_ERROR_FILENOTFOUND             'Requested file does not exist
     OZ80_ERROR_FILEREAD                 'Some kind of problem with file handle open
-    OZ80_ERROR_INVALIDWORD              'Couldn't parse a word
+    OZ80_ERROR_INDEFINITE               'Indefinite value cannot be used here
     OZ80_ERROR_INVALIDNAME              'Invalid label/property/variable name
     OZ80_ERROR_INVALIDNAME_RAM          '- Invalid RAM name, i.e. `$.name`
     OZ80_ERROR_INVALIDNUMBER            'Not a valid binary/hex/decimal number
     OZ80_ERROR_INVALIDNUMBER_DEC        '- Invalid decimal number
     OZ80_ERROR_INVALIDNUMBER_HEX        '- Invalid hexadecimal number
     OZ80_ERROR_INVALIDNUMBER_BIN        '- Invalid binary number
+    OZ80_ERROR_INVALIDWORD              'Couldn't parse a word
     OZ80_ERROR_OVERFLOW                 'A number overflowed the maximum
-    OZ80_ERROR_EXPRESSION               'Not a valid expression
-    OZ80_ERROR_EXPRESSION_Z80           '- Not a valid Z80 instruction parameter
-    OZ80_ERROR_DUPLICATE                'A name has been defined twice
-    OZ80_ERROR_UNEXPECTED               'Incorrect content at the current scope
-    OZ80_ERROR_UNEXPECTED_PROC_NAME     '- A label name must follow `PROC`
-    OZ80_ERROR_UNEXPECTED_SECTION_NAME  '- A section name must follow `SECTION`
-    OZ80_ERROR_UNEXPECTED_VAR_NAME      '- A variable name must follow `VAR`
-    OZ80_ERROR_ENDOFFILE                'Unexpected end of file
-    OZ80_ERROR_INDEFINITEVALUE          'Indefinite value cannot be used here
 End Enum
 
 '--------------------------------------------------------------------------------------
 
 Public Enum OZ80_TOKEN
-    TOKEN_NONE
+    TOKEN_NONE                          'Skip "0"
     
     'These are just the mnemonic tokens -- the assembler checks the
      'parameters and determines which opcode should be used
@@ -198,8 +271,6 @@ Public Enum OZ80_TOKEN
     TOKEN_KEYWORD_WORD
     [_TOKEN_KEYWORDS_END]
     
-    'The parser automatically converts hexadecimal/binary numbers, so we only store
-     'a 32-bit long (data field) in the token stream
     TOKEN_NUMBER
     'Number prefixes ("K", "KB" & "Kbit")
     TOKEN_PREFIX_K                      'x1000
@@ -222,3 +293,171 @@ Public Enum OZ80_TOKEN
     
     [_TOKEN_LAST]                       'Do not go above 256!
 End Enum
+
+'GetOZ80Error : Return an error description for a given error number _
+ ======================================================================================
+Public Sub GetOZ80Error( _
+    ByRef ErrorNumber As OZ80_ERROR, _
+    ByRef ReturnTitle As String, _
+    ByRef ReturnDescription As String _
+)
+    Select Case ErrorNumber
+    
+    Case OZ80_ERROR_DUPLICATE
+        '..............................................................................
+        Let ReturnTitle = "Duplicate Definition"
+        'TODO
+        Let ReturnDescription = ""
+    
+    Case OZ80_ERROR_DUPLICATE_BANK
+        '..............................................................................
+        Let ReturnTitle = "Duplicate Parameter"
+        Let ReturnDescription = _
+            "You cannot specify the `BANK` parameter twice in one `SECTION`!"
+        
+    Case OZ80_ERROR_DUPLICATE_SECTION
+        '..............................................................................
+        Let ReturnTitle = "Duplicate Definition"
+        Let ReturnDescription = _
+            "You cannot define a section name twice. There should be only one " & _
+            "`SECTION` statement for each section in use."
+        
+    Case OZ80_ERROR_DUPLICATE_SLOT
+        '..............................................................................
+        Let ReturnTitle = "Duplicate Parameter"
+        Let ReturnDescription = _
+            "You cannot specify the `SLOT` parameter twice in one `SECTION`!"
+        
+    Case OZ80_ERROR_ENDOFFILE
+        '..............................................................................
+        Let ReturnTitle = "Unexpected End of File"
+        'TODO
+        Let ReturnDescription = "The file ended "
+        
+    Case OZ80_ERROR_EXPECTED
+        '..............................................................................
+        Let ReturnTitle = "Unexpected Content"
+        'TODO
+        Let ReturnDescription = _
+            ""
+        
+    Case OZ80_ERROR_EXPECTED_PROC_NAME
+        '..............................................................................
+        Let ReturnTitle = "Unexpected Content"
+        Let ReturnDescription = _
+            "A label name must follow the `PROC` statement. " & _
+            "E.g. `PROC :myProcedure`"
+    
+    Case OZ80_ERROR_EXPECTED_ROOT
+        '..............................................................................
+        Let ReturnTitle = "Keyword expected"
+        Let ReturnDescription = _
+            "Only the keywords `INCLUDE`, `OBJECT`, `PROC`, `SECTION`, `STRUCT` " & _
+            "`TABLE` & `VAR` are allowed at this scope."
+    
+    Case OZ80_ERROR_EXPECTED_SECTION_NAME
+        '..............................................................................
+        Let ReturnTitle = "Unexpected Content"
+        Let ReturnDescription = _
+            "A section name must follow the `SECTION` statement. " & _
+            "E.g. `SECTION ::graphics`"
+            
+    Case OZ80_ERROR_EXPRESSION
+        '..............................................................................
+        Let ReturnTitle = "Invalid Expression"
+        Let ReturnDescription = _
+            "An expression can be any Number, Label, Property, RAM Name or " & _
+            "calculation (via operators) of these."
+        
+    Case OZ80_ERROR_EXPRESSION_Z80
+        '..............................................................................
+        Let ReturnTitle = "Invalid Z80 Instruction Parameter"
+        Let ReturnDescription = _
+            "Parameters following a Z80 instruction must be either a Z80 Register " & _
+            "(`a`, `b`, `c` etc.), a Z80 memory expression `(ix+$FF)` or a valid " & _
+            "numerical expression, i.e. a calculation, a label name or RAM name."
+            
+    Case OZ80_ERROR_FILENOTFOUND
+        '..............................................................................
+        Let ReturnTitle = "File Not Found"
+        'TODO
+        Let ReturnDescription = ""
+        
+    Case OZ80_ERROR_FILEREAD
+        '..............................................................................
+        Let ReturnTitle = "Cannot Read File"
+        'TODO
+        Let ReturnDescription = ""
+    
+    Case OZ80_ERROR_INDEFINITE
+        '..............................................................................
+        Let ReturnTitle = "Cannot Use Indefinite Value"
+        Let ReturnDescription = _
+            "A variable cannot be defined with an indefinite value, that is, " & _
+            "an expression containing a yet-unknown value, such as a label. " & _
+            "label addresses are not set until after assembly."
+    
+    Case OZ80_ERROR_INVALIDNAME
+        '..............................................................................
+        Let ReturnTitle = "Invalid Name"
+        Let ReturnDescription = _
+            "Variable, label and property names can contain A-Z, 0-9 underscore " & _
+            "and dot with the following exceptions: " & _
+            "1. the first letter cannot be a number or a dot, " & _
+            "2. two dots cannot occur in a row " & _
+            "3. a number cannot follow a dot, and " & _
+            "4. the name cannot end in a dot" _
+    
+    Case OZ80_ERROR_INVALIDNAME_RAM
+        '..............................................................................
+        Let ReturnTitle = "Invalid Name"
+        Let ReturnDescription = _
+            "RAM names must begin with '$.' and follow standard naming rules " & _
+            "beyond that, i.e." & _
+            "1. the first letter cannot be a number or a dot " & _
+              "(this does not include the dot that follows the dollar sign)" & _
+            "2. two dots cannot occur in a row " & _
+            "3. a number cannot follow a dot, and " & _
+            "4. the name cannot end in a dot" _
+        
+    Case OZ80_ERROR_INVALIDNUMBER
+        '..............................................................................
+        Let ReturnTitle = "Invalid Number"
+        'TODO
+        Let ReturnDescription = ""
+        
+    Case OZ80_ERROR_INVALIDNUMBER_DEC
+        '..............................................................................
+        Let ReturnTitle = "Invalid Number"
+        'TODO
+        Let ReturnDescription = ""
+        
+    Case OZ80_ERROR_INVALIDNUMBER_HEX
+        '..............................................................................
+        Let ReturnTitle = "Invalid Number"
+        Let ReturnDescription = _
+            "Hexadecimal numbers must begin with '$' and must contain 0-9 & A-F " & _
+            "letters only. E.g. `$1234ABCD`"
+    
+    Case OZ80_ERROR_INVALIDNUMBER_BIN
+        '..............................................................................
+        Let ReturnTitle = "Invalid Number"
+        'TODO
+        Let ReturnDescription = ""
+    
+    Case OZ80_ERROR_INVALIDWORD
+        '..............................................................................
+        Let ReturnTitle = "Invalid Word"
+        'TODO
+        Let ReturnDescription = ""
+    
+    Case OZ80_ERROR_OVERFLOW
+        '..............................................................................
+        Let ReturnTitle = "Overflow"
+        'TODO
+        Let ReturnDescription = ""
+        
+    Case Else
+        Stop
+    End Select
+End Sub

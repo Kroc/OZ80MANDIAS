@@ -62,7 +62,7 @@ Take for example this section of Z80 code in the middle of a procedure:
 
 	ld      c, a
 	ld      b, $00
-	ld      hl, (#RAM_TEMP3)
+	ld      hl, ($.TEMP3)
 	add     hl, bc
 
 What's the purpose of this code? Adding comments can answer that, but we can better
@@ -70,12 +70,12 @@ visualise at a glance the flow of information by providing register hints like s
   
 	ld      c;blockIndex, a;blockIndex
 	ld      b;blockIndex, $00
-	ld      hl;solidityData, (#RAM_TEMP3)
+	ld      hl;solidityData, ($.TEMP3)
 	add     hl;solidityData, bc;blockIndex
 
-Now we can see that #RAM_TEMP3 contained "solidityData" this time (even though it
+Now we can see that `$.TEMP3` contained "solidityData" this time (even though it
 could be used for other purposes else where in the code) -- thus you do not have to
-scroll around to find where #RAM_TEMP3 was last assigned.
+scroll around to find where `$.TEMP3` was last modified.
 
 Overall, we can see that the "blockIndex" in register A is copied to BC and then added
 to the "solidityData" in HL.

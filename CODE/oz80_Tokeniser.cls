@@ -35,7 +35,7 @@ Private Stopwatch As PerformanceCounter
 '--------------------------------------------------------------------------------------
 
 'These define the various punctiation marks (in ASCII codes) for the language syntax
-Private Enum SYNTAX
+Private Enum OZ80_SYNTAX
     SYNTAX_COMMENT = ASC_BTK            ' ` - Comment marker. "``" for multi-line
     SYNTAX_HINT1 = ASC_SCOL             ' ; - register hint, e.g. `a;index`
     SYNTAX_HINT2 = ASC_APOS             ' ' - shadow register hint, e.g. `ex af 'af`
@@ -61,6 +61,7 @@ Private Enum SYNTAX
     SYNTAX_OPERATOR_OR = ASC_VB         ' | - Bitwise OR
     SYNTAX_OPERATOR_AND = ASC_AMP       ' & - Bitwise AND
     SYNTAX_OPERATOR_NOT = ASC_EXC       ' ! - Bitwise NOT
+    SYNTAX_OPERATOR_XOR = ASC_TIL       ' ~ - Bitwise XOR
 End Enum
 
 'Look-up tables to validate ASCII codes:
@@ -75,6 +76,9 @@ Private IsNumber(0 To 255) As Boolean   'Validates decimal digits
 Private TokenNames(0 To OZ80_TOKEN.[_TOKEN_LAST] - 1) As String
 
 '/// CLASS STORAGE ////////////////////////////////////////////////////////////////////
+
+'The error number!
+Private My_Error As OZ80_ERROR
 
 'Remember where the original source file is as the assembler will need to change to _
  its directory when handling relative references with includes
@@ -265,16 +269,17 @@ Private Sub Class_Initialize()
     Let TokenNames(TOKEN_Z80_NZ) = "NZ"
     
     'Operators ........................................................................
-    Let TokenNames(TOKEN_OPERATOR_ADD) = Chr$(SYNTAX.SYNTAX_OPERATOR_ADD)
-    Let TokenNames(TOKEN_OPERATOR_SUB) = Chr$(SYNTAX.SYNTAX_OPERATOR_SUB)
-    Let TokenNames(TOKEN_OPERATOR_MUL) = Chr$(SYNTAX.SYNTAX_OPERATOR_MUL)
-    Let TokenNames(TOKEN_OPERATOR_DIV) = Chr$(SYNTAX.SYNTAX_OPERATOR_DIV)
-    Let TokenNames(TOKEN_OPERATOR_POW) = Chr$(SYNTAX.SYNTAX_OPERATOR_POW)
-    Let TokenNames(TOKEN_OPERATOR_MOD) = Chr$(SYNTAX.SYNTAX_OPERATOR_MOD)
+    Let TokenNames(TOKEN_OPERATOR_ADD) = Chr$(SYNTAX_OPERATOR_ADD)
+    Let TokenNames(TOKEN_OPERATOR_SUB) = Chr$(SYNTAX_OPERATOR_SUB)
+    Let TokenNames(TOKEN_OPERATOR_MUL) = Chr$(SYNTAX_OPERATOR_MUL)
+    Let TokenNames(TOKEN_OPERATOR_DIV) = Chr$(SYNTAX_OPERATOR_DIV)
+    Let TokenNames(TOKEN_OPERATOR_POW) = Chr$(SYNTAX_OPERATOR_POW)
+    Let TokenNames(TOKEN_OPERATOR_MOD) = Chr$(SYNTAX_OPERATOR_MOD)
     Let TokenNames(TOKEN_OPERATOR_REP) = "x"
-    Let TokenNames(TOKEN_OPERATOR_OR) = Chr$(SYNTAX.SYNTAX_OPERATOR_OR)
-    Let TokenNames(TOKEN_OPERATOR_AND) = Chr$(SYNTAX.SYNTAX_OPERATOR_AND)
-    Let TokenNames(TOKEN_OPERATOR_NOT) = Chr$(SYNTAX.SYNTAX_OPERATOR_NOT)
+    Let TokenNames(TOKEN_OPERATOR_OR) = Chr$(SYNTAX_OPERATOR_OR)
+    Let TokenNames(TOKEN_OPERATOR_AND) = Chr$(SYNTAX_OPERATOR_AND)
+    Let TokenNames(TOKEN_OPERATOR_NOT) = Chr$(SYNTAX_OPERATOR_NOT)
+    Let TokenNames(TOKEN_OPERATOR_XOR) = Chr$(SYNTAX_OPERATOR_XOR)
     
     'Keywords .........................................................................
     Let TokenNames(TOKEN_KEYWORD_AT) = "AT"
@@ -310,18 +315,18 @@ Private Sub Class_Initialize()
     Let TokenNames(TOKEN_PREFIX_KB) = "KB"
     Let TokenNames(TOKEN_PREFIX_KBIT) = "KBIT"
     
-    Let TokenNames(TOKEN_PARENOPEN) = Chr$(SYNTAX.SYNTAX_PAREN_OPEN)
-    Let TokenNames(TOKEN_PARENCLOSE) = Chr$(SYNTAX.SYNTAX_PAREN_CLOSE)
-    Let TokenNames(TOKEN_BLOCKOPEN) = Chr$(SYNTAX.SYNTAX_BLOCK_OPEN)
-    Let TokenNames(TOKEN_BLOCKCLOSE) = Chr$(SYNTAX.SYNTAX_BLOCK_CLOSE)
+    Let TokenNames(TOKEN_PARENOPEN) = Chr$(SYNTAX_PAREN_OPEN)
+    Let TokenNames(TOKEN_PARENCLOSE) = Chr$(SYNTAX_PAREN_CLOSE)
+    Let TokenNames(TOKEN_BLOCKOPEN) = Chr$(SYNTAX_BLOCK_OPEN)
+    Let TokenNames(TOKEN_BLOCKCLOSE) = Chr$(SYNTAX_BLOCK_CLOSE)
     
-    Let TokenNames(TOKEN_QUOTE) = Chr$(SYNTAX.SYNTAX_QUOTE)
-    Let TokenNames(TOKEN_LABEL) = Chr$(SYNTAX.SYNTAX_LABEL)
-    Let TokenNames(TOKEN_PROPERTY_USE) = Chr$(SYNTAX.SYNTAX_PROPERTY)
-    Let TokenNames(TOKEN_PROPERTY_NEW) = Chr$(SYNTAX.SYNTAX_PROPERTY)
-    Let TokenNames(TOKEN_RAM) = Chr$(SYNTAX.SYNTAX_NUMBER_HEX) & Chr$(SYNTAX.SYNTAX_PROPERTY)
-    Let TokenNames(TOKEN_SECTION) = String(2, Chr$(SYNTAX.SYNTAX_LABEL))
-    Let TokenNames(TOKEN_VARIABLE) = Chr$(SYNTAX.SYNTAX_VARIABLE)
+    Let TokenNames(TOKEN_QUOTE) = Chr$(SYNTAX_QUOTE)
+    Let TokenNames(TOKEN_LABEL) = Chr$(SYNTAX_LABEL)
+    Let TokenNames(TOKEN_PROPERTY_USE) = Chr$(SYNTAX_PROPERTY)
+    Let TokenNames(TOKEN_PROPERTY_NEW) = Chr$(SYNTAX_PROPERTY)
+    Let TokenNames(TOKEN_RAM) = Chr$(SYNTAX_NUMBER_HEX) & Chr$(SYNTAX_PROPERTY)
+    Let TokenNames(TOKEN_SECTION) = String(2, Chr$(SYNTAX_LABEL))
+    Let TokenNames(TOKEN_VARIABLE) = Chr$(SYNTAX_VARIABLE)
     
     '----------------------------------------------------------------------------------
     
@@ -330,7 +335,7 @@ Private Sub Class_Initialize()
     Dim ii As OZ80_TOKEN
     For ii = 0 To 255
         'Is this a visible, allowed ASCII-code?
-        Let IsValid(ii) = (ii = ASC_TAB) Or (ii >= ASC_SPC And ii <= ASC_RB)
+        Let IsValid(ii) = (ii = ASC_TAB) Or (ii >= ASC_SPC And ii < ASC_DEL)
         
         'Is this a number?
         If ii >= ASC_0 And ii <= ASC_9 Then
@@ -466,6 +471,10 @@ Public Property Get EOF() As Boolean
     Let EOF = CBool(TokenIndex >= TokenCount)
 End Property
 
+'PROPERTY Error : Expose the internal error number _
+ ======================================================================================
+Public Property Get Error() As OZ80_ERROR: Let Error = My_Error: End Property
+
 'PROPERTY Index : Current location within the tokenStream _
  ======================================================================================
 Public Property Get Index() As Long: Let Index = TokenIndex: End Property
@@ -551,7 +560,7 @@ Public Function Forward() As Boolean
     Let TokenIndex = TokenIndex + 1
     Call CacheToken
     
-    If TokenIndex > TokenCount Then Exit Function
+    If TokenIndex >= TokenCount Then Exit Function
     Let Forward = True
     
     'Generate a debug message with the details of the now-current token
@@ -570,6 +579,7 @@ End Sub
 Public Function Tokenise(ByRef FilePath As String) As OZ80_ERROR
     'This function is tuned for speed -- it does not conform to "best practices", _
      or even structured code; GOTOs are fast, deal with it
+    Let My_Error = OZ80_ERROR_NONE
     
     'Measure the time this takes
     Call Stopwatch.Reset
@@ -587,11 +597,8 @@ Public Function Tokenise(ByRef FilePath As String) As OZ80_ERROR
     
     'Read the whole file into a single string _
      ----------------------------------------------------------------------------------
-    Dim FileNumber As String
-    Let FileNumber = FreeFile
-    
     'Check the file even exists first...
-    If Not FileExists(FilePath) Then Let Tokenise = RaiseError( _
+    If Not FileExists(FilePath) Then Call RaiseError( _
         OZ80_ERROR_FILENOTFOUND _
     ): GoTo Finish
     
@@ -600,6 +607,7 @@ Public Function Tokenise(ByRef FilePath As String) As OZ80_ERROR
     
     'Once the file is open, ensure it's closed upon error
     On Error GoTo ErrorOpenFile
+    Dim FileNumber As Integer: Let FileNumber = FreeFile
     Open FilePath For Input Access Read Lock Write As #FileNumber
     
     'Read the file as a binary string with one-byte per character (ASCII). _
@@ -676,7 +684,7 @@ ReadChar:
     End If
     
     'Read a character:
-    Dim AscChar As SYNTAX
+    Dim AscChar As ASCII
     Let AscChar = Text(TextPos)
     
     'Keep track of line and column position in the source file _
@@ -754,6 +762,7 @@ ReadChar:
             If AscChar = SYNTAX_OPERATOR_OR Then GoTo Punctuation
             If AscChar = SYNTAX_OPERATOR_AND Then GoTo Punctuation
             If AscChar = SYNTAX_OPERATOR_NOT Then GoTo Punctuation
+            If AscChar = SYNTAX_OPERATOR_XOR Then GoTo Punctuation
         Else
             'A word is underway, check for end of line
             If AscChar = ASC_LF Then
@@ -785,6 +794,7 @@ ReadChar:
             If AscChar = SYNTAX_OPERATOR_OR Then GoTo WordBreak
             If AscChar = SYNTAX_OPERATOR_AND Then GoTo WordBreak
             If AscChar = SYNTAX_OPERATOR_NOT Then GoTo WordBreak
+            If AscChar = SYNTAX_OPERATOR_XOR Then GoTo WordBreak
         End If
         
         'Is this a quote? (in which case, ignore wordbreaks until quote end). _
@@ -804,8 +814,6 @@ ReadChar:
         
     'Strings: .........................................................................
     Else
-        'TODO: skip tabs and line breaks -- not possible yet due to the memcopy! _
-               -- will need to copy into a second byte array? filter array?
         'Skip over the closing quote so that it doesn't get tokenised
         If AscChar = SYNTAX_QUOTE Then Let IsQuote = False: GoTo EndWord
         
@@ -818,11 +826,12 @@ NextChar:
      of the word and flag as word in-progress
     If Not IsWord Then
         Let WordBegin = TextPos: Let LineBegin = Line: Let ColBegin = Col
-        Let IsWord = True
+        Let WordLen = 0: Let IsWord = True
     End If
     'Since this is a valid letter, capture it and increase the valid word length
     Let WordArr(WordLen) = AscChar
     Let WordLen = WordLen + 1
+    'Increase our word buffer if the word gets too long (likely a string)
     If WordLen > WordArrLimit Then
         Let WordArrLimit = WordArrLimit + 256
         ReDim Preserve WordArr(WordArrLimit) As Byte
@@ -833,6 +842,7 @@ NextChar:
 Punctuation:
     Let WordBegin = TextPos
     Let WordEnd = TextPos
+    Let WordArr(0) = AscChar
     Let WordLen = 1
     GoTo TokenWord
     
@@ -882,7 +892,7 @@ TokenWord:
                 Stop
                 
                 'ERROR: Invalid number!
-                Let Tokenise = RaiseError(OZ80_ERROR_INVALIDNUMBER_DEC)
+                Call RaiseError(OZ80_ERROR_INVALID_NUMBER_DEC)
                 GoTo Finish
             Else
                 'Convert the number from ASCII codes into a value
@@ -923,7 +933,7 @@ TokenWord:
        And Asc2 = SYNTAX_PROPERTY Then
         'ERROR: Invalid RAM name?
         If Not IsValidName() Then
-            Let Tokenise = RaiseError(OZ80_ERROR_INVALIDNAME_RAM)
+            Call RaiseError(OZ80_ERROR_INVALID_NAME_RAM)
             GoTo Finish
         End If
         
@@ -938,8 +948,8 @@ TokenWord:
         'Check the digits are 0-9, A-F
         For ii = 1 To WordLen - 1
             'ERROR: Invalid hexadecimal number!
-            If IsHex(WordArr(ii)) = False Then Let Tokenise = RaiseError( _
-                OZ80_ERROR_INVALIDNUMBER_HEX _
+            If IsHex(WordArr(ii)) = False Then Call RaiseError( _
+                OZ80_ERROR_INVALID_NUMBER_HEX _
             ): GoTo Finish
         Next ii
         'Any more than 8-digits will be an overflow (32-bit number maximum)
@@ -967,15 +977,13 @@ TokenWord:
         'A label cannot begin with a number but must otherwise be A-Z, 0-9 and "_"
         ElseIf Not IsValidName() Then
             'TODO: Label specific error message
-            Let Tokenise = RaiseError(OZ80_ERROR_INVALIDNAME)
+            Call RaiseError(OZ80_ERROR_INVALID_NAME)
             GoTo Finish
         Else
             'Is this a section name (`::section`) or regular label (`:label`)?
-            If Asc2 = SYNTAX_LABEL Then
-                Call AddString(TOKEN_SECTION)
-            Else
+            If Asc2 = SYNTAX_LABEL Then _
+                Call AddString(TOKEN_SECTION) Else _
                 Call AddString(TOKEN_LABEL)
-            End If
             GoTo NextWord
         End If
     
@@ -990,23 +998,21 @@ TokenWord:
         '-- currently undecided about this
         If Asc2 = ASC_NUL Then
             'TODO: Property specific error message
-            Let Tokenise = RaiseError(OZ80_ERROR_INVALIDNAME)
+            Call RaiseError(OZ80_ERROR_INVALID_NAME)
             GoTo Finish
             GoTo NextWord
         
         'A property cannot begin with a number but must otherwise be A-Z, 0-9 and "_"
         ElseIf Not IsValidName() Then
             'TODO: Property specific error message
-            Let Tokenise = RaiseError(OZ80_ERROR_INVALIDNAME)
+            Call RaiseError(OZ80_ERROR_INVALID_NAME)
             GoTo Finish
         Else
             'If the property appears on a new line, it's a label-property definition _
              i.e. it defines a new sub-label of a block
-            If LineBegin <> PrevLine Then
-                Call AddString(TOKEN_PROPERTY_NEW)
-            Else
+            If LineBegin <> PrevLine Then _
+                Call AddString(TOKEN_PROPERTY_NEW) Else _
                 Call AddString(TOKEN_PROPERTY_USE)
-            End If
             GoTo NextWord
         End If
     
@@ -1016,7 +1022,7 @@ TokenWord:
         'A variable cannot begin with a number but must otherwise be A-Z, 0-9 and "_"
         If (Asc2 = ASC_NUL) Or (Not IsValidName()) Then
             'TODO: Variable specific error message
-            Let Tokenise = RaiseError(OZ80_ERROR_INVALIDNAME)
+            Call RaiseError(OZ80_ERROR_INVALID_NAME)
             GoTo Finish
         Else
             Call AddString(TOKEN_VARIABLE)
@@ -1293,6 +1299,8 @@ TokenWord:
         Call Add(TOKEN_OPERATOR_AND): GoTo NextWord
     ElseIf Asc1 = SYNTAX_OPERATOR_NOT Then '................................... `!` ...
         Call Add(TOKEN_OPERATOR_NOT): GoTo NextWord
+    ElseIf Asc1 = SYNTAX_OPERATOR_XOR Then '................................... `~` ...
+        Call Add(TOKEN_OPERATOR_XOR): GoTo NextWord
     End If
     
     'Z80 Registers: _
@@ -1358,9 +1366,7 @@ NextWord:
 GetWord:
     'Build a string of the word from the byte array
     Let Word = vbNullString
-    For ii = 0 To WordLen - 1
-        Let Word = Word & Chr$(WordArr(ii))
-    Next ii
+    For ii = 0 To WordLen - 1: Let Word = Word & Chr$(WordArr(ii)): Next ii
     Return
 
     '----------------------------------------------------------------------------------
@@ -1369,21 +1375,21 @@ ErrorOpenFile:
     On Error GoTo 0
     Close #FileNumber
     'TODO: Send the system error details, Err.Number / Err.Description
-    Let Tokenise = RaiseError(OZ80_ERROR_FILEREAD)
+    Call RaiseError(OZ80_ERROR_FILEREAD)
     GoTo Finish
 
 ErrorOverflow: '.......................................................................
     On Error GoTo 0
-    Let Tokenise = RaiseError(OZ80_ERROR_OVERFLOW)
+    Call RaiseError(OZ80_ERROR_OVERFLOW)
     GoTo Finish
     
 WordError: '...........................................................................
-    Let Tokenise = RaiseError(OZ80_ERROR_INVALIDWORD)
+    Call RaiseError(OZ80_ERROR_INVALID_WORD)
     GoTo Finish
     
     '----------------------------------------------------------------------------------
 Finish:
-    If Tokenise = OZ80_ERROR_NONE Then
+    If My_Error = OZ80_ERROR_NONE Then
         'Reduce the buffer to the final size
         Let TokenLimit = TokenCount - 1
         ReDim Preserve Tokens(0 To TokenLimit) As oz80Token
@@ -1405,6 +1411,9 @@ Finish:
         Erase Tokens
         Let TokenCount = 0
     End If
+    
+    'Return the error number to the assembler
+    Let Tokenise = My_Error
 End Function
 
 '/// PRIVATE PROCEDURES ///////////////////////////////////////////////////////////////
@@ -1461,10 +1470,10 @@ Private Sub AddString( _
     'Note Line & Col numbers are global variables to this class to save having to _
      use them in calls hundreds of times over. Again, speed over properness
     
+    'Convert the word buffer into a string
     Dim Data As String, ii As Long
-    For ii = 0 To WordLen - 1
-        Let Data = Data & Chr$(WordArr(ii))
-    Next ii
+    For ii = 0 To WordLen - 1: Let Data = Data & Chr$(WordArr(ii)): Next ii
+    'Ignore the quote mark that is left on the front of OZ80 strings
     If Token = TOKEN_QUOTE Then Let Data = Mid$(Data, 2)
     
     'Hash the string to quickly identify if it has already been added
@@ -1504,10 +1513,9 @@ Private Function CompStr( _
      strings in the parsing routine
     
     'If the lengths don't match then they can't be the same
-    'Note the use of an evil private class variable here to save having to pass it _
-     to this function hundreds of times
     If WordLen <> Len(CompText) Then Exit Function
     
+    'Cast the string parameter into a byte array
     Dim TextArray() As Byte
     Let TextArray = oz80.CRC.CastStringToArray(CompText)
     
@@ -1665,11 +1673,10 @@ End Function
 
 'RiaseError : Provide error details through an event _
  ======================================================================================
-Private Function RaiseError(ByRef Number As OZ80_ERROR) As OZ80_ERROR
+Private Sub RaiseError(ByRef Number As OZ80_ERROR)
+    'Set the error number on this class
+    Let My_Error = Number
+    
     'Send the error to the controller (if it sinks events)
     RaiseEvent Error(Number, LineBegin, ColBegin)
-    
-    'We return the same error number we were given only to make the tail recursion _
-     simpler, e.g. `let TokeniseFile = RaiseError(OZ80_ERROR_...`
-    Let RaiseError = Number
-End Function
+End Sub

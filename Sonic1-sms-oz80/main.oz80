@@ -5,12 +5,12 @@
 
 PROC    :decompressArt                  SECTION ::main
         `====================================================================[$0405]===
-PARAMS	hl	`relative address from the beginning of the intended bank (A)
-	de	`VDP register number (D) and value byte (E) to send to the VDP
-	a	`bank number for the relative address HL
+PARAMS	hl	        `relative address from the beginning of the intended bank (A)
+	de	        `VDP register number (D) and value byte (E) to send to the VDP
+	a;bank	        `bank number for the relative address HL
 {
 	di				`disable interrupts
-._1	push	af			`remember the A parameter
+._1	push	af;bank			`remember the A parameter
 	
 	`--- determine bank number ----------------------------------------------------
 	
@@ -27,19 +27,19 @@ PARAMS	hl	`relative address from the beginning of the intended bank (A)
 	`restore the A parameter (the starting bank number) and increase it so that
 	 `HL now represents a relative address from the next bank up. this would mean
 	 `that instead of paging in, for example, banks 9 & 10, we would get 10 & 11
-	pop	af
-	inc	a
+	pop	af;bank
+	inc	a;bank
 	jp	._1
 	
 	`--- configure the VDP --------------------------------------------------------
 	
 ._2	ld	a, e			`load the second byte from the DE parameter
-	out	(#SMS_VDP_CONTROL), a	`send as the value byte to the VDP
+	out	($.VDP_CONTROL), a	`send as the value byte to the VDP
 	
 	ld	a, d
 	or	%01000000		`add bit 7 (that is, convert A to a
 					 `VDP control register number)
-	out	(#SMS_VDP_CONTROL), a	`send it to the VDP
+	out	($.VDP_CONTROL), a	`send it to the VDP
 	
 	`--- switch banks -------------------------------------------------------------
 	
@@ -54,10 +54,10 @@ PARAMS	hl	`relative address from the beginning of the intended bank (A)
 	push	de
 	
 	`change pages 1 & 2 (Z80:$4000-$BFFF) to banks A & A+1
-	ld	(#SMS_PAGE_1), a
+	ld	($.SMS_PAGE_1), a
 	ld	($.PAGE_1), a
 	inc	a
-	ld	(#SMS_PAGE_2), a
+	ld	($.SMS_PAGE_2), a
 	ld	($.PAGE_2), a
 	
 	`--- read header --------------------------------------------------------------
@@ -178,22 +178,22 @@ PARAMS	hl	`relative address from the beginning of the intended bank (A)
 	
 	`write 1 row of pixels (4 bytes) to the VDP
 	ld	a, (bc)
-	out	(#SMS_VDP_DATA), a
+	out	($.VDP_DATA), a
 	inc	bc
 	nop
 	nop
 	ld	a, (bc)
-	out	(#SMS_VDP_DATA), a
+	out	($.VDP_DATA), a
 	inc	bc
 	nop
 	nop
 	ld	a, (bc)
-	out	(#SMS_VDP_DATA), a
+	out	($.VDP_DATA), a
 	inc	bc
 	nop
 	nop
 	ld	a, (bc)
-	out	(#SMS_VDP_DATA), a
+	out	($.VDP_DATA), a
 	inc	bc
 	
 	`swap BC/DE/HL back again
@@ -244,22 +244,22 @@ PARAMS	hl	`relative address from the beginning of the intended bank (A)
 	
 	`write 1 row of pixels (4 bytes) to the VDP
 	ld	a, (hl)			
-	out	(#SMS_VDP_DATA), a
+	out	($.VDP_DATA), a
 	inc	hl
 	nop
 	nop
 	ld	a, (hl)
-	out	(#SMS_VDP_DATA), a
+	out	($.VDP_DATA), a
 	inc	hl
 	nop
 	nop
 	ld	a, (hl)
-	out	(#SMS_VDP_DATA), a
+	out	($.VDP_DATA), a
 	inc	hl
 	nop
 	nop
 	ld	a, (hl)
-	out	(#SMS_VDP_DATA), a
+	out	($.VDP_DATA), a
 	inc	hl
 	
 	`decrease the remaining row count
@@ -276,7 +276,7 @@ PARAMS	hl	`relative address from the beginning of the intended bank (A)
 ._6	`restore the pages to the original banks at the beginning of the procedure
 	pop	de
 	ld	($.PAGE_1), de
-	ld	(#SMS_PAGE_1), de
+	ld	($.SMS_PAGE_1), de
 	
 	ei
 	res	1, (iy+#vars.flags9)
@@ -295,19 +295,19 @@ PARAMS	hl	`relative address from the beginning of the intended bank (A)
 
 PROC    :decompressScreen               SECTION ::main
         `====================================================================[$0501]===
-PARAMS	bc	`length of the compressed data
-	de	`VDP register number (D) and value byte (E) to send to the VDP
-	hl	`absolute address to the start of the compressed screen data
+PARAMS	bc	        `length of the compressed data
+	de	        `VDP register number (D) and value byte (E) to send to the VDP
+	hl	        `absolute address to the start of the compressed screen data
 {        
 	di				`disable interrupts
 	
 	`configure the VDP based on the DE parameter
 	ld	a, e
-	out	(#SMS_VDP_CONTROL), a
+	out	($.VDP_CONTROL), a
 	ld	a, d
 	or	%01000000		`add bit 7 (that is, convert A to a
 					 `VDP control register number)
-	out	(#SMS_VDP_CONTROL), a
+	out	($.VDP_CONTROL), a
 	
 	ei				`enable interrupts
 	
@@ -331,11 +331,11 @@ PARAMS	bc	`length of the compressed data
 	jr	z, .skip		
 	
 	`--- uncompressed byte --------------------------------------------------------
-	out	(#SMS_VDP_DATA), a	`send the tile to the VDP
+	out	($.VDP_DATA), a	`send the tile to the VDP
 	ld	e, a			`update the "current byte" being compared
 	ld	a, ($.TEMP1)		`get the upper byte to use for the tiles
 					 `(foreground / background / flip)
-	out	(#SMS_VDP_DATA), a
+	out	($.VDP_DATA), a
 	
 	inc	hl			`move to the next byte
 	dec	bc			`decrease the remaining bytes to read
@@ -359,10 +359,10 @@ PARAMS	bc	`length of the compressed data
 	jr	z, .multiSkip
 	
 	`repeat the byte
-._4	out	(#SMS_VDP_DATA), a
+._4	out	($.VDP_DATA), a
 	push	af
 	ld	a, ($.TEMP1)
-	out	(#SMS_VDP_DATA), a
+	out	($.VDP_DATA), a
 	pop	af
 	dec	e
 	jp	nz, ._4
@@ -381,11 +381,11 @@ PARAMS	bc	`length of the compressed data
 	
 .skip
 	ld	e, a
-	in	a, (#SMS_VDP_DATA)
+	in	a, ($.VDP_DATA)
 	nop
 	inc	hl
 	dec	bc
-	in	a, (#SMS_VDP_DATA)
+	in	a, ($.VDP_DATA)
 	
 	ld	a, b
 	or	c
@@ -395,10 +395,10 @@ PARAMS	bc	`length of the compressed data
 	ret
 
 .multiSkip
-	in	a, (#SMS_VDP_DATA)
+	in	a, ($.VDP_DATA)
 	push	af
 	pop	af
-	in	a, (#SMS_VDP_DATA)
+	in	a, ($.VDP_DATA)
 	nop
 	dec	e
 	jp	nz, .multiSkip
@@ -407,14 +407,14 @@ PARAMS	bc	`length of the compressed data
 
 PROC    :loadPalette                    SECTION ::main
         `====================================================================[$0566]===
-PARAMS	a	`which palette(s) to set
-		 `bit 0 - tile palette (0-15)
-		 `bit 1 - sprite palette (16-31)
-	hl	`address of palette
+PARAMS	a;flags	        `which palette(s) to set
+                         `bit 0 - tile palette (0-15)
+                         `bit 1 - sprite palette (16-31)
+	hl;addr         `address of palette
 RETURN	$.LOADPALETTE_TILE,
 	$.LOADPALETTE_SPRITE
 {        
-	push	af
+	push	af;flags
 	
 	ld	b, 16			`we will copy 16 colours
 	ld	c, 0			`beginning at palette index 0 (tiles)
@@ -425,18 +425,18 @@ RETURN	$.LOADPALETTE_TILE,
 	ld	($.LOADPALETTE_TILE), hl
 	call	.sendPalette		`send the palette colours to the VDP
 	
-._1	pop	af
+._1	pop	af;flags
 	
-	bit	1, a			`are we loading a sprite palette?
+	bit	1, a;flags		`are we loading a sprite palette?
 	ret	z			`if no, finish here
 	
 	`store the address of the sprite palette
-	ld	($.LOADPALETTE_SPRITE), hl
+	ld	($.LOADPALETTE_SPRITE), hl;addr
 	
 	ld	b, 16			`we will copy 16 colours
 	ld	c, 16			`beginning at palette index 16 (sprites)
 	
-	bit	0, a			`if loading both tile and sprite palette	
+	bit	0, a;flags		`if loading both tile and sprite palette	
 	jr	nz, .sendPalette	 `then stick with what we've set and do it
 	
 	`if loading sprite palette only, then ignore the first colour
@@ -448,9 +448,9 @@ RETURN	$.LOADPALETTE_TILE,
 	
 .sendPalette
 	ld	a, c			`send the palette index number to begin at
-	out	(#SMS_VDP_CONTROL), a
+	out	($.VDP_CONTROL), a
 	ld	a, %11000000		`specify palette operation (bits 7 & 6)
-	out	(#SMS_VDP_CONTROL), a
+	out	($.VDP_CONTROL), a
 	ld	c, $BE			`send the colours to the palette
 	otir
 	ret
@@ -460,22 +460,23 @@ PROC    :clearVRAM                      SECTION ::main
         `====================================================================[$0595]===
         `called only by `::interrupts:init`
         
-PARAMS	hl,	`VRAM address
-	bc,	`length
-	a	`value
+PARAMS	hl;addr 	`VRAM address
+	bc;size 	`length
+	a;value	        `value
 {        
-	ld	e, a
+	ld	e;value, a;value        `temporarily shift the value to E
 	ld	a, l
-	out	(#SMS_VDP_CONTROL), a
+	out	($.VDP_CONTROL), a
 	ld	a, h
 	or	%01000000
-	out	(#SMS_VDP_CONTROL), a
+	out	($.VDP_CONTROL), a
 	
-.loop	ld	a, e
-	out	(#SMS_VDP_DATA), a
-	dec	bc
-	ld	a, b
-	or	c
+.loop	ld	a;value, e;value        `return the value to A
+	out	($.VDP_DATA), a;value   `send it to the VDP
+	
+        dec	bc;size
+	ld	a;size, b;size
+	or	c;size
 	jr	nz, .loop
 	ret
 }
@@ -484,7 +485,7 @@ PROC    :readJoypad                     SECTION ::main
         `====================================================================[$05A7]===
 RETURN	iy+#vars.joypad
 {       
-	in	a, (#SMS_JOYPAD_1)	`read the joypad port
+	in	a, ($.SMS_JOYPAD_1)	`read the joypad port
 	or	%11000000		`mask out bits 7 & 6 - these are joypad 2
 					 `down / up
 	ld	(iy+#vars.joypad), a	`store the joypad value in $D203
@@ -523,16 +524,16 @@ PARAMS	hl      `address to memory with column & row numbers,
 	ex	de, hl
 	sla	c			`multiply column number by 2 (16-bit values)
 	add	hl, bc
-	ld	bc, #SMS_VDP_SCREENNAMETABLE
+	ld	bc, $.VDP_SCREENNAMETABLE
 	add	hl, bc
 	
 	`set the VDP to point to the screen address calculated
 	di
 	ld	a, l
-	out	(#SMS_VDP_CONTROL), a
+	out	($.VDP_CONTROL), a
 	ld	a, h
 	or	%01000000
-	out	(#SMS_VDP_CONTROL), a
+	out	($.VDP_CONTROL), a
 	ei
 
 	`read bytes from memory until hitting $FF
@@ -540,12 +541,12 @@ PARAMS	hl      `address to memory with column & row numbers,
 	cp	$FF
 	ret	z
 	
-	out	(#SMS_VDP_DATA), a
+	out	($.VDP_DATA), a
 	push	af			`kill time?
 	pop	af
 	ld	a, ($.TEMP1)		`what to use as the tile upper bits
 					 `(front/back, flip &c.)
-	out	(#SMS_VDP_DATA), a
+	out	($.VDP_DATA), a
 	inc	de
 	djnz	.loop
 	
@@ -780,10 +781,10 @@ PROC    :fillOverscrollCache            SECTION ::main
 	di	
 	`switch pages 1 & 2 ($4000-$BFFF) to banks 4 & 5 ($10000-$17FFF)
 	ld	a,:S1_BlockMappings.bank
-	ld	(#SMS_PAGE_1),a
+	ld	($.SMS_PAGE_1),a
 	ld	($.PAGE_1),a
 	ld	a,:S1_BlockMappings.bank+1
-	ld	(#SMS_PAGE_2),a
+	ld	($.SMS_PAGE_2),a
 	ld	($.PAGE_2),a
 	ei	
 	
@@ -996,9 +997,7 @@ PROC    :fillScrollTiles                SECTION ::main
 	jp	z, ._4
 	
 	exx
-	push	hl;stack
-	push	de;stack
-	push	bc;stack
+	push	hl;stack, de;stack, bc;stack
 	
 	`------------------------------------------------------------------------------
 	`calculate the number of bytes to offset by to get to the correct row in the
@@ -1034,7 +1033,7 @@ PROC    :fillScrollTiles                SECTION ::main
 	add	a, c
 	ld	c, a
 	
-	ld	hl, #SMS_VDP_SCREENNAMETABLE
+	ld	hl, $.VDP_SCREENNAMETABLE
 	add	hl, bc			`offset to the top of the column needed
 	set	6, h			`add bit 6 to label as a VDP VRAM address
 	
@@ -1064,9 +1063,9 @@ PROC    :fillScrollTiles                SECTION ::main
 	`set the VDP address calculated earlier
 ._2	exx
 	ld	a, l
-	out	(#SMS_VDP_CONTROL), a
+	out	($.VDP_CONTROL), a
 	ld	a, h
-	out	(#SMS_VDP_CONTROL), a
+	out	($.VDP_CONTROL), a
 	
 	`move to the next row
 	add	hl, bc
@@ -1116,7 +1115,7 @@ PROC    :fillScrollTiles                SECTION ::main
 	srl	a
 	add	a, c
 	ld	c, a
-	ld	hl, #SMS_VDP_SCREENNAMETABLE
+	ld	hl, $.VDP_SCREENNAMETABLE
 	add	hl, bc
 	set	6, h
 	ex	de, hl
@@ -1135,11 +1134,11 @@ PROC    :fillScrollTiles                SECTION ::main
 	and	%11000000
 	ld	($.TEMP1), a
 	ld	a, e
-	out	(#SMS_VDP_CONTROL), a
+	out	($.VDP_CONTROL), a
 	and	$3F
 	ld	e, a
 	ld	a, d
-	out	(#SMS_VDP_CONTROL), a
+	out	($.VDP_CONTROL), a
 	ld	b, $3E
 	ld	c, $BE
 
@@ -1153,9 +1152,9 @@ PROC    :fillScrollTiles                SECTION ::main
 	ret
 
 ._8	ld	a, ($.TEMP1)
-	out	(#SMS_VDP_CONTROL), a
+	out	($.VDP_CONTROL), a
 	ld	a, d
-	out	(#SMS_VDP_CONTROL), a
+	out	($.VDP_CONTROL), a
 	
 ._9	outi
 	outi
@@ -1287,18 +1286,18 @@ PROC    :fillScreenWithFloorLayout      SECTION ::main
 {        
 	`page in banks 4 & 5 (containing the block mappings)
 	di				`disable interrupts
-	ld	a,:S1_BlockMappings.bank
-	ld	(#SMS_PAGE_1),a
-	ld	($.PAGE_1),a
-	ld	a,:S1_BlockMappings.bank + 1
-	ld	(#SMS_PAGE_2),a
-	ld	($.PAGE_2),a
+	ld	a;bank,:S1_BlockMappings.bank
+	ld	($.SMS_PAGE_1),a;bank
+	ld	($.PAGE_1),a;bank
+	ld	a;bank,:S1_BlockMappings.bank + 1
+	ld	($.SMS_PAGE_2),a;bank
+	ld	($.PAGE_2),a;bank
 	
 	ld	bc,$0000
 	call	:getFloorLayoutRAMPosition
 	
 	`------------------------------------------------------------------------------
-	ld	de,#SMS_VDP_SCREENNAMETABLE
+	ld	de,$.VDP_SCREENNAMETABLE
 	`in 192-line mode, the screen is 6 blocks tall,
 	 `in 224-line mode it's 7 blocks tall
 	ld	b,#SMS_SCREENHEIGHT_BLOCKS
@@ -1365,45 +1364,45 @@ PROC    :fillScreenWithFloorLayout      SECTION ::main
 	
 	`set the screen name address
 ._3	ld	a,l
-	out	(#SMS_VDP_CONTROL),a
+	out	($.VDP_CONTROL),a
 	ld	a,h
 	or	%01000000
-	out	(#SMS_VDP_CONTROL),a
+	out	($.VDP_CONTROL),a
 	
 	ld	a,(de)
-	out	(#SMS_VDP_DATA),a
+	out	($.VDP_DATA),a
 	inc	de
 	exx	
 	ld	a,c
 	exx	
-	out	(#SMS_VDP_DATA),a
+	out	($.VDP_DATA),a
 	nop	
 	nop	
 	ld	a,(de)
-	out	(#SMS_VDP_DATA),a
+	out	($.VDP_DATA),a
 	inc	de
 	exx	
 	ld	a,c
 	exx	
-	out	(#SMS_VDP_DATA),a
+	out	($.VDP_DATA),a
 	nop	
 	nop	
 	ld	a,(de)
-	out	(#SMS_VDP_DATA),a
+	out	($.VDP_DATA),a
 	inc	de
 	exx	
 	ld	a,c
 	exx	
-	out	(#SMS_VDP_DATA),a
+	out	($.VDP_DATA),a
 	nop	
 	nop	
 	ld	a,(de)
-	out	(#SMS_VDP_DATA),a
+	out	($.VDP_DATA),a
 	inc	de
 	exx	
 	ld	a,c
 	exx	
-	out	(#SMS_VDP_DATA),a
+	out	($.VDP_DATA),a
 	ld	a,b
 	ld	bc,64
 	add	hl,bc
@@ -1438,50 +1437,50 @@ PROC    :fillScreenWithFloorLayout      SECTION ::main
 
 PROC    :loadFloorLayout                SECTION ::main
         `====================================================================[$0A10]===
-PARAMS	hl	`address of Floor Layout data
-	bc	`length of compressed data
+PARAMS	hl;addr         `address of Floor Layout data
+	bc;size	        `length of compressed data
 {        
-	ld	de,$.FLOORLAYOUT	`where in RAM the floor layout will go
+	ld	de;floor,$.FLOORLAYOUT	`where in RAM the floor layout will go
 
 	`RLE decompress floor layout:
 	`------------------------------------------------------------------------------
-._1	ld	a,(hl)		`read the first byte of the floor layout
-	cpl			`flip it to avoid first byte comparison
-	ld	(iy+$01),a	`this is the comparison byte
+._1	ld	a,(hl;floor)	        `read the first byte of the floor layout
+	cpl			        `flip it to avoid first byte comparison
+	ld	(iy+$01),a	        `this is the comparison byte
 
-._2	ld	a,(hl)		`read the current byte
-	cp	(iy+$01)	`is it the same as the comparison byte?
-	jr	z,._3		`if so, decompress it
+._2	ld	a,(hl;floor)            `read the current byte
+	cp	(iy+$01)	        `is it the same as the comparison byte?
+	jr	z,._3		        `if so, decompress it
 	
 	`copy byte as normal:
-	ld	(de),a		`write it to RAM	
-	ld	(iy+$01),a	`update the comparison byte
-	inc	hl		`move forward
+	ld	(de),a		        `write it to RAM	
+	ld	(iy+$01),a	        `update the comparison byte
+	inc	hl		        `move forward
 	inc	de
-	dec	bc		`count count of remaining bytes
-	ld	a,b		`are there remaining bytes?
+	dec	bc		        `count count of remaining bytes
+	ld	a,b		        `are there remaining bytes?
 	or	c
-	jp	nz,._2		`if so continue
-	ret 			`otherwise, finish
+	jp	nz,._2		        `if so continue
+	ret 			        `otherwise, finish
 
 	`if the last two bytes of the data are duplicates, don't try decompress
 	 `further when there is no more data to be read!
-._3	dec	bc		`reduce count of remaining bytes
-	ld	a,b		`are there remaining bytes?
+._3	dec	bc		        `reduce count of remaining bytes
+	ld	a,b		        `are there remaining bytes?
 	or	c
-	ret	z		`if not, finish
+	ret	z		        `if not, finish
 	
-	ld	a,(hl)		`read the value to repeat
-	inc	hl		`move to the next byte (the repeat count)
-	push	bc		`put BC (length of compressed data) to the side
-	ld	b,(hl)		`get the repeat count
+	ld	a,(hl)		        `read the value to repeat
+	inc	hl		        `move to the next byte (the repeat count)
+	push	bc		        `put BC (length of compressed data) to the side
+	ld	b,(hl)	        	`get the repeat count
 	
-._4	ld	(de),a		`write value to RAM
-	inc	de		`move forward in RAM
-	djnz	._4		`continue until repeating is complete
+._4	ld	(de),a		        `write value to RAM
+	inc	de		        `move forward in RAM
+	djnz	._4		        `continue until repeating is complete
 	
-	pop	bc		`retrieve the data length
-	inc	hl		`move forward in the compressed data
+	pop	bc		        `retrieve the data length
+	inc	hl		        `move forward in the compressed data
 	
 	`check if bytes remain
 	dec	bc
@@ -1495,10 +1494,10 @@ PROC    :fadeOut                        SECTION ::main
         `====================================================================[$0A40]===
 {        
 	ld	a, 1
-	ld	(#SMS_PAGE_1), a
+	ld	($.SMS_PAGE_1), a
 	ld	($.PAGE_1), a
 	ld	a, 2
-	ld	(#SMS_PAGE_2), a
+	ld	($.SMS_PAGE_2), a
 	ld	($.PAGE_2), a
 	
 	ld	a, (iy+#vars.spriteUpdateCount)
@@ -1524,8 +1523,8 @@ PROC    :fadeOut                        SECTION ::main
 	call	:darkenPalette
 	
 	`load the darkened palette on the next interrupt
-	ld	hl, $.PALETTE
-	ld	a, %00000011
+	ld	hl;addr, $.PALETTE
+	ld	a;flags, %00000011
 	call	:loadPaletteOnInterrupt
 	
 	`wait 10 frames
@@ -1597,12 +1596,12 @@ PARAMS  hl
 	ld	bc,32
 	ldir	
 	
-	ld	a,1
-	ld	(#SMS_PAGE_1),a
-	ld	($.PAGE_1),a
-	ld	a,2
-	ld	(#SMS_PAGE_2),a
-	ld	($.PAGE_2),a
+	ld	a;bank,1
+	ld	($.SMS_PAGE_1),a;bank
+	ld	($.PAGE_1),a;bank
+	ld	a;bank,2
+	ld	($.SMS_PAGE_2),a;bank
+	ld	($.PAGE_2),a;bank
 	
 	`switch to using the temporary palette on screen
 	ld	hl,$.PALETTE
@@ -1715,12 +1714,12 @@ PROC    :_b60 SECTION ::main
 	ld	bc,32
 	ldir	
 	
-._1	ld	a,1
-	ld	(#SMS_PAGE_1),a
-	ld	($.PAGE_1),a
-	ld	a,2
-	ld	(#SMS_PAGE_2),a
-	ld	($.PAGE_2),a
+._1	ld	a;bank,1
+	ld	($.SMS_PAGE_1),a;bank
+	ld	($.PAGE_1),a;bank
+	ld	a;bank,2
+	ld	($.SMS_PAGE_2),a;bank
+	ld	($.PAGE_2),a;bank
 	
 	ld	hl,$.PALETTE
 	ld	a,%00000011
@@ -1785,8 +1784,8 @@ PROC    :_b60 SECTION ::main
 	pop	bc
 	djnz	._4
 	
-	ld	hl,$.PALETTE
-	ld	a,%00000011
+	ld	hl;addr,$.PALETTE
+	ld	a;flags,%00000011
 	call	:loadPaletteOnInterrupt
 	
 	ld	b,10
@@ -1847,8 +1846,8 @@ PARAMS	hl	`absolute address to uncompressed art data for the icons,
 		`($14000-$17FFF)
 {        
 	di	
-	ld	a,5			`temporarily switch to bank 5 for the function
-	ld	(#SMS_PAGE_1),a
+	ld	a;bank,5		`temporarily switch to bank 5 for the function
+	ld	($.SMS_PAGE_1),a;bank
 	
 	ld	a,($.FRAMECOUNT)
 	and	%00001111
@@ -1864,25 +1863,25 @@ PARAMS	hl	`absolute address to uncompressed art data for the icons,
 	
 	add	hl,bc
 	ld	a,l
-	out	(#SMS_VDP_CONTROL),a
+	out	($.VDP_CONTROL),a
 	ld	a,h
 	or	%01000000
-	out	(#SMS_VDP_CONTROL),a
+	out	($.VDP_CONTROL),a
 	
 	ld	b,4
 .loop	ld	a,(de)
-	out	(#SMS_VDP_DATA),a
+	out	($.VDP_DATA),a
 	nop	
 	nop	
 	inc	de
 	ld	a,(de)
-	out	(#SMS_VDP_DATA),a
+	out	($.VDP_DATA),a
 	inc	de
 	djnz	.loop
 	
 	`return to the previous bank number
-	ld	a,($.PAGE_1)
-	ld	(#SMS_PAGE_1),a
+	ld	a;bank,($.PAGE_1)
+	ld	($.SMS_PAGE_1),a;bank
 	ei	
 	ret
 }

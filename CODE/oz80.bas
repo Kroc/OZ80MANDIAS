@@ -15,6 +15,16 @@ Public CRC As New CRC32
 
 '/// ENUMS ////////////////////////////////////////////////////////////////////////////
 
+'Some expressions cannot be calculated until the Z80 code has been assembled, _
+ for example label addresses are placed after all code has been parsed and the sizes _
+ of the blocks are known. A special value is used that lies outside of the allowable _
+ range of numbers in OZ80 (32-bit) to mark an expression with a yet-unknown value
+
+'VB does not allow implicit Double (64-bit) values greater than 32-bit, _
+ a trick is used here to build the largest possible 64-bit number: _
+ <stackoverflow.com/questions/929069/how-do-i-declare-max-double-in-vb6/933490#933490>
+Public Const OZ80_INDEFINITE As Double = 1.79769313486231E+308 + 5.88768018655736E+293
+
 'This makes life a whole lot easier when processing text as ASCII codes
 Public Enum ASCII
     'Non-visible control codes:
@@ -73,6 +83,7 @@ Public Enum ASCII
     ASC_LB                              '`{` Left Brace
     ASC_VB                              '`|` Vertical Bar / Pipe
     ASC_RB                              '`}` Right Brace
+    ASC_TIL                             '`~` Tilde
     
     ASC_DEL                             '"Delete" -- non-visible
 End Enum
@@ -82,6 +93,7 @@ End Enum
 Public Enum OZ80_LOG
     OZ80_LOG_ACTION                     'The key important happenings
     OZ80_LOG_INFO                       'Optional information, not actions happening
+    OZ80_LOG_STATUS                     'Display variable values &c. when assigned
     OZ80_LOG_DEBUG                      'Internal information for debugging purposes
 End Enum
 
@@ -93,12 +105,17 @@ End Enum
 Public Enum OZ80_ERROR
     OZ80_ERROR_NONE                     'Assembly completed successfully
     OZ80_ERROR_DUPLICATE                'A name has been defined twice
-    OZ80_ERROR_DUPLICATE_BANK           '- Duplicate `BANK` parameter
+    OZ80_ERROR_DUPLICATE_PROC_PARAMS    '- Duplicate `PARAMS` parameter
+    OZ80_ERROR_DUPLICATE_PROC_RETURN    '- Duplicate `RETURN` parameter
+    OZ80_ERROR_DUPLICATE_PROC_SECTION   '- Duplicate `SECTION` parameter
     OZ80_ERROR_DUPLICATE_SECTION        '- Can't define a section twice
-    OZ80_ERROR_DUPLICATE_SLOT           '- Duplicate `SLOT` parameter
+    OZ80_ERROR_DUPLICATE_SECTION_BANK   '- Duplicate `BANK` parameter
+    OZ80_ERROR_DUPLICATE_SECTION_SLOT   '- Duplicate `SLOT` parameter
     OZ80_ERROR_ENDOFFILE                'Unexpected end of file
     OZ80_ERROR_EXPECTED                 'Incorrect content at the current scope
     OZ80_ERROR_EXPECTED_PROC_NAME       '- A label name must follow `PROC`
+    OZ80_ERROR_EXPECTED_PROC_PARAMS     '- Invalid stuff in the `PARAMS` list
+    OZ80_ERROR_EXPECTED_PROC_RETURN     '- Invalid stuff in the `RETURN` list
     OZ80_ERROR_EXPECTED_ROOT            '- Only certain keywords allowed at root
     OZ80_ERROR_EXPECTED_SECTION_NAME    '- A section name must follow `SECTION`
     OZ80_ERROR_EXPECTED_VAR_NAME        '- A variable name must follow `VAR`
@@ -107,13 +124,14 @@ Public Enum OZ80_ERROR
     OZ80_ERROR_FILENOTFOUND             'Requested file does not exist
     OZ80_ERROR_FILEREAD                 'Some kind of problem with file handle open
     OZ80_ERROR_INDEFINITE               'Indefinite value cannot be used here
-    OZ80_ERROR_INVALIDNAME              'Invalid label/property/variable name
-    OZ80_ERROR_INVALIDNAME_RAM          '- Invalid RAM name, i.e. `$.name`
-    OZ80_ERROR_INVALIDNUMBER            'Not a valid binary/hex/decimal number
-    OZ80_ERROR_INVALIDNUMBER_DEC        '- Invalid decimal number
-    OZ80_ERROR_INVALIDNUMBER_HEX        '- Invalid hexadecimal number
-    OZ80_ERROR_INVALIDNUMBER_BIN        '- Invalid binary number
-    OZ80_ERROR_INVALIDWORD              'Couldn't parse a word
+    OZ80_ERROR_INVALID_NAME             'Invalid label/property/variable name
+    OZ80_ERROR_INVALID_NAME_RAM         '- Invalid RAM name, i.e. `$.name`
+    OZ80_ERROR_INVALID_NUMBER           'Not a valid binary/hex/decimal number
+    OZ80_ERROR_INVALID_NUMBER_DEC       '- Invalid decimal number
+    OZ80_ERROR_INVALID_NUMBER_HEX       '- Invalid hexadecimal number
+    OZ80_ERROR_INVALID_NUMBER_BIN       '- Invalid binary number
+    OZ80_ERROR_INVALID_SECTION          'Section used, but not defined
+    OZ80_ERROR_INVALID_WORD             'Couldn't parse a word
     OZ80_ERROR_OVERFLOW                 'A number overflowed the maximum
 End Enum
 
@@ -197,17 +215,17 @@ Public Enum OZ80_TOKEN
     
     'Z80 Registers ....................................................................
     TOKEN_Z80_A                         'Accumulator
-    TOKEN_Z80_AF
+    TOKEN_Z80_AF                        'Accumulator and Flags
     TOKEN_Z80_B                         'Register B
-    TOKEN_Z80_C                         'Register C and Carry flag
+    TOKEN_Z80_C                         'Register C or Carry flag
     TOKEN_Z80_NC                        'Carry unset flag
-    TOKEN_Z80_BC
-    TOKEN_Z80_D
-    TOKEN_Z80_E
-    TOKEN_Z80_DE
-    TOKEN_Z80_H
-    TOKEN_Z80_L
-    TOKEN_Z80_HL
+    TOKEN_Z80_BC                        'Register pair B & C
+    TOKEN_Z80_D                         'Register D
+    TOKEN_Z80_E                         'Register E
+    TOKEN_Z80_DE                        'Register pair D & E
+    TOKEN_Z80_H                         'Register H
+    TOKEN_Z80_L                         'Register L
+    TOKEN_Z80_HL                        'Register pair H & L
     TOKEN_Z80_I                         'Interrupt - not to be confused with IX & IY
     TOKEN_Z80_IX
     TOKEN_Z80_IXL
@@ -215,15 +233,15 @@ Public Enum OZ80_TOKEN
     TOKEN_Z80_IY
     TOKEN_Z80_IYL
     TOKEN_Z80_IYH
-    TOKEN_Z80_M                         'Sign is set
-    TOKEN_Z80_P                         'Sign is not set
+    TOKEN_Z80_M                         'Sign is set flag
+    TOKEN_Z80_P                         'Sign is not set flag
     TOKEN_Z80_PC                        'Program Counter
-    TOKEN_Z80_PE                        'Parity/Overflow is set
-    TOKEN_Z80_PO                        'Parity/Overflow is not set
+    TOKEN_Z80_PE                        'Parity/Overflow is set flag
+    TOKEN_Z80_PO                        'Parity/Overflow is not set flag
     TOKEN_Z80_R                         'Refresh register (pseudo-random)
     TOKEN_Z80_SP                        'Stack Pointer
-    TOKEN_Z80_Z                         'Zero set
-    TOKEN_Z80_NZ                        'Zero not set
+    TOKEN_Z80_Z                         'Zero set flag
+    TOKEN_Z80_NZ                        'Zero not set flag
     
     'Operators ........................................................................
     [_TOKEN_OPERATORS_BEGIN]
@@ -237,6 +255,7 @@ Public Enum OZ80_TOKEN
     TOKEN_OPERATOR_OR                   'Bitwise OR "|"
     TOKEN_OPERATOR_AND                  'Bitwise AND "&"
     TOKEN_OPERATOR_NOT                  'Bitwise NOT "!"
+    TOKEN_OPERATOR_XOR                  'Bitwise XOR "~"
     [_TOKEN_OPERATORS_END]
     
     'Keywords .........................................................................
@@ -291,8 +310,23 @@ Public Enum OZ80_TOKEN
     TOKEN_VARIABLE                      'e.g. `#myVar`
     TOKEN_RAM                           'e.g. `$.thing`
     
-    [_TOKEN_LAST]                       'Do not go above 256!
+    [_TOKEN_LAST]                       'Do not go above 255!
+    
+    'Bit 8 is set to mark a Z80 instruction parameter as a memory reference
+    TOKEN_Z80_MEM = 256
+    
+    'Some shorthand for comparisons
+    TOKEN_Z80_MEM_HL = TOKEN_Z80_MEM Or TOKEN_Z80_HL
+    TOKEN_Z80_MEM_IX = TOKEN_Z80_MEM Or TOKEN_Z80_IX
+    TOKEN_Z80_MEM_IY = TOKEN_Z80_MEM Or TOKEN_Z80_IY
 End Enum
+
+Public Type oz80Param
+    Register As OZ80_TOKEN
+    Value As Double
+End Type
+
+'/// PUBLIC PROCEDURES ////////////////////////////////////////////////////////////////
 
 'GetOZ80Error : Return an error description for a given error number _
  ======================================================================================
@@ -309,7 +343,7 @@ Public Sub GetOZ80Error( _
         'TODO
         Let ReturnDescription = ""
     
-    Case OZ80_ERROR_DUPLICATE_BANK
+    Case OZ80_ERROR_DUPLICATE_SECTION_BANK
         '..............................................................................
         Let ReturnTitle = "Duplicate Parameter"
         Let ReturnDescription = _
@@ -322,7 +356,7 @@ Public Sub GetOZ80Error( _
             "You cannot define a section name twice. There should be only one " & _
             "`SECTION` statement for each section in use."
         
-    Case OZ80_ERROR_DUPLICATE_SLOT
+    Case OZ80_ERROR_DUPLICATE_SECTION_SLOT
         '..............................................................................
         Let ReturnTitle = "Duplicate Parameter"
         Let ReturnDescription = _
@@ -397,7 +431,7 @@ Public Sub GetOZ80Error( _
             "an expression containing a yet-unknown value, such as a label. " & _
             "label addresses are not set until after assembly."
     
-    Case OZ80_ERROR_INVALIDNAME
+    Case OZ80_ERROR_INVALID_NAME
         '..............................................................................
         Let ReturnTitle = "Invalid Name"
         Let ReturnDescription = _
@@ -408,7 +442,7 @@ Public Sub GetOZ80Error( _
             "3. a number cannot follow a dot, and " & _
             "4. the name cannot end in a dot" _
     
-    Case OZ80_ERROR_INVALIDNAME_RAM
+    Case OZ80_ERROR_INVALID_NAME_RAM
         '..............................................................................
         Let ReturnTitle = "Invalid Name"
         Let ReturnDescription = _
@@ -420,32 +454,32 @@ Public Sub GetOZ80Error( _
             "3. a number cannot follow a dot, and " & _
             "4. the name cannot end in a dot" _
         
-    Case OZ80_ERROR_INVALIDNUMBER
+    Case OZ80_ERROR_INVALID_NUMBER
         '..............................................................................
         Let ReturnTitle = "Invalid Number"
         'TODO
         Let ReturnDescription = ""
         
-    Case OZ80_ERROR_INVALIDNUMBER_DEC
+    Case OZ80_ERROR_INVALID_NUMBER_DEC
         '..............................................................................
         Let ReturnTitle = "Invalid Number"
         'TODO
         Let ReturnDescription = ""
         
-    Case OZ80_ERROR_INVALIDNUMBER_HEX
+    Case OZ80_ERROR_INVALID_NUMBER_HEX
         '..............................................................................
         Let ReturnTitle = "Invalid Number"
         Let ReturnDescription = _
             "Hexadecimal numbers must begin with '$' and must contain 0-9 & A-F " & _
             "letters only. E.g. `$1234ABCD`"
     
-    Case OZ80_ERROR_INVALIDNUMBER_BIN
+    Case OZ80_ERROR_INVALID_NUMBER_BIN
         '..............................................................................
         Let ReturnTitle = "Invalid Number"
         'TODO
         Let ReturnDescription = ""
     
-    Case OZ80_ERROR_INVALIDWORD
+    Case OZ80_ERROR_INVALID_WORD
         '..............................................................................
         Let ReturnTitle = "Invalid Word"
         'TODO

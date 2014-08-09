@@ -134,7 +134,7 @@ PROC	:doObjectCode_Sonic {
 	call	nz,:_50e3
 	
 	ld	a,15
-	ld	(#SMS_PAGE_2),a
+	ld	($.SMS_PAGE_2),a
 	ld	($.PAGE_2),a
 	ld	bc,$000C
 	ld	de,$0010
@@ -170,7 +170,7 @@ PROC	:doObjectCode_Sonic {
 	
 	`switch page 2 ($8000-$BFFF) to bank 2 ($8000-$BFFF)
 	ld	a,2
-	ld	(#SMS_PAGE_2),a
+	ld	($.SMS_PAGE_2),a
 	ld	($.PAGE_2),a
 	push	de
 	jp	(hl)

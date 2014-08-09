@@ -5,13 +5,11 @@
 
 `NOTE: the power-ups share code between themselves
 
-SECTION ::object_powerUps BANK 1, 2 SLOT 1, 2 {
-
 	`____________________________________________________________________[$5B09]___
 	`OBJECT: monitor - rings
 
-PROC	:doObjectCode_powerUp_ring {
-	
+PROC	:doObjectCode_powerUp_ring      SECTION ::objects
+{	
 	ld	(ix+#object.width),$14
 	ld	(ix+#object.height),$18
 	call	:_5da8
@@ -85,8 +83,7 @@ PROC	:doObjectCode_powerUp_ring {
 	ld	(ix+#object.Yspeed+1),h
 	ld	(ix+#object.Ydirection),a
 	ret
-
-	}
+}
 
 :_5bbf
 	DATA $54, $56, $58, $FF, $FF, $FF

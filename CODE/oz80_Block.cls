@@ -37,93 +37,111 @@ Public Section As Long
  and they can be placed in their given sections
 Public Address As Long
 
+Public Banks As Scripting.Dictionary
+Public Slots As Scripting.Dictionary
+
 'The assembled code/data goes here
 Private Block() As Byte
-Private BlockSize As Long
 Private At As Long
 
+Private My_Size As Long                 'Length of the block in bytes
+Private My_CyclesMin As Long            'Minimum number of cycles in this block
+Private My_CyclesMax As Long            'Maximum number of cycles in this block
+
 '/// CONSTANTS ////////////////////////////////////////////////////////////////////////
-
-Public Enum OZ80_PARAM
-    PARAM_A = 2 ^ 0                     'Accumulator
-    PARAM_B = 2 ^ 1                     'B register
-    PARAM_C = 2 ^ 2                     'C register and Carry-set flag
-    PARAM_D = 2 ^ 3                     'D register
-    PARAM_E = 2 ^ 4                     'E register
-  [_PARAM_F] = 2 ^ 5                    'F register, not directly accessible
-    PARAM_H = 2 ^ 6                     'H register
-    PARAM_I = 2 ^ 7                     'Interrupt, not to be confused with IX/IY
-    PARAM_L = 2 ^ 8                     'L register
-    PARAM_M = 2 ^ 9                     'Sign-set flag
-    PARAM_NC = 2 ^ 10                   'No-Carry flag
-    PARAM_NZ = 2 ^ 11                   'Not-Zero flag
-    PARAM_P = 2 ^ 12                    'Sign-unset flag
-    PARAM_PE = 2 ^ 13                   'Parity/Overflow set flag
-    PARAM_PO = 2 ^ 14                   'Parity/Overflow unset flag
-    PARAM_R = 2 ^ 15                    'R register
-    PARAM_Z = 2 ^ 16                    'Zero flag
-    
-    PARAM_AF = PARAM_A Or [_PARAM_F]
-    PARAM_BC = PARAM_B Or PARAM_C
-    PARAM_DE = PARAM_D Or PARAM_E
-    PARAM_HL = PARAM_H Or PARAM_L
-    
-    PARAM_IX = 2 ^ 17
-    PARAM_IY = 2 ^ 18
-    PARAM_SP = 2 ^ 19
-    
-    PARAM_MEM = 2 ^ 20                  'Is a memory reference, e.g. `(...)`
-    PARAM_VAL = 2 ^ 21                  'Has an associated value
-End Enum
-
-Private TestParam1Type As OZ80_PARAM
-Private TestParam2Type As OZ80_PARAM
-Private TestInstruction As OZ80_TOKEN
-
-'--------------------------------------------------------------------------------------
-
-'The actual opcodes that go into the binary are complicated and are altered by a _
- number of factors, including which register is involved, the use of IX & IY, _
- and the presence of bits, condition flags and 8 or 16-bit values
- 
-'Public Enum OZ80_OPCODE
-'    'Specific values used with opcodes for various instruction features:
-'     'E.g. the use of IX/IY often requires extra bytes to denote these
-'    '..................................................................................
-'    'Opcodes that accept registers usually add these offsets to the opcode
-'    OPCODE_REG_A = 7
-'    OPCODE_REG_B = 0
-'    OPCODE_REG_C = 1
-'    OPCODE_REG_D = 2
-'    OPCODE_REG_E = 3
-'    OPCODE_REG_H = 4
-'    OPCODE_REG_L = 5
-'
-'    'Register-pairs work in the same manner
-'    OPCODE_REG_BC = &H0
-'    OPCODE_REG_DE = &H10
-'    OPCODE_REG_HL = &H20: OPCODE_REG_IX = OPCODE_REG_HL: OPCODE_REG_IY = OPCODE_REG_IX
-'    OPCODE_REG_SP = &H30: OPCODE_REG_AF = OPCODE_REG_SP
-'
-'    'IX and IY have their own opcodes that precede the main opcode
-'    OPCODE_IX = &HDD
-'    OPCODE_IY = &HFD
-'
-'    'The flags add these offsets to the base opcode
-'    OPCODE_FLAG_NZ = 0                  '..---...
-'    OPCODE_FLAG_Z = &H8                 '..--x...
-'    OPCODE_FLAG_NC = &H10               '..-x-...
-'    OPCODE_FLAG_C = &H18                '..-xx...
-'    OPCODE_FLAG_PO = &H20               '..x--...
-'    OPCODE_FLAG_PE = &H28               '..x-x...
-'    OPCODE_FLAG_P = &H30                '..xx-...
-'    OPCODE_FLAG_M = &H38                '..xxx...
-'End Enum
 
 'Each block starts at this size (many blocks will be small Z80 routines). _
  If this buffer size is filled, it will be doubled. Once the block is "finalised", _
  the buffer will be cut down to the size of the actual contents
 Private Const BLOCK_BUFFER As Long = 1024
+
+
+Private Enum OZ80_PARAM
+    OZ80_PARAM_NOMEM = 2 ^ 0
+    OZ80_PARAM_MEM = 2 ^ 1
+    
+    OZ80_PARAM_A = 2 ^ 2
+    OZ80_PARAM_B = 2 ^ 3
+    OZ80_PARAM_C = 2 ^ 4
+    OZ80_PARAM_D = 2 ^ 5
+    OZ80_PARAM_E = 2 ^ 6
+    OZ80_PARAM_H = 2 ^ 7
+    OZ80_PARAM_L = 2 ^ 8
+    OZ80_PARAM_I = 2 ^ 9
+    OZ80_PARAM_R = 2 ^ 10
+    
+    OZ80_PARAM_AF = 2 ^ 11
+    OZ80_PARAM_BC = 2 ^ 12
+    OZ80_PARAM_DE = 2 ^ 13
+    OZ80_PARAM_HL = 2 ^ 14
+    OZ80_PARAM_SP = 2 ^ 15
+    
+    OZ80_PARAM_IX = 2 ^ 16
+    OZ80_PARAM_IY = 2 ^ 17
+    
+    [_BIT9] = 2 ^ 18
+    [_BIT10] = 2 ^ 19
+    [_BIT11] = 2 ^ 20
+    
+    OZ80_PARAM_FLAG_C = [_BIT9]
+    OZ80_PARAM_FLAG_NC = [_BIT10]
+    OZ80_PARAM_FLAG_Z = [_BIT10] Or [_BIT9]
+    OZ80_PARAM_FLAG_NZ = [_BIT11]
+    
+    OZ80_PARAM_FLAGS_CZ = [_BIT11] Or [_BIT10] Or [_BIT9]
+    
+    [_BIT12] = 2 ^ 21
+    [_BIT13] = 2 ^ 22
+    [_BIT14] = 2 ^ 23
+    
+    OZ80_PARAM_FLAG_P = [_BIT12]
+    OZ80_PARAM_FLAG_PE = [_BIT13]
+    OZ80_PARAM_FLAG_PO = [_BIT13] Or [_BIT12]
+    OZ80_PARAM_FLAG_M = [_BIT14]
+    
+    OZ80_PARAM_FLAGS_MP = [_BIT14] Or [_BIT13] Or [_BIT12]
+    
+    OZ80_PARAM_FLAGS = OZ80_PARAM_FLAGS_CZ Or OZ80_PARAM_FLAGS_MP
+    
+    OZ80_PARAM_VAL_8 = 2 ^ 24
+    OZ80_PARAM_VAL_16 = 2 ^ 25
+End Enum
+
+'--------------------------------------------------------------------------------------
+
+'http://z80.info/decoding.htm
+    
+' .---------------.
+' |7|6|5|4|3|2|1|0|
+' '---------------'
+' | x |  y  |  z  |
+' '---------------'
+'     | p |q|
+'     '-----'
+    
+Private Const x1 As Byte = 2 ^ 6
+Private Const x2 As Byte = 2 ^ 7
+Private Const x3 As Byte = x1 Or x2
+    
+Private Const y1 As Byte = 2 ^ 3
+Private Const y2 As Byte = 2 ^ 4
+Private Const y3 As Byte = y1 Or y2
+Private Const y4 As Byte = 2 ^ 5
+Private Const y5 As Byte = y4 Or y1
+Private Const y6 As Byte = y4 Or y2
+Private Const y7 As Byte = y4 Or y4
+    
+Private Const z1 As Byte = 2 ^ 0
+Private Const z2 As Byte = 2 ^ 1
+Private Const z3 As Byte = y1 Or y2
+Private Const z4 As Byte = 2 ^ 2
+Private Const z5 As Byte = z4 Or z1
+Private Const z6 As Byte = z4 Or z2
+Private Const z7 As Byte = z4 Or z4
+    
+Private Const p1 As Byte = 2 ^ 4
+Private Const p2 As Byte = 2 ^ 5
+Private Const p3 As Byte = p1 Or p2
 
 '/// EVENTS ///////////////////////////////////////////////////////////////////////////
 
@@ -133,10 +151,10 @@ Private Sub Class_Initialize()
     '
 End Sub
 
-'CLASS Initialize _
+'CLASS Terminate _
  ======================================================================================
 Private Sub Class_Terminate()
-    Erase Block: Let BlockSize = 0
+    Erase Block
 End Sub
 
 '/// PUBLIC INTERFACE /////////////////////////////////////////////////////////////////
@@ -148,20 +166,18 @@ Public Sub AddByte(ByRef Value As Byte)
     Let Block(At) = Value
     Let At = At + 1
     
-    If At > BlockSize Then
-        Let BlockSize = BlockSize * 2
-        ReDim Preserve Block(0 To BlockSize) As Byte
+    If At > My_Size Then
+        Let My_Size = My_Size * 2
+        ReDim Preserve Block(0 To My_Size) As Byte
     End If
 End Sub
 
 'AddInstruction : Assemble a Z80 mneomic _
  ======================================================================================
-Public Sub AddInstruction( _
-             ByRef Instruction As OZ80_TOKEN, _
-    Optional ByRef Param1Type As OZ80_PARAM, _
-    Optional ByRef Param1Value As Long, _
-    Optional ByRef Param2Type As OZ80_PARAM, _
-    Optional ByRef Param2Value As Long _
+Friend Sub AddInstruction( _
+    ByRef Instruction As OZ80_TOKEN, _
+    ByRef Param1 As oz80Param, _
+    ByRef Param2 As oz80Param _
 )
     'OPCODE MAP: _
      Here's a complete list of the Z80 instruction set and the opcodes used for each _
@@ -179,8 +195,8 @@ Public Sub AddInstruction( _
     '   rr      IX = DD
     '           IY = FD
     '           HL = rr and ?? is omitted
-    '   +f      nz = +0
-    '           z  = +8
+    '   +f      nz = +00
+    '           z  = +08
     '           nc = +10
     '           c  = +18
     '           po = +20
@@ -188,27 +204,27 @@ Public Sub AddInstruction( _
     '           p  = +30
     '           m  = +38
     '   +b      bit * 8
-    '   +im     0  = +0
+    '   +im     0  = +00
     '           1  = +10
     '           2  = +18
         
-    'Z80    Param 1                 Param 2             Opcode              Offset _
+    'Z80    Param 1                 Param 2             Opcode              Cycles _
      ----------------------------------------------------------------------------------
-    'ADC    a                       a|b|c|d|e|h|l       88+r                 --
-    '                               $8                  CE ??               +46
-    '                               (hl|ix+$8|iy+$8)    rr 8E ??            +06
-    '       hl                      bc|de|hl|sp         ED 4A+rr
+    'ADC    a                       a|b|c|d|e|h|l       88+r                4
+    '                               $8                  CE ??               7
+    '                               (hl|ix+$8|iy+$8)    rr 8E ??            7
+    '       hl                      bc|de|hl|sp         ED 4A+rr            15
                                 
-    'ADD    a                       a|b|c|d|e|h|l       80+r                 --
-    '                               $8                  C6 ??               +46
-    '                               (hl|ix+$8|iy+$8)    rr 86 ??            +06
-    '       hl                      bc|de|hl|sp         09+rr
-    '       ix                      bc|de|ix|sp         rr 09+rr
-    '       iy                      bc|de|iy|sp         rr 09+rr
+    'ADD    a                       a|b|c|d|e|h|l       80+r                4
+    '                               $8                  C6 ??               7
+    '                               (hl|ix+$8|iy+$8)    rr 86 ??            7
+    '       hl                      bc|de|hl|sp         09+rr               11
+    '       ix                      bc|de|ix|sp         rr 09+rr            11
+    '       iy                      bc|de|iy|sp         rr 09+rr            11
     
-    'AND    a|b|c|d|e|h|l                               A0+r                 --
-    '       $8                                          E6 ??               +46
-    '       (hl|ix+$8|iy+$8)                            rr A6 ??            +06
+    'AND    a|b|c|d|e|h|l                               A0+r
+    '       $8                                          E6 ??
+    '       (hl|ix+$8|iy+$8)                            rr A6 ??
     
     'BIT    0-7                     a|b|c|d|e|h|l       CB 40+r+b
     '                               (hl|ix+$8|iy+$8)    rr CB ?? 40+r+b
@@ -218,9 +234,9 @@ Public Sub AddInstruction( _
     
     'CCF                                                3F
     
-    'CP     a|b|c|d|e|h|l                               B8+r                 --
-    '       (hl|ix+$8|iy+$8)                            rr BE ??            +06
-    '       $8                                          FE ??               +46
+    'CP     a|b|c|d|e|h|l                               B8+r
+    '       (hl|ix+$8|iy+$8)                            rr BE ??
+    '       $8                                          FE ??
     
     'CPD                                                ED A9
     'CPDR                                               ED B9
@@ -408,66 +424,366 @@ Public Sub AddInstruction( _
     
     '----------------------------------------------------------------------------------
     
-    Let TestInstruction = Instruction
-    Let TestParam1Type = Param1Type
-    Let TestParam2Type = Param2Type
+    'See, BASIC does have a good use!
+    On Instruction - ([_TOKEN_INSTRUCTIONS_BEGIN] + 1) GoTo _
+        zADC, zADD, zAND, zBIT, zCALL, zCCF, zCP, zCPD, zCPDR, zCPI, zCPIR, zCPL, _
+        zDAA, zDEC, zDI, zDJNZ, zEI, zEX, zEXX, zHALT, zIM, zIN, zINC, zIND, zINDR, _
+        zINI, zINIR, zJP, zJR, zLD, zLDD, zLDDR, zLDI, zLDIR, zNEG, zNOP, zOR, zOUT, _
+        zOUTD, zOTDR, zOUTI, zOTIR, zPOP, zPUSH, zRES, zRET, zRETI, zRETN, zRLA, zRL, _
+        zRLCA, zRLC, zRLD, zRRA, zRR, zRRCA, zRRC, zRRD, zRST, zSBC, zSCF, zSET, _
+        zSLA, zSRA, zSLL, zSRL, zSUB, zXOR
+    Stop
     
-    Call TestOpcode(TOKEN_Z80_ADC, 2, 1, 0, PARAM_A)
+    Dim Opcode As Integer
+    
+zADC: '................................................................................
+    'Add with Carry
+    
+    
+    'ADC    a                       a|b|c|d|e|h|l       88+r                4
+    '                               (hl|ix+$8|iy+$8)    rr 8E ??            7
+    '                               $8                  CE ??               7
+    '       hl                      bc|de|hl|sp         ED 4A+rr            15
+    
+    '`ADC a, ...`
+    If Param1.Register = TOKEN_Z80_A Then
+        '`ADC a, a|b|c|d|e|h|l|(hl|ix+$8|iy+$8)`
+        If IsRegister8Bit_ABCDEHL_Mem_HLIXY8(Param2.Register) Then
+            Let Opcode = x2 Or Opcode_Alu(Instruction) Or _
+                         Opcode_RegisterZ(Param2.Register)
+        
+        '`ADC a, $8`
+        ElseIf Param1.Register = TOKEN_NUMBER Then
+            Let Opcode = x3 Or Opcode_Alu(Instruction) Or z6
+        
+        Else
+            Stop
+        End If
+    
+    '`ADC hl, ...`
+    ElseIf Param1.Register = TOKEN_Z80_HL Then
+        'TODO: ED prefix
+        Let Opcode = x1 Or Opcode_RegisterPair Or q1 Or z2
+        
+    Else
+        Stop
+    End If
+    GoTo Finish
+    
+zADD: '................................................................................
+    If Param1.Register = TOKEN_Z80_A Then
+        If IsRegister8Bit_ABCDEHL_Mem_HLIXY8(Param2.Register) Then
+            Let Opcode = x2 Or Opcode_Alu(Instruction) Or _
+                         Opcode_RegisterZ(Param2.Register)
+        ElseIf Param1.Register = TOKEN_NUMBER Then
+            Let Opcode = x3 Or Opcode_Alu(Instruction) Or z6
+        Else
+            Stop
+        End If
+    
+    'TODO: IX/IY prefix
+    ElseIf Param1.Register = TOKEN_Z80_HL Then
+        Let Opcode = Opcode_RegisterPair(Register) Or q1 Or z1
+    Else
+        Stop
+    End If
+    GoTo Finish
+    
+zAND: '................................................................................
+zBIT: '................................................................................
+zCALL:
+zCCF:
+zCP:
+zCPD:
+zCPDR:
+zCPI:
+zCPIR:
+zCPL:
+zDAA:
+zDEC:
+zDI:
+zDJNZ:
+zEI:
+zEX:
+zEXX:
+zHALT:
+zIM:
+zIN:
+zINC:
+zIND:
+zINDR:
+zINI:
+zINIR:
+zJP:
+zJR:
+zLD:
+zLDD:
+zLDDR:
+zLDI:
+zLDIR:
+zNEG:
+zNOP:
+zOR:
+zOUT:
+zOUTD:
+zOTDR:
+zOUTI:
+zOTIR:
+zPOP:
+zPUSH:
+zRES:
+zRET:
+zRETI:
+zRETN:
+zRLA:
+zRL:
+zRLCA:
+zRLC:
+zRLD:
+zRRA:
+zRR:
+zRRCA:
+zRRC:
+zRRD:
+zRST:
+zSBC:
+zSCF:
+zSET:
+zSLA:
+zSRA:
+zSLL:
+zSRL:
+zSUB:
+zXOR:
+
+
+Finish:
 End Sub
 
-Private Function TestParams( _
-             ByRef Param1Type As OZ80_PARAM, ByRef Param1Test As OZ80_PARAM, _
-    Optional ByRef Param2Type As OZ80_PARAM, Optional ByRef Param2Test As OZ80_PARAM _
+'IsRegister8Bit_ABCDEHL : Test for the common parameter of a main 8-bit register _
+ ======================================================================================
+Private Function IsRegister8Bit_ABCDEHL( _
+    ByRef Register As OZ80_TOKEN _
 ) As Boolean
-    If (Param1Type And Param1Test) <> Param1Test Then Exit Function
-    If Param2Test <> 0 Then
-        If (Param2Type And Param2Test) <> Param2Test Then Exit Function
+    '"Or" comparisions are not used for speed reasons, _
+     we want to evaluate as little as possible in one go
+    If Register = TOKEN_Z80_A Then
+        Let IsRegister8Bit_ABCDEHL = True
+    ElseIf Register = TOKEN_Z80_B Then
+        Let IsRegister8Bit_ABCDEHL = True
+    ElseIf Register = TOKEN_Z80_C Then
+        Let IsRegister8Bit_ABCDEHL = True
+    ElseIf Register = TOKEN_Z80_D Then
+        Let IsRegister8Bit_ABCDEHL = True
+    ElseIf Register = TOKEN_Z80_E Then
+        Let IsRegister8Bit_ABCDEHL = True
+    ElseIf Register = TOKEN_Z80_H Then
+        Let IsRegister8Bit_ABCDEHL = True
+    ElseIf Register = TOKEN_Z80_L Then
+        Let IsRegister8Bit_ABCDEHL = True
     End If
-    Let TestParams = True
 End Function
 
-Private Function TestOpcode( _
-             ByRef Instruction As OZ80_TOKEN, _
-    Optional ByRef x As Byte, Optional ByRef y As Byte, Optional ByRef z As Byte, _
-    Optional ByRef Param1Test As OZ80_PARAM, _
-    Optional ByRef Param2Test As OZ80_PARAM _
+'IsRegister8Bit_ABCDEHL_Mem_HL_IXY8 : Test for common register / memory-reference _
+ ======================================================================================
+Private Function IsRegister8Bit_ABCDEHL_Mem_HLIXY8( _
+    ByRef Register As OZ80_TOKEN _
 ) As Boolean
-    If Instruction <> TestInstruction Then Exit Function
-    
-    'http://z80.info/decoding.htm
-    
-    ' .---------------.
-    ' |7|6|5|4|3|2|1|0|
-    ' '---------------'
-    ' | x |  y  |  z  |
-    ' '---------------'
-    '     | p |q|
-    '     '-----'
-    
-    Const x1 As Byte = 2 ^ 6
-    Const x2 As Byte = 2 ^ 7
-    Const x3 As Byte = x1 Or x2
-    
-    Const y1 As Byte = 2 ^ 3
-    Const y2 As Byte = 2 ^ 4
-    Const y3 As Byte = y1 Or y2
-    Const y4 As Byte = 2 ^ 5
-    Const y5 As Byte = y4 Or y1
-    Const y6 As Byte = y4 Or y2
-    Const y7 As Byte = y4 Or y4
-    
-    Const z1 As Byte = 2 ^ 0
-    Const z2 As Byte = 2 ^ 1
-    Const z3 As Byte = y1 Or y2
-    Const z4 As Byte = 2 ^ 2
-    Const z5 As Byte = z4 Or z1
-    Const z6 As Byte = z4 Or z2
-    Const z7 As Byte = z4 Or z4
-    
-    Const p1 As Byte = 2 ^ 4
-    Const p2 As Byte = 2 ^ 5
-    Const p3 As Byte = p1 Or p2
-    
-    Dim Opcode As Byte
+    If Register = TOKEN_Z80_A Then
+        Let IsRegister8Bit_ABCDEHL_Mem_HLIXY8 = True
+    ElseIf Register = TOKEN_Z80_B Then
+        Let IsRegister8Bit_ABCDEHL_Mem_HLIXY8 = True
+    ElseIf Register = TOKEN_Z80_C Then
+        Let IsRegister8Bit_ABCDEHL_Mem_HLIXY8 = True
+    ElseIf Register = TOKEN_Z80_D Then
+        Let IsRegister8Bit_ABCDEHL_Mem_HLIXY8 = True
+    ElseIf Register = TOKEN_Z80_E Then
+        Let IsRegister8Bit_ABCDEHL_Mem_HLIXY8 = True
+    ElseIf Register = TOKEN_Z80_H Then
+        Let IsRegister8Bit_ABCDEHL_Mem_HLIXY8 = True
+    ElseIf Register = TOKEN_Z80_L Then
+        Let IsRegister8Bit_ABCDEHL_Mem_HLIXY8 = True
+    ElseIf Register = TOKEN_Z80_MEM_HL Then
+        Let IsRegister8Bit_ABCDEHL_Mem_HLIXY8 = True
+    ElseIf Register = TOKEN_Z80_MEM_IX Then
+        Let IsRegister8Bit_ABCDEHL_Mem_HLIXY8 = True
+    ElseIf Register = TOKEN_Z80_MEM_IY Then
+        Let IsRegister8Bit_ABCDEHL_Mem_HLIXY8 = True
+    End If
 End Function
 
+'IsValue : Test to see if a parameter would class as having an associated value _
+ ======================================================================================
+Private Function IsValue( _
+    ByRef Register As OZ80_TOKEN _
+) As Boolean
+    If Register = TOKEN_NUMBER Then
+        Let IsValue = True
+    ElseIf Register = TOKEN_NUMBER Or TOKEN_Z80_MEM Then
+        Let IsValue = True
+    ElseIf Register = TOKEN_Z80_MEM_IX Then
+        Let IsValue = True
+    ElseIf Register = TOKEN_Z80_MEM_IY Then
+        Let IsValue = True
+    End If
+End Function
+
+'Opcode_Alu : Converts arithmetic instructions to bits 3, 4 & 5 of opcode _
+ ======================================================================================
+Private Function Opcode_Alu( _
+    ByRef Instruction As OZ80_TOKEN _
+) As Integer
+    If Instruction = TOKEN_Z80_ADD Then
+        Exit Function
+    ElseIf Instruction = TOKEN_Z80_ADC Then
+        Let Opcode_Alu = y1
+    ElseIf Instruction = TOKEN_Z80_SUB Then
+        Let Opcode_Alu = y2
+    ElseIf Instruction = TOKEN_Z80_SBC Then
+        Let Opcode_Alu = y3
+    ElseIf Instruction = TOKEN_Z80_AND Then
+        Let Opcode_Alu = y4
+    ElseIf Instruction = TOKEN_Z80_XOR Then
+        Let Opcode_Alu = y5
+    ElseIf Instruction = TOKEN_Z80_OR Then
+        Let Opcode_Alu = y6
+    ElseIf Instruction = TOKEN_Z80_CP Then
+        Let Opcode_Alu = y7
+    Else
+        Stop
+    End If
+End Function
+
+'Opcode_Condition : Convert a condition flag to bits 3, 4 & 5 of opcode _
+ ======================================================================================
+Private Function Opcode_Condition( _
+    ByRef Condition As OZ80_TOKEN _
+) As Integer
+    If Condition = TOKEN_Z80_NZ Then
+        Exit Function
+    ElseIf Condition = TOKEN_Z80_Z Then
+        Let Opcode_Condition = y1
+    ElseIf Condition = TOKEN_Z80_NC Then
+        Let Opcode_Condition = y2
+    ElseIf Condition = TOKEN_Z80_C Then
+        Let Opcode_Condition = y3
+    ElseIf Condition = TOKEN_Z80_PO Then
+        Let Opcode_Condition = y4
+    ElseIf Condition = TOKEN_Z80_PE Then
+        Let Opcode_Condition = y5
+    ElseIf Condition = TOKEN_Z80_P Then
+        Let Opcode_Condition = y6
+    ElseIf Condition = TOKEN_Z80_M Then
+        Let Opcode_Condition = y7
+    Else
+        Stop
+    End If
+End Function
+
+'Opcode_RegisterPair : Converts 16-bit register tokens to bits 4 & 5 of the opcode _
+ ======================================================================================
+Private Function Opcode_RegisterPair( _
+    ByRef Register As OZ80_TOKEN _
+) As Integer
+    If Register = TOKEN_Z80_BC Then
+        Exit Function
+    ElseIf Register = TOKEN_Z80_DE Then
+        Let Opcode_RegisterPair = p1
+    ElseIf Register = TOKEN_Z80_HL Then
+        Let Opcode_RegisterPair = p2
+    ElseIf Register = TOKEN_Z80_SP Or Register = TOKEN_Z80_AF Then
+        Let Opcode_RegisterPair = p3
+    Else
+        Stop
+    End If
+End Function
+
+'Opcode_RegisterY : Sets the Y-bits (3, 4 & 5) of the opcode based on the register _
+ ======================================================================================
+Private Function Opcode_RegisterY( _
+    ByRef Register As OZ80_TOKEN _
+) As Integer
+    If Register = TOKEN_Z80_B Then
+        Exit Function
+    ElseIf Register = TOKEN_Z80_C Then
+        Let Opcode_RegisterY = y1
+    ElseIf Register = TOKEN_Z80_D Then
+        Let Opcode_RegisterY = y2
+    ElseIf Register = TOKEN_Z80_E Then
+        Let Opcode_RegisterY = y3
+    ElseIf Register = TOKEN_Z80_H Then
+        Let Opcode_RegisterY = y4
+    ElseIf Register = TOKEN_Z80_L Then
+        Let Opcode_RegisterY = y5
+    ElseIf Register = TOKEN_Z80_MEM_HL Then
+        Let Opcode_RegisterY = y6
+    ElseIf Register = TOKEN_Z80_MEM_IX Then
+        'TODO: opcode prefix
+        Let Opcode_RegisterY = y6
+    ElseIf Register = TOKEN_Z80_MEM_IY Then
+        'TODO: opcode prefix
+        Let Opcode_RegisterY = y6
+    ElseIf Register = TOKEN_Z80_A Then
+        Let Opcode_RegisterY = y7
+    Else
+        Stop
+    End If
+End Function
+
+'Opcode_RegisterZ : Sets the Z-bits (0, 1 & 2) of the opcode based on the register _
+ ======================================================================================
+Private Function Opcode_RegisterZ( _
+    ByRef Register As OZ80_TOKEN _
+) As Integer
+    If Register = TOKEN_Z80_B Then
+        Exit Function
+    ElseIf Register = TOKEN_Z80_C Then
+        Let Opcode_RegisterZ = z1
+    ElseIf Register = TOKEN_Z80_D Then
+        Let Opcode_RegisterZ = z2
+    ElseIf Register = TOKEN_Z80_E Then
+        Let Opcode_RegisterZ = z3
+    ElseIf Register = TOKEN_Z80_H Then
+        Let Opcode_RegisterZ = z4
+    ElseIf Register = TOKEN_Z80_L Then
+        Let Opcode_RegisterZ = z5
+    ElseIf Register = TOKEN_Z80_MEM_HL Then
+        Let Opcode_RegisterZ = y6
+    ElseIf Register = TOKEN_Z80_MEM_IX Then
+        'TODO: opcode prefix
+        Let Opcode_RegisterZ = y6
+    ElseIf Register = TOKEN_Z80_MEM_IY Then
+        'TODO: opcode prefix
+        Let Opcode_RegisterZ = y6
+    ElseIf Register = TOKEN_Z80_A Then
+        Let Opcode_RegisterZ = z7
+    Else
+        Stop
+    End If
+End Function
+
+'Opcode_Rot : Set opcode for shift / rotate instructions _
+ ======================================================================================
+Private Function Opcode_Rot( _
+    ByRef Instruction As OZ80_TOKEN _
+) As Integer
+    If Instruction = TOKEN_Z80_RLC Then
+        Exit Function
+    ElseIf Instruction = TOKEN_Z80_RRC Then
+        Let Opcode_Rot = y1
+    ElseIf Instruction = TOKEN_Z80_RL Then
+        Let Opcode_Rot = y2
+    ElseIf Instruction = TOKEN_Z80_RR Then
+        Let Opcode_Rot = y3
+    ElseIf Instruction = TOKEN_Z80_SLA Then
+        Let Opcode_Rot = y4
+    ElseIf Instruction = TOKEN_Z80_SRA Then
+        Let Opcode_Rot = y5
+    ElseIf Instruction = TOKEN_Z80_SLL Then
+        Let Opcode_Rot = y6
+    ElseIf Instruction = TOKEN_Z80_SRL Then
+        Let Opcode_Rot = y7
+    Else
+        Stop
+    End If
+End Function

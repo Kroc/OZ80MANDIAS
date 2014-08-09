@@ -75,9 +75,7 @@ End Sub
 'FORM Resize _
  ======================================================================================
 Private Sub Form_Resize()
-    Call Me.txtLog.Move( _
-        0, 0, Me.ScaleWidth, Me.ScaleHeight _
-    )
+    Call Me.txtLog.Move(0, 0, Me.ScaleWidth, Me.ScaleHeight)
 End Sub
 
 'EVENT <Assembler> Error _
@@ -99,14 +97,18 @@ End Sub
 Private Sub Assembler_Message( _
     ByRef Depth As Long, ByRef LogLevel As OZ80_LOG, ByRef Text As String _
 )
-    Static PrevLog As OZ80_LOG, PrevDepth As Long
+    Static PrevLog As OZ80_LOG
+    Static PrevDepth As Long
     
     Dim Prefix As String
-    If Depth < PrevDepth Then Let Prefix = vbCrLf
-    Let PrevDepth = Depth
+    If LogLevel <> OZ80_LOG_DEBUG Then
+        Let PrevDepth = Depth
+        If Depth < PrevDepth Then Let Prefix = vbCrLf
+    End If
     
     If LogLevel = OZ80_LOG_ACTION Then Let Prefix = Prefix & "*"
     If LogLevel = OZ80_LOG_INFO Then Let Prefix = Prefix & "-": Let Depth = Depth - 1
+    If LogLevel = OZ80_LOG_STATUS Then Let Prefix = Prefix & "=": Let Depth = Depth - 1
     If LogLevel = OZ80_LOG_DEBUG Then Let Prefix = Prefix & ".": Let Depth = Depth - 1
     
     Dim D As Long
@@ -130,7 +132,7 @@ Private Sub Log( _
 )
     Debug.Print Text
     
-    If LogLevel > OZ80_LOG_INFO Then Exit Sub
+    If LogLevel >= OZ80_LOG_DEBUG Then Exit Sub
     Let Text = Text & vbCrLf
     
     'Thanks to Jdo300 for this execllent tip to prevent flicker _

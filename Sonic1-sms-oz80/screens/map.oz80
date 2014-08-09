@@ -55,13 +55,13 @@ PROC    ;_LABEL_C52_106
 	
 	`load page 1 ($4000-$7FFF) with bank 5 ($14000-$17FFF)
 	ld	a,5
-	ld	(#SMS_PAGE_1),a
+	ld	($.SMS_PAGE_1),a
 	ld	($.PAGE_1),a
 	
 	`map 1 background
 	ld	hl,$627e
 	ld	bc,$0178
-	ld	de,#SMS_VDP_SCREENNAMETABLE
+	ld	de,$.VDP_SCREENNAMETABLE
 	ld	a,$10
 	ld	($.TEMP1),a
 	call	:decompressScreen
@@ -69,7 +69,7 @@ PROC    ;_LABEL_C52_106
 	`map 1 foreground
 	ld	hl,$63f6
 	ld	bc,$0145
-	ld	de,#SMS_VDP_SCREENNAMETABLE
+	ld	de,$.VDP_SCREENNAMETABLE
 	ld	a,$00
 	ld	($.TEMP1),a
 	call	:decompressScreen
@@ -106,13 +106,13 @@ PROC    ;_LABEL_C52_106
 	
 	`load page 1 ($4000-$7FFF) with bank 5 ($14000-$17FFF)
 	ld	a,5
-	ld	(#SMS_PAGE_1),a
+	ld	($.SMS_PAGE_1),a
 	ld	($.PAGE_1),a
 	
 	`map screen 2 background
 	ld	hl,$653b
 	ld	bc,$0170
-	ld	de,#SMS_VDP_SCREENNAMETABLE
+	ld	de,$.VDP_SCREENNAMETABLE
 	ld	a,$10
 	ld	($.TEMP1),a
 	call	:decompressScreen
@@ -120,7 +120,7 @@ PROC    ;_LABEL_C52_106
 	`map screen 2 foreground
 	ld	hl,$66ab
 	ld	bc,$0153
-	ld	de,#SMS_VDP_SCREENNAMETABLE
+	ld	de,$.VDP_SCREENNAMETABLE
 	ld	a,$00
 	ld	($.TEMP1),a
 	call	:decompressScreen
@@ -693,12 +693,12 @@ PROC    ;titleScreen
 	
 	`now switch page 1 ($4000-$7FFF) to bank 5 ($14000-$17FFF)
 	ld	a, 5
-	ld	(#SMS_PAGE_1), a
+	ld	($.SMS_PAGE_1), a
 	ld	($.PAGE_1), a
 	
 	`load the title screen itself
 	ld	hl, $6000		`ROM:$16000
-	ld	de, #SMS_VDP_SCREENNAMETABLE
+	ld	de, $.VDP_SCREENNAMETABLE
 	ld	bc, $012E
 	ld	a, $00
 	ld	($.TEMP1), a
@@ -864,13 +864,13 @@ PROC    ;_1401
 	
 	`switch page 1 ($4000-$7FFF) to bank 5 ($14000-$17FFF)
 	ld	a,5
-	ld	(#SMS_PAGE_1),a
+	ld	($.SMS_PAGE_1),a
 	ld	($.PAGE_1),a
 	
 	`act complete background
 	ld	hl,$67fe
 	ld	bc,$0032
-	ld	de,#SMS_VDP_SCREENNAMETABLE
+	ld	de,$.VDP_SCREENNAMETABLE
 	ld	a,$00
 	ld	($.TEMP1),a
 	call	;decompressScreen
@@ -1027,13 +1027,13 @@ PROC    ;_155e
 	
 	`load page 1 ($4000-$7FFF) with bank 5 ($14000-$17FFF)
 	ld	a,5
-	ld	(#SMS_PAGE_1),a
+	ld	($.SMS_PAGE_1),a
 	ld	($.PAGE_1),a
 	
 	`UNKNOWN
 	ld	hl,$612e
 	ld	bc,$00bb
-	ld	de,#SMS_VDP_SCREENNAMETABLE
+	ld	de,$.VDP_SCREENNAMETABLE
 	ld	a,($.CURRENT_LEVEL)
 	cp	28
 	jr	c,._1
@@ -1041,7 +1041,7 @@ PROC    ;_155e
 	`UNKNOWN
 	ld	hl,$61e9		`$161E9?
 	ld	bc,$0095
-	ld	de,#SMS_VDP_SCREENNAMETABLE
+	ld	de,$.VDP_SCREENNAMETABLE
 
 ._1	xor	a
 	ld	($.TEMP1),a
@@ -1933,7 +1933,7 @@ PROC    ;_LABEL_1CED_131
 {        
 	`load page 1 (Z80:$4000-$7FFF) with bank 5 (ROM:$14000-$17FFF)
 	ld	a, 5
-	ld	(#SMS_PAGE_1), a
+	ld	($.SMS_PAGE_1), a
 	ld	($.PAGE_1), a
 	
 	ld	a, ($.CURRENT_LEVEL)
@@ -1989,7 +1989,7 @@ PROC    ;_LABEL_1CED_131
 	
 	`switch page 1 ($4000-$7FFF) to bank 11 ($2C000-$2FFFF)
 	ld	a,11
-	ld	(#SMS_PAGE_1),a
+	ld	($.SMS_PAGE_1),a
 	ld	($.PAGE_1),a
 	
 	`are rings enabled?
@@ -2012,10 +2012,10 @@ PROC    ;_LABEL_1CED_131
 	
 	`switch pages 1 & 2 ($4000-$BFFF) to banks 1 & 2 ($4000-$BFFF)
 	ld	a,1
-	ld	(#SMS_PAGE_1),a
+	ld	($.SMS_PAGE_1),a
 	ld	($.PAGE_1),a
 	ld	a,2
-	ld	(#SMS_PAGE_2),a
+	ld	($.SMS_PAGE_2),a
 	ld	($.PAGE_2),a
 	
 	call	;_2e5a
@@ -2040,7 +2040,7 @@ PROC    ;_LABEL_1CED_131
 	
 	`switch page 1 ($4000-$7FFF) to bank 11 ($2C000-$2FFFF)
 	ld	a,11
-	ld	(#SMS_PAGE_1),a
+	ld	($.SMS_PAGE_1),a
 	ld	($.PAGE_1),a
 	
 	`are rings enabled?
@@ -2128,10 +2128,10 @@ PROC    ;_LABEL_1CED_131
 	
 	`switch pages 1 & 2 ($4000-$BFFF) to banks 1 & 2 ($4000-$BFFF)
 	ld	a,1
-	ld	(#SMS_PAGE_1),a
+	ld	($.SMS_PAGE_1),a
 	ld	($.PAGE_1),a
 	ld	a,2
-	ld	(#SMS_PAGE_2),a
+	ld	($.SMS_PAGE_2),a
 	ld	($.PAGE_2),a
 	
 	call	;_2e5a
@@ -2182,7 +2182,7 @@ PROC    ;_1e9e
 	call	;waitForInterrupt
 	ld	(iy+#vars.spriteUpdateCount),a
 	ld	a,11
-	ld	(#SMS_PAGE_1),a
+	ld	($.SMS_PAGE_1),a
 	ld	($.PAGE_1),a
 	
 	`are rings enabled?
@@ -2195,7 +2195,7 @@ PROC    ;_1e9e
 	jr	nz,._1
 	
 	ld	a,;sound_unpause#bank
-	ld	(#SMS_PAGE_1),a
+	ld	($.SMS_PAGE_1),a
 	ld	($.PAGE_1),a
 	call	;sound_unpause
 	ret
@@ -2261,10 +2261,10 @@ PROC    ;_1f06
 	
 	di	
 	ld	a,1
-	ld	(#SMS_PAGE_1),a
+	ld	($.SMS_PAGE_1),a
 	ld	($.PAGE_1),a
 	ld	a,2
-	ld	(#SMS_PAGE_2),a
+	ld	($.SMS_PAGE_2),a
 	ld	($.PAGE_2),a
 	
 	ld	e,$00
@@ -2279,15 +2279,15 @@ PROC    ;_1f06
 	ld	b,$00
 	add	hl,bc
 	add	a,e
-	out	(#SMS_VDP_CONTROL),a
+	out	($.VDP_CONTROL),a
 	ld	a,%11000000
-	out	(#SMS_VDP_CONTROL),a
+	out	($.VDP_CONTROL),a
 	ld	a,($.D2B1)
 	and	$01
 	ld	a,(hl)
 	jr	z,._2
 	ld	a,($.D2B3)
-._2	out	(#SMS_VDP_DATA),a
+._2	out	($.VDP_DATA),a
 	ei	
 	ret
 }
@@ -2518,7 +2518,7 @@ PROC    ;_20b8
         `====================================================================[$20B8]===
 {        
 	ld	a,;sound_fadeOut#bank
-	ld	(#SMS_PAGE_1),a
+	ld	($.SMS_PAGE_1),a
 	ld	($.PAGE_1),a
 	
 	ld	hl,$0028
@@ -2810,18 +2810,18 @@ PROC    ;loadLevel
 	sub	$40
 	ld	h,a
 	ld	a,6
-	ld	(#SMS_PAGE_1),a
+	ld	($.SMS_PAGE_1),a
 	ld	($.PAGE_1),a
 	ld	a,7
-	ld	(#SMS_PAGE_2),a
+	ld	($.SMS_PAGE_2),a
 	ld	($.PAGE_2),a
 	jr	._10
 	
 ._9	ld	a,5
-	ld	(#SMS_PAGE_1),a
+	ld	($.SMS_PAGE_1),a
 	ld	($.PAGE_1),a
 	ld	a,6
-	ld	(#SMS_PAGE_2),a
+	ld	($.SMS_PAGE_2),a
 	ld	($.PAGE_2),a
 	
 ._10	ei				`enable interrupts
@@ -2908,10 +2908,10 @@ PROC    ;loadLevel
 	`switch pages 1 & 2 ($4000-$BFFF) to banks 1 & 2 ($4000-$BFFF)
 	di	
 	ld	a,1
-	ld	(#SMS_PAGE_1),a
+	ld	($.SMS_PAGE_1),a
 	ld	($.PAGE_1),a
 	ld	a,2
-	ld	(#SMS_PAGE_2),a
+	ld	($.SMS_PAGE_2),a
 	ld	($.PAGE_2),a
 	ei	
 	
@@ -2970,10 +2970,10 @@ PROC    ;loadLevel
 	`switch pages 1 & 2 ($4000-$BFFF) to banks 1 & 2 ($4000-$BFFF)
 	di	
 	ld	a,1
-	ld	(#SMS_PAGE_1),a
+	ld	($.SMS_PAGE_1),a
 	ld	($.PAGE_1),a
 	ld	a,2
-	ld	(#SMS_PAGE_2),a
+	ld	($.SMS_PAGE_2),a
 	ld	($.PAGE_2),a
 	ei	
 	
@@ -3004,7 +3004,7 @@ PROC    ;loadLevel
 	
 	`switch page 1 ($4000-$BFFF) to page 5 ($14000-$17FFF)
 	ld	a,5
-	ld	(#SMS_PAGE_1),a
+	ld	($.SMS_PAGE_1),a
 	ld	($.PAGE_1),a
 	call	;loadObjectLayout
 	
@@ -3338,13 +3338,13 @@ PROC    ;_LABEL_258B_133
 	
 	`load page 1 ($4000-$7FFF) with bank 5 ($14000-$17FFF)
 	ld	a,5
-	ld	(#SMS_PAGE_1),a
+	ld	($.SMS_PAGE_1),a
 	ld	($.PAGE_1),a
 	
 	`map 3 screen (end of game)
 	ld	hl,$6830
 	ld	bc,$0179
-	ld	de,#SMS_VDP_SCREENNAMETABLE
+	ld	de,$.VDP_SCREENNAMETABLE
 	xor	a
 	ld	($.TEMP1),a
 	call	;decompressScreen
@@ -3357,7 +3357,7 @@ PROC    ;_LABEL_258B_133
 	call	;waitForInterrupt
 	
 	ld	a,1
-	ld	(#SMS_PAGE_1),a
+	ld	($.SMS_PAGE_1),a
 	ld	($.PAGE_1),a
 	ld	a,($.D27F)
 	cp	$06
@@ -3439,13 +3439,13 @@ PROC    ;_LABEL_258B_133
 	ld	(iy+#vars.spriteUpdateCount),$00
 	
 	ld	a,5
-	ld	(#SMS_PAGE_1),a
+	ld	($.SMS_PAGE_1),a
 	ld	($.PAGE_1),a
 	
 	`UNKNOWN
 	ld	hl,$69a9
 	ld	bc,$0145
-	ld	de,#SMS_VDP_SCREENNAMETABLE
+	ld	de,$.VDP_SCREENNAMETABLE
 	xor	a
 	ld	($.TEMP1),a
 	call	;decompressScreen
@@ -3480,13 +3480,13 @@ PROC    ;_LABEL_258B_133
 	call	;decompressArt
 	
 	ld	a,5
-	ld	(#SMS_PAGE_1),a
+	ld	($.SMS_PAGE_1),a
 	ld	($.PAGE_1),a
 	
 	`credits screen
 	ld	hl,$6c61
 	ld	bc,$0189
-	ld	de,#SMS_VDP_SCREENNAMETABLE
+	ld	de,$.VDP_SCREENNAMETABLE
 	xor	a
 	ld	($.TEMP1),a
 	call	;decompressScreen
@@ -3703,24 +3703,24 @@ PROC    ;_2795
 	
 ._5	di	
 	ld	a,l
-	out	(#SMS_VDP_CONTROL),a
+	out	($.VDP_CONTROL),a
 	ld	a,h
-	out	(#SMS_VDP_CONTROL),a
+	out	($.VDP_CONTROL),a
 	push	ix
 	pop	ix
-	in	a,(#SMS_VDP_DATA)
+	in	a,($.VDP_DATA)
 	ld	c,a
 	push	ix
 	pop	ix
 	ld	a,e
-	out	(#SMS_VDP_CONTROL),a
+	out	($.VDP_CONTROL),a
 	ld	a,d
 	or	$40
-	out	(#SMS_VDP_CONTROL),a
+	out	($.VDP_CONTROL),a
 	push	ix
 	pop	ix
 	ld	a,c
-	out	(#SMS_VDP_DATA),a
+	out	($.VDP_DATA),a
 	push	ix
 	pop	ix
 	ei	
@@ -5585,13 +5585,13 @@ PROC    :updateSonicSpriteFrame
 	
 	`------------------------------------------------------------------------------
 	ld	a, e			`$80
-	out	(#SMS_VDP_CONTROL), a
+	out	($.VDP_CONTROL), a
 	ld	a, d			`$36
 	or	%01000000
-	out	(#SMS_VDP_CONTROL), a
+	out	($.VDP_CONTROL), a
 	
 	xor	a			`set A to 0
-	ld	c, #SMS_VDP_DATA
+	ld	c, $.VDP_DATA
 	ld	e, 24
 	
 	``by nature of the way the VDP stores image colours across bit-planes, and that
@@ -5601,19 +5601,19 @@ PROC    :updateSonicSpriteFrame
 ._1	outi
 	outi
 	outi
-	out	(#SMS_VDP_DATA), a
+	out	($.VDP_DATA), a
 	outi
 	outi
 	outi
-	out	(#SMS_VDP_DATA), a
+	out	($.VDP_DATA), a
 	outi
 	outi
 	outi
-	out	(#SMS_VDP_DATA), a
+	out	($.VDP_DATA), a
 	outi
 	outi
 	outi
-	out	(#SMS_VDP_DATA), a
+	out	($.VDP_DATA), a
 	
 	dec	e
 	jp	nz, ._1
@@ -5628,10 +5628,10 @@ PROC    :updateSonicSpriteFrame
 	add	hl, bc
 	
 	ld	a, e
-	out	(#SMS_VDP_CONTROL), a
+	out	($.VDP_CONTROL), a
 	ld	a, d
 	or	%01000000
-	out	(#SMS_VDP_CONTROL), a
+	out	($.VDP_CONTROL), a
 	
 	exx
 	push	bc
@@ -5644,22 +5644,22 @@ PROC    :updateSonicSpriteFrame
 ._3	outi
 	outi
 	outi
-	out	(#SMS_VDP_DATA), a
+	out	($.VDP_DATA), a
 	add	hl, de
 	outi
 	outi
 	outi
-	out	(#SMS_VDP_DATA), a
+	out	($.VDP_DATA), a
 	add	hl, de
 	outi
 	outi
 	outi
-	out	(#SMS_VDP_DATA), a
+	out	($.VDP_DATA), a
 	add	hl, de
 	outi
 	outi
 	outi
-	out	(#SMS_VDP_DATA), a
+	out	($.VDP_DATA), a
 	add	hl, de
 	exx
 	dec	b
@@ -5688,26 +5688,26 @@ PROC    :updateRingFrame
 	ex	de,hl
 	di	
 	ld	a,e
-	out	(#SMS_VDP_CONTROL),a
+	out	($.VDP_CONTROL),a
 	ld	a,d
 	or	%01000000
-	out	(#SMS_VDP_CONTROL),a
+	out	($.VDP_CONTROL),a
 	ld	b,$20
 	
 .loop	ld	a,(hl)
-	out	(#SMS_VDP_DATA),a
+	out	($.VDP_DATA),a
 	nop	
 	inc	hl
 	ld	a,(hl)
-	out	(#SMS_VDP_DATA),a
+	out	($.VDP_DATA),a
 	nop	
 	inc	hl
 	ld	a,(hl)
-	out	(#SMS_VDP_DATA),a
+	out	($.VDP_DATA),a
 	nop	
 	inc	hl
 	ld	a,(hl)
-	out	(#SMS_VDP_DATA),a
+	out	($.VDP_DATA),a
 	inc	hl
 	djnz	.loop
 	
@@ -5799,34 +5799,34 @@ PROC    ;_LABEL_38B0_51
 	xor	l
 	ld	h, a
 	add	hl, bc
-	ld	bc, #SMS_VDP_SCREENNAMETABLE
+	ld	bc, $.VDP_SCREENNAMETABLE
 	add	hl, bc
 	ld	de, ($.D2AF)
 	ld	b, $02
 
 .loop	ld	a, l
-	out	(#SMS_VDP_CONTROL), a
+	out	($.VDP_CONTROL), a
 	ld	a, h
 	or	%01000000
-	out	(#SMS_VDP_CONTROL), a
+	out	($.VDP_CONTROL), a
 	
 	ld	a, (de)
-	out	(#SMS_VDP_DATA), a
+	out	($.VDP_DATA), a
 	inc	de
 	nop
 	nop
 	ld	a, (de)
-	out	(#SMS_VDP_DATA), a
+	out	($.VDP_DATA), a
 	inc	de
 	nop
 	nop
 	ld	a, (de)
-	out	(#SMS_VDP_DATA), a
+	out	($.VDP_DATA), a
 	inc	de
 	nop
 	nop
 	ld	a, (de)
-	out	(#SMS_VDP_DATA), a
+	out	($.VDP_DATA), a
 	inc	de
 	
 	ld	a, b

@@ -29,7 +29,9 @@ OBJECT  #object
 }
 
 `the player is an object like any other and has reserved object parameters in memory
-VAR     $.SONIC		$D3FC	AS #object
+RAM     $D3FC
+{
+        .SONIC                  AS #object
 	`type			$D3FC
 	`unknown1		$D3FD
 	`X			$D3FE/F
@@ -42,6 +44,7 @@ VAR     $.SONIC		$D3FC	AS #object
 	`width			$D409
 	`height			$D40A
 	`spriteLayout		$D40B/C
+}
 
 `--------------------------------------------------------------------------------------
    

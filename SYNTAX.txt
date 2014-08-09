@@ -6,34 +6,70 @@ Licenced under a Creative Commons 3.0 Attribution Licence
 
 				TABLE OF CONTENTS
 	
-        1.              Adding Descriptions:
-	1.1		| Comments
-	1.2.		. Register Hints
-	
-	2.		Numbers:
-        2.1.            | Decimal
-        2.2.            | Hexadecimal
-        2.3.            | Binary
-	2.4.		| Units
-	2.5.		. Negative
-	
-	3.              Encapsulating Z80 Code:
-        3.1.            | Procedures
-        3.2.            | Parameters
-        3.3.            . Sub-Labels
+        i.              Terminology
         
+        1.              Comments
+	1.1.		. Register Hints
+	
+	2.		Numbers
+        2.1.            | Decimal
+        2.2.            | Negatives
+        2.3.            | Fractions
+        2.4.            | Hexadecimal
+        2.5.            | Binary
+	2.6.		| Units
+	2.7.		. Limits
+	
+        3.              Expressions
+        
+	4.              Procedures
+        4.1.            | Parameters
+        4.2.            . Sub-Labels
+        
+        5.              Variables
+        
+        6.              Objects:
+        6.1.            . Bit Flags
 
-1.	Adding Descriptions:
 =======================================================================================
-1.1.    Comments
----------------------------------------------------------------------------------------
+i.      Terminology
+=======================================================================================
+:: "Value", "<value>"
+        A number, or something that can be evaluated into a number, i.e. Variables,
+        Labels, RAM Names and Properties. This does not include Text.
+        
+:: "Expression", "<expr>"
+        A calculation. It can be a single Value, or a calculation involving Operators
+        and multiple Values.
+        
+:: "List", "<list>"
+        A series of Expressions one after the other,
+        e.g. `1, 2, 3, 4, :label, #variable, 7+8`
+        
+        Text is a list in of itself and can be included in other Lists,
+        e.g. `1, 2, "three", 4, 5`
+
+:: "Scope"
+        The nesting-depth of statements within each other.
+        For example, Z80 instructions go within a PROC block.
+        Root is the top-most scope, not nested within anything else.
+
+:: "Block"
+        An encapsulation. `PROC`, `TABLE` & `STRUCT` are all types of blocks.
+
+ 
+=======================================================================================
+1.	Comments
+=======================================================================================
+Scopes: Any
 Format:
 	`single-line
+        
 	``multi-
 	  line``
 
-A single-line comment begins with a back-tick. All text from that point to the end
-of the line is ignored.
+A single-line comment begins with a back-tick.
+All text from that point to the end of the line is ignored.
 
 	ld	de, 3			`sprite table is 3 bytes per sprite
 
@@ -48,8 +84,9 @@ double back-tick is encountered. All text in between is ignored.
 	rrca
 	rrca
 
-1.2.	Register Hints
+1.1.	Register Hints
 ---------------------------------------------------------------------------------------
+Scopes: Any
 Format:
 	<register>;<hintName>		`or:
 	<register>'<hintName>		`for indicating shadow registers in use
@@ -85,13 +122,12 @@ underscore can appear after the semi-colon and is not stored or referenced by th
 assembler. They are purely for readability.
 
 
-2.	Numbers:
+=======================================================================================
+2.	Numbers
 =======================================================================================
 2.1.    Decimal
 ---------------------------------------------------------------------------------------
-It's safe to say you know how to use numbers. With Z80 code some instructions will
-require 8-bit numbers and some 16-bit numbers.
-
+With Z80 code some instructions will require 8-bit numbers and some 16-bit numbers.
 Any decimal number above 255 is implicitly a 16-bit number, therefore the following
 would not work:
 
@@ -105,13 +141,36 @@ It's fine to use an 8-bit number on 16-bit instructions though, i.e.
 The number will be used as 16-bit with the correct high and low byte order.
 (the high byte will be 0) 
 
-2.2.    Hexadecimal
+2.2     Fractions
+---------------------------------------------------------------------------------------
+Decimal numbers can also be fractional, i.e. with decimal places.
+Up to 15 decimal places are supported.
+        
+        DEF PI 3.141592653589793
+
+Expressions may also result in fractional values:
+        
+        DEF HALF 1 / 2
+
+WARNING: Whilst fractional values can be supplied to Z80 instruction parameters,
+the value will be rounded *DOWN* and a warning raised.
+        
+        ld a, 1.6                       `produces a warning, result will be 1
+
+2.3.	Negatives
+---------------------------------------------------------------------------------------
+8-bit negative numbers are represented on the Master System by having the upper-most
+bit set. This limits a negative number to -127 (8-bit) or -32767 (16-bit)
+
+2.4.    Hexadecimal
 ---------------------------------------------------------------------------------------
 Hexadecimal numbers are prefixed with the dollar sign "$", e.g.
 
 	ld de, $ABCD
 
-2.3.    Binary
+Hexadecimal numbers cannot be negative or have fractions.
+
+2.5.    Binary
 ---------------------------------------------------------------------------------------
 Binary numbers are prefixed with the percent sign "%".
 You can include all 8 digits or only as many as you need
@@ -119,35 +178,118 @@ You can include all 8 digits or only as many as you need
 	ld h, %00001111
 	ld h, %1111
 
-For 16-bit numbers use more digits. Up to a maximum of 31 digits are supported at this
-time, but more may be supported in the future.
+For 16-bit numbers use more digits.
 	
 	ld hl, %0000111100001111
 
-2.4.	Units
+Binary numbers cannot be negative (in the sense of `-%10101010`), or have fractions.
+        
+2.6.	Units
 ---------------------------------------------------------------------------------------
-Number suffixes (units) are supported to represent larger number in a simpler
+Number suffixes (units) are supported to represent larger numbers in a simpler
 fashion.
 
-	1 K		= 1'000 (kilobytes)
-	1 KB		= 1'024 (kibibytes)
-	1 Kbit		= 128 (kibibits)
-	
-2.5.	Negative
+	1 K	= 1'000 (Kilobytes)
+	1 KB	= 1'024 (Kibibytes)
+	1 Kbit	= 128 (Kibibits)
+
+2.7.    Limits
 ---------------------------------------------------------------------------------------
-Numbers are assumed to be positive and filling the full space of the 8 or 16-bits
-available, i.e. 0-255 or 0-65535.
+Numbers are limited to 32-bits even though internally the assembler stores numbers
+using 64-bits. This is so that signed, unsigned and floating point numbers can all
+be stored and treated the same. Therefore the following limitations apply to all
+numbers:
 
-8-bit negative numbers are represented on the Master System by having the upper-most
-but set. This limits a negative number to -127 (8-bit) or -32767 (16-bit)
+        Type: `LONG` (32 bits)
+              (unless otherwise defined, all numbers are by default 32-bit)
+        
+        Maximum:         4'294'967'295          (all 32 bits)
+        Minimum:        -2'147'483'648          (31 bits & negative sign)
+        
+        Type: `TRIP` (24 bits "triple")
+        
+        Maximum:         16'777'216             (all 24 bits)
+        Minimum:         -8'388'608             (23 bits & negative sign)
+        
+        TYPE: `WORD` (16 bits)
+        
+        Maximum:          65'536                (all 16 bits)
+        Minimum:         -32'768                (15 bits & negative sign)
+        
+        TYPE: `BYTE` (8 bits)
+        
+        Maximum:          255                   (all 8 bits)
+        Minimum:         -128                   (7 bits & negative sign)
+
+NOTE: Fractions are supported on all decimal numbers, even 8-bit ones, e.g. `128.54`
 
 
-3.      Encapsulating Z80 Code:
 =======================================================================================
+3.	Expressions
+=======================================================================================
+An Expression is a calculation consisting of either a single Value, or multiple Values
+separated by Operators, e.g. `1 + 1` (See the Terminology section).
+
+These are the Operators supported:
+
+:: Plus `+`
+        Addition. I.e. `1 + 1`
+
+:: Minus `-`
+        Subtraction. I.e. `1 - 1`
+
+:: Times `*`
+        Multiplication. I.e. `2 * 2`
+
+:: Divide `/`
+        Division. I.e. `6 / 2`
+
+:: Power `^`
+        Exponentiation. I.e. multiplied a given number of times, `2 ^ 3` = `2 * 2 * 2`
+        
+:: Mod `\`
+        Modulus. I.e. remainder of division, `5 \ 2` = 1
+        
+:: And `&`
+        Bitwise AND. The bits of the two sides are combined using AND logic, that is:
+        0 & 0 = 0 / 0 & 1 = 0 / 1 & 1 = 1
+        
+:: Or `|`
+        Bitwise OR. The bits of the two sides are combined using OR logic, that is:
+        0 | 0 = 0 / 0 | 1 = 1 / 1 | 1 = 1
+
+:: Not `!`
+        Bitwise NOT. The bits of the proceeding value are inverted.
+        
+:: Xor `~`
+        Bitwise XOR. The bits of the two sides are combined using XOR logic, that is:
+        0 ~ 0 = 0 / 0 ~ 1 = 1 / 1 ~ 1 = 0
+        
+:: Shift-left `<<`
+        Shifts the bits of the value to the left by the number of places given by the
+        right-hand Value, dropping the overflow into the bit-bucket and inserting
+        zeroes to the right.
+
+:: Shift-right `>>`
+        Shifts the bits of the value to the right by the number of places given by the
+        right-hand Value, dropping the overflow into the bit-bucket and inserting
+        zeroes to the left.
+
+
+=======================================================================================
+4.      Procedures
+=======================================================================================
+Scopes: Root
+Format:
+        PROC    :<labelName>
+        {
+                [...]
+        }
+        
 When writing assembly code, flexibility in the assembler is needed to handle the
 inherit in-flexibility of assembly language. With pure assembly, inserting a single
 instruction would throw off every consequent memory address and break the entire
-code-base beyond repair!
+code-base!
 
 Labels allow you to point to an address in the ROM in a flexible & safe manner so that
 your code can expand, contract or even change order without breaking the ROM addresses
@@ -160,14 +302,6 @@ Unlike other assemblers, OZ80MANDIAS requires that all code / data be wrapped in
 relevant structure that will define the beginning and end of the block of code / data.
 Many of the unique features of OZ80MANDIAS require that it know the boundaries of the
 code and data.
-
-3.1.    Procedures
----------------------------------------------------------------------------------------
-Format:
-        PROC    :<procedureName>
-        {
-                [...]
-        }
 
 Procedures (also known as routines) are the sections of code which you `call` into and
 return from (`ret`). 
@@ -198,11 +332,13 @@ using ":doThing" rather than a fixed number.
                 ret
         }
 
-3.1.    Parameters
+4.1.    Parameters
 ---------------------------------------------------------------------------------------
+Scopes: Root
 Format:
         PROC    :<procedureName>
-                [PARAMS <list>] [RETURN <list>]
+                [PARAMS <list>]
+                [RETURN <list>]
         {
                 [...]
         }
@@ -229,14 +365,15 @@ to decipher the code.
 Here the procedure is noted to use registers A, HL & BC as inputs and sets DE upon
 return.
 
-3.3.	Sub-Labels
+4.2.	Sub-Labels
 ---------------------------------------------------------------------------------------
+Scopes: PROC
 Format:
         .<labelName>
 
 Within procedure blocks, special labels can be provided for the procedure to reference
 internal locations, i.e. jumps and private pieces of data. These are placed at the
-beginning of a line.
+beginning of a line and start with a dot, followed by the name.
 
 	PROC :myProcedure {
 		ld b, 10
@@ -257,24 +394,190 @@ procedures (such as "loop") from clashing with other procedures' internal labell
 Outside of "myProcedure", it is referred to via the full label name.
 
 
-#       Storing Data
+=======================================================================================
+5.	Variables
+=======================================================================================
+Scopes: Root
+Format:
+	VAR #<varName> [<expr>]
+	
+To reduce the amount of maintenance needed for changing values across a code base, 
+you may define names for common values and use these names throughout to provide you
+a single point to change that value in the future.
+
+In its simplest form a variable is defined using the `VAR` statement,
+a variable name and a value:
+
+	VAR #sirLancelotsFavouriteColour $30
+
+Anywhere you would normally use a value, you can now instead use the variable name:
+
+	ld a, #sirLancelotsFavouriteColour
+
+All variables are prefixed with a hash (a.k.a. 'pound', 'sharp' or 'octothorpe') any
+place where they appear in the program. This convention is used so as to distinguish
+in code (to any reader) that the variable is an arbitrary value defined by the
+assembler and not native Z80 code (that would work on any assembler). This convention
+also reduces confusion with the use of labels in Z80 instruction parameters.
+
+If the value expression is omitted, a variable defaults to 0, e.g.
+
+	VAR #ZERO
+
+But a variable is re-defined without a value, it defaults to its previous value, e.g.
+
+	VAR #ONE	1		`set to 1
+	VAR #ONE			`value is still 1, not zero
+
+
+=======================================================================================
+6.	Objects
+=======================================================================================
+Scopes: Root
+Format:
+	OBJECT #<objName> {
+                .<propName> AS BYTE|WORD|TRIP|LONG [x <expr>] [DEFAULT <expr>] [BITS {
+                        .<propName>     [x <expr>]      `define a bit name
+                        .               [x <expr>]      `skip bits
+                }]
+		.<propName> AS #<objName>
+		[...]
+	}
+
+In your code you will likely be handling structured data of some kind. A common example
+would be sprite definitions for players and enemies. The structured data would normally
+consist of a number of parameters offset from some starting point, for example
+X position, Y position, ID, speed and so forth.
+
+Managing these objects in a flexible manner is possible by using object constructs,
+essentially variables extended with custom properties defined by you.
+
+Let's imagine an enemy object:
+
+	OBJECT #enemy {
+		.x		AS WORD
+		.y		AS WORD
+		.id		AS BYTE
+		.speed		AS BYTE
+	}
+
+First, a variable is defined, #enemy, with a value of 0 -- the starting offset point.
+Additional properties are defined, each with a given size. These properties hold the
+value of their offset, for example.
+
+	ld ix, :alien			`the location of an enemy instance
+	ld a, (ix+#enemy.id)		`gives 4
+	ld bc, (ix+#enemy.x)		`gives 0
+	ld de, (ix+#enemy.y)		`gives 2
+	ld l, (ix+#enemy.speed)		`gives 5
+
+As you can see, using an object provides the flexibility to rearrange the object's
+properties, insert new ones in the middle or remove properties from any point without
+breaking your assembly code (other than when reading bytes linearly).
+
+When you need to specify a property bigger than 2 bytes, you may use the `x` operator
+to give multiples of bytes or words; for example:
+
+	OBJECT #thing {
+		.someStuff	AS BYTE x 8
+		.moreStuff	AS WORD x 16
+	}
+
+All variables and properties have a sub-property `.size` which gives the size of the
+variable or property in bytes. E.g.
+
+	PRINT #thing.moreStuff.size	`outputs 32 (16 words)
+	PRINT #thing.size		`outputs 40 (8 + 32)
+
+Objects can also contain other objects, allowing finer grained structure.
+
+	OBJECT #position {
+		.x 		AS WORD
+		.y 		AS WORD
+	}
+	
+	OBJECT #path {
+		.start		AS #position
+		.end		AS #position
+	}
+	
+These sub-properties would be accessed with `#path.start.x`, for example.
+
+...
+
+6.1.	Bit Flags
+---------------------------------------------------------------------------------------
+Scopes: VAR, OBJECT, RAM
+Format:
+	BITS {
+		.<propName>
+		.			`unused bit
+	}
+	
+Manipulating individual bits is a common task in assembly.
+        
+	VAR #elements AS BITS {
+		.earth
+		.wind
+		.fire
+		.water
+	}
+...
+
+6.2.    Object Variables
+---------------------------------------------------------------------------------------
+Scopes: Root
+Format:
+        VAR #<varName> AS #<objName>
+
+...
+
+
+=======================================================================================
+#.      Data
 =======================================================================================
 #.#.    Data Tables
 ---------------------------------------------------------------------------------------
+Scope:  Root
 Format:
-        TABLE :<tableName> {
+        TABLE :<labelName> {
                 [...]
         }
+        
+Whilst `PROC` is designed for holding Z80 code, data tables are designed for storing
+your program's data such as graphics, levels and sound.
 
 #.#.    Data Statements
 ---------------------------------------------------------------------------------------
-...
+Scope:  PROC, TABLE
+Format:
+        DATA|BYTE|WORD|TRIP|LONG|TEXT <list>
 
-#.#.    Binary Data
+It's important to note that 16-bit numbers are stored in little-endian format, that is
+the low-order byte is first and the hi-order byte second, therefore `$1234` would be
+outputted as `$34, $12`. This is the format understood by the Master System.
+
+#.#.	Binary Strings
 ---------------------------------------------------------------------------------------
-...
+Format:
+	$"<data>"
+
+To ease the work in providing longer sections of data, you can specify the bytes in a
+more compact manner using hexadecimal digits:
+
+	DATA $"0102030405060708090A0B0C"
+
+The bytes will be inserted into the output without any re-ordering.
+
+#.#.    ASCII Maps
+---------------------------------------------------------------------------------------
 
 
+#.#.    Indexes
+---------------------------------------------------------------------------------------
+
+
+=======================================================================================
 #.	Memory Management:
 =======================================================================================
 #.1.    Introduction
@@ -340,14 +643,19 @@ To make your life easier, the assembler will do all the necessary translation of
 addresses for you automatically, however you must divide your code into SECTIONs
 to alert the assembler when a particular bank or slot is required for a piece of code.
 
+#.2.    Sections
+---------------------------------------------------------------------------------------
 
+
+=======================================================================================
 #.      RAM
 =======================================================================================
-#.#.    Naming RAM Addresses
+#.1.    Naming RAM Addresses
 ---------------------------------------------------------------------------------------
 Format:
         RAM [<expr>] {
-                .<name>         AS [BYTE|WORD] [x <expr>]
+                .<ramName>              AS BYTE|WORD|TRIP|LONG [x <expr>]
+                .<ramName>              AS #<objName>
                 [...]
         }
 
@@ -355,13 +663,13 @@ Your assembly code will contain numerous references to the Master System's RAM
 (Located from $C000 to $DFFF and mirrored at $E000 to $FFFF). Manually managing the
 RAM addresses is difficult, and could make using 3rd party code untenable.
 
-Help is at hand! With OZ80 you can define a name for each RAM address and the assembler
+With OZ80 you can define a name for each RAM address and the assembler
 will choose the address for you. Begin by defining a RAM block as such:
 
         RAM {
-                .someRAM as BYTE
-                .moreRAM as WORD
-                .lotsaRAM as BYTE x 1 KB
+                .someRAM AS BYTE
+                .moreRAM AS WORD
+                .muchRAM AS BYTE x 1 KB
         }
         
 Here, a RAM constant ".someRAM" is defined to be a byte in length. The assembler will
@@ -369,7 +677,7 @@ automatically choose the RAM address for it and move on to the next address base
 the size of the constant. The second constant ".moreRAM" is 2-bytes in length and the
 third is 1 KB (1024 Bytes) in length.
 
-You can have multiple RAM blocks throughout your code, so as to define relevant RAM use
+You can have multiple RAM blocks throughout your code, so as to define relevant RAM
 near the relevant code. The assembler chooses the RAM addresses starting from $C000,
 but can you can override this on a RAM block by specifying a different starting point:
 
@@ -379,10 +687,18 @@ but can you can override this on a RAM block by specifying a different starting 
 
 Here, the addressing will begin from $D700 in memory, for this particular RAM block.
 
-#.#.    Using RAM Constants
+TODO: RAM #Objects
+
+TODO: Unnumbered RAM blocks will continue from the previous unnumbered RAM block,
+      NOT a numbered one
+      
+TODO: Two numbered RAM blocks with same addresses will duplicate RAM
+
+
+#.2.    Using RAM Constants
 ---------------------------------------------------------------------------------------
 Format:
-        $.<name>
+        $.<ramName>
 
 Once a RAM constant is defined, it can be accessed in your Z80 code with the special
 prefix "$.", e.g.
@@ -392,245 +708,71 @@ prefix "$.", e.g.
 An additional ".size" property is defined on the RAM constant that provides the size
 of the RAM constant in bytes (useful perhaps for setting up loop limits), e.g.
 
-        ld bc, ($.lotsaRAM.size)                `loads BC with 1024
-        
+        ld bc, ($.muchRAM.size)         `loads BC with 1024
 
-#.	Variables
+
 =======================================================================================
-Format:
-	DEF #<variableName> [<expr>]
-	
-The key benefit of a macro assembler over just an assembler is the ability to define
-names for common values and use these names throughout to provide you a single point
-to change that value in the future.
-
-In its simplest form a variable is defined using the DEF statement,
-a name and a value:
-
-	DEF #sirLancelotsFavouriteColour $30
-
-Anywhere you would normally use a value, you can now instead use the variable name:
-
-	ld a, #sirLancelotsFavouriteColour
-
-All variables are prefixed with a hash (a.k.a. 'pound', 'sharp' or 'octothorpe') any
-place where they appear in the program. This convention is used so as to distinguish
-in code (to any reader) that the variable is an arbitrary value defined by the
-assembler and not native Z80 code (that would work on any assembler). This convention
-also reduces confusion with the use of labels (see the section on Labels for details)
-
-If the value expression is omitted, a variable defaults to 0, e.g.
-
-	DEF #ZERO
-
-But a variable is re-defined without a value, it defaults to its previous value, e.g.
-
-	DEF #ONE	1		`set to 1
-	DEF #ONE			`value is still 1, not zero
-
-The practical application of this behaviour will be demonstrated later when it comes
-to using properties and defining RAM addresses.
-
-
 #.	Properties
 =======================================================================================
-Format:
-	#<variableName>.<propertyName>
-	
-A property is a sub-value of a variable that tells you something about that variable.
+A property is a sub-value of a named-item (i.e. variable, object, label etc.)
+that tells you something about that item.
 
-Oftentimes in Z80 assembly you need to access the high or low bytes of a 16-bit value.
+#.1.    Of Variables & Objects
+---------------------------------------------------------------------------------------
+Scope:  Any
+Format:
+	#<varName>.<propName>
+
+#.2.    Of Labels
+---------------------------------------------------------------------------------------
+Often-times in Z80 assembly you need to access the high or low bytes of a 16-bit value.
 Instead of specifying these bytes in a fixed fashion, you can use the flexibility of
 variables with the `hi` & `lo` properties, e.g.
 
-	DEF #foo	$1234
-	ld h, #foo.lo			`"$34"
-	ld l, #foo.hi			`"$12"
+	DEF #foo $1234
+	ld      h, #foo.lo		`"$34"
+	ld      l, #foo.hi		`"$12"
 
 Notice that HL is loaded in low, high order due to the Z80 being little-endian.
 
 The `.bank` property retrieves the bank number of where the Label resides,
 the `.slot` property does likewise for the slot number - 0, 1 or 2 
-(see section 3, "Banks & Slots")
 
-	DEF #labelBank :label.bank
-	DEF #realAddr :label.slot * $4000
+	DEF #BANK :label.bank
+	DEF #SLOT :label.slot
 
 TODO:
 	.size
+...        
+
+#.3.    Of Tables
+---------------------------------------------------------------------------------------
 ...
 
 
-#.	Data
 =======================================================================================
-#.#.	Data statements
----------------------------------------------------------------------------------------
-Format:
-	DATA <expr>[, <expr> ...]	//selects 8 or 16-bit automatically per value
-	BYTE <expr>[, <expr> ...]	//8 bit values only
-	WORD <expr>[, <expr> ...]	//16 bit values
-
-The data statement assembles numbers and text into the output file. It is used for
-storing non-code data in the output ROM such as graphics, text and sound.
-
-The data statement accepts one or more expressions separated by commas.
-
-	DATA $00, $FF, $00FF, $FF00, "string", :label, #variable, 1+2
-
-It's important to note that 16-bit numbers are stored in little-endian format, that is
-the low-order byte is first and the hi-order byte second, therefore `$1234` would be
-outputted as `$34, $12`. This is the format understood by the Master System.
-
-#.#.	Binary Strings
----------------------------------------------------------------------------------------
-Format:
-	$"<data>"
-	%"<data>"
-
-To ease the work in providing longer sections of data, you can specify the bytes in a
-more compact manner using binary string, in either hexadecimal digits or binary digits
-(if that's more representative of your data)
-
-	$"0102030405060708090A0B0C"	`hexadecimal digits
-	%"000001010011100101110111"	`binary digits
-
-The bytes will be inserted into the output without any re-ordering.
-
-#.#.	Filling Space
----------------------------------------------------------------------------------------
-Format:
-	FILL [BINARY] <expr>[, <expr> ...]
-
-Fills unused space from the point of the declaration onwards with the given value,
-string or binary file. The filling is done in a repeating background fashion so that
-it will appear as if the assembled code/data has been placed over the top of an area
-previously filled with the `FILL` value.
-
-	FILL $FF
-	FILL $00, $80, $FF
-	FILL "Copyright (C) SEGA"
-	FILL BINARY "filename.bin"
-
-
 #.	Includes
 =======================================================================================
+Scope:  Root
 Format:
 	INCLUDE <expr>
 ...
 
+Scope:  PROC, TABLE
 Format:
         BINARY <expr> [START <expr> [LENGTH <expr>|STOP <expr>]]
 ...
 
 
 
-#.	Data Tables
+
 =======================================================================================
-Format:
-	TABLE :<tableName> {
-		.<rowName>		;Also defines `rowName.index`
-		<data> ...
-		[.<rowName>
-		<data> ...]
-	}
-...
-
-
-#.	Objects
+#.	Structures
 =======================================================================================
+Scope:  Root
 Format:
-	OBJECT #<objectName> {
-		.<propertyName> [AS BYTE|WORD [x <expr>]|#<object>] [DEFAULT <expr>]
-		[...]
-	}
-
-In your code you will likely be handling structured data of some kind.
-A common example would be sprite definitions for players and enemies.
-The structured data would normally consist of a number of parameters offset from some
-starting point, for example X position, Y position, ID, speed and so forth.
-
-Managing these objects in a flexible manner is possible by using object constructs,
-essentially variables extended with custom properties defined by you.
-
-Let's imagine an enemy object:
-
-	OBJECT #enemy {
-		.x		AS WORD
-		.y		AS WORD
-		.id		AS BYTE
-		.speed		AS BYTE
-	}
-
-First, a variable is defined, #enemy, with a value of 0 -- the starting offset point.
-Additional properties are defined, each with a given size. These properties hold the
-value of their offset, for example.
-
-	ld ix, :alien			`the location of an enemy instance
-	ld a, (ix+#enemy.id)		`gives 4
-	ld bc, (ix+#enemy.x)		`gives 0
-	ld de, (ix+#enemy.y)		`gives 2
-	ld l, (ix+#enemy.speed)		`gives 5
-
-As you can see, using an object provides the flexibility to rearrange the object's
-properties, insert new ones in the middle or remove properties from any point without
-breaking your assembly code (other than when reading bytes linearly).
-
-Supported data types are "BYTE" & "WORD" (2 bytes). More types will be supported in
-future (including 24 / 32-bit words and single bits)
-
-When you need to specify a property bigger than 2 bytes, you may use the `x` operator
-to give multiples of bytes or words; for example:
-
-	OBJECT #thing {
-		.someStuff	AS BYTE x 8
-		.moreStuff	AS WORD x 16
-	}
-
-All variables and properties have a sub-property `.size` which gives the size of the
-variable or property in bytes. E.g.
-
-	PRINT #thing.moreStuff.size	`outputs 32 (16 words)
-	PRINT #thing.size		`outputs 40 (8 + 32)
-
-Objects can also contain other objects, allowing finer grained structure.
-
-	OBJECT #position {
-		.x 		AS WORD
-		.y 		AS WORD
-	}
-	
-	OBJECT #path {
-		.start		AS #position
-		.end		AS #position
-	}
-	
-These sub-properties would be accessed with `#path.start.x`, for example.
-
-...
-
-#.#.	Bit Flags
----------------------------------------------------------------------------------------
-Format:
-	DEF #<variableName> [<expr>] AS BITS {
-		.<bitName>
-		.			`unused bit
-	}
-	
-Manipulating individual bits is a common task in assembly.
-
-	DEF #elements $C000 AS BITS {
-		.earth
-		.wind
-		.fire
-		.water
-	}
-...
-
-#.#.	Structures
----------------------------------------------------------------------------------------
-Format:
-	STRUCT :<structureName> AS #<objectName> {
-		.<propertyName> <expr>[, <expr> ...]
+	STRUCT :<labelName> AS #<varName> {
+		.<propName> <list>
 		[...]
 	}
 
@@ -674,35 +816,7 @@ in the correct order and the 6th byte (speed) will be 5.
 TODO: sub-objects of a structure
 
 
-#.	Expressions
 =======================================================================================
-In the format descriptors given throughout this document, the term "<expr>" can
-be substituted for a Number, a Label, a Variable, a Property or a calculation of any
-combination using the Operators, to produce a value.
-
-#.#.	Operators
----------------------------------------------------------------------------------------
-The standard operators are supported as `+` add, `-` subtract, `*` multiply,
-`/` divide, `^` power & `\` modulus (remainder of division).
-
-TODO:
-& (AND)
-| (OR)
-! (NOT)
-~ (XOR)
-<< (Shift Left)
->> (Shift Right)
-<<< (Rotate Left)?
->>> (Rotate Right)?
-
-A final special operator `x` is supported. This repeats the preceding value by the
-value on the right hand side. For example, the following:
-
-	DATA $80 x 6
-
-Would insert 6 bytes of $80
-
-
 #.	Strings
 =======================================================================================
 Textual data can be represented easily:
@@ -717,11 +831,8 @@ value into the output you can break the quote and insert the value:
 
 	DATA "The quick brown fox", 13, "Jumps over the lazy dog"
 
-#.#.	ASCII Maps
----------------------------------------------------------------------------------------
-...
 
-
+=======================================================================================
 #.	Program Flow
 =======================================================================================
 #.#.	Logic
@@ -743,6 +854,7 @@ TODO: "EXIT IF"
 TODO: =, NOT, <, <=, >, >=, AND, OR (`&`/`|`/`!` are purely bitwise operators)
 
 
+=======================================================================================
 #.	Macros & Functions
 =======================================================================================
 #.#.	Macros
@@ -759,6 +871,7 @@ TODO: USE MACRO @macroName
 
 #.#.	Functions
 ---------------------------------------------------------------------------------------
+Scope:  Root
 Format:
 	FUNCTION ?<functionName> [ARGS #<variableName>[, #<variableName> ...]] {
 		<code>

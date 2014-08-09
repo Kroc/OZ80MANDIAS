@@ -9,7 +9,7 @@
 PROC	:doObjectCode_badnick_crabMeat  SECTION ::objects
 {	
 	ld	(ix+#object.width),$10
-	ld	(ix+#object.height),$1f
+	ld	(ix+#object.height),$1F
 	ld	e,(ix+$12)
 	ld	d,$00
 ._1	ld	hl,._66c5

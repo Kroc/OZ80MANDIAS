@@ -6,7 +6,7 @@
 ``the programmers use the IY register as a shortcut to $D200
   to access commonly used variables and flags`` 
 
-OBJECT  #vars {				`$D200:
+OBJECT #vars {				`$D200:
 	
 	`program flow control / loading flags?
 	.flags0			AS BYTE	`IY+$00
@@ -105,7 +105,7 @@ RAM     `name                   `size                                           
           commonly used RAM variables exist. therefore these use the `(iy+#vars.abc)`
           form of addressing. for the sake of completeness, we'll also define the
           absolute location of these variables too, i.e. `$.VARS.abc```
-        .VARS                   AS #vars                                        `$D200
+        .VARS                   AS _vars                                        `$D200
         
         ``these temporary variables are reused throughout, some times for passing
           extra parameters to a function and sometimes as extra working space within
@@ -141,14 +141,14 @@ RAM     `name                   `size                                           
         .UNUSED_D227            AS WORD                                         `$D227
         .UNUSED_D229            AS WORD                                         `$D229
         
-        ``":loadPaletteOnInterrupt" and ":loadPaletteFromInterrupt" use these to pass
-          parameters``
+        ``":loadPaletteOnInterrupt" and ":loadPaletteFromInterrupt"
+          use these to pass parameters``
         .LOADPALETTE_ADDRESS    AS WORD                                         `$D22B
         .D22D                   AS WORD                                         `UNUSED
         .LOADPALETTE_FLAGS      AS BYTE                                         `$D22F
         
-        ``":loadPalette" uses these to pass the addresses of the tile/sprite palettes
-          to load``
+        ``":loadPalette" uses these to pass the addresses of the
+          tile/sprite palettes to load``
         .LOADPALETTE_TILE       AS WORD                                         `$D230
         .LOADPALETTE_SPRITE	AS WORD                                         `$D232
         

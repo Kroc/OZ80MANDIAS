@@ -7,14 +7,14 @@
   regardless of which bank is loaded into Slot 0. Contained herein is some
   initialisation and the interrupt handling code``
 
-PROC    :START AT $0000 LIMIT $17       SECTION ::interrupts
+PROC    :START AT $0000                SECTION ::interrupts
 {
 	di				`disable interrupts
 	im	1			`set the interrupt mode to 1 --
 					 `$0038 will be called at 50/60Hz 
         
 	`wait for the scanline to reach 176 (no idea why)
-.loop	in	a, (#SMS_CURRENT_SCANLINE)
+.loop	in	a;scanline, ($.VDP_SCANLINE)
 	cp	176
 	jr	nz, .loop
 	jp	:init
@@ -23,34 +23,34 @@ PROC    :START AT $0000 LIMIT $17       SECTION ::interrupts
 `______________________________________________________________________________________
 
 `the `RST $18` Z80 instruction jumps here
-PROC    :rst_playMusic AT $0018 LIMIT 7 SECTION ::interrupts
+PROC    :rst_playMusic AT $18           SECTION ::interrupts
 PARAMS  a;songIndex
 {
 	jp	:playMusic
 }
 
 `the `RST $20` Z80 instruction jumps here
-PROC    :rst_muteSound AT $0020 LIMIT 7 SECTION ::interrupts 
+PROC    :rst_muteSound AT $20           SECTION ::interrupts 
 {
 	jp	:muteSound
 }
 
 `the `RST $28` Z80 instruction jumps here
-PROC    :rst_playSFX AT $0028 LIMIT 15  SECTION ::interrupts 
+PROC    :rst_playSFX AT $28             SECTION ::interrupts 
 PARAMS  a;SFXIndex
 {
 	jp	:playSFX
 }
 
 `the hardware interrupt generator jumps here
-PROC    :IRQ AT $0038                   SECTION ::interrupts 
+PROC    :IRQ AT $38                     SECTION ::interrupts 
 {
 	jp	:interruptHandler
         
         DATA "Developed By (C) 1991 Ancient - S", $A5, "Hayashi.", $00
 }
 
-PROC    :pause AT $0066                 SECTION ::interrupts 
+PROC    :pause AT $66                   SECTION ::interrupts 
         `====================================================================[$0066]===
         `pressing the pause button causes an interrupt and jumps to $0066
 {
@@ -84,7 +84,7 @@ PROC    :interruptHandler               SECTION ::interrupts
 	push	af', hl', de', bc'
 	
 	`get the status of the VDP
-	in	a;vdpStatus, (#SMS_VDP_CONTROL)
+	in	a;vdpStatus, ($.VDP_CONTROL)
 	
 	bit	7, (iy+#vars.flags6)	`check the underwater flag
 	jr	z, ._1			`if off, skip ahead
@@ -93,13 +93,14 @@ PROC    :interruptHandler               SECTION ::interrupts
           to remember at which step the procedure is at a value of 0 means that it
           needs to be initialised, and then it counts down from 3``
 	
-	ld	a, ($.RASTERSPLIT_STEP)
-	and	a			`doesn't change the number, but updates flags
+	ld	a;step, ($.RASTERSPLIT_STEP)
+	and	a;step			`doesn't change the number, but updates flags
 	jp	nz, :doRasterSplit	`if it's not zero, deal with the particulars
 	
 	`--- initialise raster split --------------------------------------------------
-	ld	a, ($.WATERLINE)	`check the water line height
-	and	a
+	`check the water line height:
+        ld	a;waterline, ($.WATERLINE)
+	and	a;waterline
 	jr	z, ._1			`if it's zero (above the screen), skip
 	
 	cp	$FF			`or 255 (below the screen),
@@ -108,21 +109,21 @@ PROC    :interruptHandler               SECTION ::interrupts
 	``copy the water line position into the working space for the raster split.
 	  this is to avoid the water line changing height between the multiple
 	  interrupts needed to produce the split, I think``
-	ld	($.RASTERSPLIT_LINE), a
+	ld	($.RASTERSPLIT_LINE), a;waterline
 	
 	``set the line interrupt to fire at line 10 (top of the screen),
 	  we will then set another interrupt to fire where we want the split to occur``
 	ld	a, 10
-	out	(#SMS_VDP_CONTROL), a
-	ld	a, #SMS_VDP_REGISTER_10
-	out	(#SMS_VDP_CONTROL), a
+	out	($.VDP_CONTROL), a
+	ld	a, _VDP_REGISTER_10
+	out	($.VDP_CONTROL), a
 	
 	`enable line interrupt IRQs (bit 5 of VDP register 0)
 	ld	a, ($.VDPREGISTER_0)
 	or	%00010000
-	out	(#SMS_VDP_CONTROL), a
-	ld	a, #SMS_VDP_REGISTER_0
-	out	(#SMS_VDP_CONTROL), a
+	out	($.VDP_CONTROL), a
+	ld	a, _VDP_REGISTER_0
+	out	($.VDP_CONTROL), a
 	
 	`initialise the step counter for the water line raster split
 	ld	a, 3
@@ -148,9 +149,9 @@ PROC    :interruptHandler               SECTION ::interrupts
 	ei
 	
 	`switch in the music engine / data
-	ld	a, :sound_update#bank
-	ld	(#SMS_PAGE_1), a
-	ld	($.PAGE_1), a
+	ld	a;bank, :sound_update.bank
+	ld	($.SMS_PAGE_1), a;bank
+	ld	($.PAGE_1), a;bank
 	call	:sound_update
 	
 	call	:readJoypad
@@ -160,20 +161,20 @@ PROC    :interruptHandler               SECTION ::interrupts
 	call	:_LABEL_625_57
 	
 	`check for the reset button
-	in	a, (#SMS_JOYPAD_2)	`read the second joypad port which has extra
+	in	a, ($.SMS_JOYPAD_2)	`read the second joypad port which has extra
 					 `bits for lightgun / reset button
 	and	%00010000		`check bit 4
 	jp	z, ::START		`reset!
 	
 	`return pages 1 & 2 to the banks before we started messing around here
 	pop	hl;banks
-	ld	(#SMS_PAGE_1), hl;banks
+	ld	($.SMS_PAGE_1), hl;banks
 	ld	($.PAGE_1), hl;banks
 	
 	`pull everything off the stack so that the code that was running
 	 `before the interrupt doesn't explode
 	pop	iy, ix
-	pop	bc, de, hl, af
+	pop	bc', de', hl', af'
 	ret
 }
 
@@ -190,22 +191,22 @@ PROC    :_LABEL_F7_25                   SECTION ::interrupts
 	`blank the screen (remove bit 6 of VDP register 1)
 	ld	a, ($.VDPREGISTER_1)	`get our cache value from RAM
 	and	%10111111		`remove bit 6
-	out	(#SMS_VDP_CONTROL), a	`write the value,
-	ld	a, #SMS_VDP_REGISTER_1	`followed by the register number
-	out	(#SMS_VDP_CONTROL), a
+	out	($.VDP_CONTROL), a	`write the value,
+	ld	a, _VDP_REGISTER_1	`followed by the register number
+	out	($.VDP_CONTROL), a
 	
 	`horizontal scroll
 	ld	a, ($.VDPSCROLL_HORZ)
 	neg				`I don't understand the reason for this
-	out	(#SMS_VDP_CONTROL), a
-	ld	a, #SMS_VDP_REGISTER_8
-	out	(#SMS_VDP_CONTROL), a
+	out	($.VDP_CONTROL), a
+	ld	a, _VDP_REGISTER_8
+	out	($.VDP_CONTROL), a
 	
 	`vertical scroll
 	ld	a, ($.VDPSCROLL_VERT)
-	out	(#SMS_VDP_CONTROL), a
-	ld	a, #SMS_VDP_REGISTER_9
-	out	(#SMS_VDP_CONTROL), a
+	out	($.VDP_CONTROL), a
+	ld	a, _VDP_REGISTER_9
+	out	($.VDP_CONTROL), a
 	
 	bit	5, (iy+#vars.flags0)			
 	call	nz, :fillScrollTiles
@@ -216,28 +217,28 @@ PROC    :_LABEL_F7_25                   SECTION ::interrupts
 	`turn the screen back on 
 	 `(or if it was already blank before this function, leave it blank)
 	ld	a, ($.VDPREGISTER_1)
-	out	(#SMS_VDP_CONTROL), a
-	ld	a, #SMS_VDP_REGISTER_1
-	out	(#SMS_VDP_CONTROL), a
+	out	($.VDP_CONTROL), a
+	ld	a, _VDP_REGISTER_1
+	out	($.VDP_CONTROL), a
 	
-	ld	a, 8			`Sonic sprites?
-	ld	(#SMS_PAGE_1), a
-	ld	($.PAGE_1), a
-	ld	a, 9
-	ld	(#SMS_PAGE_2), a
-	ld	($.PAGE_2), a
+	ld	a;bank, 8               `Sonic sprites?
+	ld	($.SMS_PAGE_1), a;bank
+	ld	($.PAGE_1), a;bank
+	ld	a;bank, 9
+	ld	($.SMS_PAGE_2), a;bank
+	ld	($.PAGE_2), a;bank
 	
 	`does the Sonic sprite need updating?
 	 `(the particular frame of animation is copied to the VRAM)
 	bit	7, (iy+#vars.timeLightningFlags)
 	call	nz, :updateSonicSpriteFrame
 	
-	ld	a, 1
-	ld	(#SMS_PAGE_1), a
-	ld	($.PAGE_1), a
-	ld	a, 2
-	ld	(#SMS_PAGE_2), a
-	ld	($.PAGE_2), a
+	ld	a;bank, 1
+	ld	($.SMS_PAGE_1), a;bank
+	ld	($.PAGE_1), a;bank
+	ld	a;bank, 2
+	ld	($.SMS_PAGE_2), a;bank
+	ld	($.PAGE_2), a;bank
 	
 	`update sprite table?
 	bit	1, (iy+#vars.flags0)
@@ -258,16 +259,17 @@ PROC    :_LABEL_F7_25                   SECTION ::interrupts
 	
 PROC	:loadPaletteFromInterrupt       SECTION ::interrupts
         `--------------------------------------------------------------------[$0174]---
-        `load a palette using the parameters set by `loadPaletteOnInterrupt`
+        `load a palette using the parameters set by 'loadPaletteOnInterrupt'
         
-PARAMS	a, hl
+PARAMS	$.LOADPALETTE_ADDRESS   `address to the palette data
+        $.LOADPALETTE_FLAGS     `flags to load tile / sprite palettes or both
 {	
-	ld	a, 1
-	ld	(#SMS_PAGE_1), a
-	ld	($.PAGE_1), a
-	ld	a, 2
-	ld	(#SMS_PAGE_2), a
-	ld	($.PAGE_2), a
+	ld	a;bank, 1
+	ld	($.SMS_PAGE_1), a;bank
+	ld	($.PAGE_1), a;bank
+	ld	a;bank, 2
+	ld	($.SMS_PAGE_2), a;bank
+	ld	($.PAGE_2), a;bank
 	
 	`if the level is underwater then skip loading the palette as the palettes
 	 `are handled by the code that does the raster split
@@ -275,9 +277,9 @@ PARAMS	a, hl
 	jr	nz, ._1
 	
 	`get the palette loading parameters that were assigned by the main thread
-	 `(i.e. `loadPaletteOnInterrupt`)
-	ld	hl, ($.LOADPALETTE_ADDRESS)
-	ld	a, ($.LOADPALETTE_FLAGS)
+	 `(i.e. 'loadPaletteOnInterrupt')
+	ld	hl;addr, ($.LOADPALETTE_ADDRESS)
+	ld	a;flags, ($.LOADPALETTE_FLAGS)
 	
 	bit	3, (iy+#vars.flags0)	`check the flag to specify loading the palette
 	call	nz, :loadPalette	`load the palette if flag is set
@@ -297,26 +299,29 @@ PROC	:_LABEL_1A0_18                  SECTION ::interrupts
 	ret	z			`if off, leave now
 	
 	`switch pages 1 & 2 ($4000-$BFFF) to banks 1 & 2 ($4000-$BFFF)
-	ld	a, 1
-	ld	(#SMS_PAGE_1), a
-	ld	($.PAGE_1), a
-	ld	a, 2
-	ld	(#SMS_PAGE_2), a
-	ld	($.PAGE_2), a
+	ld	a;bank, 1
+	ld	($.SMS_PAGE_1), a;bank
+	ld	($.PAGE_1), a;bank
+	ld	a;bank, 2
+	ld	($.SMS_PAGE_2), a;bank
+	ld	($.PAGE_2), a;bank
 	
 	`this seems quite pointless but could do with
 	 `killing a specific amount of time
 	ld	b, $00
 .nop	nop
 	djnz	.nop
+        
+        `NOTE: fall through the procedure below...
 }
 
 PROC	:loadPaletteFromInterrupt_water SECTION ::interrupts
         `--------------------------------------------------------------------[$01BA]---
         `called only from `loadPaletteFromInterrupt`
 {	
-	ld	a, ($.WATERLINE)	`get the position of the water line on screen
-	and	a
+        `get the position of the water line on screen
+	ld	a;waterline, ($.WATERLINE)
+	and	a;waterline
 	jr	z, ._2			`is it 0? (above the screen)
 	cp	$FF			`or $FF? (below the screen)
 	jr	nz, ._2			`...skip ahead
@@ -328,13 +333,13 @@ PROC	:loadPaletteFromInterrupt_water SECTION ::interrupts
 	 `labyrinth Act 1 & 2 share an underwater palette and Labyrinth Act 3
 	 `uses a special palette to account for the boss / capsule, who normally
 	 `load their palettes on-demand
-	ld	hl, :S1_UnderwaterPalette
+	ld	hl;addr, :S1_UnderwaterPalette
 	`underwater boss palette?
 	bit	4, (iy+#vars.timeLightningFlags)
 	jr	z, ._1			
-	ld	hl, :S1_UnderwaterPalette_Boss
+	ld	hl;addr, :S1_UnderwaterPalette_Boss
 	
-._1	ld	a, %00000011		`"load tile & sprite palettes"
+._1	ld	a;flags, %00000011	`"load tile & sprite palettes"
 	call	:loadPalette		`load the relevant underwater palette
 	ret
 	
@@ -361,7 +366,7 @@ PROC	:loadPaletteFromInterrupt_water SECTION ::interrupts
 
 PROC	:doRasterSplit                  SECTION ::interrupts
         `--------------------------------------------------------------------[$01F2]---
-PARAMS 	a	`the raster split step number (counts down from 3)
+PARAMS 	a;step	                `the raster split step number (counts down from 3)
 {	
 	`step 1?
 	cp	1
@@ -372,37 +377,37 @@ PARAMS 	a	`the raster split step number (counts down from 3)
 	
 	`--- step 3 -------------------------------------------------------------------
 	`set counter at step 2
-	dec	a
-	ld	($.RASTERSPLIT_STEP), a
+	dec	a;step
+	ld	($.RASTERSPLIT_STEP), a;step
 	
-	in	a, (#SMS_CURRENT_SCANLINE)
-	ld	c, a
-	ld	a, ($.RASTERSPLIT_LINE)
-	sub	c			`work out the difference
+	in	a;scanline, ($.VDP_SCANLINE)
+	ld	c;scanline, a;scanline
+	ld	a;split, ($.RASTERSPLIT_LINE)
+	sub	c;scanline	        `work out the difference
 	
 	`set VDP register 10 with the scanline number to interrupt at next
 	 `(that is, set the next interrupt to occur at the water line)
-	out	(#SMS_VDP_CONTROL), a
-	ld	a, #SMS_VDP_REGISTER_10
-	out	(#SMS_VDP_CONTROL), a
+	out	($.VDP_CONTROL), a;scanline
+	ld	a;register, _VDP_REGISTER_10
+	out	($.VDP_CONTROL), a;register
 	
 	jp	._3
 	
 	`--- step 2 -------------------------------------------------------------------
 ._1	`we don't do anything on this step
-	dec	a
-	ld	($.RASTERSPLIT_STEP), a
+	dec	a;step
+	ld	($.RASTERSPLIT_STEP), a;step
 	jp	._3
 	
 	`--- step 1 -------------------------------------------------------------------
-._2	dec	a
-	ld	($.RASTERSPLIT_STEP), a
+._2	dec	a;step
+	ld	($.RASTERSPLIT_STEP), a;step
 	
 	`set the VDP to point at the palette
 	ld	a, $00
-	out	(#SMS_VDP_CONTROL), a
+	out	($.VDP_CONTROL), a
 	ld	a, %11000000
-	out	(#SMS_VDP_CONTROL), a
+	out	($.VDP_CONTROL), a
 	
 	ld	b, 16
 	ld	hl, :S1_UnderwaterPalette
@@ -414,19 +419,19 @@ PARAMS 	a	`the raster split step number (counts down from 3)
 
 	`copy the palette into the VDP
 .loop	ld   a, (hl)
-	out	(#SMS_VDP_DATA), a
+	out	($.VDP_DATA), a
 	inc	hl
 	nop
 	ld	a, (hl)
-	out	(#SMS_VDP_DATA), a
+	out	($.VDP_DATA), a
 	inc	hl
 	djnz	.loop
 	
 	ld	a, ($.VDPREGISTER_0)
 	and	%11101111		`remove bit 4 -- disable line interrupts
-	out	(#SMS_VDP_CONTROL), a
-	ld	a, #SMS_VDP_REGISTER_0
-	out	(#SMS_VDP_CONTROL), a
+	out	($.VDP_CONTROL), a
+	ld	a, _VDP_REGISTER_0
+	out	($.VDP_CONTROL), a
 
 ._3	pop	bc, de, hl, af
 	ei
@@ -451,15 +456,15 @@ PROC	:init                           SECTION ::interrupts
 	`tell the SMS the cartridge has no RAM and to use ROM banking
 	 `(the meaning of bit 7 is undocumented)
 	ld	a, %10000000
-	ld	(#SMS_PAGE_RAM), a
+	ld	($.SMS_PAGE_CONTROL), a
 	`load banks 0, 1 & 2 of the ROM into the address space
 	 `($0000-$BFFF of the address space will be mapped to $0000-$BFFF of this ROM)
-	ld	a, 0
-	ld	(#SMS_PAGE_0), a
-	ld	a, 1
-	ld	(#SMS_PAGE_1), a
-	ld	a, 2
-	ld	(#SMS_PAGE_2), a
+	ld	a;bank, ::interrupts.bank
+	ld	($.SMS_PAGE_0), a;bank
+	ld	a;bank, 1
+	ld	($.SMS_PAGE_1), a;bank
+	ld	a;bank, 2
+	ld	($.SMS_PAGE_2), a;bank
 	
 	`empty the RAM!
 	ld	hl, $.FLOORLAYOUT	`starting from $C000,
@@ -481,11 +486,11 @@ PROC	:init                           SECTION ::interrupts
 	ld	(de), a			`copy to RAM
 	inc	hl			`move to the next byte
 	inc	de				
-	out	(#SMS_VDP_CONTROL), a	`send the VDP lo-byte
+	out	($.VDP_CONTROL), a	`send the VDP lo-byte
 	ld	a, c			`Load A with #$8B
 	sub	b			`subtract B from A (B is decreasing),
 					 `so A will count from #$80 to #8A
-	out	(#SMS_VDP_CONTROL), a	`send the VDP hi-byte
+	out	($.VDP_CONTROL), a	`send the VDP hi-byte
 	djnz	.loop			`loop until B has reached 0
 	
 	`move all sprites off the bottom of the screen!
@@ -498,7 +503,7 @@ PROC	:init                           SECTION ::interrupts
 	call	:muteSound
 	
 	`initialise variables?
-	ld	iy, $D200		`variable space starts here
+	ld	iy;vars, $.VARS		`variable space starts here
 	jp	:_LABEL_1C49_62
 }
 
@@ -514,14 +519,14 @@ PARAMS	a;songIndex	``index number of song to play
 	
 	`switch page 1 (Z80:$4000-$7FFF) to bank 3 ($C000-$FFFF)
 	ld	a;bank, :sound_playMusic#bank
-	ld	(#SMS_PAGE_1), a;bank
+	ld	($.SMS_PAGE_1), a;bank
 	
 	pop	af;songIndex
 	ld	($.PREVIOUS_MUSIC), a;songIndex
 	call	:sound_playMusic
 	
 	ld	a;bank, ($.PAGE_1)
-	ld	(#SMS_PAGE_1), a;bank
+	ld	($.SMS_PAGE_1), a;bank
 	
 	ei				`enable interrupts
 	ret
@@ -534,11 +539,11 @@ PROC	:muteSound                      SECTION ::interrupts
 	di				`disable interrupts
 	
 	`switch page 1 (Z80:$4000-$7FFF) to bank 3 (ROM:$0C000-$0FFFF)
-	ld	a, :sound_stop#bank
-	ld	(#SMS_PAGE_1), a
+	ld	a;bank, :sound_stop.bank
+	ld	($.SMS_PAGE_1), a;bank
 	call	:sound_stop
-	ld	a, ($.PAGE_1)
-	ld	(#SMS_PAGE_1), a
+	ld	a;bank, ($.PAGE_1)
+	ld	($.SMS_PAGE_1), a;bank
 	
 	ei				`enable interrupts
 	ret
@@ -553,12 +558,12 @@ PARAMS	a;SFXIndex
 	push	af;SFXIndex
 	
 	ld	a;bank,:sound_playSFX#bank
-	ld	(#SMS_PAGE_1),a;bank
+	ld	($.SMS_PAGE_1),a;bank
 	
         pop	af;SFXIndex
 	call	:sound_playSFX
 	ld	a;bank,($.PAGE_1)
-	ld	(#SMS_PAGE_1),a;bank
+	ld	($.SMS_PAGE_1),a;bank
 	
 	ei	
 	ret
@@ -613,12 +618,12 @@ PROC    :unused_0323                    SECTION ::interrupts
 
 PROC	:loadPaletteOnInterrupt         SECTION ::interrupts    
         `====================================================================[$0333]===
-PARAMS	a, hl
+PARAMS	a;flags, hl;addr
 {	
 	set	3, (iy+#vars.flags0)	`set the flag for the interrupt handler
 	`store the parameters
-	ld	($.LOADPALETTE_FLAGS), a
-	ld	($.LOADPALETTE_ADDRESS), hl
+	ld	($.LOADPALETTE_FLAGS), a;flags
+	ld	($.LOADPALETTE_ADDRESS), hl;addr
 	ret
 }
 
@@ -629,10 +634,10 @@ PROC	:updateVDPSprites               SECTION ::interrupts
 	
 	`set the VDP address to $3F00 (sprite info table, Y-positions)
 	ld	a, $00
-	out	(#SMS_VDP_CONTROL), a
+	out	($.VDP_CONTROL), a
 	ld	a, $3F
 	or	%01000000		`add bit 6 to mark an address being given
-	out	(#SMS_VDP_CONTROL), a
+	out	($.VDP_CONTROL), a
 	
 	ld	b, (iy+#vars.spriteUpdateCount)
 	ld	hl, $.SPRITES+1	`Y-position of the first sprite
@@ -644,7 +649,7 @@ PROC	:updateVDPSprites               SECTION ::interrupts
 
 	`set sprite Y-positions:
 .yLoop	ld	a, (hl)			`get the sprite's Y-position from RAM
-	out	(#SMS_VDP_DATA), a	`set the sprite's Y-position in the hardware
+	out	($.VDP_DATA), a	`set the sprite's Y-position in the hardware
 	add	hl, de			`move to the next sprite
 	djnz	.yLoop
 	
@@ -666,7 +671,7 @@ PROC	:updateVDPSprites               SECTION ::interrupts
 
 	`move remaining sprites off screen
 .yOff	ld	a, 224
-	out	(#SMS_VDP_DATA), a
+	out	($.VDP_DATA), a
 	djnz	.yOff
 	
 	`--- sprite X positions / indexes ---------------------------------------------
@@ -679,17 +684,17 @@ PROC	:updateVDPSprites               SECTION ::interrupts
 	
 	`set the VDP address to $3F80 (sprite info table, X-positions & indexes)
 	ld	a, $80
-	out	(#SMS_VDP_CONTROL), a
+	out	($.VDP_CONTROL), a
 	ld	a, $3F
 	or	%01000000		`add bit 6 to mark an address being given
-	out	(#SMS_VDP_CONTROL), a
+	out	($.VDP_CONTROL), a
 	
 .xLoop	ld	a, (hl)			`set the sprite X-position
-	out	(#SMS_VDP_DATA), a
+	out	($.VDP_DATA), a
 	inc	l			`skip Y-position
 	inc	l				
 	ld	a, (hl)			`set the sprite index number
-	out	(#SMS_VDP_DATA), a
+	out	($.VDP_DATA), a
 	inc	l
 	djnz	.xLoop
 
@@ -711,14 +716,14 @@ PARAMS  bc      `number of bytes to copy
 {
 	di	
 	ld	a,e
-	out	(#SMS_VDP_CONTROL),a
+	out	($.VDP_CONTROL),a
 	ld	a,d
 	or	%01000000
-	out	(#SMS_VDP_CONTROL),a
+	out	($.VDP_CONTROL),a
 	ei	
 
 .loop	ld	a,(hl)
-	out	(#SMS_VDP_DATA),a
+	out	($.VDP_DATA),a
 	inc	hl
 	
 	dec	bc
@@ -740,19 +745,19 @@ PARAMS  a       `bank number for page 1, A+1 will be used as the bank number for
 
 	`set the VDP address using DE
 	ld	a,e
-	out	(#SMS_VDP_CONTROL),a
+	out	($.VDP_CONTROL),a
 	ld	a,d
 	or	%01000000
-	out	(#SMS_VDP_CONTROL),a
+	out	($.VDP_CONTROL),a
 	
 	pop	af
 	ld	de,($.PAGE_1)
 	push	de
 	
-	ld	(#SMS_PAGE_1),a
+	ld	($.SMS_PAGE_1),a
 	ld	($.PAGE_1),a
 	inc	a
-	ld	(#SMS_PAGE_2),a
+	ld	($.SMS_PAGE_2),a
 	ld	($.PAGE_2),a
 	ei	
 
@@ -763,7 +768,7 @@ PARAMS  a       `bank number for page 1, A+1 will be used as the bank number for
 ._2	ld	a,(hl)
 	cp	e
 	jr	z,._3
-	out	(#SMS_VDP_DATA),a
+	out	($.VDP_DATA),a
 	ld	e,a
 	inc	hl
 	dec	bc
@@ -781,7 +786,7 @@ PARAMS  a       `bank number for page 1, A+1 will be used as the bank number for
 	ld	a,d
 	ld	e,(hl)
 
-._4	out	(#SMS_VDP_DATA),a
+._4	out	($.VDP_DATA),a
 	dec	e
 	nop	
 	nop	
@@ -797,9 +802,9 @@ PARAMS  a       `bank number for page 1, A+1 will be used as the bank number for
 	pop	de
 	ld	($.PAGE_1),de
 	ld	a,e
-	ld	(#SMS_PAGE_1),a
+	ld	($.SMS_PAGE_1),a
 	ld	a,d
-	ld	(#SMS_PAGE_2),a
+	ld	($.SMS_PAGE_2),a
 	ei	
 	ret
 }

@@ -9,21 +9,11 @@ Option Explicit
 
 'Public, shared stuff
 
-'For speed, we'll be hashing strings into numerical IDs, which both the Assembler _
- and TokenStream classes need to do
+'For speed, we'll be hashing strings into numerical IDs, _
+ which both the Assembler and TokenStream classes need to do
 Public CRC As New CRC32
 
 '/// ENUMS ////////////////////////////////////////////////////////////////////////////
-
-'Some expressions cannot be calculated until the Z80 code has been assembled, _
- for example label addresses are placed after all code has been parsed and the sizes _
- of the blocks are known. A special value is used that lies outside of the allowable _
- range of numbers in OZ80 (32-bit) to mark an expression with a yet-unknown value
-
-'VB does not allow implicit Double (64-bit) values greater than 32-bit, _
- a trick is used here to build the largest possible 64-bit number: _
- <stackoverflow.com/questions/929069/how-do-i-declare-max-double-in-vb6/933490#933490>
-Public Const OZ80_INDEFINITE As Double = 1.79769313486231E+308 + 5.88768018655736E+293
 
 'This makes life a whole lot easier when processing text as ASCII codes
 Public Enum ASCII
@@ -132,6 +122,7 @@ Public Enum OZ80_ERROR
     OZ80_ERROR_INVALID_NUMBER_BIN       '- Invalid binary number
     OZ80_ERROR_INVALID_SECTION          'Section used, but not defined
     OZ80_ERROR_INVALID_WORD             'Couldn't parse a word
+    OZ80_ERROR_INVALID_Z80PARAMS        'Not the right parameters for a Z80 instruction
     OZ80_ERROR_OVERFLOW                 'A number overflowed the maximum
 End Enum
 
@@ -213,7 +204,7 @@ Public Enum OZ80_TOKEN
     TOKEN_Z80_XOR                       'Bitwise XOR
     [_TOKEN_INSTRUCTIONS_END]
     
-    'Z80 Registers ....................................................................
+    'Z80 Registers & Flags ............................................................
     TOKEN_Z80_A                         'Accumulator
     TOKEN_Z80_AF                        'Accumulator and Flags
     TOKEN_Z80_B                         'Register B
@@ -227,12 +218,12 @@ Public Enum OZ80_TOKEN
     TOKEN_Z80_L                         'Register L
     TOKEN_Z80_HL                        'Register pair H & L
     TOKEN_Z80_I                         'Interrupt - not to be confused with IX & IY
-    TOKEN_Z80_IX
-    TOKEN_Z80_IXL
-    TOKEN_Z80_IXH
-    TOKEN_Z80_IY
-    TOKEN_Z80_IYL
-    TOKEN_Z80_IYH
+    TOKEN_Z80_IX                        'Register IX
+    TOKEN_Z80_IXL                       'Undocumented low-byte of register IX
+    TOKEN_Z80_IXH                       'Undocumented high-byte of register IX
+    TOKEN_Z80_IY                        'Register IY
+    TOKEN_Z80_IYL                       'Undocumented low-byte of register IY
+    TOKEN_Z80_IYH                       'Undocumented high-byte of register IY
     TOKEN_Z80_M                         'Sign is set flag
     TOKEN_Z80_P                         'Sign is not set flag
     TOKEN_Z80_PC                        'Program Counter
@@ -311,20 +302,124 @@ Public Enum OZ80_TOKEN
     TOKEN_RAM                           'e.g. `$.thing`
     
     [_TOKEN_LAST]                       'Do not go above 255!
-    
-    'Bit 8 is set to mark a Z80 instruction parameter as a memory reference
-    TOKEN_Z80_MEM = 256
-    
-    'Some shorthand for comparisons
-    TOKEN_Z80_MEM_HL = TOKEN_Z80_MEM Or TOKEN_Z80_HL
-    TOKEN_Z80_MEM_IX = TOKEN_Z80_MEM Or TOKEN_Z80_IX
-    TOKEN_Z80_MEM_IY = TOKEN_Z80_MEM Or TOKEN_Z80_IY
 End Enum
 
+'--------------------------------------------------------------------------------------
+
+Public Enum OZ80_MASK
+    'The 8-bit registers
+     '(excluding the undocumented IX/IY halves)
+    MASK_REG_A = 2 ^ 0
+    MASK_REG_B = 2 ^ 1
+    MASK_REG_C = 2 ^ 2
+    MASK_REG_D = 2 ^ 3
+    MASK_REG_E = 2 ^ 4
+    MASK_REG_H = 2 ^ 5
+    MASK_REG_L = 2 ^ 6
+    
+    'The main 8-bit registers are a common instruction parameter
+    MASK_REGS_ABCDEHL = MASK_REG_A Or MASK_REG_B Or MASK_REG_C Or MASK_REG_D Or MASK_REG_E Or MASK_REG_E Or MASK_REG_H Or MASK_REG_L
+    
+    MASK_REG_I = 2 ^ 7                  'Interrupt register
+    MASK_REG_R = 2 ^ 8                  'Refresh register, pseudo-random
+    
+    'The 16-bit register pairs
+    MASK_REG_AF = 2 ^ 9                 'The Accumulator and the processor Flags
+    MASK_REG_BC = 2 ^ 10                'Registers B & C
+    MASK_REG_DE = 2 ^ 11                'Registers D & E
+    MASK_REG_HL = 2 ^ 12                'Registers H & L
+    MASK_REG_SP = 2 ^ 13                'Stack Pointer
+    
+    MASK_REG_IX = 2 ^ 14
+    MASK_REG_IXL = 2 ^ 15
+    MASK_REG_IXH = 2 ^ 16
+    MASK_REG_IY = 2 ^ 17
+    MASK_REG_IYL = 2 ^ 18
+    MASK_REG_IYH = 2 ^ 19
+    
+    'HL, IX & IY are synonymous as they use an opcode prefix to determine which
+    MASK_REGS_HL_IXY = MASK_REG_HL Or MASK_REG_IX Or MASK_REG_IY
+    'Some instructions accept BC/DE/HL/SP, but not IX & IY due to existing prefixes
+    MASK_REGS_BC_DE_HL_SP = MASK_REG_BC Or MASK_REG_DE Or MASK_REG_HL Or MASK_REG_SP
+    'PUSH / POP allow AF but not SP
+    MASK_REGS_AF_BC_DE_HL = MASK_REG_AF Or MASK_REG_BC Or MASK_REG_DE Or MASK_REG_HL
+    'The LD instruction can take most 16-bit registers
+    MASK_REGS_BC_DE_HL_SP_IXY = MASK_REGS_BC_DE_HL_SP Or MASK_REG_IX Or MASK_REG_IY
+    
+    '..................................................................................
+    
+    [_FLAG_BIT1] = 2 ^ 20
+    [_FLAG_BIT2] = 2 ^ 21
+    
+    'Register C & Flag C cannot be distinguished by the tokeniser (it isn't aware of
+     'context), so they are treated as the same thing, which saves a Bit here
+    MASK_FLAG_C = MASK_REG_C
+    MASK_FLAG_NC = [_FLAG_BIT1]
+    MASK_FLAG_Z = [_FLAG_BIT2]
+    MASK_FLAG_NZ = [_FLAG_BIT2] Or [_FLAG_BIT1]
+    
+    MASK_FLAGS_CZ = MASK_FLAG_C Or [_FLAG_BIT2] Or [_FLAG_BIT1]
+    
+    [_FLAG_BIT3] = 2 ^ 22
+    [_FLAG_BIT4] = 2 ^ 23
+    [_FLAG_BIT5] = 2 ^ 24
+    
+    MASK_FLAG_P = [_FLAG_BIT3]
+    MASK_FLAG_PE = [_FLAG_BIT4]
+    MASK_FLAG_PO = [_FLAG_BIT4] Or [_FLAG_BIT3]
+    MASK_FLAG_M = [_FLAG_BIT5]
+    
+    MASK_FLAGS_MP = [_FLAG_BIT5] Or [_FLAG_BIT4] Or [_FLAG_BIT3]
+    
+    MASK_FLAGS = MASK_FLAGS_CZ Or MASK_FLAGS_MP
+    
+    MASK_VAL = 2 ^ 25
+    
+    '..................................................................................
+    
+    [_MEM_BIT1] = 2 ^ 26
+    [_MEM_BIT2] = 2 ^ 27
+    
+    MASK_MEM_HL = [_MEM_BIT1]
+    MASK_MEM_IX = [_MEM_BIT2]
+    MASK_MEM_IY = [_MEM_BIT2] Or [_MEM_BIT1]
+    
+    MASK_MEMS_HL_IXY = [_MEM_BIT2] Or [_MEM_BIT1]
+    
+    MASK_REGS_ABCDEHL_MEMS_HL_IXY = MASK_REGS_ABCDEHL Or MASK_MEMS_HL_IXY
+    
+    'We don't have enough bits left to give all the memory references their own bit,
+     'so we combine the existing bits with this extra bit. This is checked specially
+     'when comparing parameters to ensure it matches the test
+    [_MASK_MEM] = -1                    '= (2 ^ 31)
+    
+    'The IN and OUT instructions can use port "C" (which is, in reality, BC)
+    MASK_MEM_C = [_MASK_MEM] Or MASK_REG_C
+    
+    MASK_MEM_BC = [_MASK_MEM] Or MASK_REG_BC
+    MASK_MEM_DE = [_MASK_MEM] Or MASK_REG_DE
+    MASK_MEM_SP = [_MASK_MEM] Or MASK_REG_SP
+    
+    MASK_MEM_VAL = [_MASK_MEM] Or MASK_VAL
+End Enum
+
+'--------------------------------------------------------------------------------------
+
 Public Type oz80Param
-    Register As OZ80_TOKEN
+    Mask As OZ80_MASK
+    Token As OZ80_TOKEN
     Value As Double
 End Type
+
+'Some expressions cannot be calculated until the Z80 code has been assembled, _
+ for example label addresses are chosen after all code has been parsed and the sizes _
+ of the blocks are known. A special value is used that lies outside of the allowable _
+ range of numbers in OZ80 (32-bit) to mark an expression with a yet-unknown value
+
+'VB does not allow implicit Double (64-bit) values greater than 32-bits, _
+ a trick is used here to build the largest possible 64-bit number: _
+ <stackoverflow.com/questions/929069/how-do-i-declare-max-double-in-vb6/933490#933490>
+Public Const OZ80_INDEFINITE As Double = 1.79769313486231E+308 + 5.88768018655736E+293
 
 '/// PUBLIC PROCEDURES ////////////////////////////////////////////////////////////////
 

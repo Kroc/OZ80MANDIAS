@@ -26,6 +26,9 @@ Licenced under a Creative Commons 3.0 Attribution Licence
         4.1.            | Parameters
         4.2.            . Sub-Labels
         
+        5.              Constants
+        5.1.            . Enumerations
+        
         5.              Variables
         
         6.              Objects:
@@ -35,7 +38,7 @@ Licenced under a Creative Commons 3.0 Attribution Licence
 i.      Terminology
 =======================================================================================
 :: "Value", "<value>"
-        A number, or something that can be evaluated into a number, i.e. Variables,
+        A number, or something that can be evaluated into a number, i.e. Constants,
         Labels, RAM Names and Properties. This does not include Text.
         
 :: "Expression", "<expr>"
@@ -44,7 +47,7 @@ i.      Terminology
         
 :: "List", "<list>"
         A series of Expressions one after the other,
-        e.g. `1, 2, 3, 4, :label, #variable, 7+8`
+        e.g. `1, 2, 3, 4, :label, CONSTANT, 7+8`
         
         Text is a list in of itself and can be included in other Lists,
         e.g. `1, 2, "three", 4, 5`
@@ -395,6 +398,48 @@ Outside of "myProcedure", it is referred to via the full label name.
 
 
 =======================================================================================
+5.      Constants
+=======================================================================================
+Scopes: Root
+Format:
+        DEF <name> [<expr>]
+
+To reduce the amount of maintenance needed for changing values across a code base, 
+you may define names for common values and use these names throughout to provide you
+a single point to change that value in the future.
+
+In its simplest form a constant is defined using the `DEF` statement,
+a constant name and a value:
+
+	DEF SIR_LANCELOTS_FAVOURITE_COLOUR $30
+
+Anywhere you would normally use a value, you can now instead use the constant name:
+
+	ld a, SIR_LANCELOTS_FAVOURITE_COLOUR
+
+---------------------------------------------------------------------------------------
+5.1.    Enumerations
+---------------------------------------------------------------------------------------
+Scopes: Root
+Format: 
+        ENUM <name> [<expr>] {
+                .<name>         [<expr>]
+                [...]
+        }
+        
+Rather than have to manage the numbers of a list manually (especially when trying to
+remove one in the middle), an enumeration provides names for a list, numbering
+automatically for you.
+
+        ENUM STATUS {
+                .SLEEP                  `i.e. 'cp STATUS.SLEEP'
+                .PARALYZE
+                .POISEN
+                .BURN
+                .FREEZE
+        }
+        
+=======================================================================================
 5.	Variables
 =======================================================================================
 Scopes: Root
@@ -507,7 +552,7 @@ These sub-properties would be accessed with `#path.start.x`, for example.
 
 6.1.	Bit Flags
 ---------------------------------------------------------------------------------------
-Scopes: VAR, OBJECT, RAM
+Scopes: OBJECT, RAM
 Format:
 	BITS {
 		.<propName>
@@ -721,7 +766,7 @@ that tells you something about that item.
 ---------------------------------------------------------------------------------------
 Scope:  Any
 Format:
-	#<varName>.<propName>
+	<varName>.<propName>
 
 #.2.    Of Labels
 ---------------------------------------------------------------------------------------
@@ -729,17 +774,17 @@ Often-times in Z80 assembly you need to access the high or low bytes of a 16-bit
 Instead of specifying these bytes in a fixed fashion, you can use the flexibility of
 variables with the `hi` & `lo` properties, e.g.
 
-	DEF #foo $1234
-	ld      h, #foo.lo		`"$34"
-	ld      l, #foo.hi		`"$12"
+	DEF FOO $1234
+	ld      h, FOO.lo		`"$34"
+	ld      l, FOO.hi		`"$12"
 
 Notice that HL is loaded in low, high order due to the Z80 being little-endian.
 
 The `.bank` property retrieves the bank number of where the Label resides,
 the `.slot` property does likewise for the slot number - 0, 1 or 2 
 
-	DEF #BANK :label.bank
-	DEF #SLOT :label.slot
+	DEF BANKNUM :label.bank
+	DEF SLOTNUM :label.slot
 
 TODO:
 	.size
@@ -897,3 +942,13 @@ Format:
 	DATA $AA, {?functionName $10, $20, $30}, $BB, $CC
 
 ...
+
+
+=======================================================================================
+#.      Z80 Helpers
+=======================================================================================
+
+PUSH / POP
+
+JP HL|IX|IY / (HL|IX|IY)
+

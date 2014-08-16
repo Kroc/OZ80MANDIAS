@@ -12,6 +12,6 @@ SECTION ::section4             BANK 2   `with bank only
 
 `simple procedure
 PROC :test {
-        ret
+        adc a, a
 }
 

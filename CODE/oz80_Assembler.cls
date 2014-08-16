@@ -151,7 +151,7 @@ Public Function Assemble(ByVal FilePath As String) As OZ80_ERROR
     'Initialise the storage for the TokenStream representations of the source files
     Set Files = New Scripting.Dictionary
     
-    'Stage 1: Parse Source _
+    'Phase 1: First Pass & Assemble _
      ----------------------------------------------------------------------------------
     RaiseEvent Message(0, OZ80_LOG_ACTION, "Assembling " & Chr(34) & FilePath & Chr(34))
     RaiseEvent Message(0, OZ80_LOG_ACTION, "Phase 1")
@@ -163,19 +163,27 @@ Public Function Assemble(ByVal FilePath As String) As OZ80_ERROR
      raised by an event, we only need to exit
     If My_Error Then GoTo Finish
     
-    'Stage 2: Assemble _
-     ----------------------------------------------------------------------------------
     'Default to 32 KB ROM (the ROM size will double each time it overflows)
     Let ROMSize = 2 ^ 15
     ReDim ROM(0 To ROMSize - 1) As Byte
     
-    'Phase 1: _
-     ..................................................................................
     Call Token.Rewind
     Call ScopeRoot
     If My_Error Then GoTo Finish
     
+    'Phase 2: Assign Addresses _
+     ----------------------------------------------------------------------------------
     RaiseEvent Message(0, OZ80_LOG_ACTION, "Phase 2")
+    'TODO
+    
+    'Phase 3: Second Parse & Assemble (now with ROM Addresses) _
+     ----------------------------------------------------------------------------------
+    RaiseEvent Message(0, OZ80_LOG_ACTION, "Phase 3")
+    'TODO
+    
+    'Phase 4: Post Processing, e.g. Checksum _
+     ----------------------------------------------------------------------------------
+    RaiseEvent Message(0, OZ80_LOG_ACTION, "Phase 4")
     'TODO
     
     RaiseEvent Message(0, OZ80_LOG_ACTION, "Assembly Complete")
@@ -461,86 +469,6 @@ Continue:
         Let Operand1 = ScopeExpression
         GoTo Continue
     End If
-End Function
-
-'ScopeMemory : Work out a memory reference, i.e. `($????)` / `(ix+$??)` _
- ======================================================================================
-Private Function ScopeMemory() As oz80Param
-    'If the current token is an open parentheses move forward into the expression
-    If Token.Kind = TOKEN_PARENOPEN Then
-        If Not Token.Forward() Then Stop
-    End If
-    
-    'The first item in the expression can be a register, typically HL, IX or IY
-    If Token.IsRegister Then
-        'The `IN` & `OUT` instructions accept only the C register
-        If Token.Kind = TOKEN_Z80_C Then
-            Let ScopeMemory.Register = TOKEN_Z80_C
-        
-        '`LD` accepts registers BC & DE
-        ElseIf Token.Kind = TOKEN_Z80_BC Then
-            Let ScopeMemory.Register = TOKEN_Z80_BC
-        ElseIf Token.Kind = TOKEN_Z80_DE Then
-            Let ScopeMemory.Register = TOKEN_Z80_DE
-        ElseIf Token.Kind = TOKEN_Z80_HL Then
-            Let ScopeMemory.Register = TOKEN_Z80_HL
-            
-        ElseIf Token.Kind = TOKEN_Z80_IX Then
-            Let ScopeMemory.Register = TOKEN_Z80_IX
-            'IX can have an additional expression, e.g. `ld a, (ix+$8)`
-            GoTo AddExpr
-            
-        ElseIf Token.Kind = TOKEN_Z80_IY Then
-            Let ScopeMemory.Register = TOKEN_Z80_IY
-            'IY can also have an additional expression, e.g. `ld a, (ix+$8)`
-            GoTo AddExpr
-            
-        ElseIf Token.Kind = TOKEN_Z80_SP Then
-            Let ScopeMemory.Register = TOKEN_Z80_SP
-        Else
-            'ERROR: register not allowed here
-            Stop
-        End If
-        
-        'Move to the next token, then check that it's the end of the memory reference
-        'TODO: out of tokens
-        If Not Token.Forward() Then Stop
-        GoTo EndScope
-        
-AddExpr:
-        'Look for the `+` following the register name
-        If Not Token.Forward() Then Stop
-        'If present, skip over it and check for an expression
-        If Token.IsOperator Then
-            If Token.Kind = TOKEN_OPERATOR_ADD Then
-                If Not Token.Forward() Then Stop
-            End If
-            
-        'If it's just a register in parens, then finish
-        ElseIf Token.Kind = TOKEN_PARENCLOSE Then
-            GoTo Finish
-        End If
-    End If
-    
-    'Try and calculate the expression. It might come back unknown and this will be _
-     passed on to the parent to decide if that's a problem or not
-    'TODO: handle overflow
-    Let ScopeMemory.Value = ScopeExpression()
-    'Memory references with IX & IY will have already set the register, but for _
-     direct memory references, e.g. `jp ($1234)`, we declare this as a pure number
-    If ScopeMemory.Register = TOKEN_NONE Then Let ScopeMemory.Register = TOKEN_NUMBER
-
-EndScope:
-    If Token.Kind = TOKEN_PARENCLOSE Then
-        Call Token.Forward
-        GoTo Finish
-    End If
-    'ERROR: Unexpected token in memory expression
-    Stop
-
-Finish:
-    'Finally, mark this as a memory reference
-    Let ScopeMemory.Register = ScopeMemory.Register Or OZ80_TOKEN.TOKEN_Z80_MEM
 End Function
 
 'ScopeValue : Get a single value as part of an expression _
@@ -906,7 +834,9 @@ Private Sub ProcessZ80()
     
     'TODO: Handle POP / PUSH
     
-    Dim Param1 As oz80Param, Param2 As oz80Param
+    'Up to three parameters are supported to allow for the undocumented instructions, _
+     e.g. `SET 0 (IX+$8) A` which sets bit 0 of the address and copies the result to B
+    Dim Param1 As oz80Param, Param2 As oz80Param, Param3 As oz80Param
     
     'Is there a first parameter?
     If Token.IsParameter Then
@@ -921,14 +851,19 @@ Private Sub ProcessZ80()
             'Fetch the second parameter
             Let Param2 = GetZ80Parameter()
             If My_Error Then Stop
+            
+            'Check if a third parameter exists
+            If Token.IsParameter Then
+                'Fetch the third parameter (very uncommon)
+                Let Param2 = GetZ80Parameter()
+                If My_Error Then Stop
+            End If
         End If
     End If
     
     'TODO: Error handling return
-'    Call Block.AddInstruction( _
-'        Instruction, Param1.Kind, Param1.Value, Param2.Kind, Param2.Value _
-'    )
-    Exit Sub
+    Call Block.AddInstruction(Instruction, Param1, Param2, Param3)
+    
 End Sub
 
 '/// PRIVATE PROCEDURES ///////////////////////////////////////////////////////////////
@@ -991,21 +926,171 @@ End Function
 'GetZ80Parameter : Fetch the type / value of a Z80 instruction parameter _
  ======================================================================================
 Private Function GetZ80Parameter() As oz80Param
-    If Token.IsRegister Then '.........................................................
-        Let GetZ80Parameter.Register = Token.Kind
-        'Now move beyond the register token
-        Call Token.Forward
-    
     'If the token is a memory reference, such as `(ix+$8)`, _
      then get the associated register and value
-    ElseIf Token.Kind = TOKEN_PARENOPEN Then '.........................................
-        Let GetZ80Parameter = ScopeMemory()
-        'TODO: Error - the memory reference is invalid
+    If Token.Kind = TOKEN_PARENOPEN Then '.............................................
+        'ERROR: File ends just as the memory expression is opened
+        If Not Token.Forward() Then Call RaiseError(OZ80_ERROR_ENDOFFILE): Exit Function
+    
+        'The first item in the expression can be a register, _
+         typically HL, IX or IY
+        If Token.IsRegister Then
+            'The `IN` & `OUT` instructions accept only the C register
+            If Token.Kind = TOKEN_Z80_C Then
+                Let GetZ80Parameter.Token = TOKEN_Z80_C
+                Let GetZ80Parameter.Mask = MASK_MEM_C
+            
+            '`LD` accepts registers BC & DE
+            ElseIf Token.Kind = TOKEN_Z80_BC Then
+                Let GetZ80Parameter.Token = TOKEN_Z80_BC
+                Let GetZ80Parameter.Mask = MASK_MEM_BC
+            ElseIf Token.Kind = TOKEN_Z80_DE Then
+                Let GetZ80Parameter.Token = TOKEN_Z80_DE
+                Let GetZ80Parameter.Mask = MASK_MEM_DE
+            
+            ElseIf Token.Kind = TOKEN_Z80_HL Then
+                Let GetZ80Parameter.Token = TOKEN_Z80_HL
+                Let GetZ80Parameter.Mask = MASK_MEM_HL
+                
+            ElseIf Token.Kind = TOKEN_Z80_IX Then
+                Let GetZ80Parameter.Token = TOKEN_Z80_IX
+                Let GetZ80Parameter.Mask = MASK_MEM_IX
+                'IX can have an additional expression, e.g. `ld a, (ix+$8)`
+                GoTo AddExpr
+                
+            ElseIf Token.Kind = TOKEN_Z80_IY Then
+                Let GetZ80Parameter.Token = TOKEN_Z80_IY
+                Let GetZ80Parameter.Mask = MASK_MEM_IY
+                'IY can also have an additional expression, e.g. `ld a, (ix+$8)`
+                GoTo AddExpr
+                
+            ElseIf Token.Kind = TOKEN_Z80_SP Then
+                Let GetZ80Parameter.Token = TOKEN_Z80_SP
+                Let GetZ80Parameter.Mask = MASK_MEM_SP
+            Else
+                'ERROR: register not allowed here
+                Stop
+            End If
+            
+            'ERROR: File ends before the memory expression is closed
+            If Not Token.Forward() Then _
+                Call RaiseError(OZ80_ERROR_ENDOFFILE): Exit Function
+            
+            GoTo EndScope
+            
+AddExpr:
+            'Look for the `+` following the register name
+            If Not Token.Forward() Then _
+                Call RaiseError(OZ80_ERROR_ENDOFFILE): Exit Function
+            
+            'If present, skip over it and check for an expression
+            If Token.Kind = TOKEN_OPERATOR_ADD Then
+                'ERROR: Something must follow the "+"!
+                If Not Token.Forward() Then _
+                    Call RaiseError(OZ80_ERROR_ENDOFFILE): Exit Function
+                
+            'If it's just a register in parens, then finish
+            ElseIf Token.Kind = TOKEN_PARENCLOSE Then
+                Exit Function
+            
+            Else
+                'TODO: ERROR: Something invalid in the expression
+                Stop
+            End If
+        End If
+        
+        'Is it an expression at all?
+        If Not Token.IsExpression Then Stop
+        
+        'Try and calculate the expression. It might come back unknown and this will be _
+         passed on to the parent to decide if that's a problem or not
+        'TODO: handle overflow
+        Let GetZ80Parameter.Value = ScopeExpression()
+        
+        'TODO: ERROR: Invalid expression
         If My_Error Then Stop
+        
+        'Memory references with IX & IY will have already set the register, but for _
+         direct memory references, e.g. `jp ($1234)`, we declare this as a pure number
+        If GetZ80Parameter.Token = TOKEN_NONE Then
+            Let GetZ80Parameter.Token = TOKEN_NUMBER
+            Let GetZ80Parameter.Mask = MASK_MEM_VAL
+        End If
+    
+EndScope:
+        If Token.Kind = TOKEN_PARENCLOSE Then
+            Call Token.Forward
+            Exit Function
+        End If
+        'ERROR: Unexpected token in memory expression
+        Stop
+    
+    ElseIf Token.IsRegister Then '.........................................................
+        Let GetZ80Parameter.Token = Token.Kind
+        
+        If Token.Kind = TOKEN_Z80_A Then
+            Let GetZ80Parameter.Mask = MASK_REG_A
+        ElseIf Token.Kind = TOKEN_Z80_B Then
+            Let GetZ80Parameter.Mask = MASK_REG_B
+        ElseIf Token.Kind = TOKEN_Z80_C Then
+            Let GetZ80Parameter.Mask = MASK_REG_C
+        ElseIf Token.Kind = TOKEN_Z80_D Then
+            Let GetZ80Parameter.Mask = MASK_REG_D
+        ElseIf Token.Kind = TOKEN_Z80_E Then
+            Let GetZ80Parameter.Mask = MASK_REG_E
+        ElseIf Token.Kind = TOKEN_Z80_H Then
+            Let GetZ80Parameter.Mask = MASK_REG_H
+        ElseIf Token.Kind = TOKEN_Z80_L Then
+            Let GetZ80Parameter.Mask = MASK_REG_L
+        ElseIf Token.Kind = TOKEN_Z80_I Then
+            Let GetZ80Parameter.Mask = MASK_REG_I
+        ElseIf Token.Kind = TOKEN_Z80_R Then
+            Let GetZ80Parameter.Mask = MASK_REG_R
+        ElseIf Token.Kind = TOKEN_Z80_AF Then
+            Let GetZ80Parameter.Mask = MASK_REG_AF
+        ElseIf Token.Kind = TOKEN_Z80_BC Then
+            Let GetZ80Parameter.Mask = MASK_REG_BC
+        ElseIf Token.Kind = TOKEN_Z80_DE Then
+            Let GetZ80Parameter.Mask = MASK_REG_DE
+        ElseIf Token.Kind = TOKEN_Z80_HL Then
+            Let GetZ80Parameter.Mask = MASK_REG_HL
+        ElseIf Token.Kind = TOKEN_Z80_SP Then
+            Let GetZ80Parameter.Mask = MASK_REG_SP
+        ElseIf Token.Kind = TOKEN_Z80_IX Then
+            Let GetZ80Parameter.Mask = MASK_REG_IX
+        ElseIf Token.Kind = TOKEN_Z80_IXL Then
+            Let GetZ80Parameter.Mask = MASK_REG_IXL
+        ElseIf Token.Kind = TOKEN_Z80_IXH Then
+            Let GetZ80Parameter.Mask = MASK_REG_IXH
+        ElseIf Token.Kind = TOKEN_Z80_IY Then
+            Let GetZ80Parameter.Mask = MASK_REG_IY
+        ElseIf Token.Kind = TOKEN_Z80_IYL Then
+            Let GetZ80Parameter.Mask = MASK_REG_IYL
+        ElseIf Token.Kind = TOKEN_Z80_IYH Then
+            Let GetZ80Parameter.Mask = MASK_REG_IYH
+        ElseIf Token.Kind = TOKEN_Z80_NC Then
+            Let GetZ80Parameter.Mask = MASK_FLAG_NC
+        ElseIf Token.Kind = TOKEN_Z80_Z Then
+            Let GetZ80Parameter.Mask = MASK_FLAG_Z
+        ElseIf Token.Kind = TOKEN_Z80_NZ Then
+            Let GetZ80Parameter.Mask = MASK_FLAG_NZ
+        ElseIf Token.Kind = TOKEN_Z80_P Then
+            Let GetZ80Parameter.Mask = MASK_FLAG_P
+        ElseIf Token.Kind = TOKEN_Z80_PE Then
+            Let GetZ80Parameter.Mask = MASK_FLAG_PE
+        ElseIf Token.Kind = TOKEN_Z80_PO Then
+            Let GetZ80Parameter.Mask = MASK_FLAG_PO
+        ElseIf Token.Kind = TOKEN_Z80_M Then
+            Let GetZ80Parameter.Mask = MASK_FLAG_M
+        End If
+        
+        'Now move beyond the register token
+        Call Token.Forward
         
     'Anything else classes as a calculable expression
     ElseIf Token.IsExpression Then '...................................................
-        Let GetZ80Parameter.Register = TOKEN_NUMBER
+        Let GetZ80Parameter.Token = TOKEN_NUMBER
+        Let GetZ80Parameter.Mask = MASK_VAL
         Let GetZ80Parameter.Value = ScopeExpression()
         'TODO: Error - the expression is invalid
         If My_Error Then Stop

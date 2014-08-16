@@ -55,58 +55,6 @@ Private My_CyclesMax As Long            'Maximum number of cycles in this block
  the buffer will be cut down to the size of the actual contents
 Private Const BLOCK_BUFFER As Long = 1024
 
-
-Private Enum OZ80_PARAM
-    OZ80_PARAM_NOMEM = 2 ^ 0
-    OZ80_PARAM_MEM = 2 ^ 1
-    
-    OZ80_PARAM_A = 2 ^ 2
-    OZ80_PARAM_B = 2 ^ 3
-    OZ80_PARAM_C = 2 ^ 4
-    OZ80_PARAM_D = 2 ^ 5
-    OZ80_PARAM_E = 2 ^ 6
-    OZ80_PARAM_H = 2 ^ 7
-    OZ80_PARAM_L = 2 ^ 8
-    OZ80_PARAM_I = 2 ^ 9
-    OZ80_PARAM_R = 2 ^ 10
-    
-    OZ80_PARAM_AF = 2 ^ 11
-    OZ80_PARAM_BC = 2 ^ 12
-    OZ80_PARAM_DE = 2 ^ 13
-    OZ80_PARAM_HL = 2 ^ 14
-    OZ80_PARAM_SP = 2 ^ 15
-    
-    OZ80_PARAM_IX = 2 ^ 16
-    OZ80_PARAM_IY = 2 ^ 17
-    
-    [_BIT9] = 2 ^ 18
-    [_BIT10] = 2 ^ 19
-    [_BIT11] = 2 ^ 20
-    
-    OZ80_PARAM_FLAG_C = [_BIT9]
-    OZ80_PARAM_FLAG_NC = [_BIT10]
-    OZ80_PARAM_FLAG_Z = [_BIT10] Or [_BIT9]
-    OZ80_PARAM_FLAG_NZ = [_BIT11]
-    
-    OZ80_PARAM_FLAGS_CZ = [_BIT11] Or [_BIT10] Or [_BIT9]
-    
-    [_BIT12] = 2 ^ 21
-    [_BIT13] = 2 ^ 22
-    [_BIT14] = 2 ^ 23
-    
-    OZ80_PARAM_FLAG_P = [_BIT12]
-    OZ80_PARAM_FLAG_PE = [_BIT13]
-    OZ80_PARAM_FLAG_PO = [_BIT13] Or [_BIT12]
-    OZ80_PARAM_FLAG_M = [_BIT14]
-    
-    OZ80_PARAM_FLAGS_MP = [_BIT14] Or [_BIT13] Or [_BIT12]
-    
-    OZ80_PARAM_FLAGS = OZ80_PARAM_FLAGS_CZ Or OZ80_PARAM_FLAGS_MP
-    
-    OZ80_PARAM_VAL_8 = 2 ^ 24
-    OZ80_PARAM_VAL_16 = 2 ^ 25
-End Enum
-
 '--------------------------------------------------------------------------------------
 
 'http://z80.info/decoding.htm
@@ -118,30 +66,41 @@ End Enum
 ' '---------------'
 '     | p |q|
 '     '-----'
+
+Private Enum OZ80_OPCODE
+    X1 = 2 ^ 6
+    X2 = 2 ^ 7
+    X3 = X1 Or X2
     
-Private Const x1 As Byte = 2 ^ 6
-Private Const x2 As Byte = 2 ^ 7
-Private Const x3 As Byte = x1 Or x2
+    Y1 = 2 ^ 3
+    Y2 = 2 ^ 4
+    Y3 = Y1 Or Y2
+    Y4 = 2 ^ 5
+    Y5 = Y4 Or Y1
+    Y6 = Y4 Or Y2
+    Y7 = Y4 Or Y3
     
-Private Const y1 As Byte = 2 ^ 3
-Private Const y2 As Byte = 2 ^ 4
-Private Const y3 As Byte = y1 Or y2
-Private Const y4 As Byte = 2 ^ 5
-Private Const y5 As Byte = y4 Or y1
-Private Const y6 As Byte = y4 Or y2
-Private Const y7 As Byte = y4 Or y4
+    Z1 = 2 ^ 0
+    Z2 = 2 ^ 1
+    Z3 = Y1 Or Y2
+    Z4 = 2 ^ 2
+    Z5 = Z4 Or Z1
+    Z6 = Z4 Or Z2
+    Z7 = Z4 Or Z4
     
-Private Const z1 As Byte = 2 ^ 0
-Private Const z2 As Byte = 2 ^ 1
-Private Const z3 As Byte = y1 Or y2
-Private Const z4 As Byte = 2 ^ 2
-Private Const z5 As Byte = z4 Or z1
-Private Const z6 As Byte = z4 Or z2
-Private Const z7 As Byte = z4 Or z4
-    
-Private Const p1 As Byte = 2 ^ 4
-Private Const p2 As Byte = 2 ^ 5
-Private Const p3 As Byte = p1 Or p2
+    P1 = 2 ^ 4
+    P2 = 2 ^ 5
+    P3 = P1 Or P2
+
+    Q1 = Y1
+End Enum
+
+'Our routine for comparing parameters is going to be used hundreds of times, _
+ so for clarity, we'll use some class-level copies to share the input parameters _
+ with the comparison routine
+Private Param1Test As oz80Param
+Private Param2Test As oz80Param
+Private Param3Test As oz80Param
 
 '/// EVENTS ///////////////////////////////////////////////////////////////////////////
 
@@ -174,18 +133,18 @@ End Sub
 
 'AddInstruction : Assemble a Z80 mneomic _
  ======================================================================================
-Friend Sub AddInstruction( _
+Friend Function AddInstruction( _
     ByRef Instruction As OZ80_TOKEN, _
     ByRef Param1 As oz80Param, _
-    ByRef Param2 As oz80Param _
-)
+    ByRef Param2 As oz80Param, _
+    ByRef Param3 As oz80Param _
+) As OZ80_ERROR
     'OPCODE MAP: _
      Here's a complete list of the Z80 instruction set and the opcodes used for each _
      addressing type.
      
      
     'http://www.smspower.org/Development/InstructionSet
-    'http://z80.info/decoding.htm
     
     'NOTE:
     '   +rr     BC = +00
@@ -424,366 +383,720 @@ Friend Sub AddInstruction( _
     
     '----------------------------------------------------------------------------------
     
+    'Our routine for comparing parameters is going to be used hundreds of times, _
+     so for clarity, we'll use some class-level copies to share the input parameters _
+     with the comparison routine
+    Let Param1Test = Param1
+    Let Param2Test = Param2
+    Let Param3Test = Param3
+    
     'See, BASIC does have a good use!
-    On Instruction - ([_TOKEN_INSTRUCTIONS_BEGIN] + 1) GoTo _
-        zADC, zADD, zAND, zBIT, zCALL, zCCF, zCP, zCPD, zCPDR, zCPI, zCPIR, zCPL, _
-        zDAA, zDEC, zDI, zDJNZ, zEI, zEX, zEXX, zHALT, zIM, zIN, zINC, zIND, zINDR, _
-        zINI, zINIR, zJP, zJR, zLD, zLDD, zLDDR, zLDI, zLDIR, zNEG, zNOP, zOR, zOUT, _
-        zOUTD, zOTDR, zOUTI, zOTIR, zPOP, zPUSH, zRES, zRET, zRETI, zRETN, zRLA, zRL, _
-        zRLCA, zRLC, zRLD, zRRA, zRR, zRRCA, zRRC, zRRD, zRST, zSBC, zSCF, zSET, _
-        zSLA, zSRA, zSLL, zSRL, zSUB, zXOR
+    On Instruction - ([_TOKEN_INSTRUCTIONS_BEGIN]) GoTo _
+        iADC, iADD, iAND, iBIT, iCALL, iCCF, iCP, iCPD, iCPDR, iCPI, iCPIR, iCPL, _
+        iDAA, iDEC, iDI, iDJNZ, iEI, iEX, iEXX, iHALT, iIM, iIN, iINC, iIND, iINDR, _
+        iINI, iINIR, iJP, iJR, iLD, iLDD, iLDDR, iLDI, iLDIR, iNEG, iNOP, iOR, iOUT, _
+        iOUTD, iOTDR, iOUTI, iOTIR, iPOP, iPUSH, iRES, iRET, iRETI, iRETN, iRLA, iRL, _
+        iRLCA, iRLC, iRLD, iRRA, iRR, iRRCA, iRRC, iRRD, iRST, iSBC, iSCF, iSET, _
+        iSLA, iSRA, iSLL, iSRL, iSUB, iXOR
     Stop
     
+    'http://z80.info/decoding.htm
     Dim Opcode As Integer
     
-zADC: '................................................................................
-    'Add with Carry
-    
-    
-    'ADC    a                       a|b|c|d|e|h|l       88+r                4
-    '                               (hl|ix+$8|iy+$8)    rr 8E ??            7
-    '                               $8                  CE ??               7
-    '       hl                      bc|de|hl|sp         ED 4A+rr            15
-    
-    '`ADC a, ...`
-    If Param1.Register = TOKEN_Z80_A Then
-        '`ADC a, a|b|c|d|e|h|l|(hl|ix+$8|iy+$8)`
-        If IsRegister8Bit_ABCDEHL_Mem_HLIXY8(Param2.Register) Then
-            Let Opcode = x2 Or Opcode_Alu(Instruction) Or _
-                         Opcode_RegisterZ(Param2.Register)
+iADC:
+    'Add with Carry _
+     ..................................................................................
+    '`ADC A, A|B|C|D|E|H|L|(HL|IX+$8|IY+$8)`
+    If TestParams(MASK_REG_A, MASK_REGS_ABCDEHL_MEMS_HL_IXY) Then
+        Let Opcode = X2 Or Y1 Or OpcodeZ_Register(Param2.Mask)
         
-        '`ADC a, $8`
-        ElseIf Param1.Register = TOKEN_NUMBER Then
-            Let Opcode = x3 Or Opcode_Alu(Instruction) Or z6
+    '`ADC A, $8`
+    ElseIf TestParams(MASK_REG_A, MASK_VAL) Then
+        Let Opcode = X3 Or Y1 Or Z6
         
-        Else
-            Stop
-        End If
+    '`ADC HL, BC|DE|HL|SP`
+    ElseIf TestParams(MASK_REG_HL, MASK_REGS_BC_DE_HL_SP) Then
+        Let Opcode = &HED00 Or X1 Or OpcodeP_RegisterPair(Param2.Token) Or Q1 Or Z2
     
-    '`ADC hl, ...`
-    ElseIf Param1.Register = TOKEN_Z80_HL Then
-        'TODO: ED prefix
-        Let Opcode = x1 Or Opcode_RegisterPair Or q1 Or z2
-        
     Else
-        Stop
+        'ERROR: Wrong parameters for Z80 instruction
+        Let AddInstruction = OZ80_ERROR_INVALID_Z80PARAMS: Exit Function
     End If
     GoTo Finish
     
-zADD: '................................................................................
-    If Param1.Register = TOKEN_Z80_A Then
-        If IsRegister8Bit_ABCDEHL_Mem_HLIXY8(Param2.Register) Then
-            Let Opcode = x2 Or Opcode_Alu(Instruction) Or _
-                         Opcode_RegisterZ(Param2.Register)
-        ElseIf Param1.Register = TOKEN_NUMBER Then
-            Let Opcode = x3 Or Opcode_Alu(Instruction) Or z6
-        Else
-            Stop
-        End If
+iADD:
+    'Add: _
+     ..................................................................................
+    '`ADD HL, BC|DE|HL|SP`
+    If TestParams(MASK_REG_HL, MASK_REGS_BC_DE_HL_SP) Then
+        Let Opcode = OpcodeP_RegisterPair(Param1.Token) Or Q1 Or Z1
     
-    'TODO: IX/IY prefix
-    ElseIf Param1.Register = TOKEN_Z80_HL Then
-        Let Opcode = Opcode_RegisterPair(Register) Or q1 Or z1
+    '`ADD A, A|B|C|D|E|H|L|(HL|IX+$8|IY+$8)`
+    ElseIf TestParams(MASK_REG_A, MASK_REGS_ABCDEHL_MEMS_HL_IXY) Then
+        Let Opcode = X2 Or OpcodeZ_Register(Param2.Mask)
+        
     Else
-        Stop
+        'ERROR: Wrong parameters for Z80 instruction
+        Let AddInstruction = OZ80_ERROR_INVALID_Z80PARAMS: Exit Function
     End If
     GoTo Finish
     
-zAND: '................................................................................
-zBIT: '................................................................................
-zCALL:
-zCCF:
-zCP:
-zCPD:
-zCPDR:
-zCPI:
-zCPIR:
-zCPL:
-zDAA:
-zDEC:
-zDI:
-zDJNZ:
-zEI:
-zEX:
-zEXX:
-zHALT:
-zIM:
-zIN:
-zINC:
-zIND:
-zINDR:
-zINI:
-zINIR:
-zJP:
-zJR:
-zLD:
-zLDD:
-zLDDR:
-zLDI:
-zLDIR:
-zNEG:
-zNOP:
-zOR:
-zOUT:
-zOUTD:
-zOTDR:
-zOUTI:
-zOTIR:
-zPOP:
-zPUSH:
-zRES:
-zRET:
-zRETI:
-zRETN:
-zRLA:
-zRL:
-zRLCA:
-zRLC:
-zRLD:
-zRRA:
-zRR:
-zRRCA:
-zRRC:
-zRRD:
-zRST:
-zSBC:
-zSCF:
-zSET:
-zSLA:
-zSRA:
-zSLL:
-zSRL:
-zSUB:
-zXOR:
+iAND:
+    'Bitwise AND: _
+     ..................................................................................
+    '`AND A|B|C|D|E|H|L|(HL|IX+$8|IY+$8)`
+    If TestParams(MASK_REGS_ABCDEHL_MEMS_HL_IXY) Then
+        Let Opcode = X2 Or Y4 Or OpcodeZ_Register(Param1.Mask)
+    Else
+        'ERROR: Wrong parameters for Z80 instruction
+        Let AddInstruction = OZ80_ERROR_INVALID_Z80PARAMS: Exit Function
+    End If
+    GoTo Finish
+    
+iBIT:
+iCALL:
 
+iCCF:
+    '..................................................................................
+    '`CCF`
+    If TestParams() Then
+        Let Opcode = Y7 Or Z7
+    Else
+        'ERROR: Wrong parameters for Z80 instruction
+        Let AddInstruction = OZ80_ERROR_INVALID_Z80PARAMS: Exit Function
+    End If
+    GoTo Finish
+    
+iCP:
+    '..................................................................................
+    '`CP A|B|C|D|E|H|L|(HL|IX+$8|IY+$8)`
+    If TestParams(MASK_REGS_ABCDEHL_MEMS_HL_IXY) Then
+        Let Opcode = X2 Or Y7 Or OpcodeZ_Register(Param1.Mask)
+    Else
+        'ERROR: Wrong parameters for Z80 instruction
+        Let AddInstruction = OZ80_ERROR_INVALID_Z80PARAMS: Exit Function
+    End If
+    GoTo Finish
+    
+iCPD:
+iCPDR:
+iCPI:
+iCPIR:
+    
+iCPL:
+    'Compliment: Flip the bits of the Accumulator _
+     ..................................................................................
+    '`CPL`
+    If TestParams() Then
+        Let Opcode = Y5 Or Z7
+    Else
+        'ERROR: Wrong parameters for Z80 instruction
+        Let AddInstruction = OZ80_ERROR_INVALID_Z80PARAMS: Exit Function
+    End If
+    GoTo Finish
+    
+iDAA:
+    'Decimal Adjust Accumulator: _
+     ..................................................................................
+    '`DAA`
+    If TestParams() Then
+        Let Opcode = Y4 Or Z7
+    Else
+        'ERROR: Wrong parameters for Z80 instruction
+        Let AddInstruction = OZ80_ERROR_INVALID_Z80PARAMS: Exit Function
+    End If
+    GoTo Finish
 
+iDEC:
+    'Decrement: _
+     ..................................................................................
+    '`DEC BC|DE|HL|SP|IX|IY`
+    If TestParams(MASK_REGS_BC_DE_HL_SP_IXY) Then
+        Let Opcode = OpcodeP_RegisterPair(Param1.Token) Or Q1 Or Z3
+    
+    '`DEC A|B|C|D|E|H|L|(HL|IX+$8|IY+$8)`
+    ElseIf TestParams(MASK_REGS_ABCDEHL_MEMS_HL_IXY) Then
+        Let Opcode = OpcodeY_Register(Param1.Token) Or Z5
+    
+    Else
+        'ERROR: Wrong parameters for Z80 instruction
+        Let AddInstruction = OZ80_ERROR_INVALID_Z80PARAMS: Exit Function
+    End If
+    GoTo Finish
+    
+iDI:
+iDJNZ:
+    'Decrement, Jump if Not Zero: _
+     ..................................................................................
+    If TestParams(MASK_VAL) Then Let Opcode = Y2: GoTo Finish
+    'ERROR: Wrong parameters for Z80 instruction
+    Let AddInstruction = OZ80_ERROR_INVALID_Z80PARAMS: Exit Function
+     
+iEI:
+iEX:
+    'Exchange: _
+     ..................................................................................
+    '`EX AF AF'`
+    If TestParams(MASK_REG_AF, MASK_REG_AF) Then
+        Let Opcode = Y1
+    Else
+        'ERROR: Wrong parameters for Z80 instruction
+        Let AddInstruction = OZ80_ERROR_INVALID_Z80PARAMS: Exit Function
+    End If
+    GoTo Finish
+    
+iEXX:
+    'Exchange All: _
+     ..................................................................................
+    If TestParams() Then
+        Let Opcode = X3 Or Q1 Or P1 Or Z1
+    Else
+        'ERROR: Wrong parameters for Z80 instruction
+        Let AddInstruction = OZ80_ERROR_INVALID_Z80PARAMS: Exit Function
+    End If
+    GoTo Finish
+
+iHALT:
+    'Halt: Stop the processor and wait for interrupts _
+     ..................................................................................
+    '`HALT`
+    If TestParams() Then
+        Let Opcode = X1 Or Y6 Or Z6
+    Else
+        'ERROR: Wrong parameters for Z80 instruction
+        Let AddInstruction = OZ80_ERROR_INVALID_Z80PARAMS: Exit Function
+    End If
+    GoTo Finish
+    
+iIM:
+iIN:
+
+iINC:
+    'Increment: _
+     ..................................................................................
+    '`INC BC|DE|HL|SP|IX|IY`
+    If TestParams(MASK_REGS_BC_DE_HL_SP_IXY) Then
+        Let Opcode = OpcodeP_RegisterPair(Param1.Token) Or Z3
+    
+    '`INC A|B|C|D|E|H|L|(HL|IX+$8|IY+$8)`
+    ElseIf TestParams(MASK_REGS_ABCDEHL) Then
+        Let Opcode = OpcodeY_Register(Param1.Token) Or Z4
+    
+    Else
+        'ERROR: Wrong parameters for Z80 instruction
+        Let AddInstruction = OZ80_ERROR_INVALID_Z80PARAMS: Exit Function
+    End If
+    GoTo Finish
+    
+iIND:
+iINDR:
+iINI:
+iINIR:
+
+iJP:
+    'Jump: _
+     ..................................................................................
+    '`JP (HL|IX|IY)` or `JP HL|IX|IY` - indirect absolute jump
+    If TestParams(MASK_REGS_HL_IXY Or MASK_MEMS_HL_IXY) Then
+        Let Opcode = X3 Or P2 Or Q1 Or Z1
+    
+    '`JP NZ|Z|NC|C|PO|PE|P|M, $16` - conditional absolute jump
+    ElseIf TestParams(MASK_FLAGS, MASK_VAL) Then
+        Let Opcode = X3 Or OpcodeY_Condition(Param1.Token) Or Z4
+    
+    Else
+        'ERROR: Wrong parameters for Z80 instruction
+        Let AddInstruction = OZ80_ERROR_INVALID_Z80PARAMS: Exit Function
+    End If
+    GoTo Finish
+    
+iJR:
+    'Jump Relative: _
+     ..................................................................................
+    If TestParams(MASK_VAL) Then
+        Let Opcode = Y3
+    ElseIf TestParams(MASK_FLAGS_CZ, MASK_VAL) Then
+        Let Opcode = OpcodeY_Condition(Param1.Token) + Y4
+    Else
+        'ERROR: Wrong parameters for Z80 instruction
+        Let AddInstruction = OZ80_ERROR_INVALID_Z80PARAMS: Exit Function
+    End If
+    GoTo Finish
+    
+iLD:
+    'The Mother-Load: _
+     ..................................................................................
+    '`LD BC|DE|HL|SP|IX|IY, $16`
+    If TestParams(MASK_REGS_BC_DE_HL_SP_IXY, MASK_VAL) Then
+        Let Opcode = OpcodeP_RegisterPair(Param1.Token) Or Z1
+    
+    '`LD (BC), A`
+    ElseIf TestParams(MASK_MEM_BC, MASK_REG_A) Then
+        Let Opcode = Z2
+        
+    '`LD (DE), A`
+    ElseIf TestParams(MASK_MEM_DE, MASK_REG_A) Then
+        Let Opcode = P1 Or Z2
+    
+    '`LD A, (BC)`
+    ElseIf TestParams(MASK_REG_A, MASK_MEM_BC) Then
+        Let Opcode = Q1 Or Z2
+    
+    '`LD A, (DE)`
+    ElseIf TestParams(MASK_REG_A, MASK_MEM_DE) Then
+        Let Opcode = P1 Or Q1 Or Z2
+    
+    '`LD ($16), HL`
+    ElseIf TestParams(MASK_MEM_VAL, MASK_REG_HL) Then
+        Let Opcode = P2 Or Z2
+    
+    '`LD ($16), A`
+    ElseIf TestParams(MASK_MEM_VAL, MASK_REG_A) Then
+        Let Opcode = P3 Or Z2
+    
+    '`LD HL, ($16)`
+    ElseIf TestParams(MASK_REG_HL, MASK_MEM_VAL) Then
+        Let Opcode = P2 Or Q1 Or Z2
+    
+    '`LD A, ($16)`
+    ElseIf TestParams(MASK_REG_A, MASK_MEM_VAL) Then
+        Let Opcode = P3 Or Q1 Or Z2
+    
+    '`LD A|B|C|D|E|H|L|(HL|IX+$8|IY+$8), $8`
+    ElseIf TestParams(MASK_REGS_ABCDEHL_MEMS_HL_IXY, MASK_VAL) Then
+        Let Opcode = OpcodeY_Register(Param1.Token) Or Z6
+    
+    '`LD A|B|C|D|E|H|L|(HL|IX+$8|IY+$8), A|B|C|D|E|H|L`
+    ElseIf TestParams(MASK_REGS_ABCDEHL_MEMS_HL_IXY, MASK_REGS_ABCDEHL) Then
+        Let Opcode = X1 Or OpcodeY_Register(Param1.Token) Or OpcodeZ_Register(Param2.Token)
+        
+    '`LD A|B|C|D|E|H|L, A|B|C|D|E|H|L|(HL|IX+$8|IY+$8)`
+    ElseIf TestParams(MASK_REGS_ABCDEHL, MASK_REGS_ABCDEHL_MEMS_HL_IXY) Then
+        Let Opcode = X1 Or OpcodeY_Register(Param1.Token) Or OpcodeZ_Register(Param2.Token)
+    
+    '`LD SP, HL`
+    ElseIf TestParams(MASK_REG_SP, MASK_REGS_HL_IXY) Then
+        Let Opcode = X3 Or P3 Or Q1 Or Z1
+        
+    Else
+        'ERROR: Wrong parameters for Z80 instruction
+        Let AddInstruction = OZ80_ERROR_INVALID_Z80PARAMS: Exit Function
+    End If
+    GoTo Finish
+    
+iLDD:
+iLDDR:
+iLDI:
+iLDIR:
+iNEG:
+
+iNOP:
+    'No Operation: _
+     ..................................................................................
+    '`NOP`
+    If TestParams() Then
+        Let Opcode = 0
+    Else
+        'ERROR: Wrong parameters for Z80 instruction
+        Let AddInstruction = OZ80_ERROR_INVALID_Z80PARAMS: Exit Function
+    End If
+    GoTo Finish
+    
+iOR:
+    'Bitwise OR: _
+     ..................................................................................
+    If TestParams(MASK_REGS_ABCDEHL_MEMS_HL_IXY) Then
+        Let Opcode = X2 Or Y6 Or OpcodeZ_Register(Param1.Mask)
+    Else
+        'ERROR: Wrong parameters for Z80 instruction
+        Let AddInstruction = OZ80_ERROR_INVALID_Z80PARAMS: Exit Function
+    End If
+    GoTo Finish
+    
+iOUT:
+iOUTD:
+iOTDR:
+iOUTI:
+iOTIR:
+
+iPOP:
+    'Fetch from stack: _
+     ..................................................................................
+    '`POP AF|BC|DE|HL|IX|IY`
+    If TestParams(MASK_REGS_AF_BC_DE_HL) Then
+        Let Opcode = X3 Or OpcodeP_RegisterPair(Param1.Token) Or Z1
+    Else
+        'ERROR: Wrong parameters for Z80 instruction
+        Let AddInstruction = OZ80_ERROR_INVALID_Z80PARAMS: Exit Function
+    End If
+    GoTo Finish
+    
+iPUSH:
+    'Push a register on to the stack: _
+     ..................................................................................
+    '`PUSH AF|BC|DE|HL|IX|IY`
+    If TestParams(MASK_REGS_AF_BC_DE_HL) Then
+        Let Opcode = X3 Or OpcodeP_RegisterPair(Param1.Token) Or Z5
+    Else
+        'ERROR: Wrong parameters for Z80 instruction
+        Let AddInstruction = OZ80_ERROR_INVALID_Z80PARAMS: Exit Function
+    End If
+    GoTo Finish
+    
+iRES:
+
+iRET:
+    'Return: _
+     ..................................................................................
+    '`RET NZ|Z|NC|C|PO|PE|P|M` - conditional return
+    If TestParams(MASK_FLAGS) Then
+        Let Opcode = X3 Or OpcodeY_Condition(Param1.Token)
+    
+    '`RET`
+    ElseIf TestParams() Then
+        Let Opcode = X3 Or Q1 Or Z1
+    Else
+        'ERROR: Wrong parameters for Z80 instruction
+        Let AddInstruction = OZ80_ERROR_INVALID_Z80PARAMS: Exit Function
+    End If
+    GoTo Finish
+
+iRETI:
+iRETN:
+
+iRLA:
+    '..................................................................................
+    '`RLA`
+    If TestParams() Then
+        Let Opcode = Y2 Or Z7
+    Else
+        'ERROR: Wrong parameters for Z80 instruction
+        Let AddInstruction = OZ80_ERROR_INVALID_Z80PARAMS: Exit Function
+    End If
+    GoTo Finish
+    
+iRL:
+
+iRLCA:
+    '..................................................................................
+    '`RLCA`
+    If TestParams() Then
+        Let Opcode = Z7
+    Else
+        'ERROR: Wrong parameters for Z80 instruction
+        Let AddInstruction = OZ80_ERROR_INVALID_Z80PARAMS: Exit Function
+    End If
+    GoTo Finish
+    
+iRLC:
+iRLD:
+
+iRRA:
+    '..................................................................................
+    '`RRA`
+    If TestParams() Then
+        Let Opcode = Y3 Or Z7
+    Else
+        'ERROR: Wrong parameters for Z80 instruction
+        Let AddInstruction = OZ80_ERROR_INVALID_Z80PARAMS: Exit Function
+    End If
+    GoTo Finish
+    
+iRR:
+
+iRRCA:
+    '..................................................................................
+    '`RRCA`
+    If TestParams() Then
+        Let Opcode = Y1 Or Z7
+    Else
+        'ERROR: Wrong parameters for Z80 instruction
+        Let AddInstruction = OZ80_ERROR_INVALID_Z80PARAMS: Exit Function
+    End If
+    GoTo Finish
+
+iRRC:
+iRRD:
+iRST:
+
+iSBC:
+    '..................................................................................
+    '`SBC A, A|B|C|D|E|H|L|(HL|IX+$8|IY+$8)`
+    If TestParams(MASK_REG_A, MASK_REGS_ABCDEHL_MEMS_HL_IXY) Then
+        Let Opcode = X2 Or Y3 Or OpcodeZ_Register(Param2.Mask)
+    Else
+        'ERROR: Wrong parameters for Z80 instruction
+        Let AddInstruction = OZ80_ERROR_INVALID_Z80PARAMS: Exit Function
+    End If
+    GoTo Finish
+
+iSCF:
+    '..................................................................................
+    '`SCF`
+    If TestParams() Then
+        Let Opcode = Y6 Or Z7
+    Else
+        'ERROR: Wrong parameters for Z80 instruction
+        Let AddInstruction = OZ80_ERROR_INVALID_Z80PARAMS: Exit Function
+    End If
+    GoTo Finish
+
+iSET:
+iSLA:
+iSRA:
+iSLL:
+iSRL:
+
+iSUB:
+    'Subtract: _
+     ..................................................................................
+    '`SUB A|B|C|D|E|H|L|(HL|IX+$8|IY+$8)`
+    If TestParams(MASK_REGS_ABCDEHL_MEMS_HL_IXY) Then
+        Let Opcode = X2 Or Y2 Or OpcodeZ_Register(Param1.Mask)
+    Else
+        'ERROR: Wrong parameters for Z80 instruction
+        Let AddInstruction = OZ80_ERROR_INVALID_Z80PARAMS: Exit Function
+    End If
+    GoTo Finish
+    
+iXOR:
+    'Bitwise XOR: _
+     ..................................................................................
+    If TestParams(MASK_REGS_ABCDEHL_MEMS_HL_IXY) Then
+        Let Opcode = X2 Or Y5 Or OpcodeZ_Register(Param1.Mask)
+    Else
+        'ERROR: Wrong parameters for Z80 instruction
+        Let AddInstruction = OZ80_ERROR_INVALID_Z80PARAMS: Exit Function
+    End If
+    
 Finish:
-End Sub
-
-'IsRegister8Bit_ABCDEHL : Test for the common parameter of a main 8-bit register _
- ======================================================================================
-Private Function IsRegister8Bit_ABCDEHL( _
-    ByRef Register As OZ80_TOKEN _
-) As Boolean
-    '"Or" comparisions are not used for speed reasons, _
-     we want to evaluate as little as possible in one go
-    If Register = TOKEN_Z80_A Then
-        Let IsRegister8Bit_ABCDEHL = True
-    ElseIf Register = TOKEN_Z80_B Then
-        Let IsRegister8Bit_ABCDEHL = True
-    ElseIf Register = TOKEN_Z80_C Then
-        Let IsRegister8Bit_ABCDEHL = True
-    ElseIf Register = TOKEN_Z80_D Then
-        Let IsRegister8Bit_ABCDEHL = True
-    ElseIf Register = TOKEN_Z80_E Then
-        Let IsRegister8Bit_ABCDEHL = True
-    ElseIf Register = TOKEN_Z80_H Then
-        Let IsRegister8Bit_ABCDEHL = True
-    ElseIf Register = TOKEN_Z80_L Then
-        Let IsRegister8Bit_ABCDEHL = True
-    End If
+    
 End Function
 
-'IsRegister8Bit_ABCDEHL_Mem_HL_IXY8 : Test for common register / memory-reference _
+'OpcodeY_Alu : Converts arithmetic instructions to bits 3, 4 & 5 of opcode _
  ======================================================================================
-Private Function IsRegister8Bit_ABCDEHL_Mem_HLIXY8( _
-    ByRef Register As OZ80_TOKEN _
-) As Boolean
-    If Register = TOKEN_Z80_A Then
-        Let IsRegister8Bit_ABCDEHL_Mem_HLIXY8 = True
-    ElseIf Register = TOKEN_Z80_B Then
-        Let IsRegister8Bit_ABCDEHL_Mem_HLIXY8 = True
-    ElseIf Register = TOKEN_Z80_C Then
-        Let IsRegister8Bit_ABCDEHL_Mem_HLIXY8 = True
-    ElseIf Register = TOKEN_Z80_D Then
-        Let IsRegister8Bit_ABCDEHL_Mem_HLIXY8 = True
-    ElseIf Register = TOKEN_Z80_E Then
-        Let IsRegister8Bit_ABCDEHL_Mem_HLIXY8 = True
-    ElseIf Register = TOKEN_Z80_H Then
-        Let IsRegister8Bit_ABCDEHL_Mem_HLIXY8 = True
-    ElseIf Register = TOKEN_Z80_L Then
-        Let IsRegister8Bit_ABCDEHL_Mem_HLIXY8 = True
-    ElseIf Register = TOKEN_Z80_MEM_HL Then
-        Let IsRegister8Bit_ABCDEHL_Mem_HLIXY8 = True
-    ElseIf Register = TOKEN_Z80_MEM_IX Then
-        Let IsRegister8Bit_ABCDEHL_Mem_HLIXY8 = True
-    ElseIf Register = TOKEN_Z80_MEM_IY Then
-        Let IsRegister8Bit_ABCDEHL_Mem_HLIXY8 = True
-    End If
-End Function
-
-'IsValue : Test to see if a parameter would class as having an associated value _
- ======================================================================================
-Private Function IsValue( _
-    ByRef Register As OZ80_TOKEN _
-) As Boolean
-    If Register = TOKEN_NUMBER Then
-        Let IsValue = True
-    ElseIf Register = TOKEN_NUMBER Or TOKEN_Z80_MEM Then
-        Let IsValue = True
-    ElseIf Register = TOKEN_Z80_MEM_IX Then
-        Let IsValue = True
-    ElseIf Register = TOKEN_Z80_MEM_IY Then
-        Let IsValue = True
-    End If
-End Function
-
-'Opcode_Alu : Converts arithmetic instructions to bits 3, 4 & 5 of opcode _
- ======================================================================================
-Private Function Opcode_Alu( _
+Private Function OpcodeY_Alu( _
     ByRef Instruction As OZ80_TOKEN _
 ) As Integer
     If Instruction = TOKEN_Z80_ADD Then
         Exit Function
     ElseIf Instruction = TOKEN_Z80_ADC Then
-        Let Opcode_Alu = y1
+        Let OpcodeY_Alu = Y1
     ElseIf Instruction = TOKEN_Z80_SUB Then
-        Let Opcode_Alu = y2
+        Let OpcodeY_Alu = Y2
     ElseIf Instruction = TOKEN_Z80_SBC Then
-        Let Opcode_Alu = y3
+        Let OpcodeY_Alu = Y3
     ElseIf Instruction = TOKEN_Z80_AND Then
-        Let Opcode_Alu = y4
+        Let OpcodeY_Alu = Y4
     ElseIf Instruction = TOKEN_Z80_XOR Then
-        Let Opcode_Alu = y5
+        Let OpcodeY_Alu = Y5
     ElseIf Instruction = TOKEN_Z80_OR Then
-        Let Opcode_Alu = y6
+        Let OpcodeY_Alu = Y6
     ElseIf Instruction = TOKEN_Z80_CP Then
-        Let Opcode_Alu = y7
+        Let OpcodeY_Alu = Y7
     Else
         Stop
     End If
 End Function
 
-'Opcode_Condition : Convert a condition flag to bits 3, 4 & 5 of opcode _
+'OpcodeY_Condition : Convert a condition flag to bits 3, 4 & 5 of opcode _
  ======================================================================================
-Private Function Opcode_Condition( _
+Private Function OpcodeY_Condition( _
     ByRef Condition As OZ80_TOKEN _
 ) As Integer
     If Condition = TOKEN_Z80_NZ Then
         Exit Function
     ElseIf Condition = TOKEN_Z80_Z Then
-        Let Opcode_Condition = y1
+        Let OpcodeY_Condition = Y1
     ElseIf Condition = TOKEN_Z80_NC Then
-        Let Opcode_Condition = y2
+        Let OpcodeY_Condition = Y2
     ElseIf Condition = TOKEN_Z80_C Then
-        Let Opcode_Condition = y3
+        Let OpcodeY_Condition = Y3
     ElseIf Condition = TOKEN_Z80_PO Then
-        Let Opcode_Condition = y4
+        Let OpcodeY_Condition = Y4
     ElseIf Condition = TOKEN_Z80_PE Then
-        Let Opcode_Condition = y5
+        Let OpcodeY_Condition = Y5
     ElseIf Condition = TOKEN_Z80_P Then
-        Let Opcode_Condition = y6
+        Let OpcodeY_Condition = Y6
     ElseIf Condition = TOKEN_Z80_M Then
-        Let Opcode_Condition = y7
+        Let OpcodeY_Condition = Y7
     Else
         Stop
     End If
 End Function
 
-'Opcode_RegisterPair : Converts 16-bit register tokens to bits 4 & 5 of the opcode _
+'OpcodeP_RegisterPair : Converts 16-bit register tokens to bits 4 & 5 of the opcode _
  ======================================================================================
-Private Function Opcode_RegisterPair( _
+Private Function OpcodeP_RegisterPair( _
     ByRef Register As OZ80_TOKEN _
 ) As Integer
     If Register = TOKEN_Z80_BC Then
         Exit Function
     ElseIf Register = TOKEN_Z80_DE Then
-        Let Opcode_RegisterPair = p1
+        Let OpcodeP_RegisterPair = P1
     ElseIf Register = TOKEN_Z80_HL Then
-        Let Opcode_RegisterPair = p2
+        Let OpcodeP_RegisterPair = P2
     ElseIf Register = TOKEN_Z80_SP Or Register = TOKEN_Z80_AF Then
-        Let Opcode_RegisterPair = p3
+        Let OpcodeP_RegisterPair = P3
     Else
         Stop
     End If
 End Function
 
-'Opcode_RegisterY : Sets the Y-bits (3, 4 & 5) of the opcode based on the register _
+'OpcodeY_Register : Sets the Y-bits (3, 4 & 5) of the opcode based on the register _
  ======================================================================================
-Private Function Opcode_RegisterY( _
-    ByRef Register As OZ80_TOKEN _
+Private Function OpcodeY_Register( _
+    ByRef Mask As OZ80_MASK _
 ) As Integer
-    If Register = TOKEN_Z80_B Then
+    If Mask = MASK_REG_B Then
         Exit Function
-    ElseIf Register = TOKEN_Z80_C Then
-        Let Opcode_RegisterY = y1
-    ElseIf Register = TOKEN_Z80_D Then
-        Let Opcode_RegisterY = y2
-    ElseIf Register = TOKEN_Z80_E Then
-        Let Opcode_RegisterY = y3
-    ElseIf Register = TOKEN_Z80_H Then
-        Let Opcode_RegisterY = y4
-    ElseIf Register = TOKEN_Z80_L Then
-        Let Opcode_RegisterY = y5
-    ElseIf Register = TOKEN_Z80_MEM_HL Then
-        Let Opcode_RegisterY = y6
-    ElseIf Register = TOKEN_Z80_MEM_IX Then
+    ElseIf Mask = MASK_REG_C Then
+        Let OpcodeY_Register = Y1
+    ElseIf Mask = MASK_REG_D Then
+        Let OpcodeY_Register = Y2
+    ElseIf Mask = MASK_REG_E Then
+        Let OpcodeY_Register = Y3
+    ElseIf Mask = MASK_REG_H Then
+        Let OpcodeY_Register = Y4
+    ElseIf Mask = MASK_REG_L Then
+        Let OpcodeY_Register = Y5
+    ElseIf Mask = MASK_MEM_HL Then
+        Let OpcodeY_Register = Y6
+    ElseIf Mask = MASK_MEM_IX Then
         'TODO: opcode prefix
-        Let Opcode_RegisterY = y6
-    ElseIf Register = TOKEN_Z80_MEM_IY Then
+        Let OpcodeY_Register = Y6
+    ElseIf Mask = MASK_MEM_IY Then
         'TODO: opcode prefix
-        Let Opcode_RegisterY = y6
-    ElseIf Register = TOKEN_Z80_A Then
-        Let Opcode_RegisterY = y7
+        Let OpcodeY_Register = Y6
+    ElseIf Mask = MASK_REG_A Then
+        Let OpcodeY_Register = Y7
     Else
         Stop
     End If
 End Function
 
-'Opcode_RegisterZ : Sets the Z-bits (0, 1 & 2) of the opcode based on the register _
+'OpcodeZ_Register : Sets the Z-bits (0, 1 & 2) of the opcode based on the register _
  ======================================================================================
-Private Function Opcode_RegisterZ( _
-    ByRef Register As OZ80_TOKEN _
+Private Function OpcodeZ_Register( _
+    ByRef Mask As OZ80_MASK _
 ) As Integer
-    If Register = TOKEN_Z80_B Then
+    If Mask = MASK_REG_B Then
         Exit Function
-    ElseIf Register = TOKEN_Z80_C Then
-        Let Opcode_RegisterZ = z1
-    ElseIf Register = TOKEN_Z80_D Then
-        Let Opcode_RegisterZ = z2
-    ElseIf Register = TOKEN_Z80_E Then
-        Let Opcode_RegisterZ = z3
-    ElseIf Register = TOKEN_Z80_H Then
-        Let Opcode_RegisterZ = z4
-    ElseIf Register = TOKEN_Z80_L Then
-        Let Opcode_RegisterZ = z5
-    ElseIf Register = TOKEN_Z80_MEM_HL Then
-        Let Opcode_RegisterZ = y6
-    ElseIf Register = TOKEN_Z80_MEM_IX Then
+    ElseIf Mask = MASK_REG_C Then
+        Let OpcodeZ_Register = Z1
+    ElseIf Mask = MASK_REG_D Then
+        Let OpcodeZ_Register = Z2
+    ElseIf Mask = MASK_REG_E Then
+        Let OpcodeZ_Register = Z3
+    ElseIf Mask = MASK_REG_H Then
+        Let OpcodeZ_Register = Z4
+    ElseIf Mask = MASK_REG_L Then
+        Let OpcodeZ_Register = Z5
+    ElseIf Mask = MASK_MEM_HL Then
+        Let OpcodeZ_Register = Z6
+    ElseIf Mask = MASK_MEM_IX Then
         'TODO: opcode prefix
-        Let Opcode_RegisterZ = y6
-    ElseIf Register = TOKEN_Z80_MEM_IY Then
+        Let OpcodeZ_Register = Z6
+    ElseIf Mask = MASK_MEM_IY Then
         'TODO: opcode prefix
-        Let Opcode_RegisterZ = y6
-    ElseIf Register = TOKEN_Z80_A Then
-        Let Opcode_RegisterZ = z7
+        Let OpcodeZ_Register = Z6
+    ElseIf Mask = MASK_REG_A Then
+        Let OpcodeZ_Register = Z7
     Else
         Stop
     End If
 End Function
 
-'Opcode_Rot : Set opcode for shift / rotate instructions _
+'OpcodeY_Rot : Set opcode for shift / rotate instructions _
  ======================================================================================
-Private Function Opcode_Rot( _
+Private Function OpcodeY_Rot( _
     ByRef Instruction As OZ80_TOKEN _
 ) As Integer
     If Instruction = TOKEN_Z80_RLC Then
         Exit Function
     ElseIf Instruction = TOKEN_Z80_RRC Then
-        Let Opcode_Rot = y1
+        Let OpcodeY_Rot = Y1
     ElseIf Instruction = TOKEN_Z80_RL Then
-        Let Opcode_Rot = y2
+        Let OpcodeY_Rot = Y2
     ElseIf Instruction = TOKEN_Z80_RR Then
-        Let Opcode_Rot = y3
+        Let OpcodeY_Rot = Y3
     ElseIf Instruction = TOKEN_Z80_SLA Then
-        Let Opcode_Rot = y4
+        Let OpcodeY_Rot = Y4
     ElseIf Instruction = TOKEN_Z80_SRA Then
-        Let Opcode_Rot = y5
+        Let OpcodeY_Rot = Y5
     ElseIf Instruction = TOKEN_Z80_SLL Then
-        Let Opcode_Rot = y6
+        Let OpcodeY_Rot = Y6
     ElseIf Instruction = TOKEN_Z80_SRL Then
-        Let Opcode_Rot = y7
+        Let OpcodeY_Rot = Y7
     Else
         Stop
     End If
+End Function
+
+'TestParams : Check if parameters are of the right type desired _
+ ======================================================================================
+Private Function TestParams( _
+    Optional ByRef Test1 As OZ80_MASK, _
+    Optional ByRef Test2 As OZ80_MASK, _
+    Optional ByRef Test3 As OZ80_MASK _
+) As Boolean
+    'Why call the function with no parameters? It's a consistent way to check when _
+     there should be no parameters for an instruction!
+    
+    'If a parameter exists, but there shouldn't be, return False
+    If (Test1 = 0) And (Param1Test.Mask <> 0) Then Exit Function
+    'If there is no first parameter, pass True
+    If (Test1 = 0) And (Param1Test.Mask = 0) Then GoTo Finish
+    
+    '1st Parameter Test: _
+     ----------------------------------------------------------------------------------
+    
+    'Is the 'memory reference' bit the same in the parameter as in the test?
+    If (Param1Test.Mask And [_MASK_MEM]) Xor (Test1 And [_MASK_MEM]) Then Exit Function
+    
+    'Does the parameter appear in the test? E.g. Param = A, Test = A/B/C/D/E/H/L _
+     NOTE: The memory reference bit is removed to avoid false positives where the _
+           memory reference bit is present, but the rest of the mask does not match
+    If ( _
+        (Param1Test.Mask And Not [_MASK_MEM]) And (Test1 And Not [_MASK_MEM]) _
+    ) = 0 Then Exit Function
+    
+    'If there shouldn't be a second parameter, return False
+    If (Test2 = 0) And (Param2Test.Mask <> 0) Then Exit Function
+    'If there is no second parameter, the test has passed
+    If (Test2 = 0) And (Param2Test.Mask = 0) Then GoTo Finish
+    
+    '2nd Parameter Test: _
+     ----------------------------------------------------------------------------------
+    
+    'Is the 'memory reference' bit the same in the parameter as in the test?
+    If (Param2Test.Mask And [_MASK_MEM]) Xor (Test2 And [_MASK_MEM]) Then Exit Function
+    
+    'Does the parameter appear in the test? E.g. Param = A, Test = A/B/C/D/E/H/L _
+     NOTE: The memory reference bit is removed to avoid false positives where the _
+           memory reference bit is present, but the rest of the mask does not match
+    If ( _
+        (Param2Test.Mask And Not [_MASK_MEM]) And (Test2 And Not [_MASK_MEM]) _
+    ) = 0 Then Exit Function
+    
+    'If there shouldn't be a third parameter, return False
+    If (Test3 = 0) And (Param3Test.Mask <> 0) Then Exit Function
+    'If there is no third parameter, the test has passed
+    If (Test3 = 0) And (Param3Test.Mask = 0) Then GoTo Finish
+    
+    '3rd Parameter Test: _
+     ----------------------------------------------------------------------------------
+    
+    'Is the 'memory reference' bit the same in the parameter as in the test?
+    If (Param3Test.Mask And [_MASK_MEM]) Xor (Test3 And [_MASK_MEM]) Then Exit Function
+    
+    'Does the parameter appear in the test? E.g. Param = A, Test = A/B/C/D/E/H/L _
+     NOTE: The memory reference bit is removed to avoid false positives where the _
+           memory reference bit is present, but the rest of the mask does not match
+    If ( _
+        (Param3Test.Mask And Not [_MASK_MEM]) And (Test3 And Not [_MASK_MEM]) _
+    ) = 0 Then Exit Function
+    
+Finish:
+    Let TestParams = True
 End Function

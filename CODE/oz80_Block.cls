@@ -463,6 +463,16 @@ iAND:
     GoTo Finish
     
 iBIT:
+    'Test a bit: _
+     ..................................................................................
+    '`BIT 0-7 A|B|C|D|E|H|L|(HL|IX+$8|IY+$8)`
+    If TestParams(MASK_VAL, MASK_REGS_ABCDEHL_MEM_HLIXY) Then
+        Let Opcode = &HCB00 Or X1 Or OpcodeY_Bit(Param1.Value) Or OpcodeZ_Register(Param1.Mask)
+    Else
+        'ERROR: Wrong parameters for Z80 instruction
+        Let AddInstruction = OZ80_ERROR_INVALID_Z80PARAMS: Exit Function
+    End If
+    GoTo Finish
 
 iCALL:
     'Call Procedure: _
@@ -831,7 +841,17 @@ iPUSH:
     GoTo Finish
     
 iRES:
-
+    'Reset a bit: _
+     ..................................................................................
+    '`RES 0-7 A|B|C|D|E|H|L|(HL|IX+$8|IY+$8)`
+    If TestParams(MASK_VAL, MASK_REGS_ABCDEHL_MEM_HLIXY) Then
+        Let Opcode = &HCB00 Or X2 Or OpcodeY_Bit(Param1.Value) Or OpcodeZ_Register(Param1.Mask)
+    Else
+        'ERROR: Wrong parameters for Z80 instruction
+        Let AddInstruction = OZ80_ERROR_INVALID_Z80PARAMS: Exit Function
+    End If
+    GoTo Finish
+    
 iRET:
     'Return: _
      ..................................................................................
@@ -983,7 +1003,17 @@ iSCF:
     GoTo Finish
 
 iSET:
-
+    'Set a bit: _
+     ..................................................................................
+    '`SET 0-7 A|B|C|D|E|H|L|(HL|IX+$8|IY+$8)`
+    If TestParams(MASK_VAL, MASK_REGS_ABCDEHL_MEM_HLIXY) Then
+        Let Opcode = &HCB00 Or X3 Or OpcodeY_Bit(Param1.Value) Or OpcodeZ_Register(Param1.Mask)
+    Else
+        'ERROR: Wrong parameters for Z80 instruction
+        Let AddInstruction = OZ80_ERROR_INVALID_Z80PARAMS: Exit Function
+    End If
+    GoTo Finish
+    
 iSLA:
     '..................................................................................
     '`SLA A|B|C|D|E|H|L|(HL|IX+$8|IY+$8)`
@@ -1084,6 +1114,36 @@ Private Function OpcodeY_Alu( _
         Let OpcodeY_Alu = Y6
     ElseIf Instruction = TOKEN_Z80_CP Then
         Let OpcodeY_Alu = Y7
+    Else
+        Stop
+    End If
+End Function
+
+'OpcodeY_Bit : Convert a bit number into the opcode Y bits _
+ ======================================================================================
+Private Function OpcodeY_Bit( _
+    ByRef Value As Double _
+) As Integer
+    'TODO: Cannot allow indefinite number during phase 3
+    If Value = OZ80_INDEFINITE Then
+        'For now, treat as bit 0
+        Exit Function
+    ElseIf Value = 0 Then
+        Exit Function
+    ElseIf Value = 1 Then
+        Let OpcodeY_Bit = Y1
+    ElseIf Value = 2 Then
+        Let OpcodeY_Bit = Y2
+    ElseIf Value = 3 Then
+        Let OpcodeY_Bit = Y3
+    ElseIf Value = 4 Then
+        Let OpcodeY_Bit = Y4
+    ElseIf Value = 5 Then
+        Let OpcodeY_Bit = Y5
+    ElseIf Value = 6 Then
+        Let OpcodeY_Bit = Y6
+    ElseIf Value = 7 Then
+        Let OpcodeY_Bit = Y7
     Else
         Stop
     End If

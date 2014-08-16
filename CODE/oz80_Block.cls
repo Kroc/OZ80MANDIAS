@@ -407,7 +407,7 @@ iADC:
     'Add with Carry _
      ..................................................................................
     '`ADC A, A|B|C|D|E|H|L|(HL|IX+$8|IY+$8)`
-    If TestParams(MASK_REG_A, MASK_REGS_ABCDEHL_MEMS_HL_IXY) Then
+    If TestParams(MASK_REG_A, MASK_REGS_ABCDEHL_MEM_HLIXY) Then
         Let Opcode = X2 Or Y1 Or OpcodeZ_Register(Param2.Mask)
         
     '`ADC A, $8`
@@ -432,7 +432,7 @@ iADD:
         Let Opcode = OpcodeP_RegisterPair(Param1.Token) Or Q1 Or Z1
     
     '`ADD A, A|B|C|D|E|H|L|(HL|IX+$8|IY+$8)`
-    ElseIf TestParams(MASK_REG_A, MASK_REGS_ABCDEHL_MEMS_HL_IXY) Then
+    ElseIf TestParams(MASK_REG_A, MASK_REGS_ABCDEHL_MEM_HLIXY) Then
         Let Opcode = X2 Or OpcodeZ_Register(Param2.Mask)
         
     Else
@@ -445,7 +445,7 @@ iAND:
     'Bitwise AND: _
      ..................................................................................
     '`AND A|B|C|D|E|H|L|(HL|IX+$8|IY+$8)`
-    If TestParams(MASK_REGS_ABCDEHL_MEMS_HL_IXY) Then
+    If TestParams(MASK_REGS_ABCDEHL_MEM_HLIXY) Then
         Let Opcode = X2 Or Y4 Or OpcodeZ_Register(Param1.Mask)
     Else
         'ERROR: Wrong parameters for Z80 instruction
@@ -470,7 +470,7 @@ iCCF:
 iCP:
     '..................................................................................
     '`CP A|B|C|D|E|H|L|(HL|IX+$8|IY+$8)`
-    If TestParams(MASK_REGS_ABCDEHL_MEMS_HL_IXY) Then
+    If TestParams(MASK_REGS_ABCDEHL_MEM_HLIXY) Then
         Let Opcode = X2 Or Y7 Or OpcodeZ_Register(Param1.Mask)
     Else
         'ERROR: Wrong parameters for Z80 instruction
@@ -515,7 +515,7 @@ iDEC:
         Let Opcode = OpcodeP_RegisterPair(Param1.Token) Or Q1 Or Z3
     
     '`DEC A|B|C|D|E|H|L|(HL|IX+$8|IY+$8)`
-    ElseIf TestParams(MASK_REGS_ABCDEHL_MEMS_HL_IXY) Then
+    ElseIf TestParams(MASK_REGS_ABCDEHL_MEM_HLIXY) Then
         Let Opcode = OpcodeY_Register(Param1.Token) Or Z5
     
     Else
@@ -597,7 +597,7 @@ iJP:
     'Jump: _
      ..................................................................................
     '`JP (HL|IX|IY)` or `JP HL|IX|IY` - indirect absolute jump
-    If TestParams(MASK_REGS_HL_IXY Or MASK_MEMS_HL_IXY) Then
+    If TestParams(MASK_REGS_HL_IXY Or MASK_MEM_HLIXY) Then
         Let Opcode = X3 Or P2 Or Q1 Or Z1
     
     '`JP NZ|Z|NC|C|PO|PE|P|M, $16` - conditional absolute jump
@@ -663,15 +663,15 @@ iLD:
         Let Opcode = P3 Or Q1 Or Z2
     
     '`LD A|B|C|D|E|H|L|(HL|IX+$8|IY+$8), $8`
-    ElseIf TestParams(MASK_REGS_ABCDEHL_MEMS_HL_IXY, MASK_VAL) Then
+    ElseIf TestParams(MASK_REGS_ABCDEHL_MEM_HLIXY, MASK_VAL) Then
         Let Opcode = OpcodeY_Register(Param1.Token) Or Z6
     
     '`LD A|B|C|D|E|H|L|(HL|IX+$8|IY+$8), A|B|C|D|E|H|L`
-    ElseIf TestParams(MASK_REGS_ABCDEHL_MEMS_HL_IXY, MASK_REGS_ABCDEHL) Then
+    ElseIf TestParams(MASK_REGS_ABCDEHL_MEM_HLIXY, MASK_REGS_ABCDEHL) Then
         Let Opcode = X1 Or OpcodeY_Register(Param1.Token) Or OpcodeZ_Register(Param2.Token)
         
     '`LD A|B|C|D|E|H|L, A|B|C|D|E|H|L|(HL|IX+$8|IY+$8)`
-    ElseIf TestParams(MASK_REGS_ABCDEHL, MASK_REGS_ABCDEHL_MEMS_HL_IXY) Then
+    ElseIf TestParams(MASK_REGS_ABCDEHL, MASK_REGS_ABCDEHL_MEM_HLIXY) Then
         Let Opcode = X1 Or OpcodeY_Register(Param1.Token) Or OpcodeZ_Register(Param2.Token)
     
     '`LD SP, HL`
@@ -705,7 +705,7 @@ iNOP:
 iOR:
     'Bitwise OR: _
      ..................................................................................
-    If TestParams(MASK_REGS_ABCDEHL_MEMS_HL_IXY) Then
+    If TestParams(MASK_REGS_ABCDEHL_MEM_HLIXY) Then
         Let Opcode = X2 Or Y6 Or OpcodeZ_Register(Param1.Mask)
     Else
         'ERROR: Wrong parameters for Z80 instruction
@@ -822,7 +822,7 @@ iRST:
 iSBC:
     '..................................................................................
     '`SBC A, A|B|C|D|E|H|L|(HL|IX+$8|IY+$8)`
-    If TestParams(MASK_REG_A, MASK_REGS_ABCDEHL_MEMS_HL_IXY) Then
+    If TestParams(MASK_REG_A, MASK_REGS_ABCDEHL_MEM_HLIXY) Then
         Let Opcode = X2 Or Y3 Or OpcodeZ_Register(Param2.Mask)
     Else
         'ERROR: Wrong parameters for Z80 instruction
@@ -851,7 +851,7 @@ iSUB:
     'Subtract: _
      ..................................................................................
     '`SUB A|B|C|D|E|H|L|(HL|IX+$8|IY+$8)`
-    If TestParams(MASK_REGS_ABCDEHL_MEMS_HL_IXY) Then
+    If TestParams(MASK_REGS_ABCDEHL_MEM_HLIXY) Then
         Let Opcode = X2 Or Y2 Or OpcodeZ_Register(Param1.Mask)
     Else
         'ERROR: Wrong parameters for Z80 instruction
@@ -862,7 +862,7 @@ iSUB:
 iXOR:
     'Bitwise XOR: _
      ..................................................................................
-    If TestParams(MASK_REGS_ABCDEHL_MEMS_HL_IXY) Then
+    If TestParams(MASK_REGS_ABCDEHL_MEM_HLIXY) Then
         Let Opcode = X2 Or Y5 Or OpcodeZ_Register(Param1.Mask)
     Else
         'ERROR: Wrong parameters for Z80 instruction
@@ -960,13 +960,7 @@ Private Function OpcodeY_Register( _
         Let OpcodeY_Register = Y4
     ElseIf Mask = MASK_REG_L Then
         Let OpcodeY_Register = Y5
-    ElseIf Mask = MASK_MEM_HL Then
-        Let OpcodeY_Register = Y6
-    ElseIf Mask = MASK_MEM_IX Then
-        'TODO: opcode prefix
-        Let OpcodeY_Register = Y6
-    ElseIf Mask = MASK_MEM_IY Then
-        'TODO: opcode prefix
+    ElseIf Mask = MASK_MEM_HLIXY Then
         Let OpcodeY_Register = Y6
     ElseIf Mask = MASK_REG_A Then
         Let OpcodeY_Register = Y7
@@ -992,13 +986,7 @@ Private Function OpcodeZ_Register( _
         Let OpcodeZ_Register = Z4
     ElseIf Mask = MASK_REG_L Then
         Let OpcodeZ_Register = Z5
-    ElseIf Mask = MASK_MEM_HL Then
-        Let OpcodeZ_Register = Z6
-    ElseIf Mask = MASK_MEM_IX Then
-        'TODO: opcode prefix
-        Let OpcodeZ_Register = Z6
-    ElseIf Mask = MASK_MEM_IY Then
-        'TODO: opcode prefix
+    ElseIf Mask = MASK_MEM_HLIXY Then
         Let OpcodeZ_Register = Z6
     ElseIf Mask = MASK_REG_A Then
         Let OpcodeZ_Register = Z7

@@ -950,17 +950,17 @@ Private Function GetZ80Parameter() As oz80Param
             
             ElseIf Token.Kind = TOKEN_Z80_HL Then
                 Let GetZ80Parameter.Token = TOKEN_Z80_HL
-                Let GetZ80Parameter.Mask = MASK_MEM_HL
+                Let GetZ80Parameter.Mask = MASK_MEM_HLIXY
                 
             ElseIf Token.Kind = TOKEN_Z80_IX Then
                 Let GetZ80Parameter.Token = TOKEN_Z80_IX
-                Let GetZ80Parameter.Mask = MASK_MEM_IX
+                Let GetZ80Parameter.Mask = MASK_MEM_HLIXY
                 'IX can have an additional expression, e.g. `ld a, (ix+$8)`
                 GoTo AddExpr
                 
             ElseIf Token.Kind = TOKEN_Z80_IY Then
                 Let GetZ80Parameter.Token = TOKEN_Z80_IY
-                Let GetZ80Parameter.Mask = MASK_MEM_IY
+                Let GetZ80Parameter.Mask = MASK_MEM_HLIXY
                 'IY can also have an additional expression, e.g. `ld a, (ix+$8)`
                 GoTo AddExpr
                 

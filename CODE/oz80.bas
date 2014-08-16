@@ -377,16 +377,12 @@ Public Enum OZ80_MASK
     
     '..................................................................................
     
-    [_MEM_BIT1] = 2 ^ 26
-    [_MEM_BIT2] = 2 ^ 27
+    'HL/IX & IY are synonymous - opcode prefixes are used to determine which
+    MASK_MEM_HLIXY = 2 ^ 26
     
-    MASK_MEM_HL = [_MEM_BIT1]
-    MASK_MEM_IX = [_MEM_BIT2]
-    MASK_MEM_IY = [_MEM_BIT2] Or [_MEM_BIT1]
-    
-    MASK_MEMS_HL_IXY = [_MEM_BIT2] Or [_MEM_BIT1]
-    
-    MASK_REGS_ABCDEHL_MEMS_HL_IXY = MASK_REGS_ABCDEHL Or MASK_MEMS_HL_IXY
+    'The Z80 clumps HL/IX & IY memory references together with 8-bit registers when
+     'building opcodes, i.e. A|B|C|D|E|H|L|(HL|IX+$8|IY+$8)
+    MASK_REGS_ABCDEHL_MEM_HLIXY = MASK_REGS_ABCDEHL Or MASK_MEM_HLIXY
     
     'We don't have enough bits left to give all the memory references their own bit,
      'so we combine the existing bits with this extra bit. This is checked specially

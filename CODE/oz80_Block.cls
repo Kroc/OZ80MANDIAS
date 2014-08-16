@@ -416,6 +416,7 @@ iADC:
         
     '`ADC HL, BC|DE|HL|SP`
     ElseIf TestParams(MASK_REG_HL, MASK_REGS_BC_DE_HL_SP) Then
+        'IX/IY is not supported here due to the ED-prefix
         Let Opcode = &HED00 Or X1 Or OpcodeP_RegisterPair(Param2.Token) Or Q1 Or Z2
     
     Else
@@ -434,7 +435,10 @@ iADD:
     '`ADD A, A|B|C|D|E|H|L|(HL|IX+$8|IY+$8)`
     ElseIf TestParams(MASK_REG_A, MASK_REGS_ABCDEHL_MEM_HLIXY) Then
         Let Opcode = X2 Or OpcodeZ_Register(Param2.Mask)
-        
+    
+    '`ADD A, $8`
+    ElseIf TestParams(MASK_REG_A, MASK_VAL) Then
+        Let Opcode = X3 Or Z6
     Else
         'ERROR: Wrong parameters for Z80 instruction
         Let AddInstruction = OZ80_ERROR_INVALID_Z80PARAMS: Exit Function
@@ -447,6 +451,11 @@ iAND:
     '`AND A|B|C|D|E|H|L|(HL|IX+$8|IY+$8)`
     If TestParams(MASK_REGS_ABCDEHL_MEM_HLIXY) Then
         Let Opcode = X2 Or Y4 Or OpcodeZ_Register(Param1.Mask)
+    
+    '`AND $8`
+    ElseIf TestParams(MASK_VAL) Then
+        Let Opcode = X3 Or Y4 Or Z6
+    
     Else
         'ERROR: Wrong parameters for Z80 instruction
         Let AddInstruction = OZ80_ERROR_INVALID_Z80PARAMS: Exit Function
@@ -454,8 +463,23 @@ iAND:
     GoTo Finish
     
 iBIT:
-iCALL:
 
+iCALL:
+    'Call Procedure: _
+     ..................................................................................
+    '`CALL NZ|Z|NC|C|PO|PE|P|M, $16` - conditional call
+    If TestParams(MASK_FLAGS, MASK_VAL) Then
+        Let Opcode = X3 Or OpcodeY_Condition(Param1.Token) Or Z4
+    
+    '`CALL $16` - absolute call
+    ElseIf TestParams(MASK_VAL) Then
+        Let Opcode = X3 Or Q1 Or Z5
+    Else
+        'ERROR: Wrong parameters for Z80 instruction
+        Let AddInstruction = OZ80_ERROR_INVALID_Z80PARAMS: Exit Function
+    End If
+    GoTo Finish
+    
 iCCF:
     '..................................................................................
     '`CCF`
@@ -472,6 +496,10 @@ iCP:
     '`CP A|B|C|D|E|H|L|(HL|IX+$8|IY+$8)`
     If TestParams(MASK_REGS_ABCDEHL_MEM_HLIXY) Then
         Let Opcode = X2 Or Y7 Or OpcodeZ_Register(Param1.Mask)
+    
+    '`CP $8`
+    ElseIf TestParams(MASK_VAL) Then
+        Let Opcode = X3 Or Y7 Or Z6
     Else
         'ERROR: Wrong parameters for Z80 instruction
         Let AddInstruction = OZ80_ERROR_INVALID_Z80PARAMS: Exit Function
@@ -525,6 +553,16 @@ iDEC:
     GoTo Finish
     
 iDI:
+    'Disable Interrupts: _
+     ..................................................................................
+    If TestParams() Then
+        Let Opcode = X3 Or Y6 Or Z3
+    Else
+        'ERROR: Wrong parameters for Z80 instruction
+        Let AddInstruction = OZ80_ERROR_INVALID_Z80PARAMS: Exit Function
+    End If
+    GoTo Finish
+    
 iDJNZ:
     'Decrement, Jump if Not Zero: _
      ..................................................................................
@@ -533,12 +571,30 @@ iDJNZ:
     Let AddInstruction = OZ80_ERROR_INVALID_Z80PARAMS: Exit Function
      
 iEI:
+    'Enable Interrupts: _
+     ..................................................................................
+    If TestParams() Then
+        Let Opcode = X3 Or Y7 Or Z3
+    Else
+        'ERROR: Wrong parameters for Z80 instruction
+        Let AddInstruction = OZ80_ERROR_INVALID_Z80PARAMS: Exit Function
+    End If
+    GoTo Finish
+    
 iEX:
     'Exchange: _
      ..................................................................................
     '`EX AF AF'`
     If TestParams(MASK_REG_AF, MASK_REG_AF) Then
         Let Opcode = Y1
+    
+    '`EX (SP), HL|IX|IY`
+    ElseIf TestParams(MASK_MEM_SP, MASK_REGS_HL_IXY) Then
+        Let Opcode = X3 Or Y4 Or Z3
+    
+    '`EX DE, HL`
+    ElseIf TestParams(MASK_REG_DE, MASK_REG_HL) Then
+        Let Opcode = X3 Or Y5 Or Z3
     Else
         'ERROR: Wrong parameters for Z80 instruction
         Let AddInstruction = OZ80_ERROR_INVALID_Z80PARAMS: Exit Function
@@ -569,8 +625,19 @@ iHALT:
     GoTo Finish
     
 iIM:
-iIN:
 
+iIN:
+    'Read from port: _
+     ..................................................................................
+    '`IN A, ($8)`
+    If TestParams(MASK_REG_A, MASK_MEM_VAL) Then
+        Let Opcode = X3 Or Y3 Or Z3
+    Else
+        'ERROR: Wrong parameters for Z80 instruction
+        Let AddInstruction = OZ80_ERROR_INVALID_Z80PARAMS: Exit Function
+    End If
+    GoTo Finish
+    
 iINC:
     'Increment: _
      ..................................................................................
@@ -602,7 +669,11 @@ iJP:
     
     '`JP NZ|Z|NC|C|PO|PE|P|M, $16` - conditional absolute jump
     ElseIf TestParams(MASK_FLAGS, MASK_VAL) Then
-        Let Opcode = X3 Or OpcodeY_Condition(Param1.Token) Or Z4
+        Let Opcode = X3 Or OpcodeY_Condition(Param1.Token) Or Z2
+    
+    '`JP $16` - absolute jump
+    ElseIf TestParams(MASK_VAL) Then
+        Let Opcode = X3 Or Z3
     
     Else
         'ERROR: Wrong parameters for Z80 instruction
@@ -674,7 +745,7 @@ iLD:
     ElseIf TestParams(MASK_REGS_ABCDEHL, MASK_REGS_ABCDEHL_MEM_HLIXY) Then
         Let Opcode = X1 Or OpcodeY_Register(Param1.Token) Or OpcodeZ_Register(Param2.Token)
     
-    '`LD SP, HL`
+    '`LD SP, HL|IX|IY`
     ElseIf TestParams(MASK_REG_SP, MASK_REGS_HL_IXY) Then
         Let Opcode = X3 Or P3 Or Q1 Or Z1
         
@@ -705,8 +776,13 @@ iNOP:
 iOR:
     'Bitwise OR: _
      ..................................................................................
+    '`OR A|B|C|D|E|H|L|(HL|IX+$8|IY+$8)`
     If TestParams(MASK_REGS_ABCDEHL_MEM_HLIXY) Then
         Let Opcode = X2 Or Y6 Or OpcodeZ_Register(Param1.Mask)
+    
+    '`OR $8`
+    ElseIf TestParams(MASK_VAL) Then
+        Let Opcode = X3 Or Y6 Or Z6
     Else
         'ERROR: Wrong parameters for Z80 instruction
         Let AddInstruction = OZ80_ERROR_INVALID_Z80PARAMS: Exit Function
@@ -714,6 +790,17 @@ iOR:
     GoTo Finish
     
 iOUT:
+    'Write to port: _
+     ..................................................................................
+    '`OUT ($8), A`
+    If TestParams(MASK_MEM_VAL, MASK_REG_A) Then
+        Let Opcode = X3 Or Y2 Or Z3
+    Else
+        'ERROR: Wrong parameters for Z80 instruction
+        Let AddInstruction = OZ80_ERROR_INVALID_Z80PARAMS: Exit Function
+    End If
+    GoTo Finish
+    
 iOUTD:
 iOTDR:
 iOUTI:
@@ -776,6 +863,15 @@ iRLA:
     GoTo Finish
     
 iRL:
+    '..................................................................................
+    '`RL A|B|C|D|E|H|L|(HL|IX+$8|IY+$8)`
+    If TestParams(MASK_REGS_ABCDEHL_MEM_HLIXY) Then
+        Let Opcode = &HCB00 Or Y2 Or OpcodeZ_Register(Param1.Mask)
+    Else
+        'ERROR: Wrong parameters for Z80 instruction
+        Let AddInstruction = OZ80_ERROR_INVALID_Z80PARAMS: Exit Function
+    End If
+    GoTo Finish
 
 iRLCA:
     '..................................................................................
@@ -789,6 +885,16 @@ iRLCA:
     GoTo Finish
     
 iRLC:
+    '..................................................................................
+    '`RLC A|B|C|D|E|H|L|(HL|IX+$8|IY+$8)`
+    If TestParams(MASK_REGS_ABCDEHL_MEM_HLIXY) Then
+        Let Opcode = &HCB00 Or OpcodeZ_Register(Param1.Mask)
+    Else
+        'ERROR: Wrong parameters for Z80 instruction
+        Let AddInstruction = OZ80_ERROR_INVALID_Z80PARAMS: Exit Function
+    End If
+    GoTo Finish
+    
 iRLD:
 
 iRRA:
@@ -803,6 +909,15 @@ iRRA:
     GoTo Finish
     
 iRR:
+    '..................................................................................
+    '`RR A|B|C|D|E|H|L|(HL|IX+$8|IY+$8)`
+    If TestParams(MASK_REGS_ABCDEHL_MEM_HLIXY) Then
+        Let Opcode = &HCB00 Or Y3 Or OpcodeZ_Register(Param1.Mask)
+    Else
+        'ERROR: Wrong parameters for Z80 instruction
+        Let AddInstruction = OZ80_ERROR_INVALID_Z80PARAMS: Exit Function
+    End If
+    GoTo Finish
 
 iRRCA:
     '..................................................................................
@@ -816,14 +931,40 @@ iRRCA:
     GoTo Finish
 
 iRRC:
+    '..................................................................................
+    '`RRC A|B|C|D|E|H|L|(HL|IX+$8|IY+$8)`
+    If TestParams(MASK_REGS_ABCDEHL_MEM_HLIXY) Then
+        Let Opcode = &HCB00 Or Y1 Or OpcodeZ_Register(Param1.Mask)
+    Else
+        'ERROR: Wrong parameters for Z80 instruction
+        Let AddInstruction = OZ80_ERROR_INVALID_Z80PARAMS: Exit Function
+    End If
+    GoTo Finish
+    
 iRRD:
-iRST:
 
+iRST:
+    '"Reset" - Fire specific interrupt vector: _
+     ..................................................................................
+    '`RST $00|$08|$10|$18|$20|$28|$30|$38`
+    If TestParams(MASK_VAL) Then
+        'TODO: Need to validate the number is in range at some point in the chain
+        Let Opcode = X3 Or OpcodeY_RST(Param1.Value) Or Z7
+    Else
+        'ERROR: Wrong parameters for Z80 instruction
+        Let AddInstruction = OZ80_ERROR_INVALID_Z80PARAMS: Exit Function
+    End If
+    GoTo Finish
+    
 iSBC:
     '..................................................................................
     '`SBC A, A|B|C|D|E|H|L|(HL|IX+$8|IY+$8)`
     If TestParams(MASK_REG_A, MASK_REGS_ABCDEHL_MEM_HLIXY) Then
         Let Opcode = X2 Or Y3 Or OpcodeZ_Register(Param2.Mask)
+    
+    '`SBC A, $8`
+    ElseIf TestParams(MASK_REG_A, MASK_VAL) Then
+        Let Opcode = X3 Or Y3 Or Z6
     Else
         'ERROR: Wrong parameters for Z80 instruction
         Let AddInstruction = OZ80_ERROR_INVALID_Z80PARAMS: Exit Function
@@ -842,10 +983,50 @@ iSCF:
     GoTo Finish
 
 iSET:
+
 iSLA:
+    '..................................................................................
+    '`SLA A|B|C|D|E|H|L|(HL|IX+$8|IY+$8)`
+    If TestParams(MASK_REGS_ABCDEHL_MEM_HLIXY) Then
+        Let Opcode = &HCB00 Or Y4 Or OpcodeZ_Register(Param1.Mask)
+    Else
+        'ERROR: Wrong parameters for Z80 instruction
+        Let AddInstruction = OZ80_ERROR_INVALID_Z80PARAMS: Exit Function
+    End If
+    GoTo Finish
+
 iSRA:
+    '..................................................................................
+    '`SRA A|B|C|D|E|H|L|(HL|IX+$8|IY+$8)`
+    If TestParams(MASK_REGS_ABCDEHL_MEM_HLIXY) Then
+        Let Opcode = &HCB00 Or Y5 Or OpcodeZ_Register(Param1.Mask)
+    Else
+        'ERROR: Wrong parameters for Z80 instruction
+        Let AddInstruction = OZ80_ERROR_INVALID_Z80PARAMS: Exit Function
+    End If
+    GoTo Finish
+    
 iSLL:
+    '..................................................................................
+    '`SLL A|B|C|D|E|H|L|(HL|IX+$8|IY+$8)`
+    If TestParams(MASK_REGS_ABCDEHL_MEM_HLIXY) Then
+        Let Opcode = &HCB00 Or Y6 Or OpcodeZ_Register(Param1.Mask)
+    Else
+        'ERROR: Wrong parameters for Z80 instruction
+        Let AddInstruction = OZ80_ERROR_INVALID_Z80PARAMS: Exit Function
+    End If
+    GoTo Finish
+    
 iSRL:
+    '..................................................................................
+    '`SRL A|B|C|D|E|H|L|(HL|IX+$8|IY+$8)`
+    If TestParams(MASK_REGS_ABCDEHL_MEM_HLIXY) Then
+        Let Opcode = &HCB00 Or Y7 Or OpcodeZ_Register(Param1.Mask)
+    Else
+        'ERROR: Wrong parameters for Z80 instruction
+        Let AddInstruction = OZ80_ERROR_INVALID_Z80PARAMS: Exit Function
+    End If
+    GoTo Finish
 
 iSUB:
     'Subtract: _
@@ -853,6 +1034,10 @@ iSUB:
     '`SUB A|B|C|D|E|H|L|(HL|IX+$8|IY+$8)`
     If TestParams(MASK_REGS_ABCDEHL_MEM_HLIXY) Then
         Let Opcode = X2 Or Y2 Or OpcodeZ_Register(Param1.Mask)
+    
+    '`SUB $8`
+    ElseIf TestParams(MASK_VAL) Then
+        Let Opcode = X3 Or Y2 Or Z6
     Else
         'ERROR: Wrong parameters for Z80 instruction
         Let AddInstruction = OZ80_ERROR_INVALID_Z80PARAMS: Exit Function
@@ -862,8 +1047,13 @@ iSUB:
 iXOR:
     'Bitwise XOR: _
      ..................................................................................
+    '`XOR A|B|C|D|E|H|L|(HL|IX+$8|IY+$8)`
     If TestParams(MASK_REGS_ABCDEHL_MEM_HLIXY) Then
         Let Opcode = X2 Or Y5 Or OpcodeZ_Register(Param1.Mask)
+    
+    '`XOR $8`
+    ElseIf TestParams(MASK_VAL) Then
+        Let Opcode = X3 Or Y5 Or Z6
     Else
         'ERROR: Wrong parameters for Z80 instruction
         Let AddInstruction = OZ80_ERROR_INVALID_Z80PARAMS: Exit Function
@@ -1016,6 +1206,34 @@ Private Function OpcodeY_Rot( _
         Let OpcodeY_Rot = Y6
     ElseIf Instruction = TOKEN_Z80_SRL Then
         Let OpcodeY_Rot = Y7
+    Else
+        Stop
+    End If
+End Function
+
+'OpcodeY_RST : Set Opcode Y bits for an RST instruction address _
+ ======================================================================================
+Private Function OpcodeY_RST(ByRef Value As Double) As Integer
+    'TODO: Cannot allow indefinite number during phase 3
+    If Value = OZ80_INDEFINITE Then
+        'For now, treat as `RST 0`
+        Exit Function
+    ElseIf Value = &H0 Then
+        Exit Function
+    ElseIf Value = &H8 Then
+        Let OpcodeY_RST = Y1
+    ElseIf Value = &H10 Then
+        Let OpcodeY_RST = Y2
+    ElseIf Value = &H18 Then
+        Let OpcodeY_RST = Y3
+    ElseIf Value = &H20 Then
+        Let OpcodeY_RST = Y4
+    ElseIf Value = &H28 Then
+        Let OpcodeY_RST = Y5
+    ElseIf Value = &H30 Then
+        Let OpcodeY_RST = Y6
+    ElseIf Value = &H38 Then
+        Let OpcodeY_RST = Y7
     Else
         Stop
     End If

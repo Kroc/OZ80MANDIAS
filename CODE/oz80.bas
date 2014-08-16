@@ -346,57 +346,33 @@ Public Enum OZ80_MASK
     'The LD instruction can take most 16-bit registers
     MASK_REGS_BC_DE_HL_SP_IXY = MASK_REGS_BC_DE_HL_SP Or MASK_REG_IX Or MASK_REG_IY
     
+    MASK_VAL = 2 ^ 20
+    
     '..................................................................................
     
-    [_FLAG_BIT1] = 2 ^ 20
-    [_FLAG_BIT2] = 2 ^ 21
-    
     'Register C & Flag C cannot be distinguished by the tokeniser (it isn't aware of
-     'context), so they are treated as the same thing, which saves a Bit here
-    MASK_FLAG_C = MASK_REG_C
-    MASK_FLAG_NC = [_FLAG_BIT1]
-    MASK_FLAG_Z = [_FLAG_BIT2]
-    MASK_FLAG_NZ = [_FLAG_BIT2] Or [_FLAG_BIT1]
-    
-    MASK_FLAGS_CZ = MASK_FLAG_C Or [_FLAG_BIT2] Or [_FLAG_BIT1]
-    
-    [_FLAG_BIT3] = 2 ^ 22
-    [_FLAG_BIT4] = 2 ^ 23
-    [_FLAG_BIT5] = 2 ^ 24
-    
-    MASK_FLAG_P = [_FLAG_BIT3]
-    MASK_FLAG_PE = [_FLAG_BIT4]
-    MASK_FLAG_PO = [_FLAG_BIT4] Or [_FLAG_BIT3]
-    MASK_FLAG_M = [_FLAG_BIT5]
-    
-    MASK_FLAGS_MP = [_FLAG_BIT5] Or [_FLAG_BIT4] Or [_FLAG_BIT3]
+     'context) so they are treated as the same thing. Another bit covers NC/Z/NZ so
+     'that these are not accidentally taken as Register C elsewhere
+    MASK_FLAGS_CZ = MASK_REG_C Or (2 ^ 21)
+    MASK_FLAGS_MP = (2 ^ 22)
     
     MASK_FLAGS = MASK_FLAGS_CZ Or MASK_FLAGS_MP
-    
-    MASK_VAL = 2 ^ 25
     
     '..................................................................................
     
     'HL/IX & IY are synonymous - opcode prefixes are used to determine which
-    MASK_MEM_HLIXY = 2 ^ 26
+    MASK_MEM_HLIXY = 2 ^ 23
     
     'The Z80 clumps HL/IX & IY memory references together with 8-bit registers when
      'building opcodes, i.e. A|B|C|D|E|H|L|(HL|IX+$8|IY+$8)
     MASK_REGS_ABCDEHL_MEM_HLIXY = MASK_REGS_ABCDEHL Or MASK_MEM_HLIXY
     
-    'We don't have enough bits left to give all the memory references their own bit,
-     'so we combine the existing bits with this extra bit. This is checked specially
-     'when comparing parameters to ensure it matches the test
-    [_MASK_MEM] = -1                    '= (2 ^ 31)
-    
     'The IN and OUT instructions can use port "C" (which is, in reality, BC)
-    MASK_MEM_C = [_MASK_MEM] Or MASK_REG_C
+    MASK_MEM_BC = 2 ^ 24
+    MASK_MEM_DE = 2 ^ 25
+    MASK_MEM_SP = 2 ^ 26
     
-    MASK_MEM_BC = [_MASK_MEM] Or MASK_REG_BC
-    MASK_MEM_DE = [_MASK_MEM] Or MASK_REG_DE
-    MASK_MEM_SP = [_MASK_MEM] Or MASK_REG_SP
-    
-    MASK_MEM_VAL = [_MASK_MEM] Or MASK_VAL
+    MASK_MEM_VAL = 2 ^ 27
 End Enum
 
 '--------------------------------------------------------------------------------------

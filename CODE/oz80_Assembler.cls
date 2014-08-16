@@ -938,7 +938,7 @@ Private Function GetZ80Parameter() As oz80Param
             'The `IN` & `OUT` instructions accept only the C register
             If Token.Kind = TOKEN_Z80_C Then
                 Let GetZ80Parameter.Token = TOKEN_Z80_C
-                Let GetZ80Parameter.Mask = MASK_MEM_C
+                Let GetZ80Parameter.Mask = MASK_MEM_BC
             
             '`LD` accepts registers BC & DE
             ElseIf Token.Kind = TOKEN_Z80_BC Then
@@ -1069,19 +1069,19 @@ EndScope:
         ElseIf Token.Kind = TOKEN_Z80_IYH Then
             Let GetZ80Parameter.Mask = MASK_REG_IYH
         ElseIf Token.Kind = TOKEN_Z80_NC Then
-            Let GetZ80Parameter.Mask = MASK_FLAG_NC
+            Let GetZ80Parameter.Mask = MASK_FLAGS_CZ
         ElseIf Token.Kind = TOKEN_Z80_Z Then
-            Let GetZ80Parameter.Mask = MASK_FLAG_Z
+            Let GetZ80Parameter.Mask = MASK_FLAGS_CZ
         ElseIf Token.Kind = TOKEN_Z80_NZ Then
-            Let GetZ80Parameter.Mask = MASK_FLAG_NZ
+            Let GetZ80Parameter.Mask = MASK_FLAGS_CZ
         ElseIf Token.Kind = TOKEN_Z80_P Then
-            Let GetZ80Parameter.Mask = MASK_FLAG_P
+            Let GetZ80Parameter.Mask = MASK_FLAGS_MP
         ElseIf Token.Kind = TOKEN_Z80_PE Then
-            Let GetZ80Parameter.Mask = MASK_FLAG_PE
+            Let GetZ80Parameter.Mask = MASK_FLAGS_MP
         ElseIf Token.Kind = TOKEN_Z80_PO Then
-            Let GetZ80Parameter.Mask = MASK_FLAG_PO
+            Let GetZ80Parameter.Mask = MASK_FLAGS_MP
         ElseIf Token.Kind = TOKEN_Z80_M Then
-            Let GetZ80Parameter.Mask = MASK_FLAG_M
+            Let GetZ80Parameter.Mask = MASK_FLAGS_MP
         End If
         
         'Now move beyond the register token

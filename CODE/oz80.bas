@@ -13,6 +13,16 @@ Option Explicit
  which both the Assembler and TokenStream classes need to do
 Public CRC As New CRC32
 
+'Some expressions cannot be calculated until the Z80 code has been assembled, _
+ for example label addresses are chosen after all code has been parsed and the sizes _
+ of the blocks are known. A special value is used that lies outside of the allowable _
+ range of numbers in OZ80 (32-bit) to mark an expression with a yet-unknown value
+
+'VB does not allow implicit Double (64-bit) values greater than 32-bits, _
+ a trick is used here to build the largest possible 64-bit number: _
+ <stackoverflow.com/questions/929069/how-do-i-declare-max-double-in-vb6/933490#933490>
+Public Const OZ80_INDEFINITE As Double = 1.79769313486231E+308 + 5.88768018655736E+293
+
 '/// ENUMS ////////////////////////////////////////////////////////////////////////////
 
 'This makes life a whole lot easier when processing text as ASCII codes
@@ -380,18 +390,8 @@ End Enum
 Public Type oz80Param
     Mask As OZ80_MASK
     Token As OZ80_TOKEN
-    Value As Double
+    Value As Long
 End Type
-
-'Some expressions cannot be calculated until the Z80 code has been assembled, _
- for example label addresses are chosen after all code has been parsed and the sizes _
- of the blocks are known. A special value is used that lies outside of the allowable _
- range of numbers in OZ80 (32-bit) to mark an expression with a yet-unknown value
-
-'VB does not allow implicit Double (64-bit) values greater than 32-bits, _
- a trick is used here to build the largest possible 64-bit number: _
- <stackoverflow.com/questions/929069/how-do-i-declare-max-double-in-vb6/933490#933490>
-Public Const OZ80_INDEFINITE As Double = 1.79769313486231E+308 + 5.88768018655736E+293
 
 '/// PUBLIC PROCEDURES ////////////////////////////////////////////////////////////////
 

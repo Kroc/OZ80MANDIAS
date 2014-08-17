@@ -928,44 +928,38 @@ End Function
 Private Function GetZ80Parameter() As oz80Param
     'If the token is a memory reference, such as `(ix+$8)`, _
      then get the associated register and value
-    If Token.Kind = TOKEN_PARENOPEN Then '.............................................
+    '----------------------------------------------------------------------------------
+    If Token.Kind = TOKEN_PARENOPEN Then
         'ERROR: File ends just as the memory expression is opened
         If Not Token.Forward() Then Call RaiseError(OZ80_ERROR_ENDOFFILE): Exit Function
     
-        'The first item in the expression can be a register, _
-         typically HL, IX or IY
+        'The first item in the memory expression can be a register
         If Token.IsRegister Then
-            'The `IN` & `OUT` instructions accept only the C register
+            'Copy the register type to the parameter being built
+            Let GetZ80Parameter.Token = Token.Kind
+            
+            'The `IN` & `OUT` instructions accept only the C register, _
+             though in reality this is register pair BC
             If Token.Kind = TOKEN_Z80_C Then
-                Let GetZ80Parameter.Token = TOKEN_Z80_C
                 Let GetZ80Parameter.Mask = MASK_MEM_BC
             
             '`LD` accepts registers BC & DE
             ElseIf Token.Kind = TOKEN_Z80_BC Then
-                Let GetZ80Parameter.Token = TOKEN_Z80_BC
                 Let GetZ80Parameter.Mask = MASK_MEM_BC
             ElseIf Token.Kind = TOKEN_Z80_DE Then
-                Let GetZ80Parameter.Token = TOKEN_Z80_DE
                 Let GetZ80Parameter.Mask = MASK_MEM_DE
             
+            'HL / IX & IY are the same, a special prefix byte determines IX/IY
             ElseIf Token.Kind = TOKEN_Z80_HL Then
-                Let GetZ80Parameter.Token = TOKEN_Z80_HL
                 Let GetZ80Parameter.Mask = MASK_MEM_HLIXY
-                
-            ElseIf Token.Kind = TOKEN_Z80_IX Then
-                Let GetZ80Parameter.Token = TOKEN_Z80_IX
+            ElseIf Token.Kind = TOKEN_Z80_IX _
+                Or Token.Kind = TOKEN_Z80_IY _
+            Then
                 Let GetZ80Parameter.Mask = MASK_MEM_HLIXY
-                'IX can have an additional expression, e.g. `ld a, (ix+$8)`
-                GoTo AddExpr
-                
-            ElseIf Token.Kind = TOKEN_Z80_IY Then
-                Let GetZ80Parameter.Token = TOKEN_Z80_IY
-                Let GetZ80Parameter.Mask = MASK_MEM_HLIXY
-                'IY can also have an additional expression, e.g. `ld a, (ix+$8)`
+                'IX/IY can have an additional expression, e.g. `ld a, (ix+$8)`
                 GoTo AddExpr
                 
             ElseIf Token.Kind = TOKEN_Z80_SP Then
-                Let GetZ80Parameter.Token = TOKEN_Z80_SP
                 Let GetZ80Parameter.Mask = MASK_MEM_SP
             Else
                 'ERROR: register not allowed here
@@ -973,21 +967,20 @@ Private Function GetZ80Parameter() As oz80Param
             End If
             
             'ERROR: File ends before the memory expression is closed
-            If Not Token.Forward() Then _
-                Call RaiseError(OZ80_ERROR_ENDOFFILE): Exit Function
+            If Not Token.Forward() _
+                Then Call RaiseError(OZ80_ERROR_ENDOFFILE): Exit Function
             
             GoTo EndScope
             
-AddExpr:
-            'Look for the `+` following the register name
-            If Not Token.Forward() Then _
-                Call RaiseError(OZ80_ERROR_ENDOFFILE): Exit Function
+AddExpr:    'Look for the `+` following the register name
+            If Not Token.Forward() _
+                Then Call RaiseError(OZ80_ERROR_ENDOFFILE): Exit Function
             
             'If present, skip over it and check for an expression
             If Token.Kind = TOKEN_OPERATOR_ADD Then
                 'ERROR: Something must follow the "+"!
-                If Not Token.Forward() Then _
-                    Call RaiseError(OZ80_ERROR_ENDOFFILE): Exit Function
+                If Not Token.Forward() _
+                    Then Call RaiseError(OZ80_ERROR_ENDOFFILE): Exit Function
                 
             'If it's just a register in parens, then finish
             ElseIf Token.Kind = TOKEN_PARENCLOSE Then
@@ -1000,15 +993,8 @@ AddExpr:
         End If
         
         'Is it an expression at all?
+        'TODO: ERROR: Not a valid expression
         If Not Token.IsExpression Then Stop
-        
-        'Try and calculate the expression. It might come back unknown and this will be _
-         passed on to the parent to decide if that's a problem or not
-        'TODO: handle overflow
-        Let GetZ80Parameter.Value = ScopeExpression()
-        
-        'TODO: ERROR: Invalid expression
-        If My_Error Then Stop
         
         'Memory references with IX & IY will have already set the register, but for _
          direct memory references, e.g. `jp ($1234)`, we declare this as a pure number
@@ -1016,6 +1002,8 @@ AddExpr:
             Let GetZ80Parameter.Token = TOKEN_NUMBER
             Let GetZ80Parameter.Mask = MASK_MEM_VAL
         End If
+        
+        GoTo GetValue
     
 EndScope:
         If Token.Kind = TOKEN_PARENCLOSE Then
@@ -1025,75 +1013,66 @@ EndScope:
         'ERROR: Unexpected token in memory expression
         Stop
     
-    ElseIf Token.IsRegister Then '.........................................................
+    'A Register _
+     ----------------------------------------------------------------------------------
+    ElseIf Token.IsRegister Then
         Let GetZ80Parameter.Token = Token.Kind
         
+        'Map the register token to the mask bit; token numbers are sequential _
+         whilst parameter masks are bit combinations allowing rapid comparisons of _
+         parameters with allowed options
         If Token.Kind = TOKEN_Z80_A Then
             Let GetZ80Parameter.Mask = MASK_REG_A
-        ElseIf Token.Kind = TOKEN_Z80_B Then
-            Let GetZ80Parameter.Mask = MASK_REG_B
-        ElseIf Token.Kind = TOKEN_Z80_C Then
-            Let GetZ80Parameter.Mask = MASK_REG_C
-        ElseIf Token.Kind = TOKEN_Z80_D Then
-            Let GetZ80Parameter.Mask = MASK_REG_D
-        ElseIf Token.Kind = TOKEN_Z80_E Then
-            Let GetZ80Parameter.Mask = MASK_REG_E
-        ElseIf Token.Kind = TOKEN_Z80_H Then
-            Let GetZ80Parameter.Mask = MASK_REG_H
-        ElseIf Token.Kind = TOKEN_Z80_L Then
-            Let GetZ80Parameter.Mask = MASK_REG_L
-        ElseIf Token.Kind = TOKEN_Z80_I Then
-            Let GetZ80Parameter.Mask = MASK_REG_I
-        ElseIf Token.Kind = TOKEN_Z80_R Then
-            Let GetZ80Parameter.Mask = MASK_REG_R
-        ElseIf Token.Kind = TOKEN_Z80_AF Then
-            Let GetZ80Parameter.Mask = MASK_REG_AF
-        ElseIf Token.Kind = TOKEN_Z80_BC Then
-            Let GetZ80Parameter.Mask = MASK_REG_BC
-        ElseIf Token.Kind = TOKEN_Z80_DE Then
-            Let GetZ80Parameter.Mask = MASK_REG_DE
-        ElseIf Token.Kind = TOKEN_Z80_HL Then
-            Let GetZ80Parameter.Mask = MASK_REG_HL
-        ElseIf Token.Kind = TOKEN_Z80_SP Then
-            Let GetZ80Parameter.Mask = MASK_REG_SP
-        ElseIf Token.Kind = TOKEN_Z80_IX Then
-            Let GetZ80Parameter.Mask = MASK_REG_IX
-        ElseIf Token.Kind = TOKEN_Z80_IXL Then
-            Let GetZ80Parameter.Mask = MASK_REG_IXL
-        ElseIf Token.Kind = TOKEN_Z80_IXH Then
-            Let GetZ80Parameter.Mask = MASK_REG_IXH
-        ElseIf Token.Kind = TOKEN_Z80_IY Then
-            Let GetZ80Parameter.Mask = MASK_REG_IY
-        ElseIf Token.Kind = TOKEN_Z80_IYL Then
-            Let GetZ80Parameter.Mask = MASK_REG_IYL
-        ElseIf Token.Kind = TOKEN_Z80_IYH Then
-            Let GetZ80Parameter.Mask = MASK_REG_IYH
-        ElseIf Token.Kind = TOKEN_Z80_NC Then
-            Let GetZ80Parameter.Mask = MASK_FLAGS_CZ
-        ElseIf Token.Kind = TOKEN_Z80_Z Then
-            Let GetZ80Parameter.Mask = MASK_FLAGS_CZ
-        ElseIf Token.Kind = TOKEN_Z80_NZ Then
-            Let GetZ80Parameter.Mask = MASK_FLAGS_CZ
-        ElseIf Token.Kind = TOKEN_Z80_P Then
-            Let GetZ80Parameter.Mask = MASK_FLAGS_MP
-        ElseIf Token.Kind = TOKEN_Z80_PE Then
-            Let GetZ80Parameter.Mask = MASK_FLAGS_MP
-        ElseIf Token.Kind = TOKEN_Z80_PO Then
-            Let GetZ80Parameter.Mask = MASK_FLAGS_MP
-        ElseIf Token.Kind = TOKEN_Z80_M Then
-            Let GetZ80Parameter.Mask = MASK_FLAGS_MP
+        ElseIf Token.Kind = TOKEN_Z80_B Then Let GetZ80Parameter.Mask = MASK_REG_B
+        ElseIf Token.Kind = TOKEN_Z80_C Then Let GetZ80Parameter.Mask = MASK_REG_C
+        ElseIf Token.Kind = TOKEN_Z80_D Then Let GetZ80Parameter.Mask = MASK_REG_D
+        ElseIf Token.Kind = TOKEN_Z80_E Then Let GetZ80Parameter.Mask = MASK_REG_E
+        ElseIf Token.Kind = TOKEN_Z80_H Then Let GetZ80Parameter.Mask = MASK_REG_H
+        ElseIf Token.Kind = TOKEN_Z80_L Then Let GetZ80Parameter.Mask = MASK_REG_L
+        ElseIf Token.Kind = TOKEN_Z80_I Then Let GetZ80Parameter.Mask = MASK_REG_I
+        ElseIf Token.Kind = TOKEN_Z80_R Then Let GetZ80Parameter.Mask = MASK_REG_R
+        ElseIf Token.Kind = TOKEN_Z80_AF Then Let GetZ80Parameter.Mask = MASK_REG_AF
+        ElseIf Token.Kind = TOKEN_Z80_BC Then Let GetZ80Parameter.Mask = MASK_REG_BC
+        ElseIf Token.Kind = TOKEN_Z80_DE Then Let GetZ80Parameter.Mask = MASK_REG_DE
+        ElseIf Token.Kind = TOKEN_Z80_HL Then Let GetZ80Parameter.Mask = MASK_REG_HL
+        ElseIf Token.Kind = TOKEN_Z80_SP Then Let GetZ80Parameter.Mask = MASK_REG_SP
+        ElseIf Token.Kind = TOKEN_Z80_IX Then Let GetZ80Parameter.Mask = MASK_REG_IX
+        ElseIf Token.Kind = TOKEN_Z80_IXL Then Let GetZ80Parameter.Mask = MASK_REG_IXL
+        ElseIf Token.Kind = TOKEN_Z80_IXH Then Let GetZ80Parameter.Mask = MASK_REG_IXH
+        ElseIf Token.Kind = TOKEN_Z80_IY Then Let GetZ80Parameter.Mask = MASK_REG_IY
+        ElseIf Token.Kind = TOKEN_Z80_IYL Then Let GetZ80Parameter.Mask = MASK_REG_IYL
+        ElseIf Token.Kind = TOKEN_Z80_IYH Then Let GetZ80Parameter.Mask = MASK_REG_IYH
+        ElseIf Token.Kind = TOKEN_Z80_NC Then Let GetZ80Parameter.Mask = MASK_FLAGS_CZ
+        ElseIf Token.Kind = TOKEN_Z80_Z Then Let GetZ80Parameter.Mask = MASK_FLAGS_CZ
+        ElseIf Token.Kind = TOKEN_Z80_NZ Then Let GetZ80Parameter.Mask = MASK_FLAGS_CZ
+        ElseIf Token.Kind = TOKEN_Z80_P Then Let GetZ80Parameter.Mask = MASK_FLAGS_MP
+        ElseIf Token.Kind = TOKEN_Z80_PE Then Let GetZ80Parameter.Mask = MASK_FLAGS_MP
+        ElseIf Token.Kind = TOKEN_Z80_PO Then Let GetZ80Parameter.Mask = MASK_FLAGS_MP
+        ElseIf Token.Kind = TOKEN_Z80_M Then Let GetZ80Parameter.Mask = MASK_FLAGS_MP
         End If
         
         'Now move beyond the register token
         Call Token.Forward
         
     'Anything else classes as a calculable expression
-    ElseIf Token.IsExpression Then '...................................................
+    '----------------------------------------------------------------------------------
+    ElseIf Token.IsExpression Then
         Let GetZ80Parameter.Token = TOKEN_NUMBER
         Let GetZ80Parameter.Mask = MASK_VAL
-        Let GetZ80Parameter.Value = ScopeExpression()
-        'TODO: Error - the expression is invalid
-        If My_Error Then Stop
+
+GetValue:
+        'Try and calculate the expression
+        Dim Value As Double
+        Let Value = ScopeExpression()
+        
+        'If there was an error in the expression, the error event will already have _
+         been raised, we only need to fold upwards
+        If My_Error Then Exit Function
+        
+        'TODO: Handle indefinite value
+        'TODO: Issue warning for rounding
+        
+        Let GetZ80Parameter.Value = Value
     
     Else
         'ERROR: Not a Z80 parameter

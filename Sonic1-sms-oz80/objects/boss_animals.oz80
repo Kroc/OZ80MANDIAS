@@ -1,0 +1,196 @@
+`____________________________________________________________________________[$7594]___
+`OBJECT: free animal - bird
+
+PROC    :doObjectCode_boss_freeBird             SECTION ::objects {
+	res	5,(ix+$18)
+	ld	(ix+#object.width), 12
+	ld	(ix+#object.height),16
+	bit	7,(ix+$18)
+	jr	z,._1
+	ld	(ix+#object.Yspeed.lo),$00
+	ld	(ix+#object.Yspeed.hi),$fd
+	ld	(ix+#object.Ydirection),$ff
+._1	ld	de,$0012
+	ld	a,($.LEVEL_SOLIDITY)
+	cp	$03
+	jr	nz,._2
+	ld	de,$0038
+._2	ld	l,(ix+#object.Yspeed.lo)
+	ld	h,(ix+#object.Yspeed.hi)
+	ld	a,(ix+#object.Ydirection)
+	add	hl,de
+	adc	a,$00
+	ld	c,a
+	jp	m,._3
+	ld	a,h
+	cp	$02
+	jr	c,._3
+	ld	hl,$0200
+	ld	c,$00
+._3	ld	(ix+#object.Yspeed.lo),l
+	ld	(ix+#object.Yspeed.hi),h
+	ld	(ix+#object.Ydirection),c
+	ld	hl,$FE00
+	ld	a,($.LEVEL_SOLIDITY)
+	cp	$03
+	jr	nz,._4
+	ld	hl,$FE80
+._4	ld	(ix+#object.Xspeed.lo),l
+	ld	(ix+#object.Xspeed.hi),h
+	ld	(ix+#object.Xdirection),$ff
+	ld	bc,._7629
+	ld	a,($.LEVEL_SOLIDITY)
+	and	a
+	jr	z,._5
+	ld	bc,._762e
+	cp	$03
+	jr	nz,._5
+	ld	bc,._7633
+._5	ld	de,._7638
+	call	:_7c41
+        
+._7612	ld	l,(ix+#object.X.lo)
+	ld	h,(ix+#object.X.hi)
+	ld	de,$0010
+	add	hl,de
+	ld	de,($.CAMERA_X)
+	and	a
+	sbc	hl,de
+	ret	nc
+	ld	(ix+#object.type),$FF	`remove object?
+	ret
+
+._7629  DATA $00, $02, $01, $02, $ff
+._762e  DATA $02, $04, $03, $04, $ff
+._7633  DATA $04, $03, $05, $03, $ff
+
+        `sprite layout
+._7638  DATA $10, $12, $FF, $FF, $FF, $FF
+        DATA $FF, $FF, $FF, $FF, $FF, $FF
+        DATA $FF, $FF, $FF, $FF, $FF, $FF
+        
+        DATA $6E, $0E, $FF, $FF, $FF, $FF
+        DATA $FF, $FF, $FF, $FF, $FF, $FF
+        DATA $FF, $FF, $FF, $FF, $FF, $FF
+        
+        DATA $28, $2A, $FF, $FF, $FF, $FF
+        DATA $FF, $FF, $FF, $FF, $FF, $FF
+        DATA $FF, $FF, $FF, $FF, $FF, $FF
+        
+        DATA $2C, $2E, $FF, $FF, $FF, $FF
+        DATA $FF, $FF, $FF, $FF, $FF, $FF
+        DATA $FF, $FF, $FF, $FF, $FF, $FF
+        
+        DATA $30, $32, $FF, $FF, $FF, $FF
+        DATA $FF, $FF, $FF, $FF, $FF, $FF
+        DATA $FF, $FF, $FF, $FF, $FF, $FF
+        
+        DATA $50, $52, $FF, $FF, $FF, $FF
+        DATA $FF
+}
+
+`____________________________________________________________________________[$7699]___
+`OBJECT: free animal - rabbit
+
+PROC    :doObjectCode_boss_freeRabbit           SECTION ::objects {
+	res	5,(ix+$18)
+	ld	(ix+#object.width), 12
+	ld	(ix+#object.height),32
+	ld	hl,:_7760
+	ld	a,($.LEVEL_SOLIDITY)
+	and	a
+	jr	z,._1
+	ld	hl,:_777b
+	dec	a
+	jr	z,._1
+	ld	hl,:_7796
+	dec	a
+	jr	z,._1
+	ld	hl,:_77b1
+._1	ld	(ix+#object.spriteLayout.lo),l
+	ld	(ix+#object.spriteLayout.hi),h
+	bit	7,(ix+$18)
+	jr	z,._4
+        
+	xor	a;zero
+	ld	(ix+#object.Yspeed.lo),a;zero
+	ld	(ix+#object.Yspeed.hi),$01
+	ld	(ix+#object.Ydirection),a;zero
+	ld	(ix+#object.Xspeed.lo),a;zero
+	ld	(ix+#object.Xspeed.hi),a;zero
+	ld	(ix+#object.Xdirection),a;zero
+        
+	ld	hl,:_7752
+	ld	a,($.LEVEL_SOLIDITY)
+	ld	c,a
+	and	a
+	jr	z,._2
+	ld	hl,:_776d
+	dec	a
+	jr	z,._2
+	ld	hl,:_7788
+	dec	a
+	jr	z,._2
+	ld	hl,:_77a3
+._2	ld	(ix+#object.spriteLayout.lo),l
+	ld	(ix+#object.spriteLayout.hi),h
+	inc	(ix+$11)
+	ld	a,(ix+$11)
+	cp	$08
+	ret	c
+	ld	hl,$fffc
+	ld	a,c
+	and	a
+	jr	z,._3
+	ld	hl,$fffe
+._3	ld	(ix+#object.Yspeed.lo),$00
+	ld	(ix+#object.Yspeed.hi),l
+	ld	(ix+#object.Ydirection),h
+._4	ld	l,(ix+#object.Yspeed.lo)
+	ld	h,(ix+#object.Yspeed.hi)
+	ld	a,(ix+#object.Ydirection)
+	ld	de,$0028
+	add	hl,de
+	adc	a,$00
+	ld	c,a
+	jp	m,._5
+	ld	a,h
+	cp	$02
+	jr	c,._5
+	ld	hl,$0200
+	ld	c,$00
+._5	ld	(ix+#object.Yspeed.lo),l
+	ld	(ix+#object.Yspeed.hi),h
+	ld	(ix+#object.Ydirection),c
+	ld	(ix+#object.Xspeed.lo),$80
+	ld	(ix+#object.Xspeed.hi),$fe
+	ld	(ix+#object.Xdirection),$ff
+	ld	(ix+$11),$00
+	jp	:doObjectCode_boss_freeBird._7612
+    
+        `sprite layout
+:_7752  DATA $70, $72, $FF, $FF, $FF, $FF
+        DATA $54, $56, $FF, $FF, $FF, $FF
+        DATA $FF, $FF
+:_7760  DATA $5C, $5E, $FF, $FF, $FF, $FF
+        DATA $58, $5A, $FF, $FF, $FF, $FF
+        DATA $FF
+:_776d  DATA $FE, $FF, $FF, $FF, $FF, $FF
+        DATA $34, $36, $FF, $FF, $FF, $FF
+        DATA $FF, $FF
+:_777b  DATA $FE, $FF, $FF, $FF, $FF, $FF
+        DATA $38, $3A, $FF, $FF, $FF, $FF
+        DATA $FF
+:_7788  DATA $FE, $FF, $FF, $FF, $FF, $FF
+        DATA $3C, $3E, $FF, $FF, $FF, $FF
+        DATA $FF, $FF
+:_7796  DATA $FE, $FF, $FF, $FF, $FF, $FF
+        DATA $1C, $1E, $FF, $FF, $FF, $FF
+        DATA $FF
+:_77a3  DATA $FE, $FF, $FF, $FF, $FF, $FF
+        DATA $14, $16, $FF, $FF, $FF, $FF
+        DATA $FF, $FF
+:_77b1  DATA $FE, $FF, $FF, $FF, $FF, $FF
+        DATA $18, $1A, $FF, $FF, $FF, $FF
+        DATA $FF
+}

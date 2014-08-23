@@ -1,0 +1,138 @@
+`____________________________________________________________________________[$90C0]___
+`OBJECT: platform - float up (Labyrinth)
+
+PROC    :doObjectCode_platform_float            SECTION ::objects
+{
+	set	5,(ix+$18)
+	ld	(ix+#object.width), 30
+	ld	(ix+#object.height),28
+	ld	(ix+#object.spriteLayout.lo),._91de.lo
+	ld	(ix+#object.spriteLayout.hi),._91de.hi
+	bit	1,(ix+$18)
+	jr	nz,._1
+	ld	l,(ix+#object.X.lo)
+	ld	h,(ix+#object.X.hi)
+	ld	(ix+$11),l
+	ld	(ix+$12),h
+	ld	l,(ix+#object.Y.lo)
+	ld	h,(ix+#object.Y.hi)
+	ld	de,$ffff
+	add	hl,de
+	ld	(ix+#object.Y.lo),l
+	ld	(ix+#object.Y.hi),h
+	ld	(ix+$13),l
+	ld	(ix+$14),h
+	set	1,(ix+$18)
+._1	ld	bc,$0010
+	ld	de,$0020
+	call	:getFloorLayoutRAMPositionForObject
+	ld	e,(hl)
+	ld	d,$00
+	ld	a,($.LEVEL_SOLIDITY)
+	add	a,a
+	ld	c,a
+	ld	b,d
+	ld	hl,:S1_SolidityPointers
+	add	hl,bc
+	ld	a,(hl)
+	inc	hl
+	ld	h,(hl)
+	ld	l,a
+	add	hl,de
+	ld	a,(hl)
+	and	$3f
+	ld	c,$00
+	ld	l,c
+	ld	h,c
+	cp	$1e
+	jr	z,._2
+	bit	0,(ix+$18)
+	jr	z,._3
+	ld	l,(ix+#object.Yspeed.lo)
+	ld	h,(ix+#object.Yspeed.hi)
+	ld	a,(ix+#object.Ydirection)
+	ld	de,$fff8
+	add	hl,de
+	adc	a,$ff
+	ld	c,a
+	ld	a,h
+	neg	
+	cp	$02
+	jr	c,._2
+	ld	hl,$ff00
+	ld	c,$ff
+._2	ld	(ix+#object.Yspeed.lo),l
+	ld	(ix+#object.Yspeed.hi),h
+	ld	(ix+#object.Ydirection),c
+._3	ld	e,(ix+#object.X.lo)
+	ld	d,(ix+#object.X.hi)
+	ld	hl,($.CAMERA_X)
+	ld	bc,$ffe0
+	add	hl,bc
+	and	a
+	sbc	hl,de
+	jr	nc,._4
+	ld	hl,($.CAMERA_X)
+	inc	h
+	and	a
+	sbc	hl,de
+	jr	c,._4
+	ld	e,(ix+#object.Y.lo)
+	ld	d,(ix+#object.Y.hi)
+	ld	hl,($.CAMERA_Y)
+	ld	bc,$ffe0
+	add	hl,bc
+	and	a
+	sbc	hl,de
+	jr	nc,._4
+	ld	hl,($.CAMERA_Y)
+	ld	bc,$00e0
+	add	hl,bc
+	and	a
+	sbc	hl,de
+	jr	nc,._5
+._4	ld	l,(ix+$11)
+	ld	h,(ix+$12)
+	ld	(ix+#object.X.lo),l
+	ld	(ix+#object.X.hi),h
+	ld	l,(ix+$13)
+	ld	h,(ix+$14)
+	ld	(ix+#object.Y.lo),l
+	ld	(ix+#object.Y.hi),h
+        
+	xor	a;zero			        `set A to 0
+	ld	(ix+#object.Xsubpixel),a;zero
+	ld	(ix+#object.Ysubpixel),a;zero
+	ld	(ix+#object.Yspeed.lo),a;zero
+	ld	(ix+#object.Yspeed.hi),a;zero
+	ld	(ix+#object.Ydirection),a;zero
+	res	0,(ix+$18)
+	ret
+	
+        `------------------------------------------------------------------------------
+        
+._5	ld	hl,$0e02
+	ld	($.TEMP6),hl
+	call	:_LABEL_3956_11
+	ret	c
+	set	0,(ix+$18)
+	ld	a,($.SONIC.Yspeed.hi)
+	and	a
+	jp	p,._6
+	neg	
+	cp	$02
+	ret	nc
+	
+._6	ld	e,(ix+#object.Yspeed.lo)
+	ld	d,(ix+#object.Yspeed.hi)
+	ld	bc,$0010
+	call	:_LABEL_7CC1_12
+	ret
+        
+        `------------------------------------------------------------------------------
+
+        `sprite layout
+._91de  DATA $FE, $FF, $FF, $FF, $FF, $FF
+        DATA $16, $18, $1A, $1C, $FF, $FF
+        DATA $FF
+}

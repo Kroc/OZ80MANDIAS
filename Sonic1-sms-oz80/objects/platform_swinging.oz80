@@ -1,0 +1,245 @@
+`` Sonic 1 Master System Disassembly
+   created by Kroc Camen <kroc@camendesign.com>
+   for MaSS1VE: The Master System Sonic 1 Visual Editor <github.com/Kroc/MaSS1VE>
+   ================================================================================= ``
+
+`____________________________________________________________________________[$673C]___
+`OBJECT: wooden platform - swinging (Green Hill)
+
+PROC    :doObjectCode_platform_swinging         SECTION ::objects {
+        
+	set	5,(ix+$18)
+	ld	hl,$0020
+	ld	($.D267),hl
+	ld	hl,$0048
+	ld	($.D269),hl
+	ld	hl,$0030
+	ld	($.D26B),hl
+	ld	hl,$0030
+	ld	($.D26D),hl
+	bit	0,(ix+$18)
+	jr	nz,._1
+	ld	l,(ix+#object.X.lo)
+	ld	h,(ix+#object.X.hi)
+	ld	(ix+$12),l
+	ld	(ix+$13),h
+	ld	l,(ix+#object.Y.lo)
+	ld	h,(ix+#object.Y.hi)
+	ld	(ix+$14),l
+	ld	(ix+$15),h
+	ld	(ix+$11),$e0
+	set	0,(ix+$18)
+	set	1,(ix+$18)
+._1	ld	(ix+#object.width),$1a
+	ld	(ix+#object.height),$10
+	ld	l,(ix+#object.X.lo)
+	ld	h,(ix+#object.X.hi)
+	ld	($.TEMP1),hl
+	ld	hl,._682f
+	ld	e,(ix+$11)
+	ld	d,$00
+	add	hl,de
+	ld	c,l
+	ld	b,h
+	ld	a,(bc)
+	and	a
+	jp	p,._2
+	dec	d
+._2	ld	e,a
+	ld	l,(ix+$12)
+	ld	h,(ix+$13)
+	add	hl,de
+	ld	(ix+#object.X.lo),l
+	ld	(ix+#object.X.hi),h
+	ld	de,($.TEMP1)
+	and	a
+	sbc	hl,de
+	ld	($.TEMP1),hl
+	inc	bc
+	ld	d,$00
+	ld	a,(bc)
+	and	a
+	jp	p,._3
+	dec	d
+._3	ld	e,a
+	ld	l,(ix+$14)
+	ld	h,(ix+$15)
+	add	hl,de
+	ld	(ix+#object.Y.lo),l
+	ld	(ix+#object.Y.hi),h
+	
+	ld	a,($.SONIC.Ydirection)
+	and	a
+	jp	m,._4
+	
+	ld	hl,$0806
+	ld	($.TEMP6),hl
+	call	:_LABEL_3956_11
+	jr	c,._4
+	ld	hl,($.SONIC.X)
+	ld	de,($.TEMP1)
+	add	hl,de
+	ld	($.SONIC.X),hl
+	ld	bc,$0010
+	ld	de,$0000
+	call	:_LABEL_7CC1_12
+._4	ld	hl,:object_platform_spriteLayouts._6911
+	ld	a,($.LEVEL_SOLIDITY)
+	and	a
+	jr	z,._5
+	ld	hl,:object_platform_spriteLayouts._6923
+._5	ld	(ix+#object.spriteLayout.lo),l
+	ld	(ix+#object.spriteLayout.hi),h
+	bit	1,(ix+$18)
+	jr	nz,._6
+	ld	a,(ix+$11)
+	inc	a
+	inc	a
+	ld	(ix+$11),a
+	cp	$e0
+	ret	c
+	set	1,(ix+$18)
+	ret
+	
+._6	ld	a,(ix+$11)
+	dec	a
+	dec	a
+	ld	(ix+$11),a
+	ret	nz
+	res	1,(ix+$18)
+	ret
+        
+._682f  `this is swinging position data
+        DATA $B3, $00
+        DATA $B3, $01
+        DATA $B3, $02
+        DATA $B3, $02
+        DATA $B3, $03
+        DATA $B3, $04
+        DATA $B3, $05
+        DATA $B3, $06
+        DATA $B4, $07
+        DATA $B4, $08
+        DATA $B4, $09
+        DATA $B4, $0B
+        DATA $B4, $0C
+        DATA $B4, $0D
+        DATA $B5, $0E
+        DATA $B5, $0F
+        DATA $B5, $11
+        DATA $B5, $12
+        DATA $B6, $13
+        DATA $B6, $15
+        DATA $B7, $16
+        DATA $B7, $18
+        DATA $B8, $19
+        DATA $B8, $1B
+        DATA $B9, $1D
+        DATA $B9, $1E
+        DATA $BA, $20
+        DATA $BB, $22
+        DATA $BC, $23
+        DATA $BD, $25
+        DATA $BE, $27
+        DATA $BF, $29
+        DATA $C0, $2B
+        DATA $C2, $2D
+        DATA $C3, $2F
+        DATA $C4, $31
+        DATA $C6, $32
+        DATA $C8, $34
+        DATA $CA, $36
+        DATA $CC, $38
+        DATA $CE, $3A
+        DATA $D0, $3C
+        DATA $D2, $3E
+        DATA $D4, $3F
+        DATA $D7, $41
+        DATA $DA, $43
+        DATA $DC, $44
+        DATA $DF, $45
+        DATA $E2, $47
+        DATA $E5, $48
+        DATA $E8, $49
+        DATA $EC, $4A
+        DATA $EF, $4B
+        DATA $F2, $4C
+        DATA $F6, $4C
+        DATA $F9, $4C
+        DATA $FC, $4D
+        DATA $00, $4D
+        DATA $03, $4D
+        DATA $07, $4C
+        DATA $0A, $4C
+        DATA $0E, $4C
+        DATA $11, $4B
+        DATA $14, $4A
+        DATA $18, $49
+        DATA $1B, $48
+        DATA $1E, $47
+        DATA $21, $45
+        DATA $24, $44
+        DATA $27, $42
+        DATA $29, $41
+        DATA $2C, $3F
+        DATA $2E, $3D
+        DATA $31, $3B
+        DATA $33, $3A
+        DATA $35, $38
+        DATA $37, $36
+        DATA $39, $34
+        DATA $3A, $32
+        DATA $3C, $30
+        DATA $3E, $2E
+        DATA $3F, $2C
+        DATA $40, $2A
+        DATA $41, $28
+        DATA $43, $26
+        DATA $44, $24
+        DATA $45, $23
+        DATA $45, $21
+        DATA $46, $1F
+        DATA $47, $1D
+        DATA $48, $1C
+        DATA $48, $1A
+        DATA $49, $18
+        DATA $49, $17
+        DATA $4A, $15
+        DATA $4A, $14
+        DATA $4B, $12
+        DATA $4B, $11
+        DATA $4B, $0F
+        DATA $4B, $0E
+        DATA $4C, $0D
+        DATA $4C, $0C
+        DATA $4C, $0A
+        DATA $4C, $09
+        DATA $4C, $08
+        DATA $4C, $07
+        DATA $4D, $06
+        DATA $4D, $05
+        DATA $4D, $04
+        DATA $4D, $03
+        DATA $4D, $02
+        DATA $4D, $01
+        DATA $4D, $00
+}
+
+`--------------------------------------------------------------------------------------
+`sprite layout (other platform objects share this)
+
+TABLE   :object_platform_spriteLayouts          SECTION ::objects {
+
+._6911  DATA $FE, $FF, $FF, $FF, $FF, $FF
+        DATA $18, $1A, $18, $1A, $FF, $FF
+        DATA $FF, $FF, $FF, $FF, $FF, $FF
+._6923  DATA $FE, $FF, $FF, $FF, $FF, $FF
+        DATA $6C, $6E, $6E, $48, $FF, $FF
+        DATA $FF, $FF
+
+._6931  DATA $FE, $FF, $FF, $FF
+        DATA $FF, $FF
+        
+        DATA $6C, $6E, $6C, $6E, $FF, $FF
+        DATA $FF, $FF
+}

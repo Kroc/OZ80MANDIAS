@@ -1,0 +1,249 @@
+`____________________________________________________________________________[$88FB]___
+`OBJECT: spike ball (Labyrinth)
+
+PROC    :doObjectCode_trap_spikeBall            SECTION ::objects
+{
+	set	5,(ix+$18)
+	ld	(ix+#object.width), 8
+	ld	(ix+#object.height),12
+	bit	0,(ix+$18)
+	jr	nz,._1
+	ld	l,(ix+#object.X.lo)
+	ld	h,(ix+#object.X.hi)
+	ld	de,$0008
+	add	hl,de
+	ld	(ix+$12),l
+	ld	(ix+$13),h
+	ld	l,(ix+#object.Y.lo)
+	ld	h,(ix+#object.Y.hi)
+	ld	de,$0008
+	add	hl,de
+	ld	(ix+$14),l
+	ld	(ix+$15),h
+	set	0,(ix+$18)
+._1	ld	l,(ix+$11)
+	ld	h,$00
+	add	hl,hl
+	ld	de,._898e
+	add	hl,de
+	ld	e,(hl)
+	inc	hl
+	ld	c,(hl)
+	ld	d,$00
+	ld	b,d
+	bit	7,e
+	jr	z,._2
+	dec	d
+._2	bit	7,c
+	jr	z,._3
+	dec	b
+._3	ld	l,(ix+$12)
+	ld	h,(ix+$13)
+	add	hl,de
+	ld	(ix+#object.X.lo),l
+	ld	(ix+#object.X.hi),h
+	ld	l,(ix+$14)
+	ld	h,(ix+$15)
+	add	hl,bc
+	ld	(ix+#object.Y.lo),l
+	ld	(ix+#object.Y.hi),h
+	ld	hl,$0204
+	ld	($.TEMP6),hl
+	call	:_LABEL_3956_11
+	call	nc,:_35fd
+	ld	(ix+#object.spriteLayout.lo),._8987.lo
+	ld	(ix+#object.spriteLayout.hi),._8987.hi
+	inc	(ix+$11)
+	ld	a,(ix+$11)
+	cp	$b4
+	ret	c
+	ld	(ix+$11),$00
+	ret
+ 
+        `sprite layout
+._8987  DATA $60, $62, $FF, $FF, $FF, $FF
+        DATA $FF
+
+        `I imagine this a set of X/Y positions to do the spiked-ball rotation
+._898e  `180 lines, ergo 2deg per frame?
+        DATA $40, $00
+        DATA $40, $02
+        DATA $40, $04
+        DATA $40, $07
+        DATA $3F, $09
+        DATA $3F, $0B
+        DATA $3F, $0D
+        DATA $3E, $0F
+        DATA $3E, $12
+        DATA $3D, $14
+        DATA $3C, $16
+        DATA $3B, $18
+        DATA $3A, $1A
+        DATA $3A, $1C
+        DATA $39, $1E
+        DATA $37, $20
+        DATA $36, $22
+        DATA $35, $24
+        DATA $34, $26
+        DATA $32, $27
+        DATA $31, $29
+        DATA $30, $2B
+        DATA $2E, $2C
+        DATA $2C, $2E
+        DATA $2B, $30
+        DATA $29, $31
+        DATA $27, $32
+        DATA $26, $34
+        DATA $24, $35
+        DATA $22, $36
+        DATA $20, $37
+        DATA $1E, $39
+        DATA $1C, $3A
+        DATA $1A, $3A
+        DATA $18, $3B
+        DATA $16, $3C
+        DATA $14, $3D
+        DATA $12, $3E
+        DATA $0F, $3E
+        DATA $0D, $3F
+        DATA $0B, $3F
+        DATA $09, $3F
+        DATA $07, $40
+        DATA $04, $40
+        DATA $02, $40
+        DATA $00, $40
+        DATA $FE, $40
+        DATA $FC, $40
+        DATA $F9, $40
+        DATA $F7, $3F
+        DATA $F5, $3F
+        DATA $F3, $3F
+        DATA $F1, $3E
+        DATA $EE, $3E
+        DATA $EC, $3D
+        DATA $EA, $3C
+        DATA $E8, $3B
+        DATA $E6, $3A
+        DATA $E4, $3A
+        DATA $E2, $39
+        DATA $E0, $37
+        DATA $DE, $36
+        DATA $DC, $35
+        DATA $DA, $34
+        DATA $D9, $32
+        DATA $D7, $31
+        DATA $D5, $30
+        DATA $D4, $2E
+        DATA $D2, $2C
+        DATA $D0, $2B
+        DATA $CF, $29
+        DATA $CE, $27
+        DATA $CC, $26
+        DATA $CB, $24
+        DATA $CA, $22
+        DATA $C9, $20
+        DATA $C7, $1E
+        DATA $C6, $1C
+        DATA $C6, $1A
+        DATA $C5, $18
+        DATA $C4, $16
+        DATA $C3, $14
+        DATA $C2, $12
+        DATA $C2, $0F
+        DATA $C1, $0D
+        DATA $C1, $0B
+        DATA $C1, $09
+        DATA $C0, $07
+        DATA $C0, $04
+        DATA $C0, $02
+        DATA $C0, $00
+        DATA $C0, $FE
+        DATA $C0, $FC
+        DATA $C0, $F9
+        DATA $C1, $F7
+        DATA $C1, $F5
+        DATA $C1, $F3
+        DATA $C2, $F1
+        DATA $C2, $EE
+        DATA $C3, $EC
+        DATA $C4, $EA
+        DATA $C5, $E8
+        DATA $C6, $E6
+        DATA $C6, $E4
+        DATA $C7, $E2
+        DATA $C9, $E0
+        DATA $CA, $DE
+        DATA $CB, $DC
+        DATA $CC, $DA
+        DATA $CE, $D9
+        DATA $CF, $D7
+        DATA $D0, $D5
+        DATA $D2, $D4
+        DATA $D4, $D2
+        DATA $D5, $D0
+        DATA $D7, $CF
+        DATA $D9, $CE
+        DATA $DA, $CC
+        DATA $DC, $CB
+        DATA $DE, $CA
+        DATA $E0, $C9
+        DATA $E2, $C7
+        DATA $E4, $C6
+        DATA $E6, $C6
+        DATA $E8, $C5
+        DATA $EA, $C4
+        DATA $EC, $C3
+        DATA $EE, $C2
+        DATA $F1, $C2
+        DATA $F3, $C1
+        DATA $F5, $C1
+        DATA $F7, $C1
+        DATA $F9, $C0
+        DATA $FC, $C0
+        DATA $FE, $C0
+        DATA $00, $C0
+        DATA $02, $C0
+        DATA $04, $C0
+        DATA $07, $C0
+        DATA $09, $C1
+        DATA $0B, $C1
+        DATA $0D, $C1
+        DATA $0F, $C2
+        DATA $12, $C2
+        DATA $14, $C3
+        DATA $16, $C4
+        DATA $18, $C5
+        DATA $1A, $C6
+        DATA $1C, $C6
+        DATA $1E, $C7
+        DATA $20, $C9
+        DATA $22, $CA
+        DATA $24, $CB
+        DATA $26, $CC
+        DATA $27, $CE
+        DATA $29, $CF
+        DATA $2B, $D0
+        DATA $2C, $D2
+        DATA $2E, $D4
+        DATA $30, $D5
+        DATA $31, $D7
+        DATA $32, $D9
+        DATA $34, $DA
+        DATA $35, $DC
+        DATA $36, $DE
+        DATA $37, $E0
+        DATA $39, $E2
+        DATA $3A, $E4
+        DATA $3A, $E6
+        DATA $3B, $E8
+        DATA $3C, $EA
+        DATA $3D, $EC
+        DATA $3E, $EE
+        DATA $3E, $F1
+        DATA $3F, $F3
+        DATA $3F, $F5
+        DATA $3F, $F7
+        DATA $40, $F9
+        DATA $40, $FC
+        DATA $40, $FE
+}

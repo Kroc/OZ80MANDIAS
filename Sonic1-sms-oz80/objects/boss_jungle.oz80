@@ -1,0 +1,176 @@
+`____________________________________________________________________________[$8053]___
+`OBJECT: boss (Jungle)
+
+PROC    :doObjectCode_boss_jungle               SECTION ::objects {
+	set	5,(ix+$18)
+	ld	(ix+#object.width), 32
+	ld	(ix+#object.height),28
+	bit	0,(ix+$18)
+	jr	nz,._1
+	ld	hl,($.SONIC.Y)
+	ld	de,$00e0
+	and	a
+	sbc	hl,de
+	ret	nc
+	ld	a,($D414)
+	rlca	
+	ret	nc
+	`boss sprite set
+	ld	hl,$aeb1
+	ld	de,$2000
+	ld	a,9
+	call	:decompressArt
+	
+	ld	hl,:S1_BossPalette
+	ld	a,%00000010
+	call	:loadPaletteOnInterrupt
+	
+	ld	a,#index_music_boss1
+	rst	:rst_playMusic
+	
+	xor	a;zero
+	ld	($D2EC),a;zero
+	
+	`there's a routine at `_7c8c` for setting the scroll positions that should
+	 `have been used here?
+	ld	hl,($.CAMERA_X)
+	ld	($.LEVEL_LEFT),hl
+	ld	($.LEVEL_RIGHT),hl
+	
+	ld	hl,($.CAMERA_Y)
+	ld	($.LEVEL_TOP),hl
+	ld	($.LEVEL_BOTTOM),hl
+	ld	hl,$01f0
+	ld	($.CAMERA_X_GOTO),hl
+	ld	hl,$0048
+	ld	($.CAMERA_Y_GOTO),hl
+	
+	set	0,(ix+$18)
+	
+._1	call	:_7ca6
+	bit	0,(ix+$11)
+	jr	nz,._2
+	ld	(ix+#object.spriteLayout.lo),._81f4.lo
+	ld	(ix+#object.spriteLayout.hi),._81f4.hi
+	ld	(ix+#object.Yspeed.lo),$80
+	ld	(ix+#object.Yspeed.hi),$00
+	ld	(ix+#object.Ydirection),$00
+	ld	l,(ix+#object.Y.lo)
+	ld	h,(ix+#object.Y.hi)
+	ld	de,$0058
+	xor	a;zero
+	sbc	hl,de
+	ret	c
+	ld	(ix+#object.Yspeed.lo),a;zero
+	ld	(ix+#object.Yspeed.hi),a;zero
+	ld	(ix+#object.Ydirection),a;zero
+	set	0,(ix+$11)
+._2	ld	a,(ix+$12)
+	and	a
+	jp	nz,._4
+	ld	l,(ix+#object.X.lo)
+	ld	h,(ix+#object.X.hi)
+	bit	1,(ix+$11)
+	jr	nz,._3
+	ld	(ix+#object.spriteLayout.lo),._81f4.lo
+	ld	(ix+#object.spriteLayout.hi),._81f4.hi
+	res	1,(ix+$18)
+	ld	(ix+#object.Xspeed.lo),$00
+	ld	(ix+#object.Xspeed.hi),$ff
+	ld	(ix+#object.Xdirection),$ff
+	ld	de,$021c
+	and	a
+	sbc	hl,de
+	jp	nc,._8
+	ld	(ix+$12),$67
+	jp	._8
+	
+._3	ld	(ix+#object.spriteLayout.lo),._8206.lo
+	ld	(ix+#object.spriteLayout.hi),._8206.hi
+	set	1,(ix+$18)
+	ld	(ix+#object.Xspeed.lo),$00
+	ld	(ix+#object.Xspeed.hi),$01
+	ld	(ix+#object.Xdirection),$00
+	ld	de,$02aa
+	and	a
+	sbc	hl,de
+	jp	c,._8
+	ld	(ix+$12),$67
+	jp	._8
+	
+._4	xor	a;zero
+	ld	(ix+#object.Xspeed.lo),a;zero
+	ld	(ix+#object.Xspeed.hi),a;zero
+	ld	(ix+#object.Xdirection),a;zero
+	ld	hl,$0001
+	dec	(ix+$12)
+	jr	z,._5
+	ld	a,(ix+$12)
+	cp	$40
+	jr	nc,._6
+	ld	hl,$ffff
+	cp	$28
+	jr	c,._6
+	cp	$34
+	jr	z,._7
+._5	ld	hl,$0000
+._6	ld	(ix+#object.Yspeed.lo),$00
+	ld	(ix+#object.Yspeed.hi),l
+	ld	(ix+#object.Ydirection),h
+	jr	._8
+	
+._7	ld	a,(ix+$11)
+	xor	$02
+	ld	(ix+$11),a
+	ld	a,($D2EC)
+	cp	$08
+	jr	nc,._8
+	call	:_7c7b
+	ret	c
+	ld	e,(ix+#object.X.lo)
+	ld	d,(ix+#object.X.hi)
+	ld	c,(ix+#object.Y.lo)
+	ld	b,(ix+#object.Y.hi)
+	push	ix
+	push	hl
+	pop	ix
+	ld	(ix+#object.type),$2B	        `unknown object
+	xor	a;zero			        `set A to 0
+	ld	(ix+#object.Xsubpixel),a;zero
+	ld	hl,$000b
+	add	hl,de
+	ld	(ix+#object.X.lo),l
+	ld	(ix+#object.X.hi),h
+	ld	(ix+#object.Ysubpixel),a;zero
+	ld	hl,$0030
+	add	hl,bc
+	ld	(ix+#object.Y.lo),l
+	ld	(ix+#object.Y.hi),h
+	ld	(ix+#object.Xspeed.lo),a;zero
+	ld	(ix+#object.Xspeed.hi),a;zero
+	ld	(ix+#object.Xdirection),a;zero
+	ld	(ix+#object.Yspeed.lo),a;zero
+	ld	(ix+#object.Yspeed.hi),a;zero
+	ld	(ix+#object.Ydirection),a;zero
+	ld	(ix+$11),a;zero
+	ld	(ix+$16),a;zero
+	ld	(ix+$17),a;zero
+	call	:_LABEL_625_57
+	and	$3f
+	add	a,$64
+	ld	(ix+$12),a
+	pop	ix
+._8	ld	hl,$005a
+	ld	($.D216),hl
+	call	:_77be
+	call	:_79fa
+	ret
+
+        `sprite layout
+._81f4  DATA $20, $22, $24, $26, $28, $FF
+        DATA $40, $42, $44, $46, $48, $FF
+        DATA $60, $54, $56, $58, $68, $FF
+._8206  DATA $2A, $2C, $2E, $30, $32, $FF
+        DATA $4A, $4C, $4E, $50, $52, $FF
+        DATA $6A, $5A, $5C, $5E, $72, $FF
+}

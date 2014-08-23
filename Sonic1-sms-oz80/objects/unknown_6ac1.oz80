@@ -1,0 +1,81 @@
+`____________________________________________________________________________[$6AC1]___
+`OBJECT: UNKNOWN
+
+PROC    :_6ac1                                  SECTION ::objects {
+	set	5,(ix+$18)
+	ld	(ix+#object.width), 2
+	ld	(ix+#object.height),2
+	ld	hl,$0303
+	ld	($.TEMP6),hl
+	call	:_LABEL_3956_11
+	call	nc,:_35fd
+	ld	l,(ix+#object.Yspeed.lo)
+	ld	h,(ix+#object.Yspeed.hi)
+	ld	a,(ix+#object.Ydirection)
+	ld	e,(ix+$13)
+	ld	d,(ix+$14)
+	add	hl,de
+	adc	a,$00
+	ld	(ix+#object.Yspeed.lo),l
+	ld	(ix+#object.Yspeed.hi),h
+	ld	(ix+#object.Ydirection),a
+	ld	l,(ix+#object.X.lo)
+	ld	h,(ix+#object.X.hi)
+	ld	($.TEMP1),hl
+	ld	l,(ix+#object.Y.lo)
+	ld	h,(ix+#object.Y.hi)
+	ld	($.TEMP3),hl
+	ld	hl,$0000
+	ld	($.TEMP4),hl
+	ld	($.TEMP6),hl
+	ld	(ix+#object.spriteLayout.lo),l
+	ld	(ix+#object.spriteLayout.hi),h
+	ld	hl,._6b72
+	ld	a,($.CURRENT_LEVEL)
+	cp	$05
+	jr	z,._1
+	cp	$0b
+	jr	z,._1
+	ld	hl,._6b70
+._1	ld	a,($.FRAMECOUNT)
+	and	$01
+	ld	e,a
+	ld	d,$00
+	add	hl,de
+	ld	a,(hl)
+	call	:_3581
+	ld	c,(ix+#object.X.lo)
+	ld	b,(ix+#object.X.hi)
+	ld	l,c
+	ld	h,b
+	ld	de,$fff8
+	add	hl,de
+	ld	de,($.CAMERA_X)
+	and	a
+	sbc	hl,de
+	jr	c,._2
+	inc	d
+	ex	de,hl
+	sbc	hl,bc
+	jr	c,._2
+	ld	c,(ix+#object.Y.lo)
+	ld	b,(ix+#object.Y.hi)
+	ld	l,c
+	ld	h,b
+	ld	de,$0010
+	add	hl,de
+	ld	de,($.CAMERA_Y)
+	and	a
+	sbc	hl,de
+	jr	c,._2
+	ld	hl,$00c0
+	add	hl,de
+	and	a
+	sbc	hl,bc
+	ret	nc
+._2	ld	(ix+#object.type),$FF	        `remove object?
+	ret	
+
+._6b70  DATA $06, $08
+._6b72  DATA $34, $36
+}

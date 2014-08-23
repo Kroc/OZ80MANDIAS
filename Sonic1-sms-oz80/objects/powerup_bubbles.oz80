@@ -1,0 +1,51 @@
+`____________________________________________________________________________[$8E56]___
+`OBJECT: bubbles (Labyrinth)
+
+PROC    :doObjectCode_powerUp_bubbles           SECTION ::objects
+{
+	set	5,(ix+$18)
+	ld	a,(ix+$12)
+	and	$7f
+	jr	nz,._1
+	call	:_LABEL_625_57
+	and	$07
+	ld	e,a
+	ld	d,$00
+	ld	hl,._8ec2
+	add	hl,de
+	bit	0,(hl)
+	call	nz,:_91eb
+._1	ld	l,(ix+#object.X.lo)
+	ld	h,(ix+#object.X.hi)
+	ld	($.TEMP1),hl
+	ld	l,(ix+#object.Y.lo)
+	ld	h,(ix+#object.Y.hi)
+	ld	($.TEMP3),hl
+	ld	a,(ix+$11)
+	add	a,a
+	ld	e,a
+	ld	d,$00
+	ld	hl,._8eb6
+	add	hl,de
+	ld	e,(hl)
+	ld	($.TEMP4),de
+	inc	hl
+	ld	e,(hl)
+	ld	($.TEMP6),de
+	ld	a,$0c
+	call	:_3581
+	inc	(ix+$12)
+	ld	a,($.FRAMECOUNT)
+	and	$07
+	ret	nz
+	inc	(ix+$11)
+	ld	a,(ix+$11)
+	cp	$06
+	ret	c
+	ld	(ix+$11),$00
+	ret
+        
+._8eb6  DATA $08, $05, $08, $04, $07, $03, $06, $02, $07, $01, $06, $00
+._8ec2  DATA $01, $00, $01, $01, $00, $01, $00, $01
+
+}

@@ -50,22 +50,23 @@ OBJECT #vars {				`$D200:
 	`bit 7 - screen does not scroll down
 	
 	.flags6			AS BYTE	`IY+$06
-	`bit 0 - unknown
-	`bit 1 - unknown
-	`bit 3 - unknown
+	`bit 0 - make Sonic upside down! (some incomplete functionality left in)
+	`bit 1 - disable controls
+	`bit 3 - clock is active when set
 	`bit 4 - unknown
-	`bit 5 - unknown
-	`bit 6 - unknown
+	`bit 5 - shield active
+	`bit 6 - Sonic is in damage state
 	`bit 7 - level underwater flag (enables water line)
 	
 	`taken from the level header, this controls the presence of the time on
 	 `the HUD and if the lightning effect is in use
 	.timeLightningFlags	AS BYTE	`IY+$07
-	`bit 0 - centers the time in the screen on special stages
+	`bit 0 - centres the time in the screen on special stages
 	`bit 1 - enables the lightning effect
 	`bit 4 - use the boss underwater palette (specially for Labyrinth Act 3)
 	`bit 5 - time is displayed in the HUD
 	`bit 6 - locks the screen, no scrolling
+        `bit 7 - 0 = timer counts up, 1 = timer counts down (e.g. special stage)
 	
 	`part of the level header -- always "0" for all levels, but unknown function
 	.unknown0		AS BYTE	`IY+$08

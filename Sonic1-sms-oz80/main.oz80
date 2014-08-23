@@ -132,7 +132,7 @@ PARAMS	hl	        `relative address from the beginning of the intended bank (A)
 .processRow
 	ld	hl, ($.TEMP3)	`load HL with the original row count number
 					 `(#$0400 for sprites, #$0800 for tiles)
-	xor	a			`set A to 0 (Carry is reset)
+	xor	a;zero			`set A to 0 (Carry is reset)
 	sbc	hl, bc			`subtract current counter from the row count
 					 `that is, count upwards from 0
 	push	hl			`save the counter value
@@ -577,8 +577,8 @@ PROC    :hideSprites                    SECTION ::main
 	`mark all 64 sprites as requiring update 
 	ld	(iy+#vars.spriteUpdateCount), 64	
 	`and set zero active sprites
-	xor	a			`(set A to 0)
-	ld	($.ACTIVESPRITECOUNT), a
+	xor	a;zero			        `(set A to 0)
+	ld	($.ACTIVESPRITECOUNT), a;zero
 	ret
 }
 
@@ -589,11 +589,11 @@ PROC    :decimalMultiplyBy10            SECTION ::main
 PARAMS	hl	`input number, e.g. RAM_LIVES
 	c	`base? i.e. 10
 {        
-	xor	a			`set A to 0
+	xor	a;zero			`set A to 0
 	ld	b, 7			`we will be looping 7 times
 	ex	de, hl			`transfer the HL parameter to DE
-	ld	l, a			`set HL as $0000
-	ld	h, a
+	ld	l;zero, a;zero			`set HL as $0000
+	ld	h;zero, a;zero
 	
 .loop	rl	c			`shift the bits in C up one
 	jp	nc, ._1			`skip if it hasn't overflowed yet
@@ -614,7 +614,7 @@ PROC    :_LABEL_60F_111                 SECTION ::main
 PARAMS	c	`10
 	hl	`number of lives
 {        
-	xor	a			`set A to 0
+	xor	a;zero			`set A to 0
 	ld	b, 16
 	
 	`16-bit left-rotation -- that is, multiply by 2

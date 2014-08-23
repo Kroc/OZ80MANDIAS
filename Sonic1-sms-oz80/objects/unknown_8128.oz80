@@ -1,0 +1,88 @@
+`____________________________________________________________________________[$8218]___
+`OBJECT: UNKNOWN
+
+PROC    :_8218                                  SECTION ::objects {
+	res	5,(ix+$18)
+	ld	(ix+#object.width),$0c
+	ld	(ix+#object.height),$10
+	ld	hl,$0202
+	ld	($.TEMP6),hl
+	call	:_LABEL_3956_11
+	call	nc,:_35fd
+	ld	l,(ix+#object.Xspeed.lo)
+	ld	h,(ix+#object.Xspeed.hi)
+	ld	a,(ix+#object.Xdirection)
+	ld	de,$0002
+	ld	c,$00
+	and	a
+	jp	m,._1
+	dec	c
+	ld	de,$fffe
+._1	add	hl,de
+	adc	a,c
+	ld	(ix+#object.Xspeed.lo),l
+	ld	(ix+#object.Xspeed.hi),h
+	ld	(ix+#object.Xdirection),a
+	ld	l,(ix+#object.Yspeed.lo)
+	ld	h,(ix+#object.Yspeed.hi)
+	ld	a,(ix+#object.Ydirection)
+	ld	de,$0020
+	add	hl,de
+	adc	a,$00
+	ld	c,a
+	ld	a,h
+	cp	$03
+	jr	c,._2
+	ld	hl,$0300
+	ld	c,$00
+._2	ld	(ix+#object.Yspeed.lo),l
+	ld	(ix+#object.Yspeed.hi),h
+	ld	(ix+#object.Ydirection),c
+	ld	a,($.FRAMECOUNT)
+	and	$01
+	add	a,(ix+$11)
+	ld	(ix+$11),a
+	ld	a,(ix+$11)
+	cp	(ix+$12)
+	jr	nc,._3
+	ld	bc,._82c1
+	ld	de,._82cd
+	call	:_7c41
+	ret
+	
+._3	jr	nz,._4
+	ld	a,($.FRAMECOUNT)
+	and	$01
+	ret	z
+	ld	(ix+$16),$00
+	ld	a,$01
+	rst	:rst_playSFX
+        
+._4	xor	a;zero
+	ld	(ix+#object.Xspeed.lo),a;zero
+	ld	(ix+#object.Xspeed.hi),a;zero
+	ld	(ix+#object.Xdirection),a;zero
+	
+        ld	bc,._82c6
+	ld	de,:_a3bb
+	call	:_7c41
+	
+        ld	a,(ix+$12)
+	add	a,$12
+	cp	(ix+$11)
+	ret	nc
+	
+        ld	(ix+#object.type),$FF	        `remove object?
+	ret
+
+._82c1  DATA $00, $04, $01, $04, $FF
+._82c6  DATA $01, $0C, $02, $0C, $03, $0C, $FF
+
+        `sprite layout
+._82cd  DATA $08, $0A, $FF, $FF, $FF, $FF
+        DATA $FF, $FF, $FF, $FF, $FF, $FF
+        DATA $FF, $FF, $FF, $FF, $FF, $FF
+        
+        DATA $0C, $0E, $FF, $FF, $FF, $FF
+        DATA $FF
+}

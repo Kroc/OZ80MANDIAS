@@ -1,0 +1,7 @@
+`____________________________________________________________________________[$8F6C]___
+`OBJECT: UNKNOWN
+
+PROC    :doObjectCode_null                      SECTION ::objects
+{
+	ret				        `object nullified!
+}

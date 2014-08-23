@@ -1,0 +1,32 @@
+`____________________________________________________________________________[$7AA7]___
+`OBJECT: trip zone (Green Hill)
+
+PROC    :doObjectCode_meta_trip                 SECTION ::objects {
+	set	5,(ix+$18)
+	ld	(ix+#object.width), 64
+	ld	(ix+#object.height),64
+	ld	hl,$0000
+	ld	($.TEMP6),hl
+	call	:_LABEL_3956_11
+	ret	c
+	bit	6,(iy+#vars.flags6)
+	ret	nz
+	ld	a,($D414)
+	and	$80
+	ret	z
+	ld	hl,$fffb
+	xor	a;zero
+	ld	($.SONIC.Yspeed.lo),a;zero
+	ld	($.SONIC.Yspeed.hi),hl
+	ld	hl,$0003
+	xor	a;zero
+	ld	($.SONIC.Xspeed.lo),a;zero
+	ld	($.SONIC.Xspeed.hi),hl
+	ld	hl,$D414
+	res	1,(hl)
+	set	6,(iy+#vars.flags6)
+	ld	(iy+#vars.joypad),$ff
+	ld	a,$11
+	rst	:rst_playSFX
+	ret
+}

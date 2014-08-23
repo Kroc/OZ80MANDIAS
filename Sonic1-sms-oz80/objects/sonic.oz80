@@ -3,61 +3,62 @@
    for MaSS1VE: The Master System Sonic 1 Visual Editor <github.com/Kroc/MaSS1VE>
    ================================================================================= ``
 
-SECTION ::object_sonic BANK 1, 2 SLOT 1, 2 { `_______________________________[$48C8]___
+`____________________________________________________________________________[$48C8]___
+`this is one giant procedure because all of its sub-procedures are private
 
-PROC	:doObjectCode_Sonic {
-	
+PROC	:doObjectCode_Sonic                     SECTION ::objects
+{	
 	res	1,(iy+#vars.unknown0)
 	
 	bit	7,(ix+$18)
-	call	nz,:_4e88
+	call	nz,._4e88
 	
 	`flag to update the Sonic sprite frame
 	set	7,(iy+#vars.timeLightningFlags)
 	
 	bit	0,(iy+#vars.scrollRingFlags)
-	jp	nz,:_543c
+	jp	nz,._543c
 	
 	ld	a,($D412)
 	and	a
-	call	nz,:_4ff0
+	call	nz,._4ff0
 	
 	res	5,(ix+$18)
 	
 	bit	6,(iy+#vars.flags6)
-	call	nz,:_510a
+	call	nz,._510a
 	
 	ld	a,($.D28C)
 	and	a
-	call	nz,:_568f
+	call	nz,._568f
 	
 	bit	0,(iy+#vars.timeLightningFlags)
-	call	nz,:_5100
+	call	nz,._5100
 	
 	bit	0,(iy+#vars.unknown0)
-	call	nz,:_4ff5
+	call	nz,._4ff5
 	
 	bit	4,(ix+$18)
-	call	nz,:_5009
+	call	nz,._5009
 	
 	ld	a,($.D28B)
 	and	a
-	call	nz,:_5285
+	call	nz,._5285
 	
 	ld	a,($.D28A)
 	and	a
-	jp	nz,:_5117
+	jp	nz,._5117
 	
 	bit	6,(iy+#vars.unknown0)
-	jp	nz,:_5193
+	jp	nz,._5193
 	
 	bit	7,(iy+#vars.unknown0)
-	call	nz,:_529c
+	call	nz,._529c
 	
 	bit	4,(ix+$18)
 	jp	z,._1
 	
-	ld	hl,:_4ddd
+	ld	hl,._4ddd
 	ld	de,$.TEMP1
 	ld	bc,$0009
 	ldir	
@@ -77,7 +78,7 @@ PROC	:doObjectCode_Sonic {
 	bit	0,(iy+#vars.timeLightningFlags)
 	jr	nz,._3
 	
-._2	ld	hl,:_4dcb
+._2	ld	hl,._4dcb
 	ld	de,$.TEMP1
 	ld	bc,$0009
 	ldir	
@@ -95,7 +96,7 @@ PROC	:doObjectCode_Sonic {
 ._3	bit	7,(ix+$18)
 	jr	nz,._2
 	
-	ld	hl,:_4dd4
+	ld	hl,._4dd4
 	ld	de,$.TEMP1
 	ld	bc,$0009
 	ldir	
@@ -110,7 +111,7 @@ PROC	:doObjectCode_Sonic {
 	ld	($DC0A),hl
 	jp	._5
 	
-._4	ld	hl,:_4de6
+._4	ld	hl,._4de6
 	ld	de,$.TEMP1
 	ld	bc,$0009
 	ldir	
@@ -125,13 +126,13 @@ PROC	:doObjectCode_Sonic {
 	ld	($DC0A),hl
 	ld	a,($.FRAMECOUNT)
 	and	$03
-	call	z,:_4fec
+	call	z,._4fec
 	
-._5	bit	1,(iy+#vars.joypad)	`joypad up?
-	call	z,:_50c1
+._5	bit	1,(iy+#vars.joypad)	        `joypad up?
+	call	z,._50c1
 	
-	bit	1,(iy+#vars.joypad)	`joypad not up?
-	call	nz,:_50e3
+	bit	1,(iy+#vars.joypad)	        `joypad not up?
+	call	nz,._50e3
 	
 	ld	a,15
 	ld	($.SMS_PAGE_2),a
@@ -160,13 +161,13 @@ PROC	:doObjectCode_Sonic {
 	add	a,a
 	ld	l,a
 	ld	h,d
-	ld	de,:_58e5
+	ld	de,._58e5
 	add	hl,de
 	ld	a,(hl)
 	inc	hl
 	ld	h,(hl)
 	ld	l,a
-	ld	de,$4a28		`data?
+	ld	de,$4a28		        `data?
 	
 	`switch page 2 ($8000-$BFFF) to bank 2 ($8000-$BFFF)
 	ld	a,2
@@ -175,52 +176,56 @@ PROC	:doObjectCode_Sonic {
 	push	de
 	jp	(hl)
 	
-._6	ld	hl,($.SONIC.Y+0)
+._6	ld	hl,($.SONIC.Y)
 	ld	de,$0024
 	add	hl,de
 	ex	de,hl
 	ld	hl,($.LEVEL_BOTTOM)
 	ld	bc,$00c0
 	add	hl,bc
-	xor	a
+	xor	a;zero
 	sbc	hl,de
 	call	c,:_3618
 	ld	hl,$0000
 	ld	a,(iy+#vars.joypad)
 	cp	$ff
 	jr	nz,+
-	ld	de,($.SONIC.Xspeed)
-	ld	a,e
-	or	d
-	jr	nz,._7
-	ld	a,($D414)
+        
+        `is player moving left or right?
+	ld	de,($.SONIC.Xspeed)             `get the horizontal speed
+	ld	a,e                             `shift E into A for next instruction
+	or	d                               `combine E & D
+	jr	nz,._7                          `if it's not zero, skip
+	
+        ld	a,($D414)
 	rlca	
 	jr	nc,._7
 	ld	hl,($.D299)
 	inc	hl
+        
 ._7	ld	($.D299),hl
 	bit	7,(iy+#vars.flags6)
-	call	nz,:_50e8
+	call	nz,._50e8
 	ld	(ix+$14),$05
 	ld	hl,($.D299)
 	ld	de,$0168
 	and	a
 	sbc	hl,de
-	call	nc,:_5105
+	call	nc,._5105
 	ld	a,(iy+#vars.joypad)
 	cp	$fe
-	call	z,:_4edd
+	call	z,._4edd
 	bit	0,(iy+#vars.joypad)
-	call	nz,:_4fd3
+	call	nz,._4fd3
 	bit	0,(ix+$18)
-	jp	nz,:_532e
+	jp	nz,._532e
 	ld	a,(ix+#object.height)
 	cp	$20
 	jr	z,._8
-	ld	hl,($.SONIC.Y+0)
+	ld	hl,($.SONIC.Y)
 	ld	de,$fff8
 	add	hl,de
-	ld	($.SONIC.Y+0),hl
+	ld	($.SONIC.Y),hl
 ._8	ld	(ix+#object.width),$18
 	ld	(ix+#object.height),$20
 	ld	hl,($.SONIC.Xspeed)
@@ -229,9 +234,9 @@ PROC	:doObjectCode_Sonic {
 	ld	e,c
 	ld	d,c
 	bit	3,(iy+#vars.joypad)
-	jp	z,:_4f01
+	jp	z,._4f01
 	bit	2,(iy+#vars.joypad)
-	jp	z,:_4f01._4f5c
+	jp	z,._4f5c
 	ld	a,h
 	or	l
 	or	b
@@ -251,7 +256,7 @@ PROC	:doObjectCode_Sonic {
 	push	hl
 	push	de
 	ld	de,($.D240)
-	xor	a
+	xor	a;zero
 	sbc	hl,de
 	pop	de
 	pop	hl
@@ -281,7 +286,7 @@ PROC	:doObjectCode_Sonic {
 	ld	h,a
 	inc	hl
 	ld	de,($.D240)
-	xor	a
+	xor	a;zero
 	sbc	hl,de
 	pop	de
 	pop	hl
@@ -298,7 +303,7 @@ PROC	:doObjectCode_Sonic {
 	ld	c,a
 	jp	p,._11
 	ld	a,($.SONIC.Xspeed)
-	or	(ix+#object.Xspeed+1)
+	or	(ix+#object.Xspeed.hi)
 	or	(ix+#object.Xdirection)
 	jr	z,._11
 	ld	c,$00
@@ -323,9 +328,9 @@ PROC	:doObjectCode_Sonic {
 	ld	e,c
 	ld	d,c
 	bit	7,(ix+$18)
-	call	nz,:_50af
+	call	nz,._50af
 	bit	0,(ix+$18)
-	jp	nz,:_5407
+	jp	nz,._5407
 	ld	a,($.D28E)
 	and	a
 	jr	nz,._12
@@ -340,7 +345,7 @@ PROC	:doObjectCode_Sonic {
 ._4b7f
 	ld	a,($.D28E)
 	and	a
-	call	z,:_509d
+	call	z,._509d
 	ld	hl,($.D242)
 	ld	b,$ff
 	ld	c,$00
@@ -356,8 +361,8 @@ PROC	:doObjectCode_Sonic {
 	jp	._15
 	
 ._14	set	3,(ix+$18)
-._15	xor	a
-	ld	($.D28E),a
+._15	xor	a;zero
+	ld	($.D28E),a;zero
 ._4bac
 	bit	7,h
 	jr	nz,+
@@ -407,7 +412,7 @@ PROC	:doObjectCode_Sonic {
 	ld	($.D2E8),a
 	pop	hl
 	bit	2,(ix+$18)
-	call	nz,:_5280
+	call	nz,._5280
 	ld	a,h
 	and	a
 	jp	p,._19
@@ -437,23 +442,23 @@ PROC	:doObjectCode_Sonic {
 	ld	a,(hl)
 	and	$7f
 	cp	$79
-	call	nc,:_4def
+	call	nc,._4def
 ._4c39
 	ld	a,($.D28C)
 	and	a
-	call	nz,:_51b3
+	call	nz,._51b3
 	bit	6,(iy+#vars.flags6)
-	call	nz,:_51bc
+	call	nz,._51bc
 	bit	2,(iy+#vars.unknown0)
-	call	nz,:_51dd
+	call	nz,._51dd
 	ld	a,($D410)
 	cp	$0a
-	call	z,:_51f3
+	call	z,._51f3
 	ld	l,(ix+$14)
 	ld	c,l
 	ld	h,$00
 	add	hl,hl
-	ld	de,:_5965
+	ld	de,._5965
 	add	hl,de
 	ld	e,(hl)
 	inc	hl
@@ -461,7 +466,7 @@ PROC	:doObjectCode_Sonic {
 	ld	($D40D),de
 	ld	a,($.D2DF)
 	sub	c
-	call	nz,:_521f
+	call	nz,._521f
 	ld	a,($D40F)
 	
 ._22	ld	h,$00
@@ -479,12 +484,12 @@ PROC	:doObjectCode_Sonic {
 	ld	bc,:sound_update
 	bit	1,(ix+$18)
 	jr	z,._24
-	ld	bc,:_7000
+	ld	bc,:_7000                       `immediate $7000 or label?
 ._24	bit	5,(iy+#vars.flags6)
-	call	nz,:_5206
+	call	nz,._5206
 	ld	a,($D302)
 	and	a
-	call	nz,:_4e48
+	call	nz,._4e48
 	ld	a,d
 	rrca	
 	rrca	
@@ -498,20 +503,20 @@ PROC	:doObjectCode_Sonic {
 	ld	h,a
 	add	hl,bc
 	ld	($.SONIC_CURRENT_FRAME),hl
-	ld	hl,:_591d
+	ld	hl,._591d
 	
 	bit	0,(iy+#vars.flags6)
-	call	nz,:_520f
+	call	nz,._520f
 	
 	ld	a,($D410)
 	cp	$13
-	call	z,:_5213
+	call	z,._5213
 	ld	a,($D302)
 	and	a
-	call	nz,:_4e4d
+	call	nz,._4e4d
 	ld	($D40B),hl
 	ld	c,$10
-	ld	a,($.SONIC.Xspeed+1)
+	ld	a,($.SONIC.Xspeed.hi)
 	and	a
 	jp	p,._25
 	neg	
@@ -519,9 +524,9 @@ PROC	:doObjectCode_Sonic {
 ._25	cp	$10
 	jr	c,._26
 	ld	a,c
-	ld	($.SONIC.Xspeed+1),a
+	ld	($.SONIC.Xspeed.hi),a
 ._26	ld	c,$10
-	ld	a,($.SONIC.Yspeed+1)
+	ld	a,($.SONIC.Yspeed.hi)
 	and	a
 	jp	p,._27
 	neg	
@@ -529,24 +534,24 @@ PROC	:doObjectCode_Sonic {
 ._27	cp	$10
 	jr	c,._28
 	ld	a,c
-	ld	($.SONIC.Yspeed+1),a
-._28	ld	de,($.SONIC.Y+0)
+	ld	($.SONIC.Yspeed.hi),a
+._28	ld	de,($.SONIC.Y)
 	ld	hl,$0010
 	and	a
 	sbc	hl,de
 	jr	c,._29
 	add	hl,de
-	ld	($.SONIC.Y+0),hl
+	ld	($.SONIC.Y),hl
 ._29	bit	7,(iy+#vars.flags6)
-	call	nz,:_5224
+	call	nz,._5224
 	bit	0,(iy+#vars.unknown0)
-	call	nz,:_4e8d
+	call	nz,._4e8d
 	ld	a,($.D2E1)
 	and	a
-	call	nz,:_5231
+	call	nz,._5231
 	ld	a,($D321)
 	and	a
-	call	nz,:_4e51
+	call	nz,._4e51
 	bit	1,(iy+#vars.flags6)
 	jr	nz,._31
 	ld	hl,($.LEVEL_LEFT)
@@ -561,14 +566,15 @@ PROC	:doObjectCode_Sonic {
 	ld	a,($.SONIC.Xdirection)
 	and	a
 	jp	p,._31
-	xor	a
-	ld	($.SONIC.Xspeed+0),a
-	ld	($.SONIC.Xspeed+1),a
-	ld	($.SONIC.Xdirection),a
+        
+	xor	a;zero
+	ld	($.SONIC.Xspeed.lo),a;zero
+	ld	($.SONIC.Xspeed.hi),a;zero
+	ld	($.SONIC.Xdirection),a;zero
 	jp	._31
 	
 ._30	ld	hl,($.LEVEL_RIGHT)
-	ld	de,$00f8		`248 -- screen width less 8?
+	ld	de,$00f8		        `248 -- screen width less 8?
 	add	hl,de
 	
 	ex	de,hl
@@ -585,14 +591,15 @@ PROC	:doObjectCode_Sonic {
 	ld	a,($.SONIC.Xdirection)
 	and	a
 	jp	m,._31
-	ld	hl,($.SONIC.Xspeed+1)
+	ld	hl,($.SONIC.Xspeed.hi)
 	or	h
 	or	l
 	jr	z,._31
-	xor	a			`set A to 0
-	ld	($.SONIC.Xspeed+0),a
-	ld	($.SONIC.Xspeed+1),a
-	ld	($.SONIC.Xdirection),a
+        
+	xor	a;zero			        `set A to 0
+	ld	($.SONIC.Xspeed.lo),a;zero
+	ld	($.SONIC.Xspeed.hi),a;zero
+	ld	($.SONIC.Xdirection),a;zero
 	
 ._31	ld	a,($D414)
 	ld	($.D2B9),a
@@ -634,25 +641,20 @@ PROC	:doObjectCode_Sonic {
 	ret	c
 	sub	c
 	ld	($D40F),a
-	ret
-	
-	}
+	ret	
+        
+        `--------------------------------------------------------------------[$4DCB]---
 
-:_4dcb
-DATA $10, $00, $30, $00, $08, $00, $00, $08, $02
-:_4dd4
-DATA $10, $00, $30, $00, $02, $00, $00, $08, $02
-:_4ddd
-DATA $04, $00, $0c, $00, $02, $00, $00, $02, $01
-:_4de6
-DATA $10, $00, $30, $00, $08, $00, $00, $08, $02
+._4dcb  DATA $10, $00, $30, $00, $08, $00, $00, $08, $02
+._4dd4  DATA $10, $00, $30, $00, $02, $00, $00, $08, $02
+._4ddd  DATA $04, $00, $0c, $00, $02, $00, $00, $02, $01
+._4de6  DATA $10, $00, $30, $00, $08, $00, $00, $08, $02
 
         `--------------------------------------------------------------------[$4DEF]---
-PROC	:_4def {
+
+._4def	ex	de,hl
 	
-	ex	de,hl
-	
-	ld	hl,($.SONIC.Y+0)
+	ld	hl,($.SONIC.Y)
 	ld	bc,($.CAMERA_Y)
 	and	a
 	sbc	hl,bc
@@ -664,7 +666,7 @@ PROC	:_4def {
 	ret	c
 	
 	ld	hl,($.SONIC.X)
-	ld	bc,$000c
+	ld	bc,$000C
 	add	hl,bc
 	ld	a,(de)
 	ld	c,a
@@ -680,53 +682,44 @@ PROC	:_4def {
 	and	b
 	ret	z
 	ld	a,l
-	and	$f0
+	and	$F0
 	ld	l,a
 	ld	($.D2AB),hl
 	ld	($D31D),hl
 	ld	a,c
 	xor	b
 	ld	(de),a
-	ld	hl,($.SONIC.Y+0)
+	ld	hl,($.SONIC.Y)
 	ld	bc,$0008
 	add	hl,bc
 	ld	a,l
-	and	$e0
+	and	$E0
 	add	a,$08
 	ld	l,a
 	ld	($.D2AD),hl
 	ld	($D31F),hl
 	ld	a,$06
 	ld	($D321),a
-	ld	hl,:_595d
+	ld	hl,._595d
 	ld	($.D2AF),hl
 	ld	a,$01
 	call	:_39ac
 	ret
 
-	}
-
         `--------------------------------------------------------------------[$4E48]---
-PROC	:_4e48 {
-	
-	ld	d,a
-	ld	bc,:_7000
+
+._4e48  ld	d,a
+	ld	bc,:_7000                       `immediate $7000 or label?
 	ret
-	
-	}
 
         `--------------------------------------------------------------------[$4E4D]---
-PROC	:_4e4d {
-	
-	ld	hl,$0000
+
+._4e4d  ld	hl,$0000
 	ret
-	
-	}
 
         `--------------------------------------------------------------------[$4E51]---
-PROC	:_4e51 {
-	
-	dec	a
+
+._4e51	dec	a
 	ld	($D321),a
 	ld	hl,($D31D)
 	ld	($.TEMP1),hl
@@ -737,50 +730,44 @@ PROC	:_4e51 {
 	ld	hl,$fffe
 	ld	($.TEMP6),hl
 	cp	$03
-	jr	c,._1
+	jr	c,._34
 	ld	a,$b2
 	call	:_3581
 	ld	hl,$0008
 	ld	($.TEMP4),hl
 	ld	hl,$0002
 	ld	($.TEMP6),hl
-._1	ld	a,$5a
+._34	ld	a,$5a
 	call	:_3581
 	ret
 
-	}
-
         `--------------------------------------------------------------------[$4E88]---
-PROC	:_4e88 {
-	
-	set	1,(iy+#vars.unknown0)
+
+._4e88  set	1,(iy+#vars.unknown0)
 	ret
-	
-	}
 
         `--------------------------------------------------------------------[$4E8D]---
-PROC	:_4e8d {
-	
-	ld	hl,($.SONIC.X)
+
+._4e8d  ld	hl,($.SONIC.X)
 	ld	($.TEMP1),hl
-	ld	hl,($.SONIC.Y+0)
+	ld	hl,($.SONIC.Y)
 	ld	($.TEMP3),hl
 	ld	hl,$D2F3
 	ld	a,($.FRAMECOUNT)
 	rrca	
 	rrca	
-	jr	nc,._1
+	jr	nc,._35
 	ld	hl,$D2F7
-._1	ld	de,$.TEMP4
+._35	ld	de,$.TEMP4
 	ldi	
 	ldi	
 	ldi	
 	ldi	
 	rrca	
 	ld	a,$94
-	jr	nc,._2
+	jr	nc,._36
 	ld	a,$96
-._2	call	:_3581
+._36	call	:_3581
 	ld	a,($.FRAMECOUNT)
 	ld	c,a
 	and	$07
@@ -788,9 +775,9 @@ PROC	:_4e8d {
 	ld	b,$02
 	ld	hl,$D2F3
 	bit	3,c
-	jr	z,._
+	jr	z,._37
 	ld	hl,$D2F7
-._	push    hl
+._37	push    hl
 	call	:_LABEL_625_57
 	pop	hl
 	and	$0f
@@ -798,15 +785,12 @@ PROC	:_4e8d {
 	inc	hl
 	ld	(hl),$00
 	inc	hl
-	djnz	._
+	djnz	._37
 	ret
 
-	}
-
         `--------------------------------------------------------------------[$4EDD]---
-PROC	:_4edd {
-	
-	ld	hl,($.SONIC.Xspeed)
+        
+._4edd  ld	hl,($.SONIC.Xspeed)
 	ld	a,h
 	or	l
 	ret	nz
@@ -816,23 +800,20 @@ PROC	:_4edd {
 	ld	(ix+$14),$0c
 	ld	de,($.D2B7)
 	bit	7,d
-	jr	nz,._1
+	jr	nz,._38
 	ld	hl,$002c
 	and	a
 	sbc	hl,de
 	ret	c
-._1	inc	de
+._38	inc	de
 	ld	($.D2B7),de
 	ret
 
-	}
-
         `--------------------------------------------------------------------[$4F01]---
-PROC	:_4f01 {
-	
-	res	1,(ix+$18)
+        
+._4f01  res	1,(ix+$18)
 	bit	7,b
-	jr	nz,._1
+	jr	nz,._39
 	ld	de,($.TEMP1)
 	ld	c,$00
 	ld	(ix+$14),$01
@@ -840,10 +821,10 @@ PROC	:_4f01 {
 	exx	
 	pop	hl
 	ld	de,($.D240)
-	xor	a
+	xor	a;zero
 	sbc	hl,de
 	exx	
-	jp	c,:doObjectCode_Sonic._4b1b
+	jp	c,._4b1b
 	ld	b,a
 	ld	e,a
 	ld	d,a
@@ -851,9 +832,11 @@ PROC	:_4f01 {
 	ld	hl,($.D240)
 	ld	a,($.D216)
 	ld	(ix+$14),a
-	jp	:doObjectCode_Sonic._4b1b
+	jp	._4b1b
+        
+        `------------------------------------------------------------------------------
 	
-._1	set	1,(ix+$18)
+._39	set	1,(ix+$18)
 	ld	(ix+$14),$0a
 	push	hl
 	ld	a,l
@@ -869,18 +852,18 @@ PROC	:_4f01 {
 	pop	hl
 	ld	de,($.TEMP3)
 	ld	c,$00
-	jp	nc,:doObjectCode_Sonic._4b1b
+	jp	nc,._4b1b
 	res	1,(ix+$18)
 	ld	(ix+$14),$01
-	jp	:doObjectCode_Sonic._4b1b
+	jp	._4b1b
 ._4f5c
 	set	1,(ix+$18)
 	ld	a,l
 	or	h
-	jr	z,._2
+	jr	z,._40
 	bit	7,b
 	jr	z,._4fa6
-._2	ld	de,($.TEMP1)
+._40	ld	de,($.TEMP1)
 	ld	a,e
 	cpl	
 	ld	e,a
@@ -901,10 +884,10 @@ PROC	:_4f01 {
 	ld	h,a
 	inc	hl
 	ld	de,($.D240)
-	xor	a
+	xor	a;zero
 	sbc	hl,de
 	exx	
-	jp	c,:doObjectCode_Sonic._4b1b
+	jp	c,._4b1b
 	ld	e,a
 	ld	d,a
 	ld	c,a
@@ -919,7 +902,7 @@ PROC	:_4f01 {
 	ld	b,$ff
 	ld	a,($.D216)
 	ld	(ix+$14),a
-	jp	:doObjectCode_Sonic._4b1b
+	jp	._4b1b
 ._4fa6
 	res	1,(ix+$18)
 	ld	(ix+$14),$0a
@@ -939,55 +922,43 @@ PROC	:_4f01 {
 	and	a
 	sbc	hl,bc
 	exx	
-	jp	nc,:doObjectCode_Sonic._4b1b
+	jp	nc,._4b1b
 	set	1,(ix+$18)
 	ld	(ix+$14),$01
-	jp	:doObjectCode_Sonic._4b1b
-	
-	}
+	jp	._4b1b
 
         `--------------------------------------------------------------------[$4FD3]---
-PROC	:_4fd3 {
-	
-	bit	0,(ix+$18)
+        
+._4fd3  bit	0,(ix+$18)
 	ret	nz
 	ld	hl,($.D2B7)
 	ld	a,h
 	or	l
 	ret	z
 	bit	7,h
-	jr	z,._1
+	jr	z,._41
 	inc	hl
 	ld	($.D2B7),hl
 	ret
 	
-._1	dec	hl
+._41	dec	hl
 	ld	($.D2B7),hl
 	ret
 
-	}
-
         `--------------------------------------------------------------------[$4FEC]---
-PROC	:_4fec {
-	
-	dec	(ix+$15)
+        
+._4fec  dec	(ix+$15)
 	ret
-	
-	}
 
         `--------------------------------------------------------------------[$4FF0]---
-PROC	:_4ff0 {
-	
-	dec	a
+
+._4ff0	dec	a
 	ld	($D412),a
 	ret
-	
-	}
 
         `--------------------------------------------------------------------[$4FF5]---
-PROC	:_4ff5 {
-	
-	ld	a,($.FRAMECOUNT)
+        
+._4ff5  ld	a,($.FRAMECOUNT)
 	and	$03
 	ret	nz
 	ld	hl,$.D28D
@@ -1000,12 +971,9 @@ PROC	:_4ff5 {
 	
 	ret
 
-	}
-
         `--------------------------------------------------------------------[$5009]---
-PROC	:_5009 {
-	
-	ld	a,($.LEVEL_SOLIDITY)
+
+._5009  ld	a,($.LEVEL_SOLIDITY)
 	cp	$03
 	ret	nz
 	ld	a,($.CURRENT_LEVEL)
@@ -1020,7 +988,7 @@ PROC	:_5009 {
 	ret	c
 	ld	a,$05
 	sub	h
-	jr	nc,._1
+	jr	nc,._42
 	res	5,(iy+#vars.flags6)
 	res	6,(iy+#vars.flags6)
 	res	0,(iy+#vars.unknown0)
@@ -1036,8 +1004,8 @@ PROC	:_5009 {
 	call	:_91eb
 	call	:_91eb
 	call	:_91eb
-	xor	a
-._	ld	e,a
+	xor	a;zero
+._42	ld	e,a
 	add	a,a
 	add	a,$80
 	ld	($.D2BE),a
@@ -1048,10 +1016,10 @@ PROC	:_5009 {
 	add	hl,de
 	ld	a,($.FRAMECOUNT)
 	and	(hl)
-	jr	nz,._2
+	jr	nz,._43
 	ld	a,$1a
 	rst	:rst_playSFX
-._2	ld	a,($.FRAMECOUNT)
+._43	ld	a,($.FRAMECOUNT)
 	rrca	
 	ret	nc
 	ld	hl,($.SONIC.X)
@@ -1061,7 +1029,7 @@ PROC	:_5009 {
 	ld	a,l
 	add	a,$08
 	ld	c,a
-	ld	hl,($.SONIC.Y+0)
+	ld	hl,($.SONIC.Y)
 	ld	de,($.CAMERA_Y)
 	and	a
 	sbc	hl,de
@@ -1073,33 +1041,27 @@ PROC	:_5009 {
 	call	:_LABEL_35CC_117
 	ret
 
-._5097
-	DATA $01, $07, $0f, $1f, $3f, $7f
-	
-	}
+._5097  DATA $01, $07, $0f, $1f, $3f, $7f
 
         `--------------------------------------------------------------------[$509D]---
-PROC	:_509d {
-	
-	ld	a,$10
+        
+._509d  ld	a,$10
 	ld	($.D28E),a
 	ld	a,$00
 	rst	:rst_playSFX
 	ret
 
-	}
-
         `--- UNUSED! (8 bytes) ----------------------------------------------[$50A6]---
-	xor	a
-	ld	($D3FD),a
+        
+	xor	a;zero
+	ld	($.SONIC.Xsubpixel),a;zero
 	ld	($.SONIC.X),de
 	ret
 
         `--------------------------------------------------------------------[$50AF]---
-PROC	:_50af {
-	
-	exx	
-	ld	hl,($.SONIC.Y+0)
+
+._50af	exx	
+	ld	hl,($.SONIC.Y)
 	ld	($.D2D9),hl
 	exx	
 	bit	2,(ix+$18)
@@ -1107,12 +1069,9 @@ PROC	:_50af {
 	res	2,(ix+$18)
 	ret
 
-	}
-
         `--------------------------------------------------------------------[$50C1]---
-PROC	:_50c1 {
-	
-	bit	2,(ix+$18)
+        
+._50c1  bit	2,(ix+$18)
 	ret	nz
 	bit	0,(ix+$18)
 	ret	nz
@@ -1122,110 +1081,94 @@ PROC	:_50c1 {
 	ld	hl,($.SONIC.Xspeed)
 	ld	a,l
 	or	h
-	jr	z,._1
+	jr	z,._44
 	ld	a,$06
 	rst	:rst_playSFX
-._1	set	2,(iy+#vars.timeLightningFlags)
+._44	set	2,(iy+#vars.timeLightningFlags)
 	ret
-
-	}
 
         `--------------------------------------------------------------------[$50E3]---
-PROC	:_50e3 {
-	
-	res	2,(iy+#vars.timeLightningFlags)
+        
+._50e3  res	2,(iy+#vars.timeLightningFlags)
 	ret
 
-	}
-
         `--------------------------------------------------------------------[$50E8]---
-PROC	:_50e8 {
-	
-	ld	hl,($.D2DC)
-	ld	de,($.SONIC.Y+0)
+        
+._50e8  ld	hl,($.D2DC)
+	ld	de,($.SONIC.Y)
 	and	a
 	sbc	hl,de
-	jp	c,:_55a8
+	jp	c,._55a8
 	ld	hl,$0000
 	ld	($.D29B),hl
 	res	4,(ix+$18)
 	ret
 
-	}
-
         `--------------------------------------------------------------------[$5100]---
-PROC	:_5100 {
-	
-	set	2,(ix+$18)
+        
+._5100  set	2,(ix+$18)
 	ret
-
-	}
 
         `--------------------------------------------------------------------[$5105]---
-PROC	:_5105 {
-	
-	ld	(ix+$14),$0d
+        
+._5105  ld	(ix+$14),$0d
 	ret
 
-	}
-
         `--------------------------------------------------------------------[$510A]---
-PROC	:_510a {
-	
-	ld	(iy+#vars.joypad),$ff
+        
+._510a  ld	(iy+#vars.joypad),$ff
 	ld	a,($D414)
 	and	$fa
 	ld	($D414),a
 	ret
 
-	}
-
         `--------------------------------------------------------------------[$5117]---
-PROC	:_5117 {
-	
-	dec	a
+        
+._5117  dec	a
 	ld	($.D28A),a
-	jr	z,._2
+	jr	z,._46
 	cp	$14
-	jr	c,._1
-	xor	a
-	ld	l,a
-	ld	h,a
-	ld	($.SONIC.Xspeed+0),a
-	ld	($.SONIC.Xspeed+1),hl
-	ld	($.SONIC.Yspeed+0),a
-	ld	($.SONIC.Yspeed+1),hl
+	jr	c,._45
+        
+	xor	a;zero
+	ld	l;zero,a;zero
+	ld	h;zero,a;zero
+	ld	($.SONIC.Xspeed.lo),a;zero
+	ld	($.SONIC.Xspeed.hi),hl;zero
+	ld	($.SONIC.Yspeed.lo),a;zero
+	ld	($.SONIC.Yspeed.hi),hl;zero
+        
 	ld	(ix+$14),$0f
-	jp	:doObjectCode_Sonic._4c39
+	jp	._4c39
 	
-._1	res	1,(ix+$18)
+._45	res	1,(ix+$18)
 	ld	(ix+$14),$0e
-	jp	:doObjectCode_Sonic._4c39
+	jp	._4c39
 	
-._2	ld	hl,($.D2D5)
+._46	ld	hl,($.D2D5)
 	ld	b,(hl)
 	inc	hl
 	ld	c,(hl)
 	inc	hl
 	ld	a,(hl)
 	and	a
-	jr	z,._5
-	jp	m,._3
+	jr	z,._49
+	jp	m,._47
 	ld	($.D2D3),a
 	set	4,(iy+#vars.flags6)
-	jr	._4	
-._3	set	2,(iy+#vars.unknown_0D)
-._4	ld	a,$01
+	jr	._48	
+._47	set	2,(iy+#vars.unknown_0D)
+._48	ld	a,$01
 	ld	($.D289),a
 	ret
 	
-._5	ld	a,b
+._49	ld	a,b
 	ld	h,$00
 	ld	b,$05
 	
-.loop	add	a,a
+._50	add	a,a
 	rl	h
-	djnz	.loop
+	djnz	._50
 	
 	ld	l,a
 	ld	de,$0008
@@ -1244,64 +1187,55 @@ PROC	:_5117 {
 	add	a,a
 	rl	h
 	ld	l,a
-	ld	($.SONIC.Y+0),hl
-	xor	a
-	ld	($D3FD),a
-	ld	($D400),a
+	ld	($.SONIC.Y),hl
+        
+	xor	a;zero
+	ld	($.SONIC.Xsubpixel),a;zero
+	ld	($.SONIC.Ysubpixel),a;zero
 	ret
 
-	}
-
         `--------------------------------------------------------------------[$5193]---
-PROC	:_5193 {
+        
+._5193  xor	a;zero			        `set A to 0
+	ld	l;zero,a;zero
+	ld	h;zero,a;zero
+	ld	($.SONIC.Yspeed),hl;zerp
+	ld	($.SONIC.Ydirection),a;zero     `set "not jumping"
 	
-	xor	a			`set A to 0
-	ld	l,a
-	ld	h,a
-	ld	($.SONIC.Yspeed),hl
-	ld	($.SONIC.Ydirection),a	`set "not jumping"
-	ld	(ix+$14),$16
+        ld	(ix+$14),$16
 	ld	a,($D40F)
 	cp	$12
-	jp	c,:doObjectCode_Sonic._4c39
+	jp	c,._4c39
 	res	6,(iy+#vars.unknown0)
 	set	2,(ix+$18)
-	jp	:doObjectCode_Sonic._4c39
-
-	}
+	jp	._4c39
 
         `--------------------------------------------------------------------[$51B3]---
-PROC	:_51b3 {
-	
-	dec	a
+
+._51b3  dec	a
 	ld	($.D28C),a
 	ld	(ix+$14),$11
 	ret
 
-	}
-
         `--------------------------------------------------------------------[$51BC]---
-PROC	:_51bc {
-	
-	ld	(ix+#object.width),$1c
+        
+._51bc  ld	(ix+#object.width),$1c
 	ld	(ix+$14),$10
 	bit	7,(ix+#object.Ydirection)
 	ret	nz
 	bit	7,(ix+$18)
 	ret	z
 	res	6,(iy+#vars.flags6)
-	xor	a
-	ld	($.SONIC.Xspeed+0),a
-	ld	($.SONIC.Xspeed+1),a
-	ld	($.SONIC.Xdirection),a
+        
+	xor	a;zero
+	ld	($.SONIC.Xspeed.lo),a;zero
+	ld	($.SONIC.Xspeed.hi),a;zero
+	ld	($.SONIC.Xdirection),a;zero
 	ret
 
-	}
-
         `--------------------------------------------------------------------[$51DD]---
-PROC	:_51dd {
-	
-	ld	a,($D414)
+
+._51dd  ld	a,($D414)
 	and	$fa
 	ld	($D414),a
 	ld	(ix+$14),$14
@@ -1311,12 +1245,9 @@ PROC	:_51dd {
 	res	2,(iy+#vars.unknown0)
 	ret
 
-	}
-
         `--------------------------------------------------------------------[$51F3]---
-PROC	:_51f3 {
-	
-	ld	a,($D412)
+
+._51f3	ld	a,($D412)
 	and	a
 	ret	nz
 	bit	7,(ix+$18)
@@ -1327,68 +1258,50 @@ PROC	:_51f3 {
 	ld	($D412),a
 	ret
 
-	}
-
         `--------------------------------------------------------------------[$5206]---
-PROC	:_5206 {
-	
-	ld	a,($.FRAMECOUNT)
+        
+._5206  ld	a,($.FRAMECOUNT)
 	and	$01
 	ret	nz
 	ld	d,$18
 	ret
 
-	}
-
         `--------------------------------------------------------------------[$520F]---
-PROC	:_520f {
-	
-	ld	hl,:_592b
+        
+._520f  ld	hl,._592b
 	ret
-	
-	}
 
         `--------------------------------------------------------------------[$5213]---
-PROC	:_5213 {
-	
-	ld	hl,:_5939
+        
+._5213  ld	hl,._5939
 	bit	1,(ix+$18)
 	ret	z
-	ld	hl,:_594b
+	ld	hl,._594b
 	ret
-
-	}
 
         `--------------------------------------------------------------------[$521F]---
-PROC	:_521f {
-	
-	ld	(ix+$13),$00
+        
+._521f  ld	(ix+$13),$00
 	ret
 
-	}
-
         `--------------------------------------------------------------------[$5224]---
-PROC	:_5224 {
-	
-	bit	4,(ix+$18)
+        
+._5224  bit	4,(ix+$18)
 	ret	z
 	ld	a,($.FRAMECOUNT)
 	and	a
 	call	z,:_91eb
 	ret
 
-	}
-
         `--------------------------------------------------------------------[$5231]---
-PROC	:_5231 {
-	
-	dec	a
+        
+._5231  dec	a
 	ld	($.D2E1),a
 	cp	$06
-	jr	c,._1
+	jr	c,._51
 	cp	$0a
 	ret	c
-._1	ld	a,(iy+#vars.spriteUpdateCount)
+._51	ld	a,(iy+#vars.spriteUpdateCount)
 	ld	hl,($.SPRITES_CURRENT)
 	push	af
 	push	hl
@@ -1403,7 +1316,7 @@ PROC	:_5231 {
 	ld	hl,($.D2E2)
 	and	a
 	sbc	hl,bc
-	ld	bc,._526e		`address of sprite layout
+	ld	bc,._526e		        `address of sprite layout
 	call	:processSpriteLayout
 	
 	pop	hl
@@ -1417,20 +1330,14 @@ PROC	:_5231 {
 	DATA $20, $22, $24, $26, $FF, $FF
 	DATA $FF, $FF, $FF, $FF, $FF, $FF
 
-	}
-
         `--------------------------------------------------------------------[$5280]---
-PROC	:_5280 {
-	
-	ld	(ix+$14),$09
+        
+._5280  ld	(ix+$14),$09
 	ret
 
-	}
-
         `--------------------------------------------------------------------[$5285]---
-PROC	:_5285 {
-	
-	dec	a
+        
+._5285  dec	a
 	ld	($.D28B),a
 	ret	nz
 	
@@ -1443,12 +1350,9 @@ PROC	:_5285 {
 	ld	(iy+#vars.spriteUpdateCount),c
 	ret
 
-	}
-
         `--------------------------------------------------------------------[$529C]---
-PROC	:_529c {
-	
-	ld	(iy+#vars.joypad),$fb
+        
+._529c  ld	(iy+#vars.joypad),$fb
 	ld	hl,($.SONIC.X)
 	ld	de,$1b60
 	and	a
@@ -1465,62 +1369,59 @@ PROC	:_529c {
 	ld	(ix+$14),$18
 	ld	hl,$D2FE
 	bit	0,(iy+#vars.unknown_0D)
-	jr	nz,._1
+	jr	nz,._52
 	ld	(hl),$50
 	call	:_7c7b
-	jp	c,:doObjectCode_Sonic._4c39
+	jp	c,._4c39
 	push	ix
 	push	hl
 	pop	ix
-	xor	a			`set A to 0
-	ld	(ix+#object.type),$54	`all emeralds animation
-	ld	(ix+$11),a
-	ld	(ix+$18),a
-	ld	(ix+$01),a
+	xor	a;zero			        `set A to 0
+	ld	(ix+#object.type),$54	        `all emeralds animation
+	ld	(ix+$11),a;zero
+	ld	(ix+$18),a;zero
+	ld	(ix+#object.Xsubpixel),a;zero
 	ld	hl,($.SONIC.X)
 	ld	de,$0002
 	add	hl,de
-	ld	(ix+#object.X+0),l
-	ld	(ix+#object.X+1),h
-	ld	(ix+$04),a
-	ld	hl,($.SONIC.Y+0)
+	ld	(ix+#object.X.lo),l
+	ld	(ix+#object.X.hi),h
+	ld	(ix+#object.Ysubpixel),a;zero
+	ld	hl,($.SONIC.Y)
 	ld	de,$000e
 	add	hl,de
-	ld	(ix+#object.Y+0),l
-	ld	(ix+#object.Y+1),h
+	ld	(ix+#object.Y.lo),l
+	ld	(ix+#object.Y.hi),h
 	pop	ix
 	set	0,(iy+#vars.unknown_0D)
-	jp	:doObjectCode_Sonic._4c39
+	jp	._4c39
 	
-._1	bit	1,(iy+#vars.unknown_0D)
-	jr	nz,._2
+._52	bit	1,(iy+#vars.unknown_0D)
+	jr	nz,._53
 	dec	(hl)
-	jp	nz,:doObjectCode_Sonic._4c39
+	jp	nz,._4c39
 	set	1,(iy+#vars.unknown_0D)
 	ld	(hl),$8c
-._2	ld	(ix+$14),$17
+._53	ld	(ix+$14),$17
 	ld	a,(hl)
 	and	a
-	jr	z,._3
+	jr	z,._54
 	dec	(hl)
-	jp	:doObjectCode_Sonic._4c39
+	jp	._4c39
 	
-._3	ld	(ix+$14),$19
-	jp	:doObjectCode_Sonic._4c39
-
-	}
+._54	ld	(ix+$14),$19
+	jp	._4c39
 
         `--------------------------------------------------------------------[$532E]---
-PROC	:_532e {
-	
-	ld	a,(ix+#object.height)
+        
+._532e  ld	a,(ix+#object.height)
 	cp	$18
-	jr	z,._1
-	ld	hl,($.SONIC.Y+0)
+	jr	z,._55
+	ld	hl,($.SONIC.Y)
 	ld	de,$0008
 	add	hl,de
-	ld	($.SONIC.Y+0),hl
-._1	ld	(ix+#object.width),$18
+	ld	($.SONIC.Y),hl
+._55	ld	(ix+#object.width),$18
 	ld	(ix+#object.height),$18
 	ld	hl,($.SONIC.Xspeed)
 	ld	b,(ix+#object.Xdirection)
@@ -1530,67 +1431,67 @@ PROC	:_532e {
 	ld	a,h
 	or	l
 	or	b
-	jp	z,._6
+	jp	z,._60
 	ld	(ix+$14),$09
 	bit	2,(iy+#vars.joypad)
-	jr	nz,._3
+	jr	nz,._57
 	bit	1,(iy+#vars.joypad)
-	jr	z,._3
+	jr	z,._57
 	bit	7,(ix+$18)
-	jp	z,._2
+	jp	z,._56
 	bit	7,b
-	jr	nz,._5
+	jr	nz,._59
 	res	0,(ix+$18)
-	jp	:_4f01._4fa6
+	jp	._4fa6
 	
-._2	ld	de,$fff0
+._56	ld	de,$fff0
 	ld	c,$ff
-	jp	:doObjectCode_Sonic._4b1b
+	jp	._4b1b
 	
-._3	bit	3,(iy+#vars.joypad)
-	jr	nz,._5
+._57	bit	3,(iy+#vars.joypad)
+	jr	nz,._59
 	bit	1,(iy+#vars.joypad)
-	jr	z,._5
+	jr	z,._59
 	bit	7,(ix+$18)
-	jp	z,._4
+	jp	z,._58
 	bit	7,b
-	jr	z,._5
+	jr	z,._59
 	res	0,(ix+$18)
-	jp	:_4f01._4fa6
+	jp	._4fa6
 	
-._4	ld	de,$0010
+._58	ld	de,$0010
 	ld	c,$00
-	jp	:doObjectCode_Sonic._4b1b
+	jp	._4b1b
 	
-._5	ld	de,$0004
+._59	ld	de,$0004
 	ld	c,$00
 	ld	a,b
 	and	a
-	jp	m,:doObjectCode_Sonic._4b1b
+	jp	m,._4b1b
 	ld	de,$fffc
 	ld	c,$ff
-	jp	:doObjectCode_Sonic._4b1b
+	jp	._4b1b
 	
-._6	bit	7,(ix+$18)
-	jr	z,._8
+._60	bit	7,(ix+$18)
+	jr	z,._62
 	ld	(ix+$14),$07
 	res	0,(ix+$18)
 	ld	de,($.D2B7)
 	bit	7,d
-	jr	z,._7
+	jr	z,._61
 	ld	hl,$ffb0
 	and	a
 	sbc	hl,de
-	jp	nc,:doObjectCode_Sonic._4b49
-._7	dec	de
+	jp	nc,._4b49
+._61	dec	de
 	ld	($.D2B7),de
-	jp	:doObjectCode_Sonic._4b49
+	jp	._4b49
 	
-._8	ld	(ix+$14),$09
+._62	ld	(ix+$14),$09
 	push	de
 	push	hl
 	bit	7,b
-	jr	z,._9
+	jr	z,._63
 	ld	a,l
 	cpl	
 	ld	l,a
@@ -1598,59 +1499,53 @@ PROC	:_532e {
 	cpl	
 	ld	h,a
 	inc	hl
-._9	ld	de,($.D240)
-	xor	a
+._63	ld	de,($.D240)
+	xor	a;zero
 	sbc	hl,de
 	pop	hl
 	pop	de
-	jp	c,:doObjectCode_Sonic._4b1b
+	jp	c,._4b1b
 	ld	c,a
 	ld	e,c
 	ld	d,c
 	ld	(ix+$14),$09
-	jp	:doObjectCode_Sonic._4b1b
-
-	}
+	jp	._4b1b
 
         `--------------------------------------------------------------------[$5407]---
-PROC	:_5407 {
-	
-	bit	7,(ix+$18)
-	jr	z,._2
+        
+._5407  bit	7,(ix+$18)
+	jr	z,._65
 	bit	3,(ix+$18)
-	jr	nz,._1
+	jr	nz,._64
 	bit	5,(iy+#vars.joypad)
-	jr	z,._2
-._1	bit	5,(iy+#vars.joypad)
-	jr	nz,._3
+	jr	z,._65
+._64	bit	5,(iy+#vars.joypad)
+	jr	nz,._66
 	res	0,(ix+$18)
 	ld	a,($.SONIC.Xspeed)
 	and	$f8
 	ld	($.SONIC.Xspeed),a
-	jp	:doObjectCode_Sonic._4b7f
+	jp	._4b7f
 	
-._2	res	3,(ix+$18)
-	jp	:doObjectCode_Sonic._4bac
-._3	set	3,(ix+$18)
-	jp	:doObjectCode_Sonic._4bac
-
-	}
+._65	res	3,(ix+$18)
+	jp	._4bac
+._66	set	3,(ix+$18)
+	jp	._4bac
 
         `--------------------------------------------------------------------[$543C]---
-PROC	:_543c {
-	
-	set	5,(ix+$18)
+        
+._543c  set	5,(ix+$18)
 	ld	a,($.D287)
 	cp	$60
 	jr	z,._54aa
 	ld	hl,($.CAMERA_Y)
 	ld	de,$00c0
 	add	hl,de
-	ld	de,($.SONIC.Y+0)
+	ld	de,($.SONIC.Y)
 	sbc	hl,de
-	jr	nc,._1
+	jr	nc,._67
 	bit	2,(iy+#vars.flags6)
-	jr	nz,._1
+	jr	nz,._67
 	ld	a,$01
 	ld	($.D283),a
 	ld	hl,$.LIVES
@@ -1658,93 +1553,81 @@ PROC	:_543c {
 	set	2,(iy+#vars.flags6)
 	jp	._54aa
 	
-._2	xor	a
+._67	xor	a;zero
 	ld	hl,$0080
 	bit	3,(iy+#vars.unknown0)
-	jr	nz,._5
+	jr	nz,._71
 	ld	de,($.SONIC.Yspeed)
 	bit	7,d
-	jr	nz,._2
+	jr	nz,._68
 	ld	hl,$0600
 	and	a
 	sbc	hl,de
-	jr	c,._6
-._2	ex	de,hl
+	jr	c,._72
+._68	ex	de,hl
 	ld	b,(ix+#object.Ydirection)
 	ld	a,h
 	cp	$80
-	jr	nc,._3
+	jr	nc,._69
 	cp	$08
-	jr	nc,._4
-._3	ld	de,$0030
+	jr	nc,._70
+._69	ld	de,$0030
 	ld	c,$00
-._4	add	hl,de
+._70	add	hl,de
 	ld	a,b
 	adc	a,c
-._5	ld	($.SONIC.Yspeed),hl
+._71	ld	($.SONIC.Yspeed),hl
 	ld	($.SONIC.Ydirection),a
-._6	xor	a
-	ld	l,a
-	ld	h,a
-	ld	($.SONIC.Xspeed),hl
-	ld	($.SONIC.Xdirection),a
+._72	xor	a;zero
+	ld	l;zero,a;zero
+	ld	h;zero,a;zero
+	ld	($.SONIC.Xspeed),hl;zero
+	ld	($.SONIC.Xdirection),a;zero
 
 ._54aa
 	ld	(ix+$14),$0b
 	bit	3,(iy+#vars.unknown0)
-	jp	z,:doObjectCode_Sonic._4c39
+	jp	z,._4c39
 	ld	(ix+$14),$15
-	jp	:doObjectCode_Sonic._4c39
+	jp	._4c39
 
-	}
+        `====================================================================[$54BC]===
+        `referenced by table at `_58e5`
 
-        `--------------------------------------------------------------------[$54BC]---
-        `referenced by table at `_58e5`, part of `doObjectCode_Sonic`
-
-PROC	:_54bc {
-	
-	bit	7,(iy+#vars.flags6)
+._54bc  bit	7,(iy+#vars.flags6)
 	ret	nz
 	res	4,(ix+$18)
 	ret
 
-	}
+        `====================================================================[$54C6]===
+        `referenced by table at `_58e5`
 
-        `--------------------------------------------------------------------[$54C6]---
-        `referenced by table at `_58e5`, part of `doObjectCode_Sonic`
-
-PROC	:_54c6 {
-	
-	bit	0,(iy+#vars.scrollRingFlags)
+._54c6  bit	0,(iy+#vars.scrollRingFlags)
 	jp	z,:_35fd
 	ret
 
-	}
+        `====================================================================[$54CE]===
+        `referenced by table at `_58e5`
 
-        `--------------------------------------------------------------------[$54CE]---
-        `referenced by table at `_58e5`, part of `doObjectCode_Sonic`
-
-PROC	:_54ce {
-	
-	ld	a,(ix+#object.X+0)
+._54ce  ld	a,(ix+#object.X.lo)
 	add	a,$0c
 	and	$1f
 	cp	$1a
 	ret	c
 	ld	a,($D414)
 	rrca	
-	jr	c,._1
+	jr	c,._73
 	and	$02
 	ret	z
-._1	ld	l,(ix+#object.Xspeed+0)
-	ld	h,(ix+#object.Xspeed+1)
+._73	ld	l,(ix+#object.Xspeed.lo)
+	ld	h,(ix+#object.Xspeed.hi)
 	bit	7,(ix+#object.Xdirection)
 	ret	nz
 	ld	de,$0301
 	and	a
 	sbc	hl,de
 	ret	c
-	ld	l,(ix+#object.Xspeed+1)
+	ld	l,(ix+#object.Xspeed.hi)
 	ld	h,(ix+#object.Xdirection)
 	add	hl,hl
 	ld	a,l
@@ -1754,41 +1637,33 @@ PROC	:_54ce {
 	cpl	
 	ld	h,a
 	inc	hl
-	ld	(ix+#object.Yspeed+0),$00
-	ld	(ix+#object.Yspeed+1),l
+	ld	(ix+#object.Yspeed.lo),$00
+	ld	(ix+#object.Yspeed.hi),l
 	ld	(ix+#object.Ydirection),h
 	ld	a,$05
 	rst	:rst_playSFX
 	ret
 
-	}
+        `====================================================================[$550F]===
+        `referenced by table at `_58e5`
 
-        `--------------------------------------------------------------------[$550F]---
-        `referenced by table at `_58e5`, part of `doObjectCode_Sonic`
-
-PROC	:_550f {
-	
-	ld	a,(ix+#object.X+0)
+._550f  ld	a,(ix+#object.X.lo)
 	add	a,$0c
 	and	$1f
 	cp	$10
 	ret	c
-	ld	(ix+#object.Xspeed+0),$00
-	ld	(ix+#object.Xspeed+1),$f8
+	ld	(ix+#object.Xspeed.lo),$00
+	ld	(ix+#object.Xspeed.hi),$f8
 	ld	(ix+#object.Xdirection),$ff
 	set	1,(ix+$18)
 	ld	a,$04
 	rst	:rst_playSFX
 	ret
 
-	}
+        `====================================================================[$552D]===
+        `referenced by table at `_58e5`
 
-        `--------------------------------------------------------------------[$552D]---
-        `referenced by table at `_58e5`, part of `doObjectCode_Sonic`
-
-PROC	:_552d {
-	
-	ld	a,(ix+#object.X+0)
+._552d  ld	a,(ix+#object.X.lo)
 	add	a,$0c
 	and	$1f
 	cp	$10
@@ -1799,92 +1674,72 @@ PROC	:_552d {
 	and	$80
 	ret	nz
 	res	6,(iy+#vars.flags6)
-	ld	(ix+#object.Yspeed+0),$00
-	ld	(ix+#object.Yspeed+1),$f4
+	ld	(ix+#object.Yspeed.lo),$00
+	ld	(ix+#object.Yspeed.hi),$f4
 	ld	(ix+#object.Ydirection),$ff
 	ld	a,$04
 	rst	:rst_playSFX
 	ret
 
-	}
+        `====================================================================[$5556]===
+        `referenced by table at `_58e5`
 
-        `--------------------------------------------------------------------[$5556]---
-        `referenced by table at `_58e5`, part of `doObjectCode_Sonic`
-
-PROC	:_5556 {
-	
-	ld	a,(ix+#object.X+0)
+._5556  ld	a,(ix+#object.X.lo)
 	add	a,$0c
 	and	$1f
 	cp	$10
 	ret	nc
 	res	6,(iy+#vars.flags6)
-	ld	(ix+#object.Xspeed+0),$00
-	ld	(ix+#object.Xspeed+1),$08
+	ld	(ix+#object.Xspeed.lo),$00
+	ld	(ix+#object.Xspeed.hi),$08
 	ld	(ix+#object.Xdirection),$00
 	res	1,(ix+$18)
 	ld	a,$04
 	rst	:rst_playSFX
 	ret
 
-	}
+        `====================================================================[$5578]===
+        `referenced by table at `_58e5`
 
-        `--------------------------------------------------------------------[$5578]---
-        `referenced by table at `_58e5`, part of `doObjectCode_Sonic`
-
-PROC	:_5578 {
-	
-	bit	7,(ix+$18)
+._5578  bit	7,(ix+$18)
 	ret	z
-	ld	hl,($D3FD)
-	ld	a,($.SONIC.X+1)
+	ld	hl,($.SONIC.Xsubpixel)
+	ld	a,($.SONIC.X.hi)
 	ld	de,$fe80
 	add	hl,de
 	adc	a,$ff
-	ld	($D3FD),hl
-	ld	($.SONIC.X+1),a
+	ld	($.SONIC.Xsubpixel),hl
+	ld	($.SONIC.X.hi),a
 	ret
 
-	}
+        `====================================================================[$5590]===
+        `referenced by table at `_58e5`
 
-        `--------------------------------------------------------------------[$5590]---
-        `referenced by table at `_58e5`, part of `doObjectCode_Sonic`
-
-PROC	:_5590 {
-	
-	bit	7,(ix+$18)
+._5590  bit	7,(ix+$18)
 	ret	z
-	ld	hl,($D3FD)
-	ld	a,($.SONIC.X+1)
+	ld	hl,($.SONIC.Xsubpixel)
+	ld	a,($.SONIC.X.hi)
 	ld	de,$0200
 	add	hl,de
 	adc	a,$00
-	ld	($D3FD),hl
-	ld	($.SONIC.X+1),a
+	ld	($.SONIC.Xsubpixel),hl
+	ld	($.SONIC.X.hi),a
 	ret
 
-	}
+        `====================================================================[$55A8]===
+        `referenced by table at `_58e5`
 
-        `--------------------------------------------------------------------[$55A8]---
-        `referenced by table at `_58e5`, part of `doObjectCode_Sonic`
-
-PROC	:_55a8 {
-	
-	bit	4,(ix+$18)
-	jr	nz,._1
+._55a8  bit	4,(ix+$18)
+	jr	nz,._74
 	ld	a,$12
 	rst	:rst_playSFX
-._1	set	4,(ix+$18)
+._74	set	4,(ix+$18)
 	ret
 
-	}
+        `====================================================================[$55B6]===
+        `referenced by table at `_58e5`
 
-        `--------------------------------------------------------------------[$55B6]---
-        `referenced by table at `_58e5`, part of `doObjectCode_Sonic`
-
-PROC	:_55b6 {
-	
-	ld	a,(ix+#object.X+0)
+._55b6  ld	a,(ix+#object.X.lo)
 	add	a,$0c
 	and	$1f
 	cp	$08
@@ -1897,34 +1752,26 @@ PROC	:_55b6 {
 	and	$80
 	ret	nz
 	res	6,(iy+#vars.flags6)
-	ld	(ix+#object.Yspeed+0),$00
-	ld	(ix+#object.Yspeed+1),$f4
+	ld	(ix+#object.Yspeed.lo),$00
+	ld	(ix+#object.Yspeed.hi),$f4
 	ld	(ix+#object.Ydirection),$ff
 	ld	a,$04
 	rst	:rst_playSFX
 	ret
 
-	}
+        `====================================================================[$55E2]===
+        `referenced by table at `_58e5`
 
-        `--------------------------------------------------------------------[$55E2]---
-        `referenced by table at `_58e5`, part of `doObjectCode_Sonic`
-
-PROC 	:_55e2 {
-	
-	bit	7,(ix+#object.Ydirection)
+._55e2  bit	7,(ix+#object.Ydirection)
 	ret	nz
 	ld	a,$05
 	rst	:rst_playSFX
 	ret
 
-	}
+        `====================================================================[$55EB]===
+        `referenced by table at `_58e5`
 
-        `--------------------------------------------------------------------[$55EB]---
-        `referenced by table at `_58e5`, part of `doObjectCode_Sonic`
-
-PROC	:_55eb {
-	
-	bit	4,(iy+#vars.flags6)
+._55eb  bit	4,(iy+#vars.flags6)
 	ret	nz
 	ld	a,($.SONIC.X)
 	add	a,$0c
@@ -1944,7 +1791,7 @@ PROC	:_55eb {
 	add	a,a
 	rl	h
 	ld	e,h
-	ld	hl,($.SONIC.Y+0)
+	ld	hl,($.SONIC.Y)
 	ld	bc,$0010
 	add	hl,bc
 	ld	a,l
@@ -1958,13 +1805,13 @@ PROC	:_55eb {
 	ld	hl,._5643
 	ld	b,$05
 	
-.loop	ld	a,(hl)
+._75	ld	a,(hl)
 	inc	hl
 	cp	e
-	jr	nz,._1
+	jr	nz,._76
 	ld	a,(hl)
 	cp	d
-	jr	nz,._1
+	jr	nz,._76
 	inc	hl
 	ld	($.D2D5),hl
 	ld	a,$50
@@ -1973,25 +1820,21 @@ PROC	:_55eb {
 	rst	:rst_playSFX
 	ret
 
-._1	inc	hl
+._76	inc	hl
 	inc	hl
 	inc	hl
 	inc	hl
-	djnz	.loop
+	djnz	._75
 	
 	ret
 
 ._5643	DATA $34 $3C $34 $2F $00 $19 $3A $19 $04 $00 $0E $3A $00 $00 $16 $1B
 	DATA $32 $00 $00 $17 $2F $0C $00 $00 $FF
-	
-	}
 
-        `--------------------------------------------------------------------[$565C]---
-        `referenced by table at `_58e5`, part of `doObjectCode_Sonic`
+        `====================================================================[$565C]===
+        `referenced by table at `_58e5`
 
-PROC	:_565c {
-	
-	ld	hl,($.SONIC.Xspeed)
+._565c  ld	hl,($.SONIC.Xspeed)
 	ld	a,($.SONIC.Xdirection)
 	ld	de,$fff8
 	add	hl,de
@@ -1999,94 +1842,71 @@ PROC	:_565c {
 	ld	($.SONIC.Xspeed),hl
 	ld	($.SONIC.Xdirection),a
 	bit	4,(ix+$18)
-	jr	nz,._1
+	jr	nz,._77
 	ld	a,$12
 	rst	:rst_playSFX
-._1	set	4,(ix+$18)
+._77	set	4,(ix+$18)
 	ret
 
-	}
+        `====================================================================[$567C]===
+        `referenced by table at `_58e5`
 
-        `--------------------------------------------------------------------[$567C]---
-        `referenced by table at `_58e5`, part of `doObjectCode_Sonic`
-
-PROC	:_567c {
-	
-	xor	a			`set A to 0
+._567c  xor	a;zero			        `set A to 0
 	ld	hl,$0005
-	ld	($.SONIC.Xspeed+0),a
-	ld	($.SONIC.Xspeed+1),hl
+	ld	($.SONIC.Xspeed.lo),a;zero
+	ld	($.SONIC.Xspeed.hi),hl
 	res	1,(ix+$18)
 ._568a	ld	a,$06
 	ld	($.D28C),a
 
-	}
-
         `--------------------------------------------------------------------[$568F]---
-PROC	:_568f {
-	
-	ld	a,(iy+#vars.joypad)
+
+._568f  ld	a,(iy+#vars.joypad)
 	or	$0f
 	ld	(iy+#vars.joypad),a
 	ld	hl,$0004
-	ld	($.SONIC.Yspeed+1),hl
+	ld	($.SONIC.Yspeed.hi),hl
 	res	0,(ix+$18)
 	res	2,(ix+$18)
 	ret
 
-	}
+        `====================================================================[$56A6]===
+        `referenced by table at `_58e5`
 
-        `--------------------------------------------------------------------[$56A6]---
-        `referenced by table at `_58e5`, part of `doObjectCode_Sonic`
-
-PROC	:_56a6 {
-	
-	xor	a
+._56a6  xor	a;zero
 	ld	hl,$0006
-	ld	($.SONIC.Xspeed+0),a
-	ld	($.SONIC.Xspeed+1),hl
+	ld	($.SONIC.Xspeed.lo),a;zero
+	ld	($.SONIC.Xspeed.hi),hl
 	res	1,(ix+$18)
-	jr	:_567c._568a
+	jr	._568a
 
-	}
+        `====================================================================[$56B6]===
+        `referenced by table at `_58e5`
 
-        `--------------------------------------------------------------------[$56B6]---
-        `referenced by table at `_58e5`, part of `doObjectCode_Sonic`
-
-PROC	:_56b6 {
-	
-	xor	a
+._56b6  xor	a;zero
 	ld	hl,$fffb
-	ld	($.SONIC.Xspeed+0),a
-	ld	($.SONIC.Xspeed+1),hl
+	ld	($.SONIC.Xspeed.lo),a;zero
+	ld	($.SONIC.Xspeed.hi),hl
 	set	1,(ix+$18)
-	jr	:_567c._568a
+	jr	._568a
 
-	}
+        `====================================================================[$56C6]===
+        `referenced by table at `_58e5`
 
-        `--------------------------------------------------------------------[$56C6]---
-        `referenced by table at `_58e5`, part of `doObjectCode_Sonic`
-
-PROC	:_56c6 {
-	
-	xor	a
+._56c6  xor	a;zero
 	ld	hl,$fffa
-	ld	($.SONIC.Xspeed+0),a
-	ld	($.SONIC.Xspeed+1),hl
+	ld	($.SONIC.Xspeed.lo),a;zero
+	ld	($.SONIC.Xspeed.hi),hl
 	set	1,(ix+$18)
-	jr	:_567c._568a
-
-	}
+	jr	._568a
 	
-        `--------------------------------------------------------------------[$56D6]---
-        `referenced by table at `_58e5`, part of `doObjectCode_Sonic`
+        `====================================================================[$56D6]===
+        `referenced by table at `_58e5`
 
-PROC	:_56d6 {
-	
-	ld	a,($.D2E1)
+._56d6  ld	a,($.D2E1)
 	cp	$08
 	ret	nc
-	call	:_5727
+	call	._5727
 	ld	de,$0001
 	ld	hl,($.SONIC.Yspeed)
 	ld	a,l
@@ -2100,11 +1920,11 @@ PROC	:_56d6 {
 	add	hl,de
 	adc	a,$00
 	and	a
-	jp	p,._
+	jp	p,._78
 	ld	de,$ffc8
 	add	hl,de
 	adc	a,$ff
-._	ld	($.SONIC.Yspeed),hl
+._78	ld	($.SONIC.Yspeed),hl
 	ld	($.SONIC.Ydirection),a
 	ld	bc,$000c
 	ld	hl,($.SONIC.X)
@@ -2114,7 +1934,7 @@ PROC	:_56d6 {
 	ld	l,a
 	ld	($.D2E2),hl
 	ld	bc,$0010
-	ld	hl,($.SONIC.Y+0)
+	ld	hl,($.SONIC.Y)
 	add	hl,bc
 	ld	a,l
 	and	$e0
@@ -2126,14 +1946,10 @@ PROC	:_56d6 {
 	rst	:rst_playSFX
 	ret
 
-	}
-
         `--------------------------------------------------------------------[$5727]---
-        `called by functions referenced by `58e5`, part of `doObjectCode_Sonic`
+        `called by functions referenced by `_58e5`
 
-PROC	:_5727 {
-	
-	ld	hl,($.SONIC.Xspeed)
+._5727  ld	hl,($.SONIC.Xspeed)
 	ld	a,($.SONIC.Xdirection)
 	ld	c,a
 	and	$80
@@ -2144,7 +1960,7 @@ PROC	:_5727 {
 	sub	$10
 	and	$80
 	cp	b
-	jr	z,._1
+	jr	z,._79
 	ld	a,l
 	cpl	
 	ld	l,a
@@ -2154,7 +1970,7 @@ PROC	:_5727 {
 	ld	a,c
 	cpl	
 	ld	c,a
-._1	ld	de,$0001
+._79	ld	de,$0001
 	ld	a,c
 	add	hl,de
 	adc	a,$00
@@ -2170,56 +1986,40 @@ PROC	:_5727 {
 	ld	($.SONIC.Xdirection),a
 	ret
 
-	}
+        `====================================================================[$5761]===
+        `referenced by table at `_58e5`
 
-        `--------------------------------------------------------------------[$5761]---
-        `referenced by table at `_58e5`, part of `doObjectCode_Sonic`
-
-PROC	:_5761 {
-	
-	ld	(ix+#object.Yspeed+0),$00
-	ld	(ix+#object.Yspeed+1),$f6
+._5761  ld	(ix+#object.Yspeed.lo),$00
+	ld	(ix+#object.Yspeed.hi),$f6
 	ld	(ix+#object.Ydirection),$ff
 	ld	a,$04
 	rst	:rst_playSFX
 	ret
 
-	}
+        `====================================================================[$5771]===
+        `referenced by table at `_58e5`
 
-        `--------------------------------------------------------------------[$5771]---
-        `referenced by table at `_58e5`, part of `doObjectCode_Sonic`
-
-PROC	:_5771 {
-	
-	ld	(ix+#object.Yspeed+0),$00
-	ld	(ix+#object.Yspeed+1),$f4
+._5771  ld	(ix+#object.Yspeed.lo),$00
+	ld	(ix+#object.Yspeed.hi),$f4
 	ld	(ix+#object.Ydirection),$ff
 	ld	a,$04
 	rst	:rst_playSFX
 	ret
 
-	}
+        `====================================================================[$5781]===
+        `referenced by table at `_58e5`
 
-        `--------------------------------------------------------------------[$5781]---
-        `referenced by table at `_58e5`, part of `doObjectCode_Sonic`
-
-PROC	:_5781 {
-	
-	ld	(ix+#object.Yspeed+0),$00
-	ld	(ix+#object.Yspeed+1),$f2
+._5781  ld	(ix+#object.Yspeed.lo),$00
+	ld	(ix+#object.Yspeed.hi),$f2
 	ld	(ix+#object.Ydirection),$ff
 	ld	a,$04
 	rst	:rst_playSFX
 	ret
 
-	}
+        `====================================================================[$5791]===
+        `referenced by table at `_58e5`
 
-        `--------------------------------------------------------------------[$5791]---
-        `referenced by table at `_58e5`, part of `doObjectCode_Sonic`
-
-PROC	:_5791 {
-	
-	ld	a,($.D2B1)
+._5791  ld	a,($.D2B1)
 	and	a
 	ret	nz
 	ld	de,$0001
@@ -2236,10 +2036,10 @@ PROC	:_5791 {
 	adc	a,$00
 	ld	de,$ff00
 	ld	c,$ff
-	jp	m,._1
+	jp	m,._80
 	ld	de,$0100
 	ld	c,$00
-._1	add	hl,de
+._80	add	hl,de
 	adc	a,c
 	ld	($.SONIC.Xspeed),hl
 	ld	($.SONIC.Xdirection),a
@@ -2253,14 +2053,10 @@ PROC	:_5791 {
 	rst	:rst_playSFX
 	ret
 
-	}
+        `====================================================================[$57CD]===
+        `referenced by table at `_58e5`
 
-        `--------------------------------------------------------------------[$57CD]---
-        `referenced by table at `_58e5`, part of `doObjectCode_Sonic`
-
-PROC	:_57cd {
-	
-	call	:_5727
+._57cd  call	._5727
 	ld	de,$0001
 	ld	hl,($.SONIC.Yspeed)
 	ld	a,l
@@ -2274,22 +2070,18 @@ PROC	:_57cd {
 	add	hl,de
 	adc	a,$00
 	and	a
-	jp	p,._
+	jp	p,._81
 	ld	de,$ffc8
 	add	hl,de
 	adc	a,$ff
-._	ld	($.SONIC.Yspeed),hl
+._81	ld	($.SONIC.Yspeed),hl
 	ld	($.SONIC.Ydirection),a
-	jp	:_5791._57be
+	jp	._57be
 
-	}
+	`====================================================================[$57F6]===
+        `referenced by table at `_58e5`
 
-        `--------------------------------------------------------------------[$57F6]---
-        `referenced by table at `_58e5`, part of `doObjectCode_Sonic`
-
-PROC	:_57f6 {
-	
-	ld	hl,($.D2E9)
+._57f6  ld	hl,($.D2E9)
 	ld	de,$0082
 	and	a
 	sbc	hl,de
@@ -2298,23 +2090,19 @@ PROC	:_57f6 {
 	jp	z,:_35fd
 	ret
 
-	}
+        `====================================================================[$5808]===
+        `referenced by table at `_58e5`
 
-        `--------------------------------------------------------------------[$5808]---
-        `referenced by table at `_58e5`, part of `doObjectCode_Sonic`
-
-PROC	:_5808 {
-	
-	ld	a,($D414)
+._5808  ld	a,($D414)
 	rlca	
 	ret	nc
 	ld	hl,($.SONIC.X)
-	ld	bc,$000c
+	ld	bc,$000C
 	add	hl,bc
 	ld	a,l
-	and	$1f
+	and	$1F
 	cp	$10
-	jr	nc,:_584b._5858
+	jr	nc,._5858
 ._581b
 	ld	hl,($.SONIC.X)
 	ld	bc,$000c
@@ -2323,14 +2111,14 @@ PROC	:_5808 {
 	and	$e0
 	ld	c,a
 	ld	b,h
-	ld	hl,($.SONIC.Y+0)
+	ld	hl,($.SONIC.Y)
 	ld	de,$0010
 	add	hl,de
 	ld	a,l
 	and	$e0
 	ld	e,a
 	ld	d,h
-	call	:_5893
+	call	._5893
 	ret	c
 	ld	bc,$000c
 	ld	de,$0010
@@ -2344,14 +2132,10 @@ PROC	:_5808 {
 	ld	(hl),c
 	ret
 
-	}
+        `====================================================================[$584B]===
+        `referenced by table at `_58e5`
 
-        `--------------------------------------------------------------------[$584B]---
-        `referenced by table at `_58e5`, part of `doObjectCode_Sonic`
-
-PROC	:_584b {
-	
-	ld	hl,($.SONIC.X)
+._584b  ld	hl,($.SONIC.X)
 	ld	bc,$000c
 	add	hl,bc
 	ld	a,l
@@ -2364,14 +2148,14 @@ PROC	:_584b {
 	add	a,$10
 	ld	c,a
 	ld	b,h
-	ld	hl,($.SONIC.Y+0)
+	ld	hl,($.SONIC.Y)
 	ld	de,$0010
 	add	hl,de
 	ld	a,l
 	and	$e0
 	ld	e,a
 	ld	d,h
-	call	:_5893
+	call	._5893
 	ret	c
 	ld	bc,$000c
 	ld	de,$0010
@@ -2379,72 +2163,59 @@ PROC	:_584b {
 	ld	c,$00
 	ld	a,(hl)
 	cp	$89
-	jr	z,:_5808._5849
+	jr	z,._5849
 	ld	c,$8a
 	ld	(hl),c
 	ret
 
-	}
-
-        `--------------------------------------------------------------------[$5883]---
+        `====================================================================[$5883]===
         `referenced by table at `_58e5`, part of `doObjectCode_Sonic`
 
-PROC	:_5883 {
-	
-	ld	hl,($.SONIC.X)
+._5883  ld	hl,($.SONIC.X)
 	ld	bc,$000c
 	add	hl,bc
 	ld	a,l
 	and	$1f
 	cp	$10
 	ret	nc
-	jp	:_5808._581b
-
-	}
+	jp	._581b
 
         `--------------------------------------------------------------------[$5893]---
-        `called by functions referenced by `58e5`, part of `doObjectCode_Sonic`
+        `called by functions referenced by `58e5`
 
-PROC	:_5893 {
-	
-	push	bc
-	push	de
+._5893  push	bc, de
 	call	:_7c7b
-	pop	de
-	pop	bc
+	pop	de, bc
 	ret	c
-	push	ix
-	push	hl
+	push	ix, hl
 	pop	ix
-	xor	a			`set A to 0
-	ld	(ix+#object.type),$2E	`falling bridge piece
-	ld	(ix+$01),a
-	ld	(ix+#object.X+0),c
-	ld	(ix+#object.X+1),b
-	ld	(ix+$04),a
-	ld	(ix+#object.Y+0),e
-	ld	(ix+#object.Y+1),d
-	ld	(ix+#object.Xspeed+0),a
-	ld	(ix+#object.Xspeed+1),a
-	ld	(ix+#object.Xdirection),a
-	ld	(ix+#object.Yspeed+0),a
-	ld	(ix+#object.Yspeed+1),a
-	ld	(ix+#object.Ydirection),a
-	ld	(ix+$18),a
-	pop	ix
-	and	a
+        
+	xor	a;zero			        `set A to 0
+	ld	(ix+#object.type),$2E	        `falling bridge piece
+	ld	(ix+#object.Xsubpixel),a;zero
+	ld	(ix+#object.X.lo),c
+	ld	(ix+#object.X.hi),b
+	ld	(ix+#object.Ysubpixel),a;zero
+	ld	(ix+#object.Y.lo),e
+	ld	(ix+#object.Y.hi),d
+	ld	(ix+#object.Xspeed.lo),a;zero
+	ld	(ix+#object.Xspeed.hi),a;zerp
+	ld	(ix+#object.Xdirection),a;zero
+	ld	(ix+#object.Yspeed.lo),a;zero
+	ld	(ix+#object.Yspeed.hi),a;zero
+	ld	(ix+#object.Ydirection),a;zero
+	ld	(ix+$18),a;zero
+	
+        pop	ix
+	and	a;zero
 	ret
 
-	}
+        `====================================================================[$58D0]===
+        `referenced by table at `_58e5`
 
-        `--------------------------------------------------------------------[$58D0]---
-        `referenced by table at `_58e5`, part of `doObjectCode_Sonic`
-
-PROC	:_58d0 {
-	
-	bit	7,(ix+$18)
+._58d0  bit	7,(ix+$18)
 	ret	z
-	ld	hl,($.SONIC.Y+0)
+	ld	hl,($.SONIC.Y)
 	ld	de,($.CAMERA_Y)
 	and	a
 	sbc	hl,de
@@ -2452,39 +2223,38 @@ PROC	:_58d0 {
 	ld	(iy+#vars.joypad),$ff
 	ret
 
-	}
+	`====================================================================[$58E5]===
+        `lookup table to the functions above
+         `(these probably handle the different solidity values)
 
-`lookup table to the functions above
- `(these probably handle the different solidity values)
-:_58e5
-	DATA :_54bc, :_54c6, :_54ce, :_550f, :_552d, :_5556, :_5578, :_5590
-	DATA :_55a8, :_55b6, :_55e2, :_55eb, :_565c, :_567c, :_56a6, :_56b6
-	DATA :_56c6, :_56d6, :_5761, :_5771, :_5781, :_5791, :_57cd, :_57f6
-	DATA :_5808, :_584b, :_5883, :_58d0
+._58e5  DATA ._54bc, ._54c6, ._54ce, ._550f, ._552d, ._5556, ._5578, ._5590
+	DATA ._55a8, ._55b6, ._55e2, ._55eb, ._565c, ._567c, ._56a6, ._56b6
+	DATA ._56c6, ._56d6, ._5761, ._5771, ._5781, ._5791, ._57cd, ._57f6
+	DATA ._5808, ._584b, ._5883, ._58d0
 
-`----------------------------------------------------------------------------[$591D]---
-`sprite layouts
+        `--------------------------------------------------------------------[$591D]---
+        `sprite layouts
 
-:_591d	`Sonic's sprite layout
+._591d	`Sonic's sprite layout
 	DATA $B4 $B6 $B8 $FF $FF $FF
 	DATA $BA $BC $BE $FF $FF $FF
 	DATA $FF $FF
-:_592b
+._592b
 	DATA $B8 $B6 $B4 $FF $FF $FF
 	DATA $BE $BC $BA $FF $FF $FF
 	DATA $FF $FF
-:_5939
+._5939
 	DATA $B4 $B6 $B8 $FF $FF $FF
 	DATA $BA $BC $BE $FF $FF $FF
 	DATA $98 $9A $FF $FF $FF $FF
-:_594b
+._594b
 	DATA $B4 $B6 $B8 $FF $FF $FF
 	DATA $BA $BC $BE $FF $FF $FF
 	DATA $FE $9C $9E $FF $FF $FF
         
-:_595d	`unknown data
+._595d	`unknown data
 	DATA $00 $00 $00 $00 $00 $00 $00 $00
-:_5965	`unknown data
+._5965	`unknown data
 	DATA $99 $59 $99 $59 $CB $59 $DD $59 $DF $59 $E2 $59 $E5 $59 $FB $59
 	DATA $FE $59 $01 $5A $53 $5A $65 $5A $68 $5A $6B $5A $AF $5A $C5 $5A
 	DATA $CC $5A $D0 $5A $DE $5A $E1 $5A $E4 $5A $E7 $5A $EA $5A $00 $5B
@@ -2512,5 +2282,4 @@ PROC	:_58d0 {
 	DATA $FF $00 $23 $FF $00 $21 $21 $20 $20 $1F $1F $1E $1E $1D $1D $1C
 	DATA $1C $1B $1B $1A $1A $19 $19 $19 $19 $FF $12 $19 $FF $00 $1A $FF
 	DATA $00 $1B $FF $00
-
 }

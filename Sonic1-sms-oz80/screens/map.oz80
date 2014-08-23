@@ -9,9 +9,9 @@ PROC    ;_LABEL_C52_106
 {
         
 	`reset horizontal / vertical scroll
-	xor	a				`set A to 0
-	ld	($.VDPSCROLL_HORZ), a
-	ld	($.VDPSCROLL_VERT), a
+	xor	a;zero				`set A to 0
+	ld	($.VDPSCROLL_HORZ), a;zero
+	ld	($.VDPSCROLL_VERT), a;zero
 	
 	ld	a, $FF
 	ld	($.D216), a
@@ -413,8 +413,8 @@ PARAMS  bc
 	inc	hl
 	ld	a,(hl)
 	ld	($.TEMP2),a
-	xor	a
-	ld	($.TEMP1),a
+	xor	a;zero
+	ld	($.TEMP1),a;zero
 	
 ._1	pop	de			`Y-position
 	pop	hl			`X-position
@@ -705,9 +705,9 @@ PROC    ;titleScreen
 	call	;decompressScreen
 	
 	`reset horizontal / vertical scroll
-	xor	a			`set A to zero
-	ld	($.VDPSCROLL_HORZ), a
-	ld	($.VDPSCROLL_VERT), a
+	xor	a;zero			`set A to zero
+	ld	($.VDPSCROLL_HORZ), a;zero
+	ld	($.VDPSCROLL_VERT), a;zero
 	
 	`load the palette
 	ld	hl, .S1_TitleScreen_Palette
@@ -721,8 +721,8 @@ PROC    ;titleScreen
 	rst	:playMusic
 	
 	`initialise the animation parameters?
-	xor	a
-	ld	($.D216), a		`reset the screen counter
+	xor	a;zero
+	ld	($.D216), a;zero		`reset the screen counter
 	ld	a, $01
 	ld	($.TEMP2), a
 	ld	hl, ._1372
@@ -742,15 +742,15 @@ PROC    ;titleScreen
 	inc	a			`add one
 	cp	100			`if less than 100,
 	jr	c, ._2			`keep counting,
-	xor	a			`otherwise go back to 0
-._2	ld	($.D216), a		`update screen counter value
+	xor	a;zero			`otherwise go back to 0
+._2	ld	($.D216), a;zero		`update screen counter value
 	
 	ld	hl, ._1352
 	cp	$40
 	jr	c, ._3
 	ld	hl, ._1362
-._3	xor	a			`set A to 0
-	ld	($.TEMP1), a
+._3	xor	a;zero			`set A to 0
+	ld	($.TEMP1), a;zero
 	call	;print
 	
 	ld	a, ($.TEMP2)
@@ -875,9 +875,9 @@ PROC    ;_1401
 	ld	($.TEMP1),a
 	call	;decompressScreen
 	
-	xor	a
-	ld	($.VDPSCROLL_HORZ),a
-	ld	($.VDPSCROLL_VERT),a
+	xor	a;zero
+	ld	($.VDPSCROLL_HORZ),a;zero
+	ld	($.VDPSCROLL_VERT),a;zero
 	ld	hl,._14fc
 	ld	a,%00000011
 	call	;loadPaletteOnInterrupt
@@ -1043,8 +1043,8 @@ PROC    ;_155e
 	ld	bc,$0095
 	ld	de,$.VDP_SCREENNAMETABLE
 
-._1	xor	a
-	ld	($.TEMP1),a
+._1	xor	a;zero
+	ld	($.TEMP1),a;zero
 	call	:decompressScreen
 	
 	ld	hl,;_1711
@@ -1090,9 +1090,9 @@ PROC    ;_155e
 	inc	hl
 	djnz	._2
 	
-._3	xor	a
-	ld	($.VDPSCROLL_HORZ),a
-	ld	($.VDPSCROLL_VERT),a
+._3	xor	a;zero
+	ld	($.VDPSCROLL_HORZ),a;zero
+	ld	($.VDPSCROLL_VERT),a;zero
 	ld	hl,$1b8d
 	ld	a,%00000011
 	call	:loadPaletteOnInterrupt
@@ -1224,8 +1224,8 @@ PROC    ;_16d9
 	ld	bc,$0004
 	ldir	
 	pop	bc
-	xor	a
-	ld	($.TEMP1),a
+	xor	a;zero
+	ld	($.TEMP1),a;zero
 	
 .loop	push	bc
 	ld	hl,$.D2BE
@@ -1254,8 +1254,8 @@ DATA $15, $bd, $be, $ff
 PROC    ;_1719
         `====================================================================[$1719]===
 {        
-	xor	a			`set A to 0
-	ld	($.RINGS),a
+	xor	a;zero			`set A to 0
+	ld	($.RINGS),a;zero
 	res	3,(iy+#vars.flags9)
 	res	2,(iy+#vars.flags9)
 	ret
@@ -1341,8 +1341,8 @@ PROC    ;_172f
 	call	;print
 	ld	hl,;_197e
 	call	;print
-	xor	a
-	ld	($.D216),a
+	xor	a;zero
+	ld	($.D216),a;zero
 	ld	bc,$00b4
 	call	;_1860
 	
@@ -1846,10 +1846,10 @@ PROC    ;_LABEL_1C49_62
 	ld	a, $1C
 	ld	($.D23F), a
 	
-	xor	a			`set A to 0
-	ld	($.CURRENT_LEVEL), a	`set starting level!
-	ld	($.FRAMECOUNT), a
-	ld	(iy+#vars.unknown_0D), a
+	xor	a;zero			`set A to 0
+	ld	($.CURRENT_LEVEL), a;zero	`set starting level!
+	ld	($.FRAMECOUNT), a;zero
+	ld	(iy+#vars.unknown_0D), a;zero
 	
 	ld	hl, $.D27F
 	ld	b, $08
@@ -2107,9 +2107,9 @@ PROC    ;_LABEL_1CED_131
 	bit	2,(iy+#vars.scrollRingFlags)
 	call	nz,;_239c
 	
-	xor	a			`set A to 0
-	ld	($D302),a
-	ld	($.D2DE),a
+	xor	a;zero			`set A to 0
+	ld	($D302),a;zero
+	ld	($.D2DE),a;zero
 	ld	(iy+#vars.spriteUpdateCount),$15
 	ld	hl,$D03F		`lives icon sprite table entry
 	ld	($.SPRITES_CURRENT),hl
@@ -2155,16 +2155,18 @@ PROC    ;_LABEL_1CED_131
 	ex	de,hl
 	ld	hl,($.SONIC.X)
 	
-	xor	a			`set A to 0
+	xor	a;zero			        `set A to 0
 	sbc	hl,de
 	ret	c
-	ld	(iy+#vars.joypad),$FF
-	ld	l,a
-	ld	h,a
-	ld	($.SONIC.Xspeed),hl
-	ld	($.SONIC.Xdirection),a
-	ld	($.SONIC.Yspeed),hl
-	ld	($.SONIC.Ydirection),a
+	
+        ld	(iy+#vars.joypad),$FF
+        
+	ld	l;zero,a;zero
+	ld	h;zero,a;zero
+	ld	($.SONIC.Xspeed),hl;zero
+	ld	($.SONIC.Xdirection),a;zero
+	ld	($.SONIC.Yspeed),hl;zero
+	ld	($.SONIC.Ydirection),a;zero
 	ret
 }
 
@@ -2298,12 +2300,12 @@ PROC    ;_1f49
 {       
 	ld	de,($.D2E9)
 	ld	hl,$00aa
-	xor	a
+	xor	a;zero
 	sbc	hl,de
 	jr	nc,._1
 	ld	bc,;_1f9d
-	ld	e,a
-	ld	d,a
+	ld	e,a;zero
+	ld	d,a;zero
 	jp	._3
 	
 ._1	ld	bc,;_1fa5
@@ -2506,9 +2508,9 @@ PROC    ;_20a4
 	
 	di	
 	res	7,(iy+#vars.flags6)	`underwater?
-	xor	a			`set A to 0
-	ld	($.RASTERSPLIT_LINE),a
-	ld	($.WATERLINE),a
+	xor	a;zero			`set A to 0
+	ld	($.RASTERSPLIT_LINE),a;zero
+	ld	($.WATERLINE),a;zero
 	ei	
 	
 	ret
@@ -2525,7 +2527,7 @@ PROC    ;_20b8
 	call	;sound_fadeOut
 	call	;fadeOut
 	
-	xor	a
+	xor	a;zero
 	ret
 }
 	
@@ -2561,17 +2563,17 @@ PROC    ;loadLevel
 	ld	a, $FF
 	ld	($.D2AB), a
 	
-	xor	a			`set A to 0
-	ld	l, a			`set HL to #$0000
-	ld	h, a
+	xor	a;zero			`set A to 0
+	ld	l;zero, a;zero			`set HL to #$0000
+	ld	h;zero, a;zero
 	`clear some variables
-	ld	($.VDPSCROLL_HORZ), a
-	ld	($.VDPSCROLL_VERT), a
-	ld	($.CAMERA_X_GOTO), hl
-	ld	($.CAMERA_Y_GOTO), hl
-	ld	($.D2B7), hl
-	ld	($.RASTERSPLIT_STEP), a
-	ld	($.RASTERSPLIT_LINE), a
+	ld	($.VDPSCROLL_HORZ), a;zero
+	ld	($.VDPSCROLL_VERT), a;zero
+	ld	($.CAMERA_X_GOTO), hl;zero
+	ld	($.CAMERA_Y_GOTO), hl;zero
+	ld	($.D2B7), hl;zero
+	ld	($.RASTERSPLIT_STEP), a;zero
+	ld	($.RASTERSPLIT_LINE), a;zero
 	
 	`clear $.D287-$D2A4 (29 bytes)
 	ld	hl, $.D287
@@ -2619,8 +2621,8 @@ PROC    ;loadLevel
 	ld	hl, ;_2402
 	
 	`set number of collected rings to 0
-._3	xor	a			`set A to 0
-	ld	($.RINGS), a
+._3	xor	a;zero			`set A to 0
+	ld	($.RINGS), a;zero
 	
 	`is this a special stage? (level number 28+)
 	ld	a, ($.CURRENT_LEVEL)
@@ -2734,8 +2736,8 @@ PROC    ;loadLevel
 	 ` it doesn't try and place the camera before the level's left edge)
 	sub	3
 	jr	nc,._7
-	xor	a			`set A to 0
-._7	ld	($.BLOCK_X),a
+	xor	a;zero			`set A to 0
+._7	ld	($.BLOCK_X),a;zero
 	
 	`using the number as the hi-byte, divide by 8 into DE, e.g.
 	 `4	A: 00000100 E: 00000000 (1024) -> A: 00000000 E: 10000000 (128)
@@ -2764,7 +2766,7 @@ PROC    ;loadLevel
 	
 	sub	3
 	jr	nc,._8
-	xor	a			`set A to 0
+	xor	a;zero			`set A to 0
 	
 ._8	ld	($.BLOCK_Y),a
 	ld	e,$00
@@ -2944,8 +2946,8 @@ PROC    ;loadLevel
 	inc	hl
 	`store 0 at the next byte in RAM
 	 `(RAM_CYCLEPALETTE_INDEX)
-	xor	a			`set A to 0
-	ld	(de),a
+	xor	a;zero			`set A to 0
+	ld	(de),a;zero
 	inc	de
 	
 	`CC: Colour Cycles
@@ -3051,7 +3053,7 @@ PROC    ;loadLevel
 	`fill 64 bytes (32 16-bit numbers) from $D37C-$D3BC
 ._11	ld	b,32
 	ld	hl,$D37C
-	xor	a			`set A to 0
+	xor	a;zero			`set A to 0
 
 ._12	ld	(hl),a
 	inc	hl
@@ -3132,15 +3134,15 @@ PARAMS	a	`object type
 	exx
 	ld	l,a			`convert X-position to 16-bit number in HL
 	ld	h,$00
-	ld	(ix+$01),h		`?
+	ld	(ix+#object.Xsubpixel),h		`?
 	`multiply by 32
 	add	hl,hl			`x2 ...
 	add	hl,hl			`x4 ...
 	add	hl,hl			`x8 ...
 	add	hl,hl			`x16 ...
 	add	hl,hl			`x32
-	ld	(ix+#object.X+0),l
-	ld	(ix+#object.X+1),h
+	ld	(ix+#object.X.lo),l
+	ld	(ix+#object.X.hi),h
 	exx	
 	
 	`--- Y position ---------------------------------------------------------------
@@ -3150,14 +3152,14 @@ PARAMS	a	`object type
 	exx	
 	ld	l,a
 	ld	h,$00
-	ld	(ix+$04),h		`?
+	ld	(ix+#object.Ysubpixel),h		`?
 	add	hl,hl			`x2 ...
 	add	hl,hl			`x4 ...
 	add	hl,hl			`x8 ...
 	add	hl,hl			`x16 ...
 	add	hl,hl			`x32
-	ld	(ix+#object.Y+0),l
-	ld	(ix+#object.Y+1),h
+	ld	(ix+#object.Y.lo),l
+	ld	(ix+#object.Y.hi),h
 	
 	`transfer IX (object address) to HL
 	push	ix
@@ -3172,7 +3174,7 @@ PARAMS	a	`object type
 	
 	`erase the next 19 bytes
 	ld	b,19
-	xor	a			`set A to 0
+	xor	a;zero			`set A to 0
 .loop	ld	(hl),a
 	inc	hl
 	djnz	.loop
@@ -3217,7 +3219,7 @@ PROC    ;_239c
 	inc	a
 	cp	$06
 	jr	c,._1
-	xor	a
+	xor	a;zero
 ._1	ld	(hl),a
 	ret
 }
@@ -3246,7 +3248,7 @@ PROC    ;_23c9
 	inc	a
 	cp	h
 	jr	c,._1
-	xor	a
+	xor	a;zero
 ._1	ld	l,a
 	ld	($.CYCLEPALETTE_INDEX),hl
 	ld	a,($.CYCLEPALETTE_SPEED)
@@ -3322,9 +3324,9 @@ PROC    ;_LABEL_258B_133
 	res	0, (iy+#vars.flags0)
 	call	;waitForInterrupt
 	
-	xor	a
-	ld	($.VDPSCROLL_HORZ), a
-	ld	($.VDPSCROLL_VERT), a
+	xor	a;zero
+	ld	($.VDPSCROLL_HORZ), a;zero
+	ld	($.VDPSCROLL_VERT), a;zero
 	
 	ld	hl, ;_2828
 	ld	a, %00000011
@@ -3345,8 +3347,8 @@ PROC    ;_LABEL_258B_133
 	ld	hl,$6830
 	ld	bc,$0179
 	ld	de,$.VDP_SCREENNAMETABLE
-	xor	a
-	ld	($.TEMP1),a
+	xor	a;zero
+	ld	($.TEMP1),a;zero
 	call	;decompressScreen
 	
 	ld	a,($.VDPREGISTER_1)
@@ -3446,8 +3448,8 @@ PROC    ;_LABEL_258B_133
 	ld	hl,$69a9
 	ld	bc,$0145
 	ld	de,$.VDP_SCREENNAMETABLE
-	xor	a
-	ld	($.TEMP1),a
+	xor	a;zero
+	ld	($.TEMP1),a;zero
 	call	;decompressScreen
 	
 	ld	hl,;_2828
@@ -3487,35 +3489,35 @@ PROC    ;_LABEL_258B_133
 	ld	hl,$6c61
 	ld	bc,$0189
 	ld	de,$.VDP_SCREENNAMETABLE
-	xor	a
-	ld	($.TEMP1),a
+	xor	a;zero
+	ld	($.TEMP1),a;zero
 	call	;decompressScreen
 	
-	xor	a			`set A to 0
+	xor	a;zero			`set A to 0
 	ld	hl,$D322
 	ld	(hl),$48
 	inc	hl
 	ld	(hl),$28
 	inc	hl
-	ld	(hl),a
+	ld	(hl),a;zero
 	inc	hl
 	ld	(hl),$57
 	inc	hl
 	ld	(hl),$28
 	inc	hl
-	ld	(hl),a
+	ld	(hl),a;zero
 	inc	hl
 	ld	(hl),$69
 	inc	hl
 	ld	(hl),$28
 	inc	hl
-	ld	(hl),a
+	ld	(hl),a;zero
 	inc	hl
 	ld	(hl),$72
 	inc	hl
 	ld	(hl),$28
 	inc	hl
-	ld	(hl),a
+	ld	(hl),a;zero
 	ld	bc,$0001
 	call	;_2718
 	ld	hl,;S1_Credits_Palette
@@ -3524,8 +3526,8 @@ PROC    ;_LABEL_258B_133
 	ld	a,#index_music_ending
 	rst	:playMusic
 	
-	xor	a
-	ld	($.TEMP1),a
+	xor	a;zero
+	ld	($.TEMP1),a;zero
 	ld	hl,;S1_Credits_Text
 	call	;_2795
 }
@@ -4620,20 +4622,20 @@ PROC    ;_31e6
 	ldi	
 	ldi	
 	ld	hl,($.CAMERA_X)
-	xor	a
+	xor	a;zero
 	sbc	hl,bc
 	jr	nc,._1
-	ld	l,a
-	ld	h,a
-	xor	a
-._1	ld	e,(ix+#object.X+0)
-	ld	d,(ix+#object.X+1)
+	ld	l,a;zero
+	ld	h,a;zero
+	xor	a;zero
+._1	ld	e,(ix+#object.X.lo)
+	ld	d,(ix+#object.X.hi)
 	sbc	hl,de
 	jp	nc,._3
 	ld	hl,($.TEMP1)
 	ld	bc,($.CAMERA_X)
 	add	hl,bc
-	xor	a
+	xor	a;zero
 	sbc	hl,de
 	jp	c,._3
 	ld	hl,($.CAMERA_Y)
@@ -4642,15 +4644,15 @@ PROC    ;_31e6
 	jr	nc,._2
 	ld	l,a
 	ld	h,a
-	xor	a
-._2	ld	e,(ix+#object.Y+0)
-	ld	d,(ix+#object.Y+1)
+	xor	a;zero
+._2	ld	e,(ix+#object.Y.lo)
+	ld	d,(ix+#object.Y.hi)
 	sbc	hl,de
 	jp	nc,._3
 	ld	hl,($.TEMP4)
 	ld	bc,($.CAMERA_Y)
 	add	hl,bc
-	xor	a
+	xor	a;zero
 	sbc	hl,de
 	jp	c,._3
 	exx	
@@ -4683,7 +4685,7 @@ PROC    ;_31e6
 	ret
 }
 
-PROC    ;doObjects
+PROC    :doObjects
         `====================================================================[$392B]===
         `runs the code for each of the objects in memory
 {        
@@ -4700,7 +4702,7 @@ PROC    ;doObjects
 	`is the value greater than zero?
 	ld	a,e
 	or	d
-	call	nz,;doObjectCode
+	call	nz,:doObjectCode
 	
 	`keep reading memory until either something non-zero is found or we hit $D3BC
 	djnz	.loop
@@ -4715,7 +4717,7 @@ PROC    ;doObjects
 	ld	hl,$D024		`Sonic's sprite table entry
 	ld	($.SPRITES_CURRENT),hl
 	ld	de,$.SONIC
-	call	;doObjectCode
+	call	:doObjectCode
 	
 	pop	hl
 	pop	af
@@ -4725,7 +4727,7 @@ PROC    ;doObjects
 	ret
 }
 
-PROC    ;doObjectCode
+PROC    :doObjectCode
         `--------------------------------------------------------------------[$32C8]---
 {        
 	ld	a,(de)			`get object from the list
@@ -4753,46 +4755,61 @@ PROC    ;doObjectCode
 	ld	h,(hl)
 	ld	l,a
 	
-	`return function?
-	ld	de,;_32e2
+	`once the object's own code has been run,
+         `handle the common actions for all objects
+	ld	de,:processObject
 	push	de
 	
 	`run the object's code
 	jp	(hl)
 }
 	
-PROC    ;_32e2
+PROC    :processObject
         `--------------------------------------------------------------------[$32E2]---
-{        
-	ld	e, (ix+#object.Xspeed+0)
-	ld	d, (ix+#object.Xspeed+1)
-	ld	c, (ix+#object.Xdirection)
-	ld	l, (ix+$01)
-	ld	h, (ix+#object.X+0)
-	ld	a, (ix+#object.X+1)
-	add	hl, de
-	adc	a, c
-	ld	(ix+$01), l
-	ld	(ix+#object.X+0), h
-	ld	(ix+#object.X+1), a
-	ld	e, (ix+#object.Yspeed+0)
-	ld	d, (ix+#object.Yspeed+1)
-	ld	c, (ix+#object.Ydirection)
-	ld	l, (ix+$04)
-	ld	h, (ix+#object.Y+0)
-	ld	a, (ix+#object.Y+1)
-	add	hl, de
-	adc	a, c
-	ld	(ix+$04), l
-	ld	(ix+#object.Y+0), h
-	ld	(ix+#object.Y+1), a
+        ``once an object has run its personal code, this routine handles things that
+          all objects share, such as moving the object, and collision with Sonic``
+{       
+        `move object
+        `------------------------------------------------------------------------------
+        
+        `move the object horizontally 
+	ld	e;speed, (ix+#object.Xspeed.lo)
+	ld	d;speed, (ix+#object.Xspeed.hi)
+	ld	c;dir, (ix+#object.Xdirection)
+        
+	ld	l;xpos, (ix+#object.Xsubpixel)
+	ld	h;xpos, (ix+#object.X.lo)
+	ld	a;xpos, (ix+#object.X.hi)
+	add	hl;xpos, de;speed
+	adc	a;xpos, c;dir
+        
+	ld	(ix+#object.Xsubpixel), l;ypos
+	ld	(ix+#object.X.lo), h;ypos
+	ld	(ix+#object.X.hi), a;ypos
+        
+        `move the object vertically
+	ld	e;speed, (ix+#object.Yspeed.lo)
+	ld	d;speed, (ix+#object.Yspeed.hi)
+	ld	c;dir, (ix+#object.Ydirection)
+	ld	l;ypos, (ix+#object.Ysubpixel)
+	ld	h;ypos, (ix+#object.Y.lo)
+	ld	a;ypos, (ix+#object.Y.hi)
+	add	hl;ypos, de;speed
+	adc	a;ypos, c;dir
+        
+	ld	(ix+#object.Ysubpixel), l;ypos
+	ld	(ix+#object.Y.lo), h;ypos
+	ld	(ix+#object.Y.hi), a;ypos
+        
+        `------------------------------------------------------------------------------
+        
 	bit	5, (ix+$18)
 	jp	nz, ;_34e6
 	ld	b, $00
 	ld	d, b
 	ld	e, (ix+#object.height)
 	srl	e
-	bit	7, (ix+#object.Xspeed+1)
+	bit	7, (ix+#object.Xspeed.hi)
 	jr	nz, ._1
 	ld	c, (ix+#object.width)
 	ld	hl, $411E
@@ -4835,7 +4852,7 @@ PROC    ;_32e2
 	inc	hl
 	ld	h,(hl)
 	ld	l,a
-	ld	a,(ix+#object.Y+0)
+	ld	a,(ix+#object.Y.lo)
 	add	a,e
 	and	$1f
 	ld	e,a
@@ -4847,8 +4864,8 @@ PROC    ;_32e2
 	and	a
 	jp	p,._3
 	ld	d,$ff
-._3	ld	l,(ix+#object.X+0)
-	ld	h,(ix+#object.X+1)
+._3	ld	l,(ix+#object.X.lo)
+	ld	h,(ix+#object.X.hi)
 	ld	bc,($.TEMP3)
 	add	hl,bc
 	bit	7,(ix+#object.Xdirection)
@@ -4874,16 +4891,16 @@ PROC    ;_32e2
 	add	hl,de
 	and	a
 	sbc	hl,bc
-	ld	(ix+#object.X+0),l
-	ld	(ix+#object.X+1),h
+	ld	(ix+#object.X.lo),l
+	ld	(ix+#object.X.hi),h
 	ld	a,($.TEMP6)
 	ld	e,a
 	ld	d,$00
 	ld	hl,$3fbf		`data?
 	add	hl,de
 	ld	c,(hl)
-	ld	(ix+#object.Xspeed+0),d
-	ld	(ix+#object.Xspeed+1),d
+	ld	(ix+#object.Xspeed.lo),d
+	ld	(ix+#object.Xspeed.hi),d
 	ld	(ix+#object.Xdirection),d
 	ld	a,d
 	ld	b,d
@@ -4891,16 +4908,16 @@ PROC    ;_32e2
 	jr	z,._6
 	dec	a
 	dec	b
-._6	ld	l,(ix+#object.Yspeed+0)
-	ld	h,(ix+#object.Yspeed+1)
+._6	ld	l,(ix+#object.Yspeed.lo)
+	ld	h,(ix+#object.Yspeed.hi)
 	add	hl,bc
 	adc	a,(ix+#object.Ydirection)
-	ld	(ix+#object.Yspeed+0),l
-	ld	(ix+#object.Yspeed+1),h
+	ld	(ix+#object.Yspeed.lo),l
+	ld	(ix+#object.Yspeed.hi),h
 	ld	(ix+#object.Ydirection),a
 ._7	ld	b,$00
 	ld	d,b
-	bit	7,(ix+#object.Yspeed+1)
+	bit	7,(ix+#object.Yspeed.hi)
 	jr	nz,._8
 	ld	c,(ix+#object.width)
 	srl	c
@@ -4947,7 +4964,7 @@ PROC    ;_32e2
 	inc	hl
 	ld	h,(hl)
 	ld	l,a
-	ld	a,(ix+#object.X+0)
+	ld	a,(ix+#object.X.lo)
 	add	a,c
 	and	$1f
 	ld	c,a
@@ -4959,8 +4976,8 @@ PROC    ;_32e2
 	and	a
 	jp	p,._10
 	ld	b,$ff
-._10	ld	l,(ix+#object.Y+0)
-	ld	h,(ix+#object.Y+1)
+._10	ld	l,(ix+#object.Y.lo)
+	ld	h,(ix+#object.Y.hi)
 	ld	de,($.TEMP3)
 	add	hl,de
 	bit	7,(ix+#object.Ydirection)
@@ -5000,16 +5017,16 @@ PROC    ;_32e2
 	add	hl,bc
 	and	a
 	sbc	hl,de
-	ld	(ix+#object.Y+0),l
-	ld	(ix+#object.Y+1),h
+	ld	(ix+#object.Y.lo),l
+	ld	(ix+#object.Y.hi),h
 	ld	a,($.TEMP6)
 	ld	e,a
 	ld	d,$00
 	ld	hl,$3f90		`data?
 	add	hl,de
 	ld	c,(hl)
-	ld	(ix+#object.Yspeed+0),d
-	ld	(ix+#object.Yspeed+1),d
+	ld	(ix+#object.Yspeed.lo),d
+	ld	(ix+#object.Yspeed.hi),d
 	ld	(ix+#object.Ydirection),d
 	ld	a,d
 	ld	b,d
@@ -5017,27 +5034,27 @@ PROC    ;_32e2
 	jr	z,._13
 	dec	a
 	dec	b
-._13	ld	l,(ix+#object.Xspeed+0)
-	ld	h,(ix+#object.Xspeed+1)
+._13	ld	l,(ix+#object.Xspeed.lo)
+	ld	h,(ix+#object.Xspeed.hi)
 	add	hl,bc
 	adc	a,(ix+#object.Xdirection)
-	ld	(ix+#object.Xspeed+0),l
-	ld	(ix+#object.Xspeed+1),h
+	ld	(ix+#object.Xspeed.lo),l
+	ld	(ix+#object.Xspeed.hi),h
 	ld	(ix+#object.Xdirection),a
 ._34e6
-	ld	l,(ix+#object.Y+0)
-	ld	h,(ix+#object.Y+1)
+	ld	l,(ix+#object.Y.lo)
+	ld	h,(ix+#object.Y.hi)
 	ld	bc,($.CAMERA_Y)
 	and	a
 	sbc	hl,bc
 	ex	de,hl
-	ld	l,(ix+#object.X+0)
-	ld	h,(ix+#object.X+1)
+	ld	l,(ix+#object.X.lo)
+	ld	h,(ix+#object.X.hi)
 	ld	bc,($.CAMERA_X)
 	and	a
 	sbc	hl,bc
-	ld	c,(ix+#object.spriteLayout+0)
-	ld	b,(ix+#object.spriteLayout+1)
+	ld	c,(ix+#object.spriteLayout.lo)
+	ld	b,(ix+#object.spriteLayout.hi)
 	ld	a,c
 	or	b
 	call	nz,:processSpriteLayout
@@ -5293,8 +5310,8 @@ PROC    ;_3618
 	ld	hl,$D414
 	set	7,(hl)
 	ld	hl,$FFFA
-	xor	a
-	ld	($.SONIC.Yspeed+0),a
+	xor	a;zero
+	ld	($.SONIC.Yspeed+0),a;zero
 	ld	($.SONIC.Yspeed+1),hl
 	ld	a,$60
 	ld	($.D287),a
@@ -5312,8 +5329,8 @@ PROC    ;_3618
 PROC    ;_3644
         `--------------------------------------------------------------------[$3644]---
 {       
-	xor	a
-	ld	($.RINGS),a
+	xor	a;zero
+	ld	($.RINGS),a;zero
 	call	;_7c7b
 	jr	c,._367e
 	push	ix
@@ -5323,19 +5340,19 @@ PROC    ;_3644
 	ld	(ix+$11),$06
 	ld	(ix+$12),$00
 	ld	hl,($.SONIC.X)
-	ld	(ix+#object.X+0),l
-	ld	(ix+#object.X+1),h
-	ld	hl,($.SONIC.Y+0)
-	ld	(ix+#object.Y+0),l
-	ld	(ix+#object.Y+1),h
-	ld	(ix+#object.Yspeed+0),$00
-	ld	(ix+#object.Yspeed+1),$fc
+	ld	(ix+#object.X.lo),l
+	ld	(ix+#object.X.hi),h
+	ld	hl,($.SONIC.Y)
+	ld	(ix+#object.Y.lo),l
+	ld	(ix+#object.Y.hi),h
+	ld	(ix+#object.Yspeed.lo),$00
+	ld	(ix+#object.Yspeed.hi),$fc
 	ld	(ix+#object.Ydirection),$ff
 	pop	ix
 ._367e
 	ld	hl,$D414
 	ld	de,$fffc
-	xor	a
+	xor	a;zero
 	bit	4,(hl)
 	jr	z,._1
 	ld	de,$fffe
@@ -5346,12 +5363,12 @@ PROC    ;_3644
 	ld	a,(hl)
 	or	$12
 	ld	(hl),a
-	xor	a
+	xor	a;zero
 	ld	de,$0002
 	jr	._3
 	
 ._2	res	1,(hl)
-	xor	a
+	xor	a;zero
 	ld	de,$fffe
 ._3	ld	($.SONIC.Xspeed+0),a
 	ld	($.SONIC.Xspeed+1),de
@@ -5370,21 +5387,21 @@ PROC    ;_36be
 	ld	a,($.TEMP1)
 	ld	e,a
 	ld	d,$00
-	ld	l,(ix+#object.X+0)
-	ld	h,(ix+#object.X+1)
+	ld	l,(ix+#object.X.lo)
+	ld	h,(ix+#object.X.hi)
 	add	hl,de
-	ld	(ix+#object.X+0),l
-	ld	(ix+#object.X+1),h
+	ld	(ix+#object.X.lo),l
+	ld	(ix+#object.X.hi),h
 	ld	a,($.TEMP2)
 	ld	e,a
-	ld	l,(ix+#object.Y+0)
-	ld	h,(ix+#object.Y+1)
+	ld	l,(ix+#object.Y.lo)
+	ld	h,(ix+#object.Y.hi)
 	add	hl,de
-	ld	(ix+#object.Y+0),l
-	ld	(ix+#object.Y+1),h
-	xor	a
-	ld	(ix+#object.spriteLayout+0),a
-	ld	(ix+#object.spriteLayout+1),a
+	ld	(ix+#object.Y.lo),l
+	ld	(ix+#object.Y.hi),h
+	xor	a;zero
+	ld	(ix+#object.spriteLayout.lo),a;zero
+	ld	(ix+#object.spriteLayout.hi),a;zero
 	ld	a,$01
 	rst	:playSFX
 	ld	de,$0100
@@ -5417,8 +5434,8 @@ PARAMS	bc	`horizontal pixel offset to add to the object's X position
 	`------------------------------------------------------------------------------
 	`128 block wide level:
 	
-._1	ld	l,(ix+#object.Y+0)
-	ld	h,(ix+#object.Y+1)
+._1	ld	l,(ix+#object.Y.lo)
+	ld	h,(ix+#object.Y.hi)
 	add	hl,de
 	ld	a,l
 	add	a,a
@@ -5428,8 +5445,8 @@ PARAMS	bc	`horizontal pixel offset to add to the object's X position
 	and	%10000000
 	ld	l,a
 	ex	de,hl
-	ld	l,(ix+#object.X+0)
-	ld	h,(ix+#object.X+1)
+	ld	l,(ix+#object.X.lo)
+	ld	h,(ix+#object.X.hi)
 	add	hl,bc
 	ld	a,l
 	add	a,a
@@ -5448,8 +5465,8 @@ PARAMS	bc	`horizontal pixel offset to add to the object's X position
 	`------------------------------------------------------------------------------
 	`64 block wide level:
 	
-._2	ld	l,(ix+#object.Y+0)
-	ld	h,(ix+#object.Y+1)
+._2	ld	l,(ix+#object.Y.lo)
+	ld	h,(ix+#object.Y.hi)
 	add	hl,de
 	ld	a,l
 	add	a,a
@@ -5457,8 +5474,8 @@ PARAMS	bc	`horizontal pixel offset to add to the object's X position
 	and	%11000000
 	ld	l,a
 	ex	de,hl
-	ld	l,(ix+#object.X+0)
-	ld	h,(ix+#object.X+1)
+	ld	l,(ix+#object.X.lo)
+	ld	h,(ix+#object.X.hi)
 	add	hl,bc
 	ld	a,l
 	add	a,a
@@ -5477,15 +5494,15 @@ PARAMS	bc	`horizontal pixel offset to add to the object's X position
 	`------------------------------------------------------------------------------
 	`32 block wide level:
 	
-._3	ld	l,(ix+#object.Y+0)
-	ld	h,(ix+#object.Y+1)
+._3	ld	l,(ix+#object.Y.lo)
+	ld	h,(ix+#object.Y.hi)
 	add	hl,de
 	ld	a,l
 	and	%11100000
 	ld	l,a
 	ex	de,hl
-	ld	l,(ix+#object.X+0)
-	ld	h,(ix+#object.X+1)
+	ld	l,(ix+#object.X.lo)
+	ld	h,(ix+#object.X.hi)
 	add	hl,bc
 	ld	a,l
 	add	a,a
@@ -5504,8 +5521,8 @@ PARAMS	bc	`horizontal pixel offset to add to the object's X position
 	`------------------------------------------------------------------------------
 	`16 block wide level:
 	
-._4	ld	l,(ix+#object.Y+0)
-	ld	h,(ix+#object.Y+1)
+._4	ld	l,(ix+#object.Y.lo)
+	ld	h,(ix+#object.Y.hi)
 	add	hl,de
 	ld	a,l
 	srl	h
@@ -5513,8 +5530,8 @@ PARAMS	bc	`horizontal pixel offset to add to the object's X position
 	and	%11110000
 	ld	l,a
 	ex	de,hl
-	ld	l,(ix+#object.X+0)
-	ld	h,(ix+#object.X+1)
+	ld	l,(ix+#object.X.lo)
+	ld	h,(ix+#object.X.hi)
 	add	hl,bc
 	ld	a,l
 	add	a,a
@@ -5533,8 +5550,8 @@ PARAMS	bc	`horizontal pixel offset to add to the object's X position
 	`------------------------------------------------------------------------------
 	`256 block wide level?
 	
-._5	ld	l,(ix+#object.Y+0)		`Object Y position?
-	ld	h,(ix+#object.Y+1)
+._5	ld	l,(ix+#object.Y.lo)		`Object Y position?
+	ld	h,(ix+#object.Y.hi)
 	add	hl,de
 	ld	a,l
 	rlca				`x2 ...
@@ -5545,8 +5562,8 @@ PARAMS	bc	`horizontal pixel offset to add to the object's X position
 	rl	h
 	ex	de,hl			`put HL aside into DE
 	
-	ld	l,(ix+#object.X+0)		`Object X position?
-	ld	h,(ix+#object.X+1)
+	ld	l,(ix+#object.X.lo)		`Object X position?
+	ld	h,(ix+#object.X.hi)
 	add	hl,bc
 	ld	a,l
 	rlca				`x2 ...
@@ -5590,14 +5607,14 @@ PROC    :updateSonicSpriteFrame
 	or	%01000000
 	out	($.VDP_CONTROL), a
 	
-	xor	a			`set A to 0
+	xor	a;zero			`set A to 0
 	ld	c, $.VDP_DATA
 	ld	e, 24
 	
-	``by nature of the way the VDP stores image colours across bit-planes, and that
-	  the Sonic sprite only uses palette indexes <8, the fourth byte for a tile
-	  row is always 0. this is used as a very simple form of compression on the
-	  Sonic sprites in the ROM as the fourth byte is excluded from the data``
+	``by nature of the way the VDP stores image colours across bit-planes, and
+          that the Sonic sprite only uses palette indexes <8, the fourth byte for a
+          tile row is always 0. this is used as a very simple form of compression on
+          the Sonic sprites in the ROM as the fourth byte is excluded from the data``
 ._1	outi
 	outi
 	outi
@@ -5639,7 +5656,7 @@ PROC    :updateSonicSpriteFrame
 	exx
 	ld	de, $FFFA
 	ld	c, $BE
-	xor	a
+	xor	a;zero
 	
 ._3	outi
 	outi
@@ -5730,7 +5747,7 @@ PROC    ;_LABEL_38B0_51
 	and	%11111000
 	ld	e, a
 	
-	xor	a			`set A to 0
+	xor	a;zero			`set A to 0
 	sbc	hl, de			`is DE > HL?
 	ret	c
 	
@@ -5764,7 +5781,7 @@ PROC    ;_LABEL_38B0_51
 	ld	a, e
 	and	$F8
 	ld	e, a
-	xor	a
+	xor	a;zero
 	sbc	hl, de
 	ret	c
 	or	h
@@ -5848,52 +5865,52 @@ PROC    ;_LABEL_3956_11
 	scf
 	ret	nz
 	
-	ld	l, (ix+#object.X+0)
-	ld	h, (ix+#object.X+1)
+	ld	l, (ix+#object.X.lo)
+	ld	h, (ix+#object.X.hi)
 	ld	c, (ix+#object.width)
 	ld	b, $00
 	add	hl, bc
 	
 	ld	de, ($.SONIC.X)
 	
-	xor	a			`set A to 0
+	xor	a;zero			`set A to 0
 	sbc	hl, de
 	ret	c
 	
-	ld	l, (ix+#object.X+0)
-	ld	h, (ix+#object.X+1)
+	ld	l, (ix+#object.X.lo)
+	ld	h, (ix+#object.X.hi)
 	ld	a, ($.TEMP6)
 	ld	c, a
 	add	hl, bc
 	ex	de, hl
 	
-	ld	a, ($D409)
+	ld	a, ($.SONIC.width)
 	ld	c, a
 	add	hl, bc
-	xor	a			`set A to 0
+	xor	a;zero			`set A to 0
 	sbc	hl, de
 	ret	c
 	
-	ld	l, (ix+#object.Y+0)
-	ld	h, (ix+#object.Y+1)
+	ld	l, (ix+#object.Y.lo)
+	ld	h, (ix+#object.Y.hi)
 	ld	c, (ix+#object.height)
 	add	hl, bc
 	ld	de, ($.SONIC.Y+0)
-	xor	a			`set A to 0
+	xor	a;zero			`set A to 0
 	sbc	hl, de
 	ret	c
 	
-	ld	l, (ix+#object.Y+0)
-	ld	h, (ix+#object.Y+1)
+	ld	l, (ix+#object.Y.lo)
+	ld	h, (ix+#object.Y.hi)
 	ld	a, ($.TEMP7)
 	ld	c, a
 	add	hl, bc
 	ex	de, hl
 	
-	ld	a, ($D40A)
+	ld	a, ($.SONIC.height)
 	ld	c, a
 	add	hl, bc
-	xor	a
+	xor	a;zero
 	sbc	hl, de
 	ret
 }
@@ -5982,7 +5999,7 @@ PROC    ;_3a03
 	inc	a
 	cp	$3c
 	jr	c,._1
-	xor	a
+	xor	a;zero
 ._1	ld	(hl),a
 	dec	hl
 	ccf	
@@ -5991,7 +6008,7 @@ PROC    ;_3a03
 	daa	
 	cp	$60
 	jr	c,._2
-	xor	a
+	xor	a;zero
 ._2	ld	(hl),a
 	dec	hl
 	ccf	
@@ -6003,7 +6020,7 @@ PROC    ;_3a03
 	push	hl
 	call	;_3618
 	pop	hl
-	xor	a
+	xor	a;zero
 ._3	ld	(hl),a
 	ret
 	
@@ -6011,7 +6028,7 @@ PROC    ;_3a03
 	inc	a
 	cp	$3c
 	jr	c,._5
-	xor	a
+	xor	a;zero
 ._5	ld	(hl),a
 	dec	hl
 	ccf	
@@ -6032,7 +6049,7 @@ PROC    ;_3a03
 	ld	a,$01
 	ld	($.D289),a
 	set	2,(iy+#vars.flags9)
-	xor	a
+	xor	a;zero
 ._7	ld	(hl),a
 	ret
 }

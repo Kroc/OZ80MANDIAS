@@ -1,0 +1,12 @@
+`sprite layout, shared by Scrap Brain boss and Final Boss
+ `(likely "running Robotnik")
+TABLE   :_baf9                                  SECTION ::objects
+{
+        DATA $FE $0A $0C $0E $FF $FF
+        DATA $28 $2A $2C $2E $FF $FF
+        DATA $FE $4A $4C $4E $FF $FF
+
+        DATA $FE $0A $0C $0E $FF $FF
+        DATA $28 $2A $2C $2E $FF $FF
+        DATA $FE $02 $04 $06 $FF $FF
+}

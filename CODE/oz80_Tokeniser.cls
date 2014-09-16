@@ -42,7 +42,7 @@ Private Enum OZ80_SYNTAX
     SYNTAX_QUOTE = ASC_QUOT             ' " - string identifier
     SYNTAX_LABEL = ASC_COL              ' : - label identifier
     SYNTAX_PROPERTY = ASC_DOT           ' . - property identifier
-    SYNTAX_VARIABLE = ASC_HASH          ' # - variable identifier
+    SYNTAX_OBJECT = ASC_HASH            ' # - object identifier
     SYNTAX_MACRO = ASC_AT               ' @ - macro identifier
     SYNTAX_FUNCT = ASC_QM               ' ? - function identifier
     SYNTAX_NUMBER_HEX = ASC_DOL         ' $ - hexadecimal number, e.g. `$FFFF`
@@ -50,8 +50,8 @@ Private Enum OZ80_SYNTAX
     SYNTAX_NEXT = ASC_COM               ' , - item seperator, optional
     SYNTAX_PAREN_OPEN = ASC_LP          ' ( - memory reference open parenthesis
     SYNTAX_PAREN_CLOSE = ASC_RP         ' ) - memory reference close parenthesis
-    SYNTAX_BLOCK_OPEN = ASC_LB          ' { - block open brace
-    SYNTAX_BLOCK_CLOSE = ASC_RB         ' } - block close brace
+    SYNTAX_BLOCK_OPEN = ASC_LB          ' { - open brace
+    SYNTAX_BLOCK_CLOSE = ASC_RB         ' } - close brace
     SYNTAX_OPERATOR_ADD = ASC_PLUS      ' + - Add
     SYNTAX_OPERATOR_SUB = ASC_HYP       ' - - Subtract
     SYNTAX_OPERATOR_MUL = ASC_STAR      ' * - Multiply
@@ -282,34 +282,11 @@ Private Sub Class_Initialize()
     Let TokenNames(TOKEN_OPERATOR_XOR) = Chr$(SYNTAX_OPERATOR_XOR)
     
     'Keywords .........................................................................
-    Let TokenNames(TOKEN_KEYWORD_AT) = "AT"
-    Let TokenNames(TOKEN_KEYWORD_AS) = "AS"
-    Let TokenNames(TOKEN_KEYWORD_BANK) = "BANK"
-    Let TokenNames(TOKEN_KEYWORD_BINARY) = "BINARY"
-    Let TokenNames(TOKEN_KEYWORD_BYTE) = "BYTE"
-    Let TokenNames(TOKEN_KEYWORD_DATA) = "DATA"
-    Let TokenNames(TOKEN_KEYWORD_DEFAULT) = "DEFAULT"
-    Let TokenNames(TOKEN_KEYWORD_ECHO) = "ECHO"
-    Let TokenNames(TOKEN_KEYWORD_ELSE) = "ELSE"
-    Let TokenNames(TOKEN_KEYWORD_EXISTS) = "EXISTS"
-    Let TokenNames(TOKEN_KEYWORD_FAIL) = "FAIL"
-    Let TokenNames(TOKEN_KEYWORD_FILL) = "FILL"
-    Let TokenNames(TOKEN_KEYWORD_IF) = "IF"
-    Let TokenNames(TOKEN_KEYWORD_INCLUDE) = "INCLUDE"
-    Let TokenNames(TOKEN_KEYWORD_LENGTH) = "LENGTH"
-    Let TokenNames(TOKEN_KEYWORD_OBJECT) = "OBJECT"
     Let TokenNames(TOKEN_KEYWORD_PARAMS) = "PARAMS"
     Let TokenNames(TOKEN_KEYWORD_PROC) = "PROC"
-    Let TokenNames(TOKEN_KEYWORD_RAM) = "RAM"
     Let TokenNames(TOKEN_KEYWORD_RETURN) = "RETURN"
     Let TokenNames(TOKEN_KEYWORD_SECTION) = "SECTION"
     Let TokenNames(TOKEN_KEYWORD_SLOT) = "SLOT"
-    Let TokenNames(TOKEN_KEYWORD_START) = "START"
-    Let TokenNames(TOKEN_KEYWORD_STOP) = "STOP"
-    Let TokenNames(TOKEN_KEYWORD_STRUCT) = "STRUCT"
-    Let TokenNames(TOKEN_KEYWORD_TABLE) = "TABLE"
-    Let TokenNames(TOKEN_KEYWORD_VAR) = "VAR"
-    Let TokenNames(TOKEN_KEYWORD_WORD) = "WORD"
     
     Let TokenNames(TOKEN_PREFIX_K) = "K"
     Let TokenNames(TOKEN_PREFIX_KB) = "KB"
@@ -326,7 +303,6 @@ Private Sub Class_Initialize()
     Let TokenNames(TOKEN_PROPERTY_NEW) = Chr$(SYNTAX_PROPERTY)
     Let TokenNames(TOKEN_RAM) = Chr$(SYNTAX_NUMBER_HEX) & Chr$(SYNTAX_PROPERTY)
     Let TokenNames(TOKEN_SECTION) = String(2, Chr$(SYNTAX_LABEL))
-    Let TokenNames(TOKEN_VARIABLE) = Chr$(SYNTAX_VARIABLE)
     
     '----------------------------------------------------------------------------------
     
@@ -421,7 +397,7 @@ Private Sub Class_Initialize()
         
         'If the token consititutes an expression (a calculable value)
         ElseIf (ii = TOKEN_LABEL) Or (ii = TOKEN_NUMBER) Or _
-               (ii = TOKEN_PROPERTY_USE) Or (ii = TOKEN_VARIABLE) _
+               (ii = TOKEN_PROPERTY_USE) _
         Then
             Let My_IsExpression(ii) = True
             Let My_IsParameter(ii) = True
@@ -1015,19 +991,6 @@ TokenWord:
                 Call AddString(TOKEN_PROPERTY_USE)
             GoTo NextWord
         End If
-    
-    '.......................................................................... `#` ...
-    ElseIf Asc1 = SYNTAX_VARIABLE Then
-        'A variable name cannot be just '#'
-        'A variable cannot begin with a number but must otherwise be A-Z, 0-9 and "_"
-        If (Asc2 = ASC_NUL) Or (Not IsValidName()) Then
-            'TODO: Variable specific error message
-            Call RaiseError(OZ80_ERROR_INVALID_NAME)
-            GoTo Finish
-        Else
-            Call AddString(TOKEN_VARIABLE)
-            GoTo NextWord
-        End If
         
     'String (quote) _
      .......................................................................... `"` ...
@@ -1041,17 +1004,10 @@ TokenWord:
         If CompStr("adc") Then Call Add(TOKEN_Z80_ADC): GoTo NextWord
         If CompStr("add") Then Call Add(TOKEN_Z80_ADD): GoTo NextWord
         If CompStr("and") Then Call Add(TOKEN_Z80_AND): GoTo NextWord
-        'Keywords
-        If CompStr("as") Then Call Add(TOKEN_KEYWORD_AS): GoTo NextWord
-        If CompStr("at") Then Call Add(TOKEN_KEYWORD_AT): GoTo NextWord
          
     ElseIf Asc1 = ASC_B Then '................................................. `b` ...
         'Z80 instructions
         If CompStr("bit") Then Call Add(TOKEN_Z80_BIT): GoTo NextWord
-        'Keywords
-        If CompStr("bank") Then Call Add(TOKEN_KEYWORD_BANK): GoTo NextWord
-        If CompStr("binary") Then Call Add(TOKEN_KEYWORD_BINARY): GoTo NextWord
-        If CompStr("byte") Then Call Add(TOKEN_KEYWORD_BYTE): GoTo NextWord
         
     ElseIf Asc1 = ASC_C Then '................................................. `c` ...
         'Z80 instructions
@@ -1072,24 +1028,14 @@ TokenWord:
         If CompStr("dec") Then Call Add(TOKEN_Z80_DEC): GoTo NextWord
         If CompStr("di") Then Call Add(TOKEN_Z80_DI): GoTo NextWord
         If CompStr("djnz") Then Call Add(TOKEN_Z80_DJNZ): GoTo NextWord
-        'Keywords
-        If CompStr("data") Then Call Add(TOKEN_KEYWORD_DATA): GoTo NextWord
-        If CompStr("default") Then Call Add(TOKEN_KEYWORD_DEFAULT): GoTo NextWord
         
     ElseIf Asc1 = ASC_E Then '................................................. `e` ...
         'Z80 instructions
         If CompStr("ei") Then Call Add(TOKEN_Z80_EI): GoTo NextWord
         If CompStr("ex") Then Call Add(TOKEN_Z80_EX): GoTo NextWord
         If CompStr("exx") Then Call Add(TOKEN_Z80_EXX): GoTo NextWord
-        'Keywords
-        If CompStr("echo") Then Call Add(TOKEN_KEYWORD_ECHO): GoTo NextWord
-        If CompStr("else") Then Call Add(TOKEN_KEYWORD_ELSE): GoTo NextWord
-        If CompStr("exists") Then Call Add(TOKEN_KEYWORD_EXISTS): GoTo NextWord
         
     ElseIf Asc1 = ASC_F Then '................................................. `f` ...
-        'Keywords
-        If CompStr("fail") Then Call Add(TOKEN_KEYWORD_FAIL): GoTo NextWord
-        If CompStr("fill") Then Call Add(TOKEN_KEYWORD_FILL): GoTo NextWord
         'You can't refer to the `f` register directly (only `af`)
         GoTo WordError
         
@@ -1110,9 +1056,6 @@ TokenWord:
         If CompStr("indr") Then Call Add(TOKEN_Z80_INDR): GoTo NextWord
         If CompStr("ini") Then Call Add(TOKEN_Z80_INI): GoTo NextWord
         If CompStr("inir") Then Call Add(TOKEN_Z80_INIR): GoTo NextWord
-        'Keywords
-        If CompStr("if") Then Call Add(TOKEN_KEYWORD_IF): GoTo NextWord
-        If CompStr("include") Then Call Add(TOKEN_KEYWORD_INCLUDE): GoTo NextWord
         
     ElseIf Asc1 = ASC_J Then '................................................. `j` ...
         'Z80 instructions
@@ -1144,8 +1087,6 @@ TokenWord:
         If CompStr("lddr") Then Call Add(TOKEN_Z80_LDDR): GoTo NextWord
         If CompStr("ldi") Then Call Add(TOKEN_Z80_LDI): GoTo NextWord
         If CompStr("ldir") Then Call Add(TOKEN_Z80_LDIR): GoTo NextWord
-        'Keywords
-        If CompStr("length") Then Call Add(TOKEN_KEYWORD_LENGTH): GoTo NextWord
     
     ElseIf Asc1 = ASC_M Then '................................................. `m` ...
         'Z80 flag conditions
@@ -1173,8 +1114,6 @@ TokenWord:
         If CompStr("otdr") Then Call Add(TOKEN_Z80_OTDR): GoTo NextWord
         If CompStr("outi") Then Call Add(TOKEN_Z80_OUTI): GoTo NextWord
         If CompStr("otir") Then Call Add(TOKEN_Z80_OTIR): GoTo NextWord
-        'Keywords
-        If CompStr("object") Then Call Add(TOKEN_KEYWORD_OBJECT): GoTo NextWord
         'There are no `o` registers
         GoTo WordError
         
@@ -1229,13 +1168,8 @@ TokenWord:
         'Keywords
         If CompStr("section") Then Call Add(TOKEN_KEYWORD_SECTION): GoTo NextWord
         If CompStr("slot") Then Call Add(TOKEN_KEYWORD_SLOT): GoTo NextWord
-        If CompStr("start") Then Call Add(TOKEN_KEYWORD_START): GoTo NextWord
-        If CompStr("stop") Then Call Add(TOKEN_KEYWORD_STOP): GoTo NextWord
-        If CompStr("struct") Then Call Add(TOKEN_KEYWORD_STRUCT): GoTo NextWord
     
     ElseIf Asc1 = ASC_T Then '................................................. `t` ...
-        'Keywords
-        If CompStr("table") Then Call Add(TOKEN_KEYWORD_TABLE): GoTo NextWord
         'There is no `t` register
         GoTo WordError
     
@@ -1244,13 +1178,10 @@ TokenWord:
         GoTo WordError
     
     ElseIf Asc1 = ASC_V Then '................................................. `v` ...
-        'Keywords
-        If CompStr("var") Then Call Add(TOKEN_KEYWORD_VAR): GoTo NextWord
+        'There's nothing that begins with V
         GoTo WordError
         
     ElseIf Asc1 = ASC_W Then '................................................. `w` ...
-        'Keywords
-        If CompStr("word") Then Call Add(TOKEN_KEYWORD_WORD): GoTo NextWord
         'There is no `w` register
         GoTo WordError
         
@@ -1580,8 +1511,6 @@ Private Function FormatToken() As String
         Let Msg = "[REGISTER] " & TokenNames(TokenKind)
     ElseIf TokenKind = TOKEN_SECTION Then
         Let Msg = "[ SECTION] " & Chr(34) & Strings(TokenValue) & Chr(34)
-    ElseIf TokenKind = TOKEN_VARIABLE Then
-        Let Msg = "[VARIABLE] " & Chr(34) & Strings(TokenValue) & Chr(34)
     ElseIf My_IsInstruction(TokenKind) Then
         Let Msg = "[     Z80] " & TokenNames(TokenKind)
     ElseIf TokenKind = TOKEN_PARENOPEN _
@@ -1623,7 +1552,7 @@ Private Function IsValidName() As Boolean
        WordArr(0) <> SYNTAX_FUNCT And _
        WordArr(0) <> SYNTAX_MACRO And _
        WordArr(0) <> SYNTAX_PROPERTY And _
-       WordArr(0) <> SYNTAX_VARIABLE And _
+       WordArr(0) <> SYNTAX_OBJECT And _
        WordArr(0) <> SYNTAX_NUMBER_HEX _
     Then
         Exit Function

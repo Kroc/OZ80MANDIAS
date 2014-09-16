@@ -73,7 +73,8 @@ INCLUDE "boss_animals.oz80"
 `____________________________________________________________________________[$77BE]___
 `called by the boss object code -- probably the exploded egg ship
 
-PROC    :_77be                                  SECTION ::objects {
+PROC    :_77be                                  SECTION ::objects
+{
 	ld	a,($D2EC)
 	cp	$08
 	jr	nc,._4
@@ -292,7 +293,8 @@ PROC    :_77be                                  SECTION ::objects {
 `____________________________________________________________________________[$79FA]___
 `called by green hill boss, jungle boss and final animation
 
-PROC    :_79fa                                  SECTION ::objects {
+PROC    :_79fa                                  SECTION ::objects
+{
 	ld	a,(ix+#object.Xspeed.lo)
 	or	(ix+#object.Xspeed.hi)
 	ret	z
@@ -323,7 +325,8 @@ PROC    :_79fa                                  SECTION ::objects {
 `____________________________________________________________________________[$7A3A]___
 `called by `:_77be`, capsule and final animation
 
-PROC    :_7a3a                                  SECTION ::objects {
+PROC    :_7a3a                                  SECTION ::objects
+{
 	call	:_7c7b
 	ret	c
 	push	hl
@@ -579,7 +582,8 @@ PROC    :doObjectCode_platform_fallVert         SECTION ::object
 `____________________________________________________________________________[$7E9B]___
 `OBJECT: log - horizontal (Jungle)
 
-PROC :doObjectCode_platform_fallHoriz {
+PROC    :doObjectCode_platform_fallHoriz        SECTION ::objects
+{
 	set	5,(ix+$18)
 	ld	hl,$0030
 	ld	($.D267),hl
@@ -587,8 +591,8 @@ PROC :doObjectCode_platform_fallHoriz {
 	ld	($.D269),hl
 	ld	(ix+#object.width),$1a
 	ld	(ix+#object.height),$10
-	ld	(ix+#object.spriteLayout.lo),._7ed9.lo
-	ld	(ix+#object.spriteLayout.hi),._7ed9.hi
+	ld	(ix+#object.spriteLayout.lo),.layout.lo
+	ld	(ix+#object.spriteLayout.hi),.layout.hi
 	bit	0,(ix+$18)
 	jp	nz,:doObjectCode_platform_fallVert._7e3c
 	ld	a,(ix+#object.Y.lo)
@@ -600,7 +604,7 @@ PROC :doObjectCode_platform_fallHoriz {
 	jp	:doObjectCode_platform_fallVert._7e3c
         
         `sprite layout
-._7ed9  DATA $FE, $FF, $FF, $FF, $FF, $FF
+.layout DATA $FE, $FF, $FF, $FF, $FF, $FF                                    `$7ED9
         DATA $6C, $6E, $6E, $48, $FF, $FF
         DATA $FF
 }
@@ -1372,864 +1376,30 @@ PROC    :doObjectCode_boss_labyrinth            SECTION ::objects
         DATA $60, $62, $64, $66, $68, $FF
 }
 
-`____________________________________________________________________________[$94A5]___
-`OBJECT: UNKNOWN
-
-PROC    :_94a5                                  SECTION ::objects
-{
-	set	5,(ix+$18)
-	ld	(ix+#object.width), 8
-	ld	(ix+#object.height),10
-	ld	hl,$0404
-	ld	($.TEMP6),hl
-	call	:_LABEL_3956_11
-	call	nc,:_35fd
-	bit	1,(ix+$18)
-	jr	nz,._1
-	set	1,(ix+$18)
-	ld	hl,($.SONIC.X)
-	ld	de,$000c
-	add	hl,de
-	ex	de,hl
-	ld	l,(ix+#object.X.lo)
-	ld	h,(ix+#object.X.hi)
-	ld	bc,$0008
-	add	hl,bc
-	and	a
-	sbc	hl,de
-	jr	nc,._1
-	set	2,(ix+$18)
-._1	bit	0,(ix+$18)
-	jr	nz,._3
-	ld	(ix+#object.Yspeed.lo),$40
-	ld	(ix+#object.Yspeed.hi),$00
-	ld	(ix+#object.Ydirection),$00
-	ld	hl,:_9698
-	bit	2,(ix+$18)
-	jr	z,._2
-	ld	hl,:_9688
-._2	ld	(ix+#object.spriteLayout.lo),l
-	ld	(ix+#object.spriteLayout.hi),h
-	ld	hl,($.SONIC.Y)
-	ld	e,(ix+#object.Y.lo)
-	ld	d,(ix+#object.Y.hi)
-	and	a
-	sbc	hl,de
-	ret	nc
-	set	0,(ix+$18)
-	ret
-        
-        `------------------------------------------------------------------------------
-	
-._3	ld	c,(ix+#object.X.lo)
-	ld	b,(ix+#object.X.hi)
-	ld	hl,$fff0
-	add	hl,bc
-	ld	de,($.CAMERA_X)
-	and	a
-	sbc	hl,de
-	jr	c,._4
-	ld	l,c
-	ld	h,b
-	inc	d
-	and	a
-	sbc	hl,de
-	jr	nc,._4
-	ld	c,(ix+#object.Y.lo)
-	ld	b,(ix+#object.Y.hi)
-	ld	hl,$fff0
-	add	hl,bc
-	ld	de,($.CAMERA_Y)
-	and	a
-	sbc	hl,de
-	jr	c,._4
-	ld	hl,$00c0
-	add	hl,de
-	and	a
-	sbc	hl,bc
-	jr	nc,._5
-._4	ld	(ix+#object.type),$FF	        `remove object
-._5	xor	a;zero
-	ld	hl,$0002
-	bit	2,(ix+$18)
-	jr	nz,._6
-	dec	a
-	ld	hl,$fffe
-._6	ld	e,(ix+#object.Xspeed.lo)
-	ld	d,(ix+#object.Xspeed.hi)
-	add	hl,de
-	adc	a,(ix+#object.Xdirection)
-	ld	c,a
-	ld	a,h
-	ld	de,$0100
-	bit	7,c
-	jr	z,._7
-	ld	a,l
-	cpl	
-	ld	e,a
-	ld	a,h
-	cpl	
-	ld	d,a
-	inc	de
-	ld	a,d
-	ld	de,$ff00
-._7	and	a
-	jr	z,._8
-	ex	de,hl
-._8	ld	(ix+#object.Xspeed.lo),l
-	ld	(ix+#object.Xspeed.hi),h
-	ld	(ix+#object.Xdirection),c
-	ld	hl,($.SONIC.Y)
-	ld	de,$0010
-	add	hl,de
-	ex	de,hl
-	ld	l,(ix+#object.Y.lo)
-	ld	h,(ix+#object.Y.hi)
-	ld	bc,$0008
-	add	hl,bc
-	and	a
-	sbc	hl,de
-	ld	a,$ff
-	ld	hl,$fffe
-	bit	7,(ix+#object.Ydirection)
-	jr	nz,._9
-	ld	hl,$fffc
-._9	jr	nc,._10
-	inc	a
-	ld	hl,$0002
-	bit	7,(ix+#object.Ydirection)
-	jr	z,._10
-	ld	hl,$0004
-._10	ld	e,(ix+#object.Yspeed.lo)
-	ld	d,(ix+#object.Yspeed.hi)
-	add	hl,de
-	adc	a,(ix+#object.Ydirection)
-	ld	c,a
-	ld	a,h
-	ld	de,$0100
-	bit	7,c
-	jr	z,._11
-	ld	a,l
-	cpl	
-	ld	e,a
-	ld	a,h
-	cpl	
-	ld	d,a
-	inc	de
-	ld	a,d
-	ld	de,$ff00
-._11	and	a
-	jr	z,._12
-	ex	de,hl
-._12	ld	(ix+#object.Yspeed.lo),l
-	ld	(ix+#object.Yspeed.hi),h
-	ld	(ix+#object.Ydirection),c
-	ld	hl,:_9688
-	bit	7,(ix+#object.Xdirection)
-	jr	z,._13
-	ld	hl,:_9698
-._13	push	hl
-	ld	l,(ix+#object.Xspeed.lo)
-	ld	h,(ix+#object.Xspeed.hi)
-	bit	7,h
-	jr	z,._14
-	ld	a,l
-	cpl	
-	ld	l,a
-	ld	a,h
-	cpl	
-	ld	h,a
-	inc	hl
-._14	ld	e,(ix+$11)
-	ld	d,(ix+$12)
-	add	hl,de
-	ld	(ix+$11),l
-	ld	(ix+$12),h
-	ld	a,h
-	and	$08
-	ld	e,a
-	ld	d,$00
-	pop	hl
-	add	hl,de
-	ld	(ix+#object.spriteLayout.lo),l
-	ld	(ix+#object.spriteLayout.hi),h
-	ld	l,(ix+#object.X.lo)
-	ld	h,(ix+#object.X.hi)
-	ld	de,$fff9
-	bit	7,(ix+#object.Xdirection)
-	jr	z,._15
-	ld	de,$000f
-._15	add	hl,de
-	ld	($.TEMP1),hl
-	ld	l,(ix+#object.Y.lo)
-	ld	h,(ix+#object.Y.hi)
-	ld	($.TEMP3),hl
-	ld	a,($.FRAMECOUNT)
-	and	$0f
-	ret	nz
-	call	:_7c7b
-	ret	c
-	push	ix
-	push	hl
-	pop	ix
-	xor	a;zero			        `set A to 0
-	ld	(ix+#object.type),$2A	        `unknown object
-	ld	hl,($.TEMP1)
-	ld	(ix+#object.Xsubpixel),a;zero
-	ld	(ix+#object.X.lo),l
-	ld	(ix+#object.X.hi),h
-	ld	hl,($.TEMP3)
-	ld	(ix+#object.Ysubpixel),a;zero
-	ld	(ix+#object.Y.lo),l
-	ld	(ix+#object.Y.hi),h
-	ld	(ix+$11),a;zero
-	ld	(ix+$12),a;zero
-	ld	(ix+#object.Xspeed.lo),a;zero
-	ld	(ix+#object.Xspeed.hi),a;zero
-	ld	(ix+#object.Xdirection),a;zero
-	ld	(ix+#object.Yspeed.lo),a;zero
-	ld	(ix+#object.Yspeed.hi),a;zero
-	ld	(ix+#object.Ydirection),a;zero
-	pop	ix
-	ret
-}
-
-`sprite layout
-:_9688
-DATA $3C, $3E, $FF, $FF, $FF, $FF
-DATA $FF, $FF, $38, $3A, $FF, $FF
-DATA $FF, $FF, $FF, $FF
-:_9698
-DATA $56, $58, $FF, $FF, $FF, $FF
-DATA $FF, $FF, $5A, $5C, $FF, $FF
-DATA $FF, $FF, $FF, $FF
-
-`____________________________________________________________________________[$96A8]___
-`OBJECT: UNKNOWN
-
-PROC    :_96a8                                  SECTION ::objects
-{
-	set	5,(ix+$18)
-	xor	a;zero
-	ld	(ix+#object.spriteLayout.lo),a;zero
-	ld	(ix+#object.spriteLayout.hi),a;zero
-	ld	l,(ix+#object.X.lo)
-	ld	h,(ix+#object.X.hi)
-	ld	($.TEMP1),hl
-	ld	l,(ix+#object.Y.lo)
-	ld	h,(ix+#object.Y.hi)
-	ld	($.TEMP3),hl
-	ld	l;zero,a;zero
-	ld	h;zero,a;zero
-	ld	($.TEMP4),hl;zero
-	ld	($.TEMP6),hl;zero
-	ld	e,(ix+$12)
-	ld	d,$00
-	ld	hl,:_96f5
-	add	hl,de
-	ld	a,(hl)
-	call	:_3581
-	inc	(ix+$11)
-	ld	a,(ix+$11)
-	cp	$0c
-	ret	c
-	ld	(ix+$11),$00
-	inc	(ix+$12)
-	ld	a,(ix+$12)
-	cp	$03
-	ret	c
-	ld	(ix+#object.type),$FF	`remove object?
-	ret
-}
-
-:_96f5
-DATA $1C, $1E, $5E
-
-`____________________________________________________________________________[$96F8]___
-`OBJECT: UNKNOWN
-
-PROC :_96f8 {
-	set	5,(ix+$18)
-	xor	a;zero
-	ld	(ix+#object.spriteLayout.lo),a;zero
-	ld	(ix+#object.spriteLayout.hi),a;zero
-	ld	a,(iy+#vars.spriteUpdateCount)
-	ld	hl,($.SPRITES_CURRENT)
-	push	af
-	push	hl
-	ld	a,($.D2DE)
-	cp	$24
-	jr	nc,._3
-	ld	e,a
-	ld	d,$00
-	ld	hl,$.SPRITES
-	add	hl,de
-	ld	($.SPRITES_CURRENT),hl
-	ld	l,(ix+#object.X.lo)
-	ld	h,(ix+#object.X.hi)
-	ld	($.TEMP1),hl
-	ld	l,(ix+#object.Y.lo)
-	ld	h,(ix+#object.Y.hi)
-	ld	($.TEMP3),hl
-	ld	hl,$0000
-	ld	($.TEMP4),hl
-	ld	($.TEMP6),hl
-	ld	a,(ix+$12)
-	and	a
-	jr	z,._1
-	cp	$08
-	jr	nc,._1
-	ld	hl,$0004
-	ld	($.TEMP4),hl
-	ld	a,$0c
-	jr	._2
-	
-._1	ld	a,$40
-	call	:_3581
-	ld	hl,($.TEMP4)
-	ld	de,$0008
-	add	hl,de
-	ld	($.TEMP4),hl
-	ld	a,$42
-._2	call	:_3581
-	ld	a,($.D2DE)
-	add	a,$06
-	ld	($.D2DE),a
-._3	pop	hl
-	pop	af
-	ld	($.SPRITES_CURRENT),hl
-	ld	(iy+#vars.spriteUpdateCount),a
-	ld	(ix+#object.width),$0a
-	ld	(ix+#object.height),$0c
-	ld	a,(ix+$12)
-	and	a
-	jr	z,._4
-	ld	c,$00
-	ld	b,c
-	ld	d,c
-	ld	(ix+#object.Yspeed.lo),c
-	ld	(ix+#object.Yspeed.hi),c
-	ld	(ix+#object.Ydirection),c
-	dec	(ix+$12)
-	jp	nz,._6
-	ld	(ix+#object.type),$FF	`remove object
-	jp	._6
-	
-._4	ld	hl,$0206
-	ld	($.TEMP6),hl
-	call	:_LABEL_3956_11
-	jr	c,._5
-	ld	bc,($.SONIC.Y)
-	ld	e,(ix+#object.Y.lo)
-	ld	d,(ix+#object.Y.hi)
-	ld	hl,$fff8
-	add	hl,de
-	and	a
-	sbc	hl,bc
-	jr	nc,._5
-	ld	hl,$0006
-	add	hl,de
-	and	a
-	sbc	hl,bc
-	jr	c,._5
-	ld	a,(ix+$12)
-	and	a
-	jr	nz,._5
-	xor	a;zero
-	ld	l;zero,a;zero
-	ld	h;zero,a;zero
-	ld	($.SONIC.Yspeed),hl;zero
-	ld	($.SONIC.Ydirection),a;zero
-	ld	($.D28E),a;zero
-	ld	($.D29B),hl;zero
-	set	2,(iy+#vars.unknown0)
-	ld	a,$20
-	ld	($D2FB),a
-	ld	(ix+$12),$10
-	ld	a,$22
-	rst	:rst_playSFX
-._5	ld	(ix+#object.Yspeed.lo),$98
-	ld	(ix+#object.Yspeed.hi),$ff
-	ld	(ix+#object.Ydirection),$ff
-	ld	a,(ix+$11)
-	and	$0f
-	jr	nz,._7
-	call	:_LABEL_625_57
-	ld	bc,$0020
-	ld	d,$00
-	and	$3f
-	cp	$20
-	jr	c,._6
-	ld	bc,$ffe0
-	ld	d,$ff
-._6	ld	(ix+#object.Xspeed.lo),c
-	ld	(ix+#object.Xspeed.hi),b
-	ld	(ix+#object.Xdirection),d
-._7	ld	l,(ix+#object.X.lo)
-	ld	h,(ix+#object.X.hi)
-	ex	de,hl
-	ld	hl,($.CAMERA_X)
-	ld	bc,$0008
-	xor	a;zero
-	sbc	hl,bc
-	jr	nc,._8
-	ld	l,a;zero
-	ld	h,a;zero
-._8	and	a
-	sbc	hl,de
-	jr	nc,._9
-	ld	hl,($.CAMERA_X)
-	ld	bc,$0100
-	add	hl,bc
-	and	a
-	sbc	hl,de
-	jr	c,9
-	ld	l,(ix+#object.Y.lo)
-	ld	h,(ix+#object.Y.hi)
-	ex	de,hl
-	ld	hl,($.D2DC)
-	and	a
-	sbc	hl,de
-	jr	nc,9
-	ld	hl,($.CAMERA_Y)
-	ld	bc,$fff0
-	add	hl,bc
-	and	a
-	sbc	hl,de
-	jr	nc,9
-	ld	hl,($.CAMERA_Y)
-	ld	bc,$00c0
-	add	hl,bc
-	and	a
-	sbc	hl,de
-	jr	nc,._10
-._9	ld	(ix+#object.type),$FF	`remove object
-._10	inc	(ix+$11)
-	ret
-}
-
-`____________________________________________________________________________[$9866]___
-`OBJECT: flipper (Special Stage)
-
-PROC :doObjectCode_platform_flipper {
-	set	5,(ix+$18)
-	ld	(ix+#object.spriteLayout.lo),:_9a7e.lo
-	ld	(ix+#object.spriteLayout.hi),:_9a7e.hi
-	bit	5,(iy+#vars.joypad)
-	jr	nz,._1
-	ld	a,(ix+$11)
-	ld	(ix+$12),a
-	ld	a,(ix+$11)
-	cp	$05
-	jr	nc,._2
-	inc	(ix+$11)
-	jp	._2
-	
-._1	ld	a,(ix+$11)
-	and	a
-	jr	z,._2
-	dec	(ix+$11)
-._2	ld	a,(ix+$11)
-	cp	$01
-	jr	nc,._3
-	ld	hl,$140c
-	ld	($.TEMP6),hl
-	ld	(ix+#object.width),$1e
-	ld	(ix+#object.height),$16
-	call	:_LABEL_3956_11
-	ret	c
-	ld	bc,:_999e
-	call	:_9aaf
-	ret	nc
-	ld	a,($.D2E8)
-	ld	hl,($.D2E6)
-	ld	($.SONIC.Yspeed),hl
-	ld	($.SONIC.Ydirection),a
-	ld	de,$fffc
-	ld	hl,($.SONIC.Xspeed)
-	ld	a,($.SONIC.Xdirection)
-	add	hl,de
-	adc	a,$ff
-	ld	($.SONIC.Xspeed),hl
-	ld	($.SONIC.Xdirection),a
-	ret
-	
-._3	cp	$04
-	jp	nc,._4
-	ld	(ix+#object.spriteLayout.lo),:_9a90.lo
-	ld	(ix+#object.spriteLayout.hi),:_9a90.hi
-	ld	hl,$080f
-	ld	($.TEMP6),hl
-	ld	(ix+#object.width),$1e
-	ld	(ix+#object.height),$16
-	call	:_LABEL_3956_11
-	ret	c
-	ld	bc,:_99be
-	call	:_9aaf
-	ret	nc
-	ld	a,(ix+$12)
-	cp	(ix+$11)
-	ret	nc
-	ld	a,($.SONIC.X)
-	add	a,$0c
-	and	$1f
-	add	a,a
-	ld	c,a
-	ld	b,$00
-	ld	hl,:_99fe
-	add	hl,bc
-	ld	e,(hl)
-	inc	hl
-	ld	d,(hl)
-	ld	hl,($.SONIC.Xspeed)
-	ld	a,($.SONIC.Xdirection)
-	add	hl,de
-	adc	a,$ff
-	ld	($.SONIC.Xspeed),hl
-	ld	($.SONIC.Xdirection),a
-	ld	hl,:_9a3e
-	add	hl,bc
-	ld	e,(hl)
-	inc	hl
-	ld	d,(hl)
-	ld	hl,($.SONIC.Yspeed)
-	ld	a,l
-	cpl	
-	ld	l,a
-	ld	a,h
-	cpl	
-	ld	h,a
-	ld	a,($.SONIC.Ydirection)
-	cpl	
-	add	hl,de
-	adc	a,$ff
-	ld	($.SONIC.Yspeed),hl
-	ld	($.SONIC.Ydirection),a
-	ret
-
-	`unused section of code?
-	ld	a,($.D2E8)
-	ld	hl,($.D2E6)
-	ld	($.SONIC.Yspeed),hl
-	ld	($.SONIC.Ydirection),a
-	ld	de,$0008
-	ld	hl,($.SONIC.Xspeed)
-	ld	a,($.SONIC.Xdirection)
-	add	hl,de
-	adc	a,$00
-	ld	($.SONIC.Xspeed),hl
-	ld	($.SONIC.Xdirection),a
-	ret
-	
-._4	ld	(ix+#object.spriteLayout.lo),:_9aa2.lo
-	ld	(ix+#object.spriteLayout.hi),:_9aa2.hi
-	ld	hl,$021a
-	ld	($.TEMP6),hl
-	ld	(ix+#object.width),$1e
-	ld	(ix+#object.height),$16
-	call	:_LABEL_3956_11
-	ret	c
-	ld	bc,:_99de
-	call	:_9aaf
-	ret	nc
-	ld	a,($.D2E8)
-	ld	hl,($.D2E6)
-	ld	($.SONIC.Yspeed),hl
-	ld	($.SONIC.Ydirection),a
-	ld	de,$001a
-	ld	hl,($.SONIC.Xspeed)
-	ld	a,($.SONIC.Xdirection)
-	add	hl,de
-	adc	a,$00
-	ld	($.SONIC.Xspeed),hl
-	ld	($.SONIC.Xdirection),a
-	ret
-}
-
-:_999e
-DATA $FF, $FF, $FE, $FE, $FE, $FD, $FD, $FD, $FC, $FC, $FC, $FC, $FB, $FB, $FB, $FB
-DATA $FA, $FA, $FA, $FA, $FA, $F9, $F9, $F9, $F9, $F9, $F9, $FA, $FA, $FB, $FC, $FE
-:_99be
-DATA $EA, $EA, $EA, $F6, $F7, $F8, $F8, $F8, $F9, $F9, $F9, $FA, $FA, $FA, $FB, $FB
-DATA $FB, $FB, $FC, $FC, $FC, $FC, $FD, $FD, $FD, $FD, $FE, $FE, $FF, $00, $02, $04
-:_99de
-DATA $EA, $EA, $EA, $EA, $EA, $EA, $EA, $EA, $EA, $EA, $EA, $EA, $EE, $ED, $EC, $EC
-DATA $EC, $ED, $EE, $EF, $F0, $F2, $F3, $F4, $F5, $F7, $F8, $F9, $FA, $FB, $FD, $FF
-:_99fe
-DATA $00, $F8, $00, $F8, $00, $F9, $00, $FA, $00, $FB, $00, $FC, $E0, $FC, $80, $FD
-DATA $C0, $FD, $00, $FE, $40, $FE, $80, $FE, $C0, $FE, $00, $FF, $20, $FF, $40, $FF
-DATA $60, $FF, $80, $FF, $A0, $FF, $C0, $FF, $E0, $FF, $E8, $FF, $EA, $FF, $EC, $FF
-DATA $EE, $FF, $F0, $FF, $F2, $FF, $F4, $FF, $F6, $FF, $F8, $FF, $FC, $FF, $FE, $FF
-:_9a3e
-DATA $00, $FC, $00, $FC, $00, $FC, $00, $FB, $00, $FA, $00, $F9, $00, $F8, $00, $F7
-DATA $00, $F6, $80, $F5, $00, $F5, $C0, $F4, $80, $F4, $40, $F4, $00, $F4, $00, $F4
-DATA $00, $F4, $00, $F4, $40, $F4, $80, $F4, $C0, $F4, $00, $F5, $00, $F6, $00, $F7
-DATA $00, $F9, $00, $FA, $00, $FC, $80, $FC, $00, $FD, $C0, $FD, $00, $FF, $00, $FF
-
-`sprite layout
-:_9a7e
-DATA $FE, $FF, $FF, $FF, $FF, $FF
-DATA $38, $3A, $3C, $3E, $FF, $FF
-DATA $FF, $FF, $FF, $FF, $FF, $FF
-:_9a90
-DATA $48, $4A, $4C, $4E, $FF, $FF
-DATA $68, $6A, $6C, $6E, $FF, $FF
-DATA $FF, $FF, $FF, $FF, $FF, $FF
-:_9aa2
-DATA $FE, $12, $14, $16, $FF, $FF
-DATA $FE, $32, $34, $36, $FF, $FF
-DATA $FF
-
-`____________________________________________________________________________[$9AAF]___
-
-PROC :_9aaf {
-	ld	a,($.SONIC.Ydirection)
-	and	a
-	ret	m
-	
-	ld	a,($.SONIC.X)
-	add	a,$0c
-	and	$1f
-	ld	l,a
-	ld	h,$00
-	add	hl,bc
-	ld	b,$00
-	ld	c,(hl)
-	bit	7,c
-	jr	z,._1
-	dec	b
-._1	ld	l,(ix+#object.Y.lo)
-	ld	h,(ix+#object.Y.hi)
-	add	hl,bc
-	ld	($.SONIC.Y),hl
-	ld	a,($.SONIC.Yspeed.hi)
-	cp	$03
-	jr	nc,._2
-	scf	
-	ret
-	
-._2	ld	de,$0001
-	ld	hl,($.SONIC.Yspeed)
-	ld	a,l
-	cpl	
-	ld	l,a
-	ld	a,h
-	cpl	
-	ld	h,a
-	ld	a,($.SONIC.Ydirection)
-	cpl	
-	add	hl,de
-	adc	a,$00
-	sra	a
-	rr	h
-	rr	l
-	ld	($.SONIC.Yspeed),hl
-	ld	($.SONIC.Ydirection),a
-	and	a
-	ret
-}
-
-`____________________________________________________________________________[$9AFB]___
-`OBJECT: moving bumper (Special Stage)
-
-PROC :doObjectCode_platform_bumper {
-	set	5,(ix+$18)
-	ld	(ix+#object.width),$1c
-	ld	(ix+#object.height),$06
-	ld	(ix+#object.spriteLayout.lo),:_9b6e.lo
-	ld	(ix+#object.spriteLayout.hi),:_9b6e.hi
-	ld	hl,$0001
-	ld	a,(ix+$12)
-	cp	$60
-	jr	nc,._1
-	ld	hl,$ffff
-._1	ld	(ix+#object.Xspeed.lo),$00
-	ld	(ix+#object.Xspeed.hi),l
-	ld	(ix+#object.Xdirection),h
-	inc	a
-	cp	$c0
-	jr	c,._2
-	xor	a;zero
-._2	ld	(ix+$12),a;zero
-	ld	a,(ix+$11)
-	and	a
-	jr	nz,._3
-	ld	hl,$0602
-	ld	($.TEMP6),hl
-	call	:_LABEL_3956_11
-	ret	c
-	ld	a,($.D2E8)
-	ld	de,($.D2E6)
-	ld	c,a
-	ld	hl,($.SONIC.Yspeed)
-	ld	a,l
-	cpl	
-	ld	l,a
-	ld	a,h
-	cpl	
-	ld	h,a
-	ld	a,($.SONIC.Ydirection)
-	cpl	
-	add	hl,de
-	adc	a,c
-	ld	de,$0001
-	add	hl,de
-	adc	a,$00
-	ld	($.SONIC.Yspeed),hl
-	ld	($.SONIC.Ydirection),a
-	ld	(ix+$11),$08
-	ld	a,$07
-	rst	:rst_playSFX
-	ret
-	
-._3	dec	(ix+$11)
-	ret
-}
-
-`sprite layout
-:_9b6e
-DATA $08, $0A, $28, $2A, $FF, $FF
-DATA $FF
-
-`____________________________________________________________________________[$9B75]___
-`OBJECT: UNKNOWN
-
-PROC :_9b75 {
-	set	5,(ix+$18)
-	ld	(ix+#object.width),$1e
-	ld	(ix+#object.height),$60
-	ld	hl,$0000
-	ld	($.TEMP6),hl
-	call	:_LABEL_3956_11
-	jr	c,._2
-	ld	l,(ix+#object.X.lo)
-	ld	h,(ix+#object.X.hi)
-	ld	a,l
-	add	a,a
-	rl	h
-	add	a,a
-	rl	h
-	add	a,a
-	rl	h
-	ld	e,h
-	ld	l,(ix+#object.Y.lo)
-	ld	h,(ix+#object.Y.hi)
-	ld	a,l
-	add	a,a
-	rl	h
-	add	a,a
-	rl	h
-	add	a,a
-	rl	h
-	ld	d,h
-	ld	hl,:_9bd9
-	ld	b,$05
-	
-.loop	ld	a,(hl)
-	inc	hl
-	cp	e
-	jr	nz,._1
-	ld	a,(hl)
-	cp	d
-	jr	nz,._1
-	inc	hl
-	ld	a,(hl)
-	ld	($.D2D3),a
-	ld	a,$01
-	ld	($.D289),a
-	set	4,(iy+#vars.flags6)
-	jp	._2
-	
-._1	inc	hl
-	inc	hl
-	djnz	.loop
-	
-._2	xor	a;zero
-	ld	(ix+#object.spriteLayout.lo),a;zero
-	ld	(ix+#object.spriteLayout.hi),a;zero
-	ret
-}
-
-:_9bd9
-DATA $7D, $1A, $15, $7D, $01, $14, $01, $3C, $18, $01, $02
-:_9be4
-DATA $19, $14, $0F, $1A
-
-`____________________________________________________________________________[$9BE8]___
-`OBJECT: UNKNOWN
-
-PROC :_9be8 {
-	ld	(ix+#object.Xspeed.lo),$80
-	ld	(ix+#object.Xspeed.hi),$01
-	ld	(ix+#object.Xdirection),$00
-	ld	(ix+#object.spriteLayout.lo),:_9c69.lo
-	ld	(ix+#object.spriteLayout.hi),:_9c69.hi
-._9bfc	set	5,(ix+$18)
-	bit	0,(ix+$18)
-	jr	nz,._1
-	ld	a,(ix+#object.X.lo)
-	ld	(ix+$11),a
-	ld	a,(ix+#object.X.hi)
-	ld	(ix+$12),a
-	ld	a,$18
-	rst	:rst_playSFX
-	set	0,(ix+$18)
-._1	ld	(ix+#object.width),$06
-	ld	(ix+#object.height),$08
-	ld	a,(ix+$13)
-	cp	$64
-	jr	nc,._2
-	ld	hl,$0400
-	ld	($.TEMP6),hl
-	call	:_LABEL_3956_11
-	call	nc,:_35fd
-._2	inc	(ix+$13)
-	ld	a,(ix+$13)
-	cp	$64
-	ret	c
-	cp	$f0
-	jr	c,._3
-	xor	a;zero			        `set A to 0
-	ld	(ix+#object.Xsubpixel),a;zero
-	ld	(ix+$13),a;zero
-	ld	a,(ix+$11)
-	ld	(ix+#object.X.lo),a
-	ld	a,(ix+$12)
-	ld	(ix+#object.X.hi),a
-	ld	a,$18
-	rst	:rst_playSFX
-	ret
-	
-._3	xor	a;zero
-	ld	(ix+#object.spriteLayout.lo),a;zero
-	ld	(ix+#object.spriteLayout.hi),a;zero
-	ld	(ix+#object.Xspeed.lo),a;zero
-	ld	(ix+#object.Xspeed.hi),a;zero
-	ld	(ix+#object.Xdirection),a;zero
-	ret
-}
-
-`sprite layout
-:_9c69
-DATA $0C, $0E, $FF, $FF, $FF, $FF
-DATA $FF
+INCLUDE "unknown_94a5.oz80"
+INCLUDE "unknown_96a8.oz80"
+INCLUDE "unknown_96f8.oz80"
+INCLUDE "platform_flipper.oz80"
+INCLUDE "platform_bumper.oz80"
+INCLUDE "unknown_9b75.oz80"
+INCLUDE "unknown_9be8.oz80"
 
 `____________________________________________________________________________[$9C70]___
 `OBJECT: UNKNOWN
 
-PROC :_9c70 {
+PROC    :_9c70                                  SECTION ::objects
+{
 	ld	(ix+#object.Xspeed.lo),$80
 	ld	(ix+#object.Xspeed.hi),$fe
 	ld	(ix+#object.Xdirection),$ff
-	ld	(ix+#object.spriteLayout.lo),:_9c87.lo
-	ld	(ix+#object.spriteLayout.hi),:_9c87.hi
+	ld	(ix+#object.spriteLayout.lo),._9c87.lo
+	ld	(ix+#object.spriteLayout.hi),._9c87.hi
 	jp	:_9be8._9bfc
-}
 
-`sprite layout
-:_9c87
-DATA $2C, $2E, $FF, $FF, $FF, $FF
-DATA $FF
+        `sprite layout
+._9c87  DATA $2C, $2E, $FF, $FF, $FF, $FF
+        DATA $FF
+}
 
 `____________________________________________________________________________[$9C8E]___
 `OBJECT: flame thrower - scrap brain
@@ -4514,97 +3684,13 @@ DATA $FF
 :_b388
 DATA $08, $1C, $18, $3C, $08, $1E, $18, $3E, $08, $38, $18, $3A, $0C, $1A, $00, $FF
 
-`____________________________________________________________________________[$B398]___
-`OBJECT: moving spiked wall (Sky Base)
-
-PROC :_b398 {
-	set	5,(ix+$18)
-	bit	0,(ix+$18)
-	jr	nz,._1
-	ld	l,(ix+#object.X.lo)
-	ld	h,(ix+#object.X.hi)
-	ld	(ix+$11),l
-	ld	(ix+$12),h
-	set	0,(ix+$18)
-._1	ld	(ix+#object.width),$0c
-	ld	(ix+#object.height),$2e
-	ld	(ix+#object.spriteLayout.lo),:_b45b.lo
-	ld	(ix+#object.spriteLayout.hi),:_b45b.hi
-	ld	hl,$0202
-	ld	($.TEMP6),hl
-
-	call	:_LABEL_3956_11
-	call	nc,:_35fd
-	ld	l,(ix+#object.Xsubpixel)
-	ld	h,(ix+#object.X.lo)
-	ld	a,(ix+#object.X.hi)
-	ld	de,$0080
-	add	hl,de
-	adc	a,$00
-	ld	l,h
-	ld	h,a
-	ld	($.TEMP1),hl
-	ld	l,(ix+#object.Y.lo)
-	ld	h,(ix+#object.Y.hi)
-	ld	($.TEMP3),hl
-	ld	hl,$0000
-	ld	($.TEMP4),hl
-	ld	hl,$fff0
-	ld	($.TEMP6),hl
-	ld	a,$16
-	call	:_3581
-	ld	hl,$0008
-	ld	($.TEMP4),hl
-	ld	a,$18
-	call	:_3581
-	ld	l,(ix+#object.X.lo)
-	ld	h,(ix+#object.X.hi)
-	ld	de,$0580
-	xor	a;zero
-	ld	(ix+#object.Xspeed.lo),a;zero
-	ld	(ix+#object.Xspeed.hi),a;zero
-	ld	(ix+#object.Xdirection),a;zero
-	sbc	hl,de
-	ret	nc
-	ld	c,(ix+#object.Y.lo)
-	ld	b,(ix+#object.Y.hi)
-	ld	hl,$0040
-	add	hl,bc
-	ld	de,($.CAMERA_Y)
-	and	a
-	sbc	hl,de
-	jr	nc,._2
-	ld	a,(ix+$11)
-	ld	(ix+#object.X.lo),a
-	ld	a,(ix+$12)
-	ld	(ix+#object.X.hi),a
-._2	ld	de,($.SONIC.Y)
-	ld	hl,$ffe0
-	add	hl,bc
-	xor	a;zero
-	sbc	hl,de
-	ret	nc
-	ld	hl,$002c
-	add	hl,bc
-	xor	a;zero
-	sbc	hl,de
-	ret	c
-	ld	(ix+#object.Xspeed.lo),$80
-	ld	(ix+#object.Xspeed.hi),a;zero
-	ld	(ix+#object.Xdirection),a;zero
-	ret
-}
-
-`sprite layout
-:_b45b
-DATA $16, $18, $FF, $FF, $FF, $FF
-DATA $16, $18, $FF, $FF, $FF, $FF
-DATA $16, $18, $FF, $FF, $FF, $FF
+INCLUDE "trap_spikewall.oz80"
 
 `____________________________________________________________________________[$B46D]___
 `OBJECT: fixed turret (Sky Base)
 
-PROC :doObjectCode_trap_turretFixed {
+PROC    :doObjectCode_trap_turretFixed          SECTION ::objects
+{
 	set	5,(ix+$18)
 	bit	0,(ix+$18)
 	jr	nz,._1
@@ -4632,7 +3718,7 @@ PROC :doObjectCode_trap_turretFixed {
 	add	a,e
 	ld	e,a
 	ld	d,$00
-	ld	hl,:_b4e6
+	ld	hl,._b4e6
 	add	hl,de
 	ld	e,(hl)
 	inc	hl
@@ -4675,49 +3761,47 @@ PROC :doObjectCode_trap_turretFixed {
 	ret	nz
 	call	:_b5c2
 	ret
-}
 
-:_b4e6
-DATA $80, $FE, $80, $FE, $00, $00, $F8, $FF, $FF, $FF, $80, $01, $80, $FE, $18, $00
-DATA $F8, $FF, $00, $FF, $80, $FE, $80, $01, $00, $00, $10, $00, $FF, $00, $80, $01
-DATA $80, $01, $18, $00, $10, $00, $00, $00   
+._b4e6  DATA $80 $FE $80 $FE $00 $00 $F8 $FF $FF $FF $80 $01 $80 $FE $18 $00
+        DATA $F8 $FF $00 $FF $80 $FE $80 $01 $00 $00 $10 $00 $FF $00 $80 $01
+        DATA $80 $01 $18 $00 $10 $00 $00 $00   
+}
 
 `____________________________________________________________________________[$B50E]___
 `OBJECT: flying platform - up/down (Sky Base)
 
-PROC :doObjectCode_platform_flyingUpDown {
+PROC    :doObjectCode_platform_flyingUpDown     SECTION ::objects
+{
 	set	5,(ix+$18)
 	ld	hl,:_b37b
 	ld	a,($.LEVEL_SOLIDITY)
 	cp	$01
 	jr	nz,._1
-	ld	hl,:_b5b5
+	ld	hl,._b5b5
 ._1	ld	(ix+#object.spriteLayout.lo),l
 	ld	(ix+#object.spriteLayout.hi),h
 	ld	a,$50
 	ld	($.D216),a
-	call	:_b53b
+	call	._b53b
 	inc	(ix+$11)
 	ld	a,(ix+$11)
 	cp	$a0
 	ret	c
 	ld	(ix+$11),$00
 	ret
-}
 
-`----------------------------------------------------------------------------[$B53B]---
+        `--------------------------------------------------------------------[$B53B]---
 
-PROC :_b53b {
-	ld	a,($.D216)
+._b53b 	ld	a,($.D216)
 	ld	l,a
 	ld	de,$0010
 	ld	c,$00
 	ld	a,(ix+$11)
 	cp	l
-	jr	c,._1
+	jr	c,._2
 	dec	c
 	ld	de,$fff0
-._1	ld	l,(ix+#object.Yspeed.lo)
+._2	ld	l,(ix+#object.Yspeed.lo)
 	ld	h,(ix+#object.Yspeed.hi)
 	ld	a,(ix+#object.Ydirection)
 	add	hl,de
@@ -4727,7 +3811,7 @@ PROC :_b53b {
 	ld	(ix+#object.Ydirection),a
 	ld	a,h
 	and	a
-	jp	p,._2
+	jp	p,._3
 	ld	a,l
 	cpl	
 	ld	l,a
@@ -4737,19 +3821,19 @@ PROC :_b53b {
 	inc	hl
 	ld	a,h
 	cp	$02
-	jr	c,._3
+	jr	c,._4
 	ld	(ix+#object.Yspeed.lo),$00
 	ld	(ix+#object.Yspeed.hi),$fe
 	ld	(ix+#object.Ydirection),$ff
-	jr	._3
+	jr	._4
 	
-._2	cp	$02
-	jr	c,._3
+._3	cp	$02
+	jr	c,._4
 	ld	(ix+#object.Yspeed.lo),$00
 	ld	(ix+#object.Yspeed.hi),$02
 	ld	(ix+#object.Ydirection),$00
 	
-._3	ld	a,($.SONIC.Ydirection)
+._4	ld	a,($.SONIC.Ydirection)
 	and	a
 	ret	m
 	
@@ -4764,17 +3848,17 @@ PROC :_b53b {
 	ld	bc,$0010
 	call	:_LABEL_7CC1_12
 	ret
+        
+        `sprite layout
+._b5b5  DATA $FE, $FF, $FF, $FF, $FF, $FF
+        DATA $6C, $6E, $6C, $6E, $FF, $FF
+        DATA $FF
 }
-
-`sprite layout
-:_b5b5
-DATA $FE, $FF, $FF, $FF, $FF, $FF
-DATA $6C, $6E, $6C, $6E, $FF, $FF
-DATA $FF
 
 `____________________________________________________________________________[$B5C2]___
 
-PROC :_b5c2 {
+PROC    :_b5c2                                  SECTION ::objects
+{
 	push	bc
 	push	de
 	call	:_7c7b
@@ -4831,14 +3915,15 @@ PROC :_b5c2 {
 `____________________________________________________________________________[$B634]___
 `OBJECT: boss (Sky Base)
 
-PROC :doObjectCode_boss_skyBase {
+PROC    :doObjectCode_boss_skyBase              SECTION ::objects
+{
 	ld	(ix+#object.width),$1e
 	ld	(ix+#object.height),$2f
 	set	5,(ix+$18)
 	bit	2,(ix+$18)
-	jp	nz,:_b821
+	jp	nz,._b821
 	call	:_7ca6
-	call	:_b7e6
+	call	._b7e6
 	bit	0,(ix+$18)
 	jr	nz,._1
 	
@@ -4873,7 +3958,7 @@ PROC :doObjectCode_boss_skyBase {
 ._1	ld	a,(ix+$15)
 	and	a
 	jp	nz,._4
-	call	:_b99f
+	call	._b99f
 	ld	a,($.FRAMECOUNT)
 	and	$07
 	jp	nz,._8
@@ -4954,10 +4039,10 @@ PROC :doObjectCode_boss_skyBase {
 	ld	(ix+#object.X.hi),h
 	ld	a,(ix+$16)
 	and	a
-	call	z,:_b9d5
+	call	z,._b9d5
 	ld	(ix+$17),$02
 	set	1,(ix+$18)
-	call	:_b99f
+	call	._b99f
 	inc	(ix+$16)
 	ld	a,(ix+$16)
 	cp	$12
@@ -4970,7 +4055,7 @@ PROC :doObjectCode_boss_skyBase {
 ._8	ld	hl,$ba31
 	bit	1,(ix+$18)
 	jr	z,._9
-	ld	hl,:_ba3b
+	ld	hl,._ba3b
 ._9	ld	de,$.TEMP1
 	ldi	
 	ldi	
@@ -5007,22 +4092,20 @@ PROC :doObjectCode_boss_skyBase {
 	ld	a,$21
 	rst	:rst_playSFX
 	ret
-}
+        
+        `--------------------------------------------------------------------[$B7E6]---
 
-`____________________________________________________________________________[$B7E6]___	
-
-PROC :_b7e6 {
-	ld	a,($.D2B1)
+._b7e6	ld	a,($.D2B1)
 	and	a
 	ret	nz
 	bit	0,(iy+#vars.scrollRingFlags)
 	ret	nz
 	ld	a,($D414)
 	rrca	
-	jr	c,._1
+	jr	c,._10
 	and	$02
 	ret	z
-._1	ld	hl,($.SONIC.X)
+._10	ld	hl,($.SONIC.X)
 	ld	de,$0410
 	and	a
 	sbc	hl,de
@@ -5042,17 +4125,15 @@ PROC :_b7e6 {
 	ld	hl,$D2EC
 	inc	(hl)
 	ret
-}
 
-`____________________________________________________________________________[$B821]___	
+        `--------------------------------------------------------------------[$B821]---
 
-PROC :_b821 {
-	bit	3,(ix+$18)
-	jp	nz,._10
+._b821	bit	3,(ix+$18)
+	jp	nz,._20
 	res	5,(ix+$18)
 	ld	a,(ix+$11)
 	cp	$0f
-	jr	nc,._1
+	jr	nc,._11
 	add	a,a
 	add	a,a
 	ld	e,a
@@ -5076,7 +4157,7 @@ PROC :_b821 {
 	inc	(ix+$11)
 	ld	a,(ix+$11)
 	cp	$0f
-	jr	nz,._1
+	jr	nz,._11
 	set	5,(iy+#vars.flags0)
 	res	1,(iy+#vars.flags2)
 	
@@ -5084,17 +4165,17 @@ PROC :_b821 {
 	ld	hl,$0550
 	ld	($.LEVEL_RIGHT),hl
 	
-._1	ld	e,(ix+#object.X.lo)
+._11	ld	e,(ix+#object.X.lo)
 	ld	d,(ix+#object.X.hi)
 	ld	hl,$05e0
 	xor	a;zero
 	sbc	hl,de
-	jr	nc,._2
+	jr	nc,._12
 	ld	c,a;zero
 	ld	b,a;zero
-	jp	._5
+	jp	._15
 	
-._2	ex	de,hl
+._12	ex	de,hl
 	ld	de,($.SONIC.X)
 	xor	a;zero
 	sbc	hl,de
@@ -5102,26 +4183,26 @@ PROC :_b821 {
 	xor	a;zero
 	ld	bc,($.SONIC.Xspeed)
 	bit	7,b
-	jr	nz,._3
+	jr	nz,._13
 	sbc	hl,de
-	jr	c,._4
-._3	ld	bc,$ff80
-._4	inc	b
-._5	ld	(ix+#object.Xspeed.lo),c
+	jr	c,._14
+._13	ld	bc,$ff80
+._14	inc	b
+._15	ld	(ix+#object.Xspeed.lo),c
 	ld	(ix+#object.Xspeed.hi),b
 	ld	(ix+#object.Xdirection),a
 	ld	a,(ix+$17)
 	cp	$06
-	jr	nz,._6
+	jr	nz,._16
 	ld	a,(ix+$16)
 	dec	a
-	jr	nz,._6
+	jr	nz,._16
 	bit	7,(ix+$18)
-	jr	z,._6
+	jr	z,._16
 	ld	(ix+#object.Yspeed.lo),$00
 	ld	(ix+#object.Yspeed.hi),$ff
 	ld	(ix+#object.Ydirection),$ff
-._6	ld	de,$0017
+._16	ld	de,$0017
 	ld	bc,$0036
 	call	:getFloorLayoutRAMPositionForObject
 	ld	e,(hl)
@@ -5131,20 +4212,20 @@ PROC :_b821 {
 	ld	a,(hl)
 	and	$3f
 	and	a
-	jr	z,._7
+	jr	z,._17
 	bit	7,(ix+$18)
-	jr	z,._7
+	jr	z,._17
 	ld	(ix+#object.Yspeed.lo),$80
 	ld	(ix+#object.Yspeed.hi),$fd
 	ld	(ix+#object.Ydirection),$ff
-._7	ld	de,$0000
+._17	ld	de,$0000
 	ld	bc,$0008
 	call	:getFloorLayoutRAMPositionForObject
 	ld	a,(hl)
 	cp	$49
-	jr	nz,._8
+	jr	nz,._18
 	bit	7,(ix+$18)
-	jr	z,._8
+	jr	z,._18
 	xor	a;zero
 	ld	(ix+$16),a;zero
 	ld	(ix+$17),a;zero
@@ -5161,50 +4242,50 @@ PROC :_b821 {
 	call	:_7c8c
 	
 	set	3,(ix+$18)
-	jp	._10
+	jp	._20
 	
-._8	ld	l,(ix+#object.Yspeed.lo)
+._18	ld	l,(ix+#object.Yspeed.lo)
 	ld	h,(ix+#object.Yspeed.hi)
 	ld	a,(ix+#object.Ydirection)
 	ld	de,$000e
 	add	hl,de
 	adc	a,$00
 	ld	c,a
-	jp	m,._9
+	jp	m,._19
 	ld	a,h
 	cp	$02
-	jr	c,._9
+	jr	c,._19
 	ld	hl,$0200
-._9	ld	(ix+#object.Yspeed.lo),l
+._19	ld	(ix+#object.Yspeed.lo),l
 	ld	(ix+#object.Yspeed.hi),h
 	ld	(ix+#object.Ydirection),c
-	ld	bc,:_ba28
+	ld	bc,._ba28
 	ld	de,:_baf9
 	call	:_7c41
 	ret
 	
-._10	ld	(iy+#vars.joypad),$ff
-	call	:_b99f
+._20	ld	(iy+#vars.joypad),$ff
+	call	._b99f
 	ld	a,(ix+$16)
 	cp	$30
-	jr	nc,._12
+	jr	nc,._22
 	ld	c,a
 	ld	a,($.FRAMECOUNT)
 	and	$07
-	jr	nz,._11
+	jr	nz,._21
 	ld	a,(ix+$17)
 	inc	a
 	and	$01
 	ld	(ix+$17),a
 	inc	(ix+$16)
-._11	ld	a,c
+._21	ld	a,c
 	cp	$2c
 	ret	c
 	ld	(ix+#object.spriteLayout.lo),:_bb77.lo
 	ld	(ix+#object.spriteLayout.hi),:_bb77.hi
 	ret
 	
-._12	xor	a;zero
+._22	xor	a;zero
 	ld	(ix+#object.spriteLayout.lo),a;zero
 	ld	(ix+#object.spriteLayout.hi),a;zero
 	inc	(ix+$16)
@@ -5213,12 +4294,10 @@ PROC :_b821 {
 	ret	c
 	ld	(ix+#object.type),$FF	        `remove object?
 	ret
-}
 	
-`____________________________________________________________________________[$B99F]___
+        `--------------------------------------------------------------------[$B99F]---
 
-PROC :_b99f {
-	ld	hl,:_ba1c
+._b99f	ld	hl,._ba1c
 	ld	a,(ix+$17)
 	add	a,a
 	add	a,a
@@ -5247,12 +4326,10 @@ PROC :_b99f {
 	ld	(ix+#object.Y.lo),l
 	ld	(ix+#object.Y.hi),h
 	ret
-}
 
-`____________________________________________________________________________[$B9D5]___
+        `--------------------------------------------------------------------[$B9D5]---
 
-PROC :_b9d5 {
-	bit	5,(iy+#vars.unknown0)
+._b9d5  bit	5,(iy+#vars.unknown0)
 	ret	nz
 	call	:_7c7b
 	ret	c
@@ -5279,69 +4356,64 @@ PROC :_b9d5 {
 	ld	(ix+#object.Ydirection),a;zero
 	pop	ix
 	ret
+
+._ba1b  DATA $C9		                `unused?
+._ba1c  DATA $00 $00 $F9 $BA $00 $02 $0B $BB $00 $07 $0B $BB
+._ba28  DATA $03 $08 $04 $07 $05 $08 $04 $07 $FF $30 $04 $A0 $01 $00 $00
+._ba37  DATA $00 $00 $20 $22                    `unused, or part of above?
+._ba3b  DATA $30 $04 $A0 $01 $00 $00 $00 $00 $24 $26 $20 $04 $60 $01 $37 $10
+        DATA $38 $10 $4A $10 $4B $10 $30 $04 $60 $01 $28 $10 $19 $10 $4C $10
+        DATA $4D $10 $40 $04 $60 $01 $00 $10 $2D $10 $4E $10 $4F $10 $20 $04
+        DATA $70 $01 $00 $00 $00 $00 $00 $00 $00 $00 $30 $04 $70 $01 $00 $00
+        DATA $00 $00 $00 $00 $00 $00 $40 $04 $70 $01 $00 $00 $00 $00 $00 $00
+        DATA $00 $00 $20 $04 $80 $01 $00 $00 $00 $00 $00 $00 $00 $00 $30 $04
+        DATA $80 $01 $00 $00 $00 $00 $00 $00 $00 $00 $40 $04 $80 $01 $00 $00
+        DATA $00 $00 $00 $00 $00 $00 $20 $04 $90 $01 $00 $00 $00 $00 $00 $00
+        DATA $00 $00 $30 $04 $90 $01 $00 $00 $00 $00 $00 $00 $00 $00 $40 $04
+        DATA $90 $01 $00 $00 $00 $00 $00 $00 $00 $00 $20 $04 $A0 $01 $5A $10
+        DATA $5B $10 $37 $10 $3B $10 $30 $04 $A0 $01 $5C $10 $5D $10 $3C $10
+        DATA $00 $10 $40 $04 $A0 $01 $5E $10 $5F $10 $00 $10 $2D $10
 }
 
-:_ba1b
-DATA $C9					`unused?
-:_ba1c    
-DATA $00, $00, $F9, $BA, $00, $02, $0B, $BB, $00, $07, $0B, $BB
-:_ba28
-DATA $03, $08, $04, $07, $05, $08, $04, $07, $FF, $30, $04, $A0, $01, $00, $00
-:_ba37
-DATA $00, $00, $20, $22
-:_ba3b
-DATA $30, $04, $A0, $01, $00, $00, $00, $00, $24, $26, $20, $04, $60, $01, $37, $10
-DATA $38, $10, $4A, $10, $4B, $10, $30, $04, $60, $01, $28, $10, $19, $10, $4C, $10
-DATA $4D, $10, $40, $04, $60, $01, $00, $10, $2D, $10, $4E, $10, $4F, $10, $20, $04
-DATA $70, $01, $00, $00, $00, $00, $00, $00, $00, $00, $30, $04, $70, $01, $00, $00
-DATA $00, $00, $00, $00, $00, $00, $40, $04, $70, $01, $00, $00, $00, $00, $00, $00
-DATA $00, $00, $20, $04, $80, $01, $00, $00, $00, $00, $00, $00, $00, $00, $30, $04
-DATA $80, $01, $00, $00, $00, $00, $00, $00, $00, $00, $40, $04, $80, $01, $00, $00
-DATA $00, $00, $00, $00, $00, $00, $20, $04, $90, $01, $00, $00, $00, $00, $00, $00
-DATA $00, $00, $30, $04, $90, $01, $00, $00, $00, $00, $00, $00, $00, $00, $40, $04
-DATA $90, $01, $00, $00, $00, $00, $00, $00, $00, $00, $20, $04, $A0, $01, $5A, $10
-DATA $5B, $10, $37, $10, $3B, $10, $30, $04, $A0, $01, $5C, $10, $5D, $10, $3C, $10
-DATA $00, $10, $40, $04, $A0, $01, $5E, $10, $5F, $10, $00, $10, $2D, $10
+INCLUDE "boss_running.oz80"
 
-`sprite layout
-:_baf9
-DATA $FE, $0A, $0C, $0E, $FF, $FF
-DATA $28, $2A, $2C, $2E, $FF, $FF
-DATA $FE, $4A, $4C, $4E, $FF, $FF
+`part of sky boss only
+TABLE   :_bb1d                                  SECTION ::objects
+{
+        DATA $10 $12 $14 $16 $FF $FF
+        DATA $30 $32 $34 $FE $FF $FF
+        DATA $50 $52 $54 $FE $FF $FF
 
-DATA $FE, $0A, $0C, $0E, $FF, $FF
-DATA $28, $2A, $2C, $2E, $FF, $FF
-DATA $FE, $02, $04, $06, $FF, $FF
-:_bb1d
-DATA $10, $12, $14, $16, $FF, $FF
-DATA $30, $32, $34, $FE, $FF, $FF
-DATA $50, $52, $54, $FE, $FF, $FF
+        DATA $18 $1A $1C $1E $FF $FF
+        DATA $FE $3A $3C $3E $FF $FF
+        DATA $FE $64 $66 $68 $FF $FF
 
-DATA $18, $1A, $1C, $1E, $FF, $FF
-DATA $FE, $3A, $3C, $3E, $FF, $FF
-DATA $FE, $64, $66, $68, $FF, $FF
+        DATA $18 $1A $1C $1E $FF $FF
+        DATA $FE $3A $3C $3E $FF $FF
+        DATA $FE $6A $6C $6E $FF $FF
 
-DATA $18, $1A, $1C, $1E, $FF, $FF
-DATA $FE, $3A, $3C, $3E, $FF, $FF
-DATA $FE, $6A, $6C, $6E, $FF, $FF
+        DATA $18 $1A $1C $1E $FF $FF
+        DATA $FE $3A $3C $3E $FF $FF
+        DATA $70 $72 $5A $5C $5E $FF
 
-DATA $18, $1A, $1C, $1E, $FF, $FF
-DATA $FE, $3A, $3C, $3E, $FF, $FF
-DATA $70, $72, $5A, $5C, $5E, $FF
+        DATA $00 $0A $0C $0E $FF $FF
+        DATA $28 $2A $2C $2E $FF $FF
+        DATA $00 $4A $4C $4E $FF $FF
+}
 
-DATA $00, $0A, $0C, $0E, $FF, $FF
-DATA $28, $2A, $2C, $2E, $FF, $FF
-DATA $00, $4A, $4C, $4E, $FF, $FF
-
-:_bb77
-DATA $FE, $FF, $FF, $FF, $FF, $FF
-DATA $FE, $44, $46, $FF, $FF, $FF
-DATA $FF
+`also part of sky base boss only
+TABLE   :_bb77                                  SECTION ::objects
+{
+        DATA $FE $FF $FF $FF $FF $FF
+        DATA $FE $44 $46 $FF $FF $FF
+        DATA $FF
+}
 
 `____________________________________________________________________________[$BB84]___
 `OBJECT: boss - electric beam (Sky Base)
 
-PROC :doObjectCode_boss_electricBeam {
+PROC    :doObjectCode_boss_electricBeam         SECTION ::objects
+{
 	set	5,(ix+$18)
 	ld	hl,$0008
 	ld	($.D26B),hl
@@ -5364,14 +4436,14 @@ PROC :doObjectCode_boss_electricBeam {
 	ld	l,h
 	ld	($.TEMP6),hl
 	ld	de,$011a
-	ld	hl,:_bcdd
-	call	:_bca5
+	ld	hl,._bcdd
+	call	._bca5
 	ld	e,(ix+$11)
 	ld	d,$00
 	ld	($.TEMP4),de
 	ld	de,$01d2
-	ld	hl,:_bcdd
-	call	:_bca5
+	ld	hl,._bcdd
+	call	._bca5
 	bit	4,(iy+#vars.unknown0)
 	ret	z
 	bit	1,(ix+$18)
@@ -5382,14 +4454,14 @@ PROC :doObjectCode_boss_electricBeam {
 	and	$02
 	ld	e,a
 	ld	d,$00
-	ld	hl,:_bcc7
+	ld	hl,._bcc7
 	add	hl,de
 	ld	b,$0a
 	ld	de,$0130
 	
 .loop	push	bc
 	push	de
-	call	:_bca5
+	call	._bca5
 	pop	de
 	push	hl
 	ld	hl,$0010
@@ -5478,12 +4550,10 @@ PROC :doObjectCode_boss_electricBeam {
 	ld	a,$13
 	rst	:rst_playSFX
 	ret
-}
+        
+        `--------------------------------------------------------------------[$BAC5]---
 
-`____________________________________________________________________________[$BAC5]___
-
-PROC :_bca5 {
-	ld	($.TEMP3),de
+._bca5	ld	($.TEMP3),de
 	ld	a,(hl)
 	inc	hl
 	push	hl
@@ -5502,13 +4572,14 @@ PROC :_bca5 {
 	ld	($.TEMP4),hl
 	pop	hl
 	ret
-}
+        
+        `------------------------------------------------------------------------------
 
-:_bcc7
-DATA $36, $38, $56, $58, $36, $38, $56, $58, $36, $38, $56, $58, $36, $38, $56, $58
-DATA $36, $38, $56, $58, $36, $38
-:_bcdd
-DATA $40, $42
+._bcc7  DATA $36 $38 $56 $58 $36 $38 $56 $58 $36 $38 $56 $58 $36 $38 $56 $58
+        DATA $36 $38 $56 $58 $36 $38
+._bcdd  DATA $40 $42        
+        
+}
 
 INCLUDE "unknown_bcdf.oz80"
 INCLUDE "anim_final.oz80"

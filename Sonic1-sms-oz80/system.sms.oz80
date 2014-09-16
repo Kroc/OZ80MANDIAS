@@ -1,0 +1,87 @@
+
+`mapper: (bank switching)
+`--------------------------------------------------------------------------------------
+``the banking of the cartridge ROM into the slots of the Z80 address space is handled
+  by the mapper chip. for standard SEGA mappers, writing to $FFFC configures the
+  mapper and $FFFD/E/F sets the ROM bank number to page into the relevant memory slot.
+  for more details, see http://www.smspower.org/Development/Mappers
+``
+RAM
+{
+.SMS.SLOT_CONTROL       AS BYTE $FFFC   BITS [
+                        
+                        `the bank shifting feature is documented, but was never used
+                        `http://www.smspower.org/Development/Mappers#ROMBankShifting
+                        .BankShift x 2
+                        .RAMBank                `switches SRAM banks in Slot 2
+                        .RAM8000                `enable SRAM bank at $8000 (Slot 1)
+                        .RAMC000                `enable SRAM bank at $C000 (Slot 2)
+                        . x 2                   `unused bits
+                        ``the write-protect bit for the ROM would only be used during
+                          development and has no function or purpose for releases``
+                        .WriteProtect 
+                        
+                        ]
+.SMS.SLOT0              AS BYTE $FFFD           `Slot 0 ROM Bank
+.SMS.SLOT1              AS BYTE $FFFE           `Slot 1 ROM Bank
+.SMS.SLOT2              AS BYTE $FFFF           `Slot 2 ROM Bank
+
+`Codemasters cartridges use their own mapper:
+.CODEMASTERS.SLOT0      AS BYTE $0000           `Slot 0 ROM Bank
+.CODEMASTERS.SLOT1      AS BYTE $4000           `Slot 1 ROM Bank
+.CODEMASTERS.SLOT2      AS BYTE $8000
+
+}
+
+`VDP:
+`--------------------------------------------------------------------------------------
+``the Video Display Processor in the Master System handles the graphics and sprites
+  stored in video RAM ("VRAM"), composites the display and outputs it to the display
+``
+
+RAM
+{       
+.VDP.SCANLINE           AS BYTE $7E             `read current vertical scanline
+.VDP.DATA               AS BYTE $BE             `graphics data port
+.VDP.CONTROL            AS BYTE $BF             `graphics control port
+
+.VDP.SCREENNAMETABLE    AS WORD $3800
+
+}
+
+`sound:
+`--------------------------------------------------------------------------------------
+RAM
+{
+.SMS.PSG.DATA           AS BYTE $7F	        `write-only data port for sound chip
+}
+
+`input:
+`--------------------------------------------------------------------------------------
+RAM
+{
+.SMS.JOYPADA		AS BYTE $DC     BITS [
+                        
+                        .pad1up
+                        .pad1down
+                        .pad1left
+                        .pad1right
+                        .pad1button1
+                        .pad1button2
+                        .pad2up
+                        .pad2down
+                        
+                        ]
+.SMS.JOYPADB		AS BYTE $DD     BITS [
+
+                        .pad2left
+                        .pad2right
+                        .pad2button1
+                        .pad2button2
+                        .reset                  `reset button on the console
+                        .                       `unused
+                        .lightgun1
+                        .lightgun2
+                        
+                        ]
+}

@@ -1,98 +1,141 @@
-=======================================================================================
+﻿=======================================================================================
 OZ80MANDIAS: a Z80 assembler; Copyright (C) Kroc Camen, 2013-14
 Licenced under a Creative Commons 3.0 Attribution Licence
 --You may use and modify this document how you see fit as long as you give credit
 =======================================================================================
 
-				TABLE OF CONTENTS
-	
-        i.              Terminology
+                                TABLE OF CONTENTS
         
-        1.              Comments
-	1.1.		. Register Hints
-	
-	2.		Numbers
-        2.1.            | Decimal
-        2.2.            | Negatives
-        2.3.            | Fractions
-        2.4.            | Hexadecimal
-        2.5.            | Binary
-	2.6.		| Units
-	2.7.		. Limits
-	
-        3.              Expressions
+        Preface:
+        (What you need to know up-front)
         
-	4.              Procedures
-        4.1.            | Parameters
-        4.2.            . Sub-Labels
+        1.              Terminology
         
-        5.              Constants
-        5.1.            . Enumerations
+        2.              Commenting Code
+        2.1.            | Line Comments
+        2.2.            . Register Hints
         
-        5.              Variables
+        3.              Numbers
+        3.1.            | Decimal
+        3.2.            | Negatives
+        3.3.            | Fractions
+        3.4.            | Hexadecimal
+        3.5.            | Binary
+        3.6.            . Units
         
-        6.              Objects:
-        6.1.            . Bit Flags
+        4.              Expressions
+        4.1.            | Operators
+        4.2.            | Precedence
+        4.3.            . Helper Functions
+        
+        ---
+        
+        Required Structure:
+        (What you need to do, otherwise nothing will work)
+        
+        5.              System Definition
+        5.1.            . Master System
+        
+        6.              Procedures
+        6.1.            | Parameters
+        6.2.            | Sub-Routines
+        6.3.            . Interrupts
+        
+        ---
+        
+        7.              Constants
+        7.1.            . Enumerations
+        
+        8.              Objects
+        8.1.            | Data Types
+        8.2.            | Definition
+        8.3.            . Bits
+        
+        ---
+        
+        #.              Paging
+        #.1.            | Introduction
+        #.2.            . Slots
+        
+        ---
+        
+        Appendix:
+        
+        A.              
+
+        
+///////////////////////////////////////////////////////////////////////////////////////
+                                 
+                                 P  R  E  F  A  C  E
+                         
+                          (What you need to know up-front)
+
 
 =======================================================================================
-i.      Terminology
+1.      Terminology
 =======================================================================================
-:: "Value", "<value>"
-        A number, or something that can be evaluated into a number, i.e. Constants,
-        Labels, RAM Names and Properties. This does not include Text.
+:: "Value", "«value»"
+        A Number, or something that can be evaluated into a Number, 
+        i.e. Constants, Labels, Objects and Properties. This does not include Text.
         
-:: "Expression", "<expr>"
+:: "Expression", "«expr»"
         A calculation. It can be a single Value, or a calculation involving Operators
-        and multiple Values.
+        and multiple Values, e.g. `:label + !CONSTANT`
         
-:: "List", "<list>"
+:: "List", "«list»"
         A series of Expressions one after the other,
-        e.g. `1, 2, 3, 4, :label, CONSTANT, 7+8`
+        e.g. `1, 2, 3, 4, :label, !CONSTANT, 7+8`
         
         Text is a list in of itself and can be included in other Lists,
         e.g. `1, 2, "three", 4, 5`
-
+        
 :: "Scope"
         The nesting-depth of statements within each other.
         For example, Z80 instructions go within a PROC block.
         Root is the top-most scope, not nested within anything else.
-
+        
 :: "Block"
-        An encapsulation. `PROC`, `TABLE` & `STRUCT` are all types of blocks.
+        An encapsulation. `PROC`, `TABLE` & `STRUCT` are all types of Blocks.
 
+
+The use of small angle-brackets "‹ ›" represents an optional component of the syntax.
+ 
  
 =======================================================================================
-1.	Comments
+2.      Commenting Code
 =======================================================================================
+2.1.    Line Comments
+---------------------------------------------------------------------------------------
 Scopes: Any
 Format:
-	`single-line
+        `single-line
         
-	``multi-
-	  line``
+        ``multi-
+          line``
 
 A single-line comment begins with a back-tick.
 All text from that point to the end of the line is ignored.
 
-	ld	de, 3			`sprite table is 3 bytes per sprite
+        ld      de, 3                   `sprite table is 3 bytes per sprite
 
 A multi-line comment begins with double back-tick ("``") and continues until the next
 double back-tick is encountered. All text in between is ignored.
-	
-	``in the solidity data, bit 7 determines that the tile should appear in
-	  front of sprites. rotate the byte three times to position bit 7 at bit 4.
-	  this byte will form the high-byte of the 16-bit value for the name table
-	  entry (bit 4 will therefore become bit 12)``
-	rrca
-	rrca
-	rrca
+        
+        ``in the solidity data, bit 7 determines that the tile should appear in
+          front of sprites. rotate the byte three times to position bit 7 at bit 4.
+          this byte will form the high-byte of the 16-bit value for the name table
+          entry (bit 4 will therefore become bit 12)``
+        rrca
+        rrca
+        rrca
 
-1.1.	Register Hints
+---------------------------------------------------------------------------------------
+2.2.    Register Hints
 ---------------------------------------------------------------------------------------
 Scopes: Any
 Format:
-	<register>;<hintName>		`or:
-	<register>'<hintName>		`for indicating shadow registers in use
+        «register»;«hint»               `or:
+        «register»'«hint»               `for indicating shadow registers in use
 
 Register hints provide the ability to keep track of the temporary "role" of registers.
 It allows you to explain 'what' a register currently is, without resorting to comments
@@ -100,18 +143,18 @@ It allows you to explain 'what' a register currently is, without resorting to co
 
 Take for example this section of Z80 code in the middle of a procedure:
 
-	ld      c, a
-	ld      b, $00
-	ld      hl, ($.TEMP3)
-	add     hl, bc
+        ld      c, a
+        ld      b, $00
+        ld      hl, ($.TEMP3)
+        add     hl, bc
 
 What's the purpose of this code? Adding comments can answer that, but we can better
 visualise at a glance the flow of information by providing register hints like so:
   
-	ld      c;blockIndex, a;blockIndex
-	ld      b;blockIndex, $00
-	ld      hl;solidityData, ($.TEMP3)
-	add     hl;solidityData, bc;blockIndex
+        ld      c;blockIndex, a;blockIndex
+        ld      b;blockIndex, $00
+        ld      hl;solidityData, ($.TEMP3)
+        add     hl;solidityData, bc;blockIndex
 
 Now we can see that `$.TEMP3` contained "solidityData" this time (even though it
 could be used for other purposes else where in the code) -- thus you do not have to
@@ -126,113 +169,92 @@ assembler. They are purely for readability.
 
 
 =======================================================================================
-2.	Numbers
+3.      Numbers
 =======================================================================================
-2.1.    Decimal
+3.1.    Decimal
 ---------------------------------------------------------------------------------------
 With Z80 code some instructions will require 8-bit numbers and some 16-bit numbers.
 Any decimal number above 255 is implicitly a 16-bit number, therefore the following
 would not work:
 
-	`can't load 16-bit number into 8-bit register!
-	ld a, 4096
+        `can't load 16-bit number into 8-bit register!
+        ld a, 4096
 
 It's fine to use an 8-bit number on 16-bit instructions though, i.e.
 
-	ld bc, 8
+        ld bc, 8
 
 The number will be used as 16-bit with the correct high and low byte order.
 (the high byte will be 0) 
 
-2.2     Fractions
+---------------------------------------------------------------------------------------
+3.2.    Fractions
 ---------------------------------------------------------------------------------------
 Decimal numbers can also be fractional, i.e. with decimal places.
-Up to 15 decimal places are supported.
+Approximately 15 decimal places are supported.
         
-        DEF PI 3.141592653589793
+        DEF !PI 3.141592653589793
 
 Expressions may also result in fractional values:
         
-        DEF HALF 1 / 2
+        DEF !HALF 1 / 2
 
 WARNING: Whilst fractional values can be supplied to Z80 instruction parameters,
 the value will be rounded *DOWN* and a warning raised.
         
         ld a, 1.6                       `produces a warning, result will be 1
 
-2.3.	Negatives
+---------------------------------------------------------------------------------------
+3.3.    Negatives
 ---------------------------------------------------------------------------------------
 8-bit negative numbers are represented on the Master System by having the upper-most
 bit set. This limits a negative number to -127 (8-bit) or -32767 (16-bit)
 
-2.4.    Hexadecimal
+---------------------------------------------------------------------------------------
+3.4.    Hexadecimal
 ---------------------------------------------------------------------------------------
 Hexadecimal numbers are prefixed with the dollar sign "$", e.g.
 
-	ld de, $ABCD
+        ld de, $ABCD
 
 Hexadecimal numbers cannot be negative or have fractions.
 
-2.5.    Binary
+---------------------------------------------------------------------------------------
+3.5.    Binary
 ---------------------------------------------------------------------------------------
 Binary numbers are prefixed with the percent sign "%".
 You can include all 8 digits or only as many as you need
 
-	ld h, %00001111
-	ld h, %1111
+        ld h, %00001111
+        ld h, %1111
 
 For 16-bit numbers use more digits.
-	
-	ld hl, %0000111100001111
+        
+        ld hl, %0000111100001111
 
 Binary numbers cannot be negative (in the sense of `-%10101010`), or have fractions.
+You may of course represent negative numbers manually in binary.
         
-2.6.	Units
+---------------------------------------------------------------------------------------
+3.6.    Units
 ---------------------------------------------------------------------------------------
 Number suffixes (units) are supported to represent larger numbers in a simpler
 fashion.
 
-	1 K	= 1'000 (Kilobytes)
-	1 KB	= 1'024 (Kibibytes)
-	1 Kbit	= 128 (Kibibits)
-
-2.7.    Limits
----------------------------------------------------------------------------------------
-Numbers are limited to 32-bits even though internally the assembler stores numbers
-using 64-bits. This is so that signed, unsigned and floating point numbers can all
-be stored and treated the same. Therefore the following limitations apply to all
-numbers:
-
-        Type: `LONG` (32 bits)
-              (unless otherwise defined, all numbers are by default 32-bit)
-        
-        Maximum:         4'294'967'295          (all 32 bits)
-        Minimum:        -2'147'483'648          (31 bits & negative sign)
-        
-        Type: `TRIP` (24 bits "triple")
-        
-        Maximum:         16'777'216             (all 24 bits)
-        Minimum:         -8'388'608             (23 bits & negative sign)
-        
-        TYPE: `WORD` (16 bits)
-        
-        Maximum:          65'536                (all 16 bits)
-        Minimum:         -32'768                (15 bits & negative sign)
-        
-        TYPE: `BYTE` (8 bits)
-        
-        Maximum:          255                   (all 8 bits)
-        Minimum:         -128                   (7 bits & negative sign)
-
-NOTE: Fractions are supported on all decimal numbers, even 8-bit ones, e.g. `128.54`
+        1 K     = 1'000 (Kilobytes)
+        1 KB    = 1'024 (Kibibytes)
+        1 Kbit  =   128 (Kibibits)
 
 
 =======================================================================================
-3.	Expressions
+4.      Expressions
 =======================================================================================
 An Expression is a calculation consisting of either a single Value, or multiple Values
 separated by Operators, e.g. `1 + 1` (See the Terminology section).
 
+---------------------------------------------------------------------------------------
+4.1.    Operators
+---------------------------------------------------------------------------------------
 These are the Operators supported:
 
 :: Plus `+`
@@ -260,9 +282,6 @@ These are the Operators supported:
 :: Or `|`
         Bitwise OR. The bits of the two sides are combined using OR logic, that is:
         0 | 0 = 0 / 0 | 1 = 1 / 1 | 1 = 1
-
-:: Not `!`
-        Bitwise NOT. The bits of the proceeding value are inverted.
         
 :: Xor `~`
         Bitwise XOR. The bits of the two sides are combined using XOR logic, that is:
@@ -278,15 +297,189 @@ These are the Operators supported:
         right-hand Value, dropping the overflow into the bit-bucket and inserting
         zeroes to the left.
 
+---------------------------------------------------------------------------------------
+4.2.    Precedence
+---------------------------------------------------------------------------------------
 
+             *IMPORTANT*     *IMPORTANT*     *IMPORTANT*     *IMPORTANT*
+
+OZ80 calculates Expressions in left-to-right order, and *does not* use 'operator
+precedence' like more advanced (and compiled) languages.
+
+Therefore the following is important to note that "5 * 2 + 2" is the equivilent of
+"10 + 2" and NOT "5 * 4" as it would seem. The assembler totals the calculation
+before each operator!
+
+To enforce precedence, use curly braces as parenthesis:
+
+        ld a, 5 * {2 + 2}
+
+Do *not* use curved brackets -- "(" & ")" -- as these are reserved for Z80 instruction
+memory references, e.g. `ld a, (ix+$FF)`.
+
+---------------------------------------------------------------------------------------
+4.3.    Helper Functions
+---------------------------------------------------------------------------------------
+Some built in functions are provided for common manipulations of Values in Expressions.
+
+ HI «expr»
+        ```````````````````````````````````````````````````````````````````````````````
+        Retrieves the high-byte of a 16-bit number, e.g. `HI $ABCD` is $AB.
+        For 8-bit numbers, $00 is returned.
+        
+ LO «expr»
+        ```````````````````````````````````````````````````````````````````````````````
+        Retrieves the low-byte of an 8/16-bit number, e.g. `LO $ABCD` is $CD
+        
+ NOT8 «expr»
+        ```````````````````````````````````````````````````````````````````````````````
+        8-bit bitwise NOT. The first 8-bits of the proceeding value are inverted.
+        E.g. `NOT8 $FF` is 0.
+
+ NOT16 «expr»
+        ```````````````````````````````````````````````````````````````````````````````
+        16-bit bitwise NOT. The first 16-bits of the proceeding value are inverted.
+        E.g. `NOT16 $FFFF` is 0
+        
+
+NOTE: Watch out for the left-to-right calculation order when using helper functions.
+      For example `ld a, HI $8000 + 2` is equivilent to `ld a, {HI $8000} + 2`, *NOT*
+      `ld a, HI {$8000 + 2}`. It's best to use curly braces around helper functions
+      to ensure you get what you expect.
+
+
+
+///////////////////////////////////////////////////////////////////////////////////////
+                                 
+                  R  E  Q  U  I  R  E  D      S  T  R  U  C  T  U  R  E
+                         
+                    (What you need to do, otherwise nothing will work)
+                          
+                          
 =======================================================================================
-4.      Procedures
+5.      System Definition
+=======================================================================================
+Before you can begin assembling, your source code needs to define which computer
+system you are targeting as well as some system-specific properties.
+
+At this time, OZ80 only directly supports the SEGA Master System, however it might
+support other Z80 targets in the future (such as the Nintendo GameBoy, ZX Spectrum &
+Amstrad CPC).
+
+---------------------------------------------------------------------------------------
+5.1.    Master System
+---------------------------------------------------------------------------------------
+Scopes: Root; before any Block
+Format: 
+        SYSTEM  "SMS"
+        ‹[
+                .«property»      «expr»
+        ]›
+
+At the beginning of your source code, place the following statement to tell the
+assembler to target the SEGA Master System.
+
+        SYSTEM  "SMS"
+        
+This enables a number of Master System specific behaviours, notably that the ROM
+header is automatically inserted into the output file and code / data will not be
+placed over the top of the ROM header area (by default $7FF0 - $7FFF).
+
+   TECHNICAL NOTE:
+        Because the ROM / SDSC header cannot be assembled over, Sections with
+        contiguous Banks (i.e. code/data can flow over the boundary between Banks)
+        will not be able to place code/data across the Bank 2 & 3 boundary,
+        potentially preventing assembly from completing.
+        
+.HEADER $1FF0|$3FF0|$7FF0
+        ```````````````````````````````````````````````````````````````````````````````
+        Sets the location of the ROM Header. A real, non-Japanese Master System will
+        look for the header identifier ("TMR SEGA") at $1FF0, $3FF0 and $7FF0.
+        The header defaults to $7FF0, and there's little reason to change this.
+        
+.HEADER.CHECKSUM 8|16|32|48|64|128|256|512|1024 KB
+        ```````````````````````````````````````````````````````````````````````````````
+        Sets the amount of the ROM to read for producing the checksum. The last four
+        bits of the header is set which the SMS uses to verify the checksum.
+        
+        The values 48 & 1024 KB have known bugs on certain BIOS versions in real
+        Master Systems and should not be used.
+        
+        Please note that the checksum size does NOT have to match the actual size of
+        the ROM. This property only concerns the amount of ROM to read to generate
+        (and verify) the checksum. Setting it to a low number will speed up the boot
+        time of the console.
+
+.HEADER.VERSION «expr»
+        ```````````````````````````````````````````````````````````````````````````````
+        The first 4 bits of the last byte (values of 0 to 15) represent a version or
+        'release' number. If the property is not specified, it defaults to 1. Unless
+        you are doing hardware releases, you should not change this value and instead
+        use the SDSC header (see further down) which provides a more detailed version
+        number.
+        
+.HEADER.REGION «expr»
+        ```````````````````````````````````````````````````````````````````````````````
+        
+
+.HEADER.PRODUCT «expr»
+        ```````````````````````````````````````````````````````````````````````````````
+        
+        
+.HEADER.RESERVED «list»
+        ```````````````````````````````````````````````````````````````````````````````
+        Two bytes in the header are unused and their content varies greatly from one
+        game to another. "$00 $00", "$20 $20", "$FF $FF" are common. If this property
+        is ommited "$00 $00" is used.
+        
+.HEADER.RAW «list»
+        ```````````````````````````````````````````````````````````````````````````````
+        Allows you to provide the SEGA header as raw bytes.
+        Here's some examples:
+        
+                `as a plain list
+                .HEADER.RAW $54 $4D $52 $20 $53 $45 $57 $41 $59 $59 $1B $A5 $76 0 $40
+                `using a binary string
+                .HEADER.RAW $"544D52205345474159591BA576700040"
+                `mixed types
+                .HEADER.RAW "TMR SEGA" $59 $59 $1B $A5 $7076 0 $40
+                
+        The list provided *must* equate to 15 bytes, otherwise assembly will fail.
+        
+        NOTE: The presence of other header properties will overide these bytes;
+              the raw header acts as a background to the other header properties,
+              and the raw header will be used instead of the defaults.
+        
+.SDSC
+        ```````````````````````````````````````````````````````````````````````````````
+
+.SDSC.NAME «text»
+        ```````````````````````````````````````````````````````````````````````````````
+
+.SDSC.AUTHOR «text»
+        ```````````````````````````````````````````````````````````````````````````````
+        
+.SDSC.DESC «text»
+        ```````````````````````````````````````````````````````````````````````````````
+
+.SDSC.DATE «day» «month» «year»
+        ```````````````````````````````````````````````````````````````````````````````
+
+.SDSC.VERSION «expr»
+        ```````````````````````````````````````````````````````````````````````````````
+
+.CODEMASTERS
+        ```````````````````````````````````````````````````````````````````````````````
+        
+        
+=======================================================================================
+6.      Procedures
 =======================================================================================
 Scopes: Root
 Format:
-        PROC    :<labelName>
+        PROC    :«labelName»
         {
-                [...]
+                ‹…›
         }
         
 When writing assembly code, flexibility in the assembler is needed to handle the
@@ -316,7 +509,8 @@ you must know.
 
 For example:
         
-        PROC :doThing {
+        PROC    :doThing
+        {
                 inc a
                 ret
         }
@@ -329,21 +523,23 @@ All procedure names begin with a colon so that their use elsewhere can be easily
 recognised as a procedure. The location of this code in the ROM can now be addressed
 using ":doThing" rather than a fixed number.
 
-        PROC :someThing {
+        PROC    :someThing
+        {
                 ld a, $80
                 call :doThing
                 ret
         }
 
-4.1.    Parameters
+---------------------------------------------------------------------------------------
+6.2.    Parameters
 ---------------------------------------------------------------------------------------
 Scopes: Root
 Format:
-        PROC    :<procedureName>
-                [PARAMS <list>]
-                [RETURN <list>]
+        PROC    :«labelName»
+                ‹PARAMS «list»›
+                ‹RETURN «list»›
         {
-                [...]
+                ‹…›
         }
         
 Many times your procedures will require certain registers or memory addresses to have
@@ -356,53 +552,96 @@ In addition to listing the parameters you may also list the return registers / v
 to help any user understand how to use a procedure at a quick glance without having
 to decipher the code.
 
-	PROC :decodeTheThing
-		PARAMS	a;index 	`which thing to use
-			hl;address	`data starts here
-			bc;length	`data is this long
-		RETURN	de;result	`decoding result
-	{
-		[...]
-	}
+        PROC    :decodeTheThing
+                PARAMS  a;index         `which thing to use
+                        hl;address      `data starts here
+                        bc;length       `data is this long
+                RETURN  de;result       `decoding result
+        {
+                ‹…›
+        }
 
 Here the procedure is noted to use registers A, HL & BC as inputs and sets DE upon
 return.
 
-4.2.	Sub-Labels
+---------------------------------------------------------------------------------------
+6.3.    Sub-Routines
 ---------------------------------------------------------------------------------------
 Scopes: PROC
 Format:
-        .<labelName>
+        .«labelName»
 
 Within procedure blocks, special labels can be provided for the procedure to reference
-internal locations, i.e. jumps and private pieces of data. These are placed at the
+internal locations, i.e. jumps and "private" pieces of data. These are placed at the
 beginning of a line and start with a dot, followed by the name.
 
-	PROC :myProcedure {
-		ld b, 10
-	.loop	nop
-		djnz .loop
-		ret
-	}
-	
-	PROC :test {
-                ld b, 20
-                call :myProcedure.loop
+        PROC    :myProcedure
+        {
+                ld      b, 10
+        .loop   nop
+                djnz    .loop
+                ret
+        }
+        
+        PROC    :test
+        {
+                ld      b, 20
+                call    :myProcedure.loop
                 ret
         }
 
-Here the sub-label `.loop` is defined and recognised as `:myProcedure.loop` but can be
-referred to within the procedure as `.loop`. This prevents common labels within
-procedures (such as "loop") from clashing with other procedures' internal labelling.
-Outside of "myProcedure", it is referred to via the full label name.
+Here the sub-routine `.loop` is defined canonically as `:myProcedure.loop` but can
+be referred to within the procedure simply as `.loop`. This prevents common labels
+within procedures (such as "loop") from clashing with other procedures' internal
+labelling. Outside of ":myProcedure", it is referred to via the full label name.
+
+---------------------------------------------------------------------------------------
+6.4.    Interrupts
+---------------------------------------------------------------------------------------
+Scopes: Root
+Format:
+        PROC    :«labelName»    INTERRUPT $00|$08|$10|$18|$20|$28|$30|$38|$66
+        {
+                ‹…›
+        }
+
+The Z80 interrupt routines exist at fixed locations in Bank 0. Since OZ80, by its
+nature, does not allow you to specifically fix a procedure at a certain location
+(the point of the assembler is to avoid micro-managing everything), the Interrupt
+procedures are provided to make this simple. For example
+
+        PROC    :pause          INTERRUPT $66
+        {
+                `pause button pressed ...
+        }
+
+NOTE: Interrupt procedures are automatically placed in Slot 0, Bank 0 and therefore
+      do not need to be assigned to a Section. Whilst you can assign a Section to an
+      interrupt procedure, you should *not* do this unless you intend to use the
+      Codemasters mapper and page the whole of Slot 0. See the Appendix for a topic
+      on how to page Slot 0.
+        
+Whilst you can use `INTERRUPT $00` for the starting location in the ROM, you should
+use `START` instead: (this is intended for future support of other systems that do not
+use $0000 as the initial vector, e.g. Gameboy)
+
+        START {
+                `code execution begins here...
+        }
+        
+You cannot provide a label name for the Start Procedure, but you can use the keyword
+`START` anywhere a label can be used, e.g. `jp START`.
 
 
+
+
+        
 =======================================================================================
-5.      Constants
+7.      Constants
 =======================================================================================
 Scopes: Root
 Format:
-        DEF <name> [<expr>]
+        DEF     !«name» ‹«expr»›
 
 To reduce the amount of maintenance needed for changing values across a code base, 
 you may define names for common values and use these names throughout to provide you
@@ -411,170 +650,203 @@ a single point to change that value in the future.
 In its simplest form a constant is defined using the `DEF` statement,
 a constant name and a value:
 
-	DEF SIR_LANCELOTS_FAVOURITE_COLOUR $30
+        DEF     !SIR_LANCELOTS_FAVOURITE_COLOUR $30
 
 Anywhere you would normally use a value, you can now instead use the constant name:
 
-	ld a, SIR_LANCELOTS_FAVOURITE_COLOUR
+        ld      a, !SIR_LANCELOTS_FAVOURITE_COLOUR
+
+Constant names are prefixed by an exclamation mark (to represent their immutable
+nature), must be at least 2 letters long, may contain A-Z, underscore and 0-9 (though
+may not begin with a number).
 
 ---------------------------------------------------------------------------------------
-5.1.    Enumerations
+7.1.    Enumerations
 ---------------------------------------------------------------------------------------
 Scopes: Root
 Format: 
-        ENUM <name> [<expr>] {
-                .<name>         [<expr>]
-                [...]
+        ENUM    !«name» ‹«expr»›
+        {
+                .«name» ‹«expr»›        
+                .       ‹x «expr»›      `skip indicies
+                ‹…›
         }
         
 Rather than have to manage the numbers of a list manually (especially when trying to
 remove one in the middle), an enumeration provides names for a list, numbering
 automatically for you.
 
-        ENUM STATUS {
-                .SLEEP                  `i.e. 'cp STATUS.SLEEP'
+        ENUM    !STATUS
+        {
+                .SLEEP                  `i.e. 'cp !STATUS.SLEEP'
                 .PARALYZE
                 .POISEN
                 .BURN
                 .FREEZE
         }
-        
-=======================================================================================
-5.	Variables
-=======================================================================================
-Scopes: Root
-Format:
-	VAR #<varName> [<expr>]
-	
-To reduce the amount of maintenance needed for changing values across a code base, 
-you may define names for common values and use these names throughout to provide you
-a single point to change that value in the future.
 
-In its simplest form a variable is defined using the `VAR` statement,
-a variable name and a value:
+An Expression sets the starting number used in the Enum:
 
-	VAR #sirLancelotsFavouriteColour $30
+        ENUM    !STEPS  6
+        {
+                .SIX                    `= 6
+                .SEVEN                  `= 7 ...
+        }
 
-Anywhere you would normally use a value, you can now instead use the variable name:
+A lone dot skips a number. This is for the benefit of disassemblies, where you may
+have unused Enum indexes in the code.
 
-	ld a, #sirLancelotsFavouriteColour
+        ENUM    !SKIPS 1
+        {
+                .FIRST                  `= 1
+                .                       `skips number 2
+                .THIRD                  `= 3
+        }
 
-All variables are prefixed with a hash (a.k.a. 'pound', 'sharp' or 'octothorpe') any
-place where they appear in the program. This convention is used so as to distinguish
-in code (to any reader) that the variable is an arbitrary value defined by the
-assembler and not native Z80 code (that would work on any assembler). This convention
-also reduces confusion with the use of labels in Z80 instruction parameters.
+The number used for each entry in the Enum can be provided manually.
+When an unnumbered entry follows a numbered one, the previous number is increased by 1.
 
-If the value expression is omitted, a variable defaults to 0, e.g.
-
-	VAR #ZERO
-
-But a variable is re-defined without a value, it defaults to its previous value, e.g.
-
-	VAR #ONE	1		`set to 1
-	VAR #ONE			`value is still 1, not zero
+        ENUM    !MISC
+        {
+                .ABC    8
+                .DEF    3
+                .GHI                    `= 4
+        }
 
 
 =======================================================================================
-6.	Objects
+8.      Objects
 =======================================================================================
-Scopes: Root
-Format:
-	OBJECT #<objName> {
-                .<propName> AS BYTE|WORD|TRIP|LONG [x <expr>] [DEFAULT <expr>] [BITS {
-                        .<propName>     [x <expr>]      `define a bit name
-                        .               [x <expr>]      `skip bits
-                }]
-		.<propName> AS #<objName>
-		[...]
-	}
-
 In your code you will likely be handling structured data of some kind. A common example
 would be sprite definitions for players and enemies. The structured data would normally
-consist of a number of parameters offset from some starting point, for example
+consist of a number of object properties offset from some starting point, for example
 X position, Y position, ID, speed and so forth.
 
-Managing these objects in a flexible manner is possible by using object constructs,
-essentially variables extended with custom properties defined by you.
+Managing these objects in a flexible manner is possible by using Object constructs,
+special enumerations that specify the size (in bytes) of each element.
+
+---------------------------------------------------------------------------------------
+8.1.    Data Types
+---------------------------------------------------------------------------------------
+Before you begin using Objects, it's important to know about the data types that
+specify the number of bytes a property occupies. These are:
+
+:: "BYTE"
+        A single byte, 8-bits.
+        
+        Maximum:          255                   (all 8 bits)
+        Minimum:         -128                   (7 bits & negative sign)
+
+:: "WORD"
+        Two-bytes, 16-bits, written in little-endian order on the Master System,
+        i.e. low-byte, high-byte.
+        
+        Maximum:          65'536                (all 16 bits)
+        Minimum:         -32'768                (15 bits & negative sign)
+        
+:: "TRIP"
+        A "triple" (three bytes). Written in low to high order of bytes, i.e.
+        For the 24-bit value $AABBCC, the order is $CC, $BB, $AA.
+        
+        Maximum:         16'777'216             (all 24 bits)
+        Minimum:         -8'388'608             (23 bits & negative sign)
+        
+:: "LONG"
+        Four bytes, 32-bits. Written in double-little-endian order (two Words), i.e.
+        For the 32-bit value $AABBCCDD, the order is $DD, $CC, $BB, $AA.
+        
+        Maximum:         4'294'967'295          (all 32 bits)
+        Minimum:        -2'147'483'648          (31 bits & negative sign)
+
+        
+In addition to these, the Repeat ("x") operator can be used to specify multiples,
+e.g. "LONG x 8" = 4 Bytes, 8 times = 32 Bytes.
+
+Number Units can be used to specify large numbers easily,
+e.g. "BYTE x 8 KB" = 8192 Bytes.
+        
+---------------------------------------------------------------------------------------
+8.2.    Definition
+---------------------------------------------------------------------------------------
+Scopes: Root
+Format:
+        OBJECT  #«objName»
+        {
+                .«property»     AS BYTE|WORD|TRIP|LONG ‹x «expr»› ‹DEFAULT «list»›
+                `import an existing object:
+                .«property»     AS #«objName»
+                ‹…›
+        }
 
 Let's imagine an enemy object:
 
-	OBJECT #enemy {
-		.x		AS WORD
-		.y		AS WORD
-		.id		AS BYTE
-		.speed		AS BYTE
-	}
+        OBJECT  #enemy
+        {
+                .x              AS WORD
+                .y              AS WORD
+                .id             AS BYTE
+                .speed          AS BYTE
+        }
 
-First, a variable is defined, #enemy, with a value of 0 -- the starting offset point.
+First, an Object is defined, #enemy, with a value of 0 -- the starting offset point.
 Additional properties are defined, each with a given size. These properties hold the
 value of their offset, for example.
 
-	ld ix, :alien			`the location of an enemy instance
-	ld a, (ix+#enemy.id)		`gives 4
-	ld bc, (ix+#enemy.x)		`gives 0
-	ld de, (ix+#enemy.y)		`gives 2
-	ld l, (ix+#enemy.speed)		`gives 5
+        ld ix, :alien                   `the location of an enemy instance
+        ld a,  (ix+#enemy.id)           `gives 4
+        ld bc, (ix+#enemy.x)            `gives 0
+        ld de, (ix+#enemy.y)            `gives 2
+        ld l,  (ix+#enemy.speed)        `gives 5
 
 As you can see, using an object provides the flexibility to rearrange the object's
 properties, insert new ones in the middle or remove properties from any point without
 breaking your assembly code (other than when reading bytes linearly).
 
-When you need to specify a property bigger than 2 bytes, you may use the `x` operator
-to give multiples of bytes or words; for example:
-
-	OBJECT #thing {
-		.someStuff	AS BYTE x 8
-		.moreStuff	AS WORD x 16
-	}
-
-All variables and properties have a sub-property `.size` which gives the size of the
-variable or property in bytes. E.g.
-
-	PRINT #thing.moreStuff.size	`outputs 32 (16 words)
-	PRINT #thing.size		`outputs 40 (8 + 32)
-
 Objects can also contain other objects, allowing finer grained structure.
 
-	OBJECT #position {
-		.x 		AS WORD
-		.y 		AS WORD
-	}
-	
-	OBJECT #path {
-		.start		AS #position
-		.end		AS #position
-	}
-	
+        OBJECT  #position
+        {
+                .x              AS WORD
+                .y              AS WORD
+        }
+        
+        OBJECT  #path
+        {
+                .start          AS #position
+                .end            AS #position
+        }
+        
 These sub-properties would be accessed with `#path.start.x`, for example.
 
-...
-
-6.1.	Bit Flags
+---------------------------------------------------------------------------------------
+8.3.    Bit Flags
 ---------------------------------------------------------------------------------------
 Scopes: OBJECT, RAM
 Format:
-	BITS {
-		.<propName>
-		.			`unused bit
-	}
-	
-Manipulating individual bits is a common task in assembly.
+        BITS {
+                .«property»     ‹x «expr»›
+                .               ‹x «expr»›      `unused bits
+                ‹…›
+        }
         
-	VAR #elements AS BITS {
-		.earth
-		.wind
-		.fire
-		.water
-	}
-...
+Manipulating individual bits is a common task in assembly. Keeping track of which bit
+has which meaning is probably the hardest part of maintaining bit flags, therefore
+OZ80 has syntax features designed to make managing bits very simple.
 
-6.2.    Object Variables
----------------------------------------------------------------------------------------
-Scopes: Root
-Format:
-        VAR #<varName> AS #<objName>
+For any property of an Object (or RAM Object), you can break down the property into
+individual bits and provide names for each; for example:
 
+        OBJECT #thing
+        {
+                flags           AS BYTE BITS {
+                                        .visible
+                                        .sleep
+                                        .poison
+                                        
+                                }
+        }
+        
+        
 ...
 
 
@@ -585,123 +857,61 @@ Format:
 ---------------------------------------------------------------------------------------
 Scope:  Root
 Format:
-        TABLE :<labelName> {
-                [...]
+        TABLE   :«labelName»
+        {
+                ‹…›
         }
         
 Whilst `PROC` is designed for holding Z80 code, data tables are designed for storing
 your program's data such as graphics, levels and sound.
 
+---------------------------------------------------------------------------------------
 #.#.    Data Statements
 ---------------------------------------------------------------------------------------
 Scope:  PROC, TABLE
 Format:
-        DATA|BYTE|WORD|TRIP|LONG|TEXT <list>
+        DATA|BYTE|WORD|TRIP|LONG|TEXT   «list»
 
 It's important to note that 16-bit numbers are stored in little-endian format, that is
 the low-order byte is first and the hi-order byte second, therefore `$1234` would be
 outputted as `$34, $12`. This is the format understood by the Master System.
 
-#.#.	Binary Strings
+---------------------------------------------------------------------------------------
+#.#.    Binary Strings
 ---------------------------------------------------------------------------------------
 Format:
-	$"<data>"
+        $"«data»"
 
 To ease the work in providing longer sections of data, you can specify the bytes in a
 more compact manner using hexadecimal digits:
 
-	DATA $"0102030405060708090A0B0C"
+        DATA $"0102030405060708090A0B0C"
 
 The bytes will be inserted into the output without any re-ordering.
 
-#.#.    ASCII Maps
 ---------------------------------------------------------------------------------------
-
-
 #.#.    Indexes
 ---------------------------------------------------------------------------------------
 
 
-=======================================================================================
-#.	Memory Management:
-=======================================================================================
-#.1.    Introduction
 ---------------------------------------------------------------------------------------
-The Master System can address 64 KB of memory which is mapped into 3 configurable
-slots spanning 48 KB. Since a cartridge may contain more than 48 KB (typically 256 KB
-or 512 KB), the contents of the cartridge can be "paged" into the slots in memory in
-16 KB chunks known as "banks".
-
-Slots 0, 1 & 2 can each hold any of the 16 KB banks in the cartridge.
-A 256 KB cartridge, for example, would have 16 banks.
-
-		Z80:					Cartridge ROM:
-
-	$0000	+-----------------+ 1 KB	$00000	+-----------------+
-	$0400	+ - - - - - - - - +			| BANK 0          | 16 KB
-		| SLOT 0          | 15 KB	$04000	+-----------------+
-		|                 |			| BANK 1          | 16 KB
-	$4000	+-----------------+		$08000	+-----------------+
-		|                 |			| BANK 2          | 16 KB
-		| SLOT 1          | 16 KB	$0C000	+-----------------+
-		|                 |			| BANK 3          | 16 KB
-	$8000	+-----------------+		$10000	+-----------------+
-		|                 |			| BANK 4          | 16 KB
-		| SLOT 2          | 16 KB	$14000	+-----------------+
-		|                 |			| BANK 5          | 16 KB
-	$C000	+-----------------+		$18000	+-----------------+
-	        | RAM             | 8 KB		| BANK 6          | 16 KB
-	$E000	+-----------------+		$1C000	+-----------------+
-	        | RAM (mirror)    |			| BANK 7          | 16 KB
-	$FFFF	+-----------------+		$20000	+-----------------+
-							| BANK 8          | 16 KB
-						$24000	+-----------------+
-							| BANK 9          | 16 KB
-						$28000	+-----------------+
-							| BANK 10         | 16 KB
-						$2C000	+-----------------+
-							| BANK 11         | 16 KB
-						$30000	+-----------------+
-							| BANK 12         | 16 KB
-						$34000	+-----------------+
-							| BANK 13         | 16 KB
-						$38000	+-----------------+
-							| BANK 14         | 16 KB
-						$3C000	+-----------------+
-							| BANK 15         | 16 KB
-						$3FFFF	+-----------------+
-
-What must be understood is that the code in the cartridge ROM that needs to refer to
-elsewhere in the ROM cannot do so using absolute addresses, e.g. $2C000.
-
-Let’s say that you have some code in BANK 10 that needs to refer to some data in
-BANK 14. The code must begin by loading these banks into the memory slots.
-For example, BANK 10 is loaded into SLOT 1 and BANK 14 is loaded into SLOT 2.
-That means that the contents of BANK 14 are referenced by addresses $4000 - $7FFF,
-and *not* $38000-$3BFFF as in the ROM.
-
-NOTE: The first 1 KB of memory is *always* paged in to the first 1 KB of the cartridge,
-regardless of which bank in the cartridge slot 0 is assigned to. That means $0000-$03FF
-in the memory is always mapped to $0000-$03FF in the ROM.
-
-To make your life easier, the assembler will do all the necessary translation of
-addresses for you automatically, however you must divide your code into SECTIONs
-to alert the assembler when a particular bank or slot is required for a piece of code.
-
-#.2.    Sections
+#.#.    ASCII Maps
 ---------------------------------------------------------------------------------------
 
 
+        
 =======================================================================================
 #.      RAM
 =======================================================================================
 #.1.    Naming RAM Addresses
 ---------------------------------------------------------------------------------------
+Scopes: Root
 Format:
-        RAM [<expr>] {
-                .<ramName>              AS BYTE|WORD|TRIP|LONG [x <expr>]
-                .<ramName>              AS #<objName>
-                [...]
+        RAM     ‹«expr»›
+        {
+                .«property»             AS BYTE|WORD|TRIP|LONG ‹x «expr»›
+                .«property»             AS #«objName»
+                ‹…›
         }
 
 Your assembly code will contain numerous references to the Master System's RAM
@@ -727,7 +937,7 @@ near the relevant code. The assembler chooses the RAM addresses starting from $C
 but can you can override this on a RAM block by specifying a different starting point:
 
         RAM $D700 {
-                [...]
+                ‹…›
         }
 
 Here, the addressing will begin from $D700 in memory, for this particular RAM block.
@@ -739,11 +949,11 @@ TODO: Unnumbered RAM blocks will continue from the previous unnumbered RAM block
       
 TODO: Two numbered RAM blocks with same addresses will duplicate RAM
 
-
+---------------------------------------------------------------------------------------
 #.2.    Using RAM Constants
 ---------------------------------------------------------------------------------------
 Format:
-        $.<ramName>
+        $.«property»
 
 Once a RAM constant is defined, it can be accessed in your Z80 code with the special
 prefix "$.", e.g.
@@ -757,82 +967,67 @@ of the RAM constant in bytes (useful perhaps for setting up loop limits), e.g.
 
 
 =======================================================================================
-#.	Properties
+#.      Properties
 =======================================================================================
-A property is a sub-value of a named-item (i.e. variable, object, label etc.)
-that tells you something about that item.
+A Property is a sub-value of a named-item (i.e. Object, Label etc.) that tells you
+something about that item.
 
-#.1.    Of Variables & Objects
+---------------------------------------------------------------------------------------
+#.1.    Of Objects
 ---------------------------------------------------------------------------------------
 Scope:  Any
 Format:
-	<varName>.<propName>
+        #«objName».«property»
 
+---------------------------------------------------------------------------------------
 #.2.    Of Labels
 ---------------------------------------------------------------------------------------
-Often-times in Z80 assembly you need to access the high or low bytes of a 16-bit value.
-Instead of specifying these bytes in a fixed fashion, you can use the flexibility of
-variables with the `hi` & `lo` properties, e.g.
+...
 
-	DEF FOO $1234
-	ld      h, FOO.lo		`"$34"
-	ld      l, FOO.hi		`"$12"
-
-Notice that HL is loaded in low, high order due to the Z80 being little-endian.
-
-The `.bank` property retrieves the bank number of where the Label resides,
-the `.slot` property does likewise for the slot number - 0, 1 or 2 
-
-	DEF BANKNUM :label.bank
-	DEF SLOTNUM :label.slot
-
-TODO:
-	.size
-...        
-
+---------------------------------------------------------------------------------------
 #.3.    Of Tables
 ---------------------------------------------------------------------------------------
 ...
 
 
 =======================================================================================
-#.	Includes
+#.      Includes
 =======================================================================================
 Scope:  Root
 Format:
-	INCLUDE <expr>
+        INCLUDE «expr»
 ...
 
 Scope:  PROC, TABLE
 Format:
-        BINARY <expr> [START <expr> [LENGTH <expr>|STOP <expr>]]
+        BINARY «expr» [START <expr> [LENGTH <expr>|STOP <expr>]]
 ...
 
 
-
-
 =======================================================================================
-#.	Structures
+#.      Structures
 =======================================================================================
 Scope:  Root
 Format:
-	STRUCT :<labelName> AS #<varName> {
-		.<propName> <list>
-		[...]
-	}
+        STRUCT  :<labelName>    AS #<varName>
+        {
+                .<propName> <list>
+                [...]
+        }
 
 Objects are abstract concepts as defining one does not write any data in to the ROM;
 they are for your convenience in referring to structured data. To make maintaining the
 data statements easier, you can use the structure syntax, for example:
 
-	STRUCT :alien AS #enemy {
-		.id		$3F
-		.x		$0080
-		.y		$0020
-		.speed		$1A
-	}
+        STRUCT  :alien          AS #enemy
+        {
+                .id             $3F
+                .x              $0080
+                .y              $0020
+                .speed          $1A
+        }
 
-This defines a structure labelled :alien, using the #enemy object as a template.
+This defines a structure labelled ":alien", using the "#enemy" object as a template.
 Each of the properties defined by the object are given a value.
 
 What's interesting is that the order of the properties here does not have to be in the
@@ -843,18 +1038,20 @@ places.
 What's more, you can omit properties entirely from the structure, and the default
 value will be used: either 0 if undefined, or the DEFAULT attribute from the object
 definition, e.g.:
-	
-	OBJECT #enemy {
-		.x		AS WORD
-		.y		AS WORD
-		.id		AS BYTE
-		.speed		AS BYTE DEFAULT 5
-	}
-	
-	STRUCT :alien AS #enemy {
-		.id		$3F
-	}
-	
+        
+        OBJECT  #enemy
+        {
+                .x              AS WORD
+                .y              AS WORD
+                .id             AS BYTE
+                .speed          AS BYTE DEFAULT 5
+        }
+        
+        STRUCT  :alien          AS #enemy
+        {
+                .id             $3F
+        }
+        
 Even though this omits properties, the full object will assembled,
 in the correct order and the 6th byte (speed) will be 5.
 
@@ -862,11 +1059,11 @@ TODO: sub-objects of a structure
 
 
 =======================================================================================
-#.	Strings
+#.      Strings
 =======================================================================================
 Textual data can be represented easily:
 
-	DATA "The quick brown fox"
+        DATA "The quick brown fox"
 
 Will write out the ASCII bytes for the given string of text between quotes.
 
@@ -874,54 +1071,54 @@ Within strings, tabs and line-breaks are ignored so that you may space large por
 of text over multiple lines in your source code. To insert a tab, line-break or any
 value into the output you can break the quote and insert the value:
 
-	DATA "The quick brown fox", 13, "Jumps over the lazy dog"
+        DATA "The quick brown fox", 13, "Jumps over the lazy dog"
 
 
 =======================================================================================
-#.	Program Flow
+#.      Program Flow
 =======================================================================================
-#.#.	Logic
+#.#.    Logic
 ---------------------------------------------------------------------------------------
 Format:
-	IF [NOT] <expr>|DEF #<variableName>|EXISTS <filename> {
-		<code>
-	[} ELSE IF <expr> {
-		<code> ...]
-	[} ELSE {
-		<code>]
-	}
+        IF [NOT] <expr>|DEF #<variableName>|EXISTS <filename> {
+                <code>
+        [} ELSE IF <expr> {
+                <code> ...]
+        [} ELSE {
+                <code>]
+        }
 
 TODO: "EXIT IF"
 ...
 
-#.#.	Logical Operators
+#.#.    Logical Operators
 ---------------------------------------------------------------------------------------
 TODO: =, NOT, <, <=, >, >=, AND, OR (`&`/`|`/`!` are purely bitwise operators)
 
 
 =======================================================================================
-#.	Macros & Functions
+#.      Macros & Functions
 =======================================================================================
-#.#.	Macros
+#.#.    Macros
 ---------------------------------------------------------------------------------------
 Format:
-	MACRO @<macroName> [ARGS #<variableName>[, #<variableName> ...]] {
-		<code>
-	}
+        MACRO @<macroName> [ARGS #<variableName>[, #<variableName> ...]] {
+                <code>
+        }
 
 TODO: "SHIFT", variable arguments, "ARGS.size"?
 TODO: EXIT MACRO
 TODO: USE MACRO @macroName
 ...
 
-#.#.	Functions
+#.#.    Functions
 ---------------------------------------------------------------------------------------
 Scope:  Root
 Format:
-	FUNCTION ?<functionName> [ARGS #<variableName>[, #<variableName> ...]] {
-		<code>
-		DEF ?<functionName> <expr>
-	}
+        FUNCTION ?<functionName> [ARGS #<variableName>[, #<variableName> ...]] {
+                <code>
+                DEF ?<functionName> <expr>
+        }
 
 A function is similar to a macro but is used to calculate values at expression points,
 rather than inserting whole lines or blocks of code.
@@ -936,19 +1133,316 @@ TODO: "EXIT FUNCTION"
 ...
 
 Format:
-	?<functionName> [<expr>[, <expr> ...]]
+        ?<functionName> [<expr>[, <expr> ...]]
 
 
-	DATA $AA, {?functionName $10, $20, $30}, $BB, $CC
+        DATA $AA, {?functionName $10, $20, $30}, $BB, $CC
 
 ...
 
 
 =======================================================================================
-#.      Z80 Helpers
+#.      Paging
 =======================================================================================
+Paging is an advanced topic necessary only for projects using more than 48 KB of ROM.
 
-PUSH / POP
+---------------------------------------------------------------------------------------
+#.1.    Introduction
+---------------------------------------------------------------------------------------
+The Master System can address 64 KB of memory which is mapped into three configurable
+Slots spanning 48 KB (The RAM sits above that). Since a cartridge may contain more
+than 48 KB (typically 256 KB or 512 KB), the contents of the cartridge can be "paged"
+into the Slots in memory in 16 KB chunks known as "Banks".
 
-JP HL|IX|IY / (HL|IX|IY)
+Slots 0, 1 & 2 can each hold any of the 16 KB Banks in the cartridge.
+A 256 KB cartridge, for example, would have 16 Banks.
 
+                Z80:                                    Cartridge ROM:
+
+        $0000   +-----------------+ 1 KB        $00000  +-----------------+
+        $0400   |- - - - - - - - -|                     | BANK 0          | 16 KB
+                | SLOT 0          | 15 KB       $04000  +-----------------+
+                |                 |                     | BANK 1          | 16 KB
+        $4000   +-----------------+             $08000  +-----------------+
+                |                 |                     | BANK 2          | 16 KB
+                | SLOT 1          | 16 KB       $0C000  +-----------------+
+                |                 |                     | BANK 3          | 16 KB
+        $8000   +-----------------+             $10000  +-----------------+
+                |                 |                     | BANK 4          | 16 KB
+                | SLOT 2          | 16 KB       $14000  +-----------------+
+                |                 |                     | BANK 5          | 16 KB
+        $C000   +-----------------+             $18000  +-----------------+
+                | RAM             | 8 KB                | BANK 6          | 16 KB
+        $E000   +-----------------+             $1C000  +-----------------+
+                | RAM (mirror)    |                     | BANK 7          | 16 KB
+        $FFFF   +-----------------+             $20000  +-----------------+
+                                                        | BANK 8          | 16 KB
+                                                $24000  +-----------------+
+                                                        | BANK 9          | 16 KB
+                                                $28000  +-----------------+
+                                                        | BANK 10         | 16 KB
+                                                $2C000  +-----------------+
+                                                        | BANK 11         | 16 KB
+                                                $30000  +-----------------+
+                                                        | BANK 12         | 16 KB
+                                                $34000  +-----------------+
+                                                        | BANK 13         | 16 KB
+                                                $38000  +-----------------+
+                                                        | BANK 14         | 16 KB
+                                                $3C000  +-----------------+
+                                                        | BANK 15         | 16 KB
+                                                $3FFFF  +-----------------+
+
+The important thing to remember is that there are only 3 slots ("0", "1" & "2"),
+but any number of Banks (dependant on ROM size).
+                                                
+What must be understood is that the code in the cartridge ROM that needs to refer to
+elsewhere in the ROM cannot do so using absolute addresses, e.g. $2C000. Your assembly
+code must "page in" a Bank into a Slot and then refer to the contents using the Z80's
+address space ($0000 - $BFFF).
+
+Let’s say that you have some code in Bank 10 that needs to refer to some data in Bank
+14. The code must begin by loading these banks into the memory slots. For example,
+Bank 10 is loaded into Slot 1 and Bank 14 is loaded into Slot 2. That means that the
+contents of Bank 14 are referenced (in the assembly code) by addresses $4000 - $7FFF,
+and *not* $38000-$3BFFF as in the diagram.
+
+Thankfully, OZ80 can do all the address translation for you (it automatically maps
+Label references across Slots). If your project fits into 48 KB of ROM, then you will
+not need to do any paging in your source code.
+
+When your project grows beyond 48 KB of ROM you will need to page the Banks into the
+Slots in your assembly code.
+
+---------------------------------------------------------------------------------------
+#.2.    Slots
+---------------------------------------------------------------------------------------
+
+There are a handful of common patterns for using Slots in your code, these are
+described below. It is important to recognise these patterns as you will need to
+apply varying patterns to the Sections of your code.
+
+::      Default Address Space
+```````````````````````````````````````````````````````````````````````````````````````
+        For 48 KB ROMS or less, no paging is needed and OZ80 automatically assigns
+        Banks 0, 1 & 2 to Slots 0, 1 & 2, providing a contiguous 48 KB of space.
+
+                 $0000  +--------+              +--------+
+                        | SLOT 0 |              | BANK 0 |
+                 $4000  |........|              |........|
+                        | SLOT 1 |      ->      | BANK 1 |
+                 $8000  |........|              |........|
+                        | SLOT 2 |              | BANK 2 |
+                 $BFFF  +--------+              +--------+
+         
+        If you do not use any Sections in your code then the assembler will fail if
+        more than 48 KB is used. Any Sections that have no assigned Slot pattern will
+        use this pattern and therefore all such Sections will collectively be limited
+        to 48 KB.
+
+::      Slots 0 & 1 Contiguous
+```````````````````````````````````````````````````````````````````````````````````````
+        A common pattern is where Slots 0 & 1 are contiguous
+        (Slot 2 is commonly paged between multiple Banks).
+        
+                 $0000  +--------+              +--------+
+                        | SLOT 0 |      ->      | BANK a |
+                 $4000  |........|              |........|
+                        | SLOT 1 |              | BANK b |
+                 $7FFF  +--------+              +--------+
+                        |        |
+                        +--------+
+                
+        Sections that are assigned to this Slot pattern will fill two contiguous Banks
+        for a maximum of 32 KB collectively.
+
+::      Slot 2 Only
+```````````````````````````````````````````````````````````````````````````````````````
+        This pattern behaves differently from the others. The assembler will fill
+        a 16 KB Bank, but will not flow the data over Bank boundaries. When one Bank
+        is full with data then another Bank is used, and so on.
+        
+                        +--------+
+                        |        |
+                        +--------+
+                        |        |
+                 $8000  +--------+              +--------+--------+--------+---
+                        | SLOT 2 |      ->      | BANK a | BANK b | BANK c | ...
+                 $BFFF  +--------+              +--------+--------+--------+---
+                 
+        Your code will only be able to access one Bank at a time, and will have to
+        page in the correct Bank for each Block within a Section.
+        
+::      SEGA 1 KB Slot
+```````````````````````````````````````````````````````````````````````````````````````
+        The majority of Master System games use a SEGA mapper chip to handle the
+        paging of banks into slots. A unique behaviour of the SEGA mapper is that the
+        first 1 KB of Slot 0 is always mapped to the first 1 KB of Bank 0, regardless
+        of which Bank occupies the remaining 15 KB of Slot 0.
+        
+                $0000   +--------+              +--------+
+                        | 1 KB   |      ->      | BANK 0 |
+                $03FF   |--------|              |--------+---
+                        |        |              |        |
+                        | SLOT 0 |              | BANK ? | ...
+                        |        |              |        |
+                $3FFF   +--------+              +--------+---
+                        .        .
+                        
+        The purpose of this is to protect the interrupt procedures from suddenly
+        disappearing if Slot 0 changes.
+        
+        You can assign a Section specifically to this special Slot so that if the code
+        there exceeds 1 KB, the assembly will fail.
+        
+                SECTION ::interupts SLOT 1 KB
+        
+        On Codemasters games, this special Slot does not exist and the whole of Slot 0
+        can be paged. Make sure that you set the `.CODEMASTERS` property in the System
+        definition if you intend to use the Codemasters mapper, to disable the special
+        1 KB Slot handling in OZ80.
+                
+                SYSTEM "SMS" {
+                        .CODEMASTERS
+                }
+        
+        Though you can assign more than one Section to the 1 KB Slot, all code/data
+        from these Sections *must* fit within 1 KB otherwise the assembly will fail.
+        See below for more details on Slot 0 paging.
+        
+::      Slot 0 Only
+```````````````````````````````````````````````````````````````````````````````````````
+        It is not recommended to ever page Slot 0 with more than 1 Bank (the most
+        critical code tends to go up front), but this is a useful pattern if the core
+        code of your game fits in the first Slot, leaving the other two Slots for
+        various paging (see below).
+        
+                 $0000  +--------+              +--------++--------++--------+---
+                        | SLOT 0 |      ->      | BANK a || BANK b || BANK c | ...
+                 $3FFF  +--------+              +--------++--------++--------+---
+                        |        |
+                        +--------+
+                        |        |
+                        +--------+
+        
+        When a Section is assigned to Slot 0, the first Bank will be filled with as
+        close to 16 KB of code/data as is possible before beginning the next Bank,
+        (again, it is strongly advised not to fill Slot 0 with more than 16 KB)
+        *however*, in the next Bank, the code/data will begin *AFTER* the first 1 KB.
+        This is because the first 1 KB of Slot 0 is protected and any Bank other than
+        Bank 0 will not map the first 1 KB into Slot 0 (see previous pattern).
+        
+        This behaviour is not present with the Codemasters mapper and though you can
+        page the whole of Slot 0 with other Banks, you *must* put replacement
+        interrupt routines in the secondary Slot 0 Banks.
+              
+::      Slots 1 & 2 Contiguous
+```````````````````````````````````````````````````````````````````````````````````````
+        Here Slots 1 & 2 form a contiguous block. This would be useful if you place
+        your code in Slot 0 (see above) and a large amount of data in Slots 1 & 2.
+        
+                        +--------+
+                        |        |
+                 $4000  +--------+              +--------+--------+---
+                        | SLOT 1 |      ->      | BANK a | BANK c | 
+                 $8000  |........|              |........|........|...
+                        | SLOT 2 |              | BANK b | BANK d |
+                 $BFFF  +--------+              +--------+--------+---
+                
+        You can of course have multiple instances of this pattern, just be sure to
+        remember to page in both Slot 1 & 2 together in your code!
+
+::      Slot 1 Only
+```````````````````````````````````````````````````````````````````````````````````````
+        This is the same as Slot 2 only, but with Slot 1. This patten allows you to
+        have code positioned in Slot 0 and have Slot 1 & 2 access independent areas
+        of the ROM.
+        
+                        +--------+
+                        |        |
+                 $4000  +--------+              +--------+--------+--------+---
+                        | SLOT 1 |      ->      | BANK a | BANK b | BANK c | ...
+                 $7FFF  +--------+              +--------+--------+--------+---
+                        |        |
+                        +--------+
+    
+---------------------------------------------------------------------------------------
+#.3.    Sections
+---------------------------------------------------------------------------------------
+Scopes: Root
+Format: 
+        SECTION ::«sectionName» ‹SLOT «list»›
+
+Other assemblers have very complex systems of managing Banks and Slots which do not
+work in harmony with the Master System specific Slot patterns above, and more often
+than not, are terribly high-maintenance and inflexible when it comes to altering the
+layout of the ROM. OZ80 is different in that it makes the entire process of managing
+where code/data is placed in the ROM both harmonious with Master System development,
+and low-maintenance.
+
+First of all, you must decide on the Slot pattern(s) you will use to juggle a ROM size
+of greater than 48 KB. This will depend on the size of the code/data in the project
+and the complexity. As an example, Sonic 1 uses this (simplified) layout:
+
+
+                    SLOT0   |   SLOT1   |   SLOT2    
+                +-----------+-----------------------+
+                | core code | object code           |
+                +-----------+-----------------------+
+                            | block mappings        |
+                            +-----------------------+
+                            | compressed graphics   |
+                            +-----------+-----------+
+                            | screenmap | music/SFX |
+                            +-----------+-----------+
+
+
+What this shows is that the 'game engine' remains in Slot 0, whilst Slots 1 & 2 are
+paged to different Banks in the ROM to access other things. Most of these occupy 32 KB,
+but the music/SFX fit within one Bank, so only require one Slot.
+
+A Section is a grouping of code/data Blocks intended to work with a particular Slot
+pattern (see previous heading).
+
+To begin, define your Section names and the Slot patterns they are assigned to;
+using the example above, we would define the following Sections:
+
+        SECTION ::coreCode      SLOT 0
+        SECTION ::objectCode    SLOT 1, 2
+        SECTION ::blockMappings SLOT 1, 2
+        SECTION ::compressedGFX SLOT 1, 2
+        SECTION ::screenMap     SLOT 1
+        SECTION ::musicSFX      SLOT 2
+                    
+Sections are a means of specifying which banks should be used for which groups of
+code and data blocks. Since the assembly code has to implicitly change pages, you will
+need to force groups of code & data together into certain Banks. For example, you may
+need all the music code and data to fit into one Bank.
+
+We can achieve this by first defining a Section name:
+
+        SECTION ::music
+
+Then set each PROC / TABLE block to use this Section, e.g.
+
+        PROC    :playMusic      SECTION ::music
+        {
+                [...]
+        }
+        TABLE   :musicData      SECTION ::music
+        {
+                [...]
+        }
+        
+When assembled, a Bank number will be chosen automatically and the code/data assembled
+into that Bank. Your assembly code will need to know what Bank was chosen, so as to
+page in the correct Bank. Each Section has a ".bank" property that provides this
+number.
+        
+        PROC    :doMusic
+        {
+                `switch Slot 1 to the music Bank
+                ld ($FFFD), ::music.bank
+                `play the music!
+                call :playMusic
+        }

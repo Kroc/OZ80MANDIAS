@@ -1,0 +1,40 @@
+`____________________________________________________________________________[$96A8]___
+`OBJECT: UNKNOWN
+
+PROC    :_96a8                                  SECTION ::objects
+{
+	set	5,(ix+$18)
+	xor	a;zero
+	ld	(ix+#object.spriteLayout.lo),a;zero
+	ld	(ix+#object.spriteLayout.hi),a;zero
+	ld	l,(ix+#object.X.lo)
+	ld	h,(ix+#object.X.hi)
+	ld	($.TEMP1),hl
+	ld	l,(ix+#object.Y.lo)
+	ld	h,(ix+#object.Y.hi)
+	ld	($.TEMP3),hl
+	ld	l;zero,a;zero
+	ld	h;zero,a;zero
+	ld	($.TEMP4),hl;zero
+	ld	($.TEMP6),hl;zero
+	ld	e,(ix+$12)
+	ld	d,$00
+	ld	hl,._96f5
+	add	hl,de
+	ld	a,(hl)
+	call	:_3581
+	inc	(ix+$11)
+	ld	a,(ix+$11)
+	cp	$0c
+	ret	c
+	ld	(ix+$11),$00
+	inc	(ix+$12)
+	ld	a,(ix+$12)
+	cp	$03
+	ret	c
+	ld	(ix+#object.type),$FF	        `remove object?
+	ret
+
+._96f5  DATA $1C, $1E, $5E
+
+}

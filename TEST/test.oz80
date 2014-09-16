@@ -1,14 +1,6 @@
 `OZ80MANDIAS test code
 
-VAR #DefiningAVariable                  `default value of 0
-VAR #DefiningAVariable          100     `redefine with new value
-VAR #DefiningAVariable                  `redefining a variable with existing value
-
-
-SECTION ::section1                      `section with default bank & slot
-SECTION ::section2      SLOT 0          `with slot only (bank default)
-SECTION ::section3      SLOT 1 BANK 1   `with simple bank & slot
-SECTION ::section4             BANK 2   `with bank only
+SECTION ::section1                      `section with default slot pattern
 
 `simple procedure
 PROC :test {

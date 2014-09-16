@@ -1,0 +1,58 @@
+`____________________________________________________________________________[$9BE8]___
+`OBJECT: UNKNOWN
+
+PROC    :_9be8                                  SECTION ::objects
+{
+	ld	(ix+#object.Xspeed.lo),$80
+	ld	(ix+#object.Xspeed.hi),$01
+	ld	(ix+#object.Xdirection),$00
+	ld	(ix+#object.spriteLayout.lo),._9c69.lo
+	ld	(ix+#object.spriteLayout.hi),._9c69.hi
+._9bfc	set	5,(ix+$18)
+	bit	0,(ix+$18)
+	jr	nz,._1
+	ld	a,(ix+#object.X.lo)
+	ld	(ix+$11),a
+	ld	a,(ix+#object.X.hi)
+	ld	(ix+$12),a
+	ld	a,$18
+	rst	:rst_playSFX
+	set	0,(ix+$18)
+._1	ld	(ix+#object.width),$06
+	ld	(ix+#object.height),$08
+	ld	a,(ix+$13)
+	cp	$64
+	jr	nc,._2
+	ld	hl,$0400
+	ld	($.TEMP6),hl
+	call	:_LABEL_3956_11
+	call	nc,:_35fd
+._2	inc	(ix+$13)
+	ld	a,(ix+$13)
+	cp	$64
+	ret	c
+	cp	$f0
+	jr	c,._3
+	xor	a;zero			        `set A to 0
+	ld	(ix+#object.Xsubpixel),a;zero
+	ld	(ix+$13),a;zero
+	ld	a,(ix+$11)
+	ld	(ix+#object.X.lo),a
+	ld	a,(ix+$12)
+	ld	(ix+#object.X.hi),a
+	ld	a,$18
+	rst	:rst_playSFX
+	ret
+	
+._3	xor	a;zero
+	ld	(ix+#object.spriteLayout.lo),a;zero
+	ld	(ix+#object.spriteLayout.hi),a;zero
+	ld	(ix+#object.Xspeed.lo),a;zero
+	ld	(ix+#object.Xspeed.hi),a;zero
+	ld	(ix+#object.Xdirection),a;zero
+	ret
+
+        `sprite layout
+._9c69  DATA $0C, $0E, $FF, $FF, $FF, $FF
+        DATA $FF
+}

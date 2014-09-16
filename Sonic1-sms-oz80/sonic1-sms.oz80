@@ -61,16 +61,33 @@
    
 ``
 
-INCLUDE "hardware.oz80"
+``VDP registers are written to by sending first the data byte, and then the 4-bit
+  register number with bit 7 set. for more details, see
+  http://www.smspower.org/Development/VDPRegisters
+``
+DEF !VDP_REGISTER_WRITE %10000000
+DEF !VDP_REGISTER_0     !VDP_REGISTER_WRITE | 0
+DEF !VDP_REGISTER_1	!VDP_REGISTER_WRITE | 1
+DEF !VDP_REGISTER_2	!VDP_REGISTER_WRITE | 2
+DEF !VDP_REGISTER_5     !VDP_REGISTER_WRITE | 5
+DEF !VDP_REGISTER_6	!VDP_REGISTER_WRITE | 6
+DEF !VDP_REGISTER_7     !VDP_REGISTER_WRITE | 7
+DEF !VDP_REGISTER_8	!VDP_REGISTER_WRITE | 8
+DEF !VDP_REGISTER_9	!VDP_REGISTER_WRITE | 9
+DEF !VDP_REGISTER_10	!VDP_REGISTER_WRITE | 10
+
+
 
 `how many blocks (32x32px) fit in the screen height
-DEF _SMS_SCREENHEIGHT_PX	192
-DEF _SMS_SCREENHEIGHT_BLOCKS	_SMS_SCREENHEIGHT_PX / 32
+DEF !SMS_SCREENHEIGHT_PX        192
+DEF !SMS_SCREENHEIGHT_BLOCKS    !SMS_SCREENHEIGHT_PX / 32
 
-SECTION ::interrupts    BANK 0 SLOT 0
-SECTION ::main          BANK 0 SLOT 0
-SECTION ::objects       BANK 1, 2 SLOT 1, 2
-SECTION ::sound         BANK 3, SLOT 2
+`======================================================================================
+
+SECTION ::interrupts    SLOT 0
+SECTION ::main          SLOT 0
+SECTION ::objects       SLOT 1, 2
+SECTION ::sound         SLOT 2
 
 `======================================================================================
 
@@ -88,8 +105,6 @@ INCLUDE "objects\objects.oz80"
 
 `======================================================================================
 `music code and song data
-
-BANK 3 SLOT 1
 
 INCLUDE "SOUND\sound_driver.asm"
 INCLUDE "SOUND\music.asm"

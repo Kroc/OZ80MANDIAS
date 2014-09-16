@@ -109,8 +109,6 @@ Public Enum OZ80_ERROR
     OZ80_ERROR_DUPLICATE_PROC_RETURN    '- Duplicate `RETURN` parameter
     OZ80_ERROR_DUPLICATE_PROC_SECTION   '- Duplicate `SECTION` parameter
     OZ80_ERROR_DUPLICATE_SECTION        '- Can't define a section twice
-    OZ80_ERROR_DUPLICATE_SECTION_BANK   '- Duplicate `BANK` parameter
-    OZ80_ERROR_DUPLICATE_SECTION_SLOT   '- Duplicate `SLOT` parameter
     OZ80_ERROR_ENDOFFILE                'Unexpected end of file
     OZ80_ERROR_EXPECTED                 'Incorrect content at the current scope
     OZ80_ERROR_EXPECTED_PROC_NAME       '- A label name must follow `PROC`
@@ -118,7 +116,6 @@ Public Enum OZ80_ERROR
     OZ80_ERROR_EXPECTED_PROC_RETURN     '- Invalid stuff in the `RETURN` list
     OZ80_ERROR_EXPECTED_ROOT            '- Only certain keywords allowed at root
     OZ80_ERROR_EXPECTED_SECTION_NAME    '- A section name must follow `SECTION`
-    OZ80_ERROR_EXPECTED_VAR_NAME        '- A variable name must follow `VAR`
     OZ80_ERROR_EXPRESSION               'Not a valid expression
     OZ80_ERROR_EXPRESSION_Z80           '- Not a valid Z80 instruction parameter
     OZ80_ERROR_FILENOTFOUND             'Requested file does not exist
@@ -134,6 +131,7 @@ Public Enum OZ80_ERROR
     OZ80_ERROR_INVALID_WORD             'Couldn't parse a word
     OZ80_ERROR_INVALID_Z80PARAMS        'Not the right parameters for a Z80 instruction
     OZ80_ERROR_OVERFLOW                 'A number overflowed the maximum
+    OZ80_ERROR_OVERFLOW_Z80             '16-bit number used with an 8-bit instruction
 End Enum
 
 '--------------------------------------------------------------------------------------
@@ -261,34 +259,11 @@ Public Enum OZ80_TOKEN
     
     'Keywords .........................................................................
     [_TOKEN_KEYWORDS_BEGIN]
-    TOKEN_KEYWORD_AT
-    TOKEN_KEYWORD_AS
-    TOKEN_KEYWORD_BANK
-    TOKEN_KEYWORD_BINARY
-    TOKEN_KEYWORD_BYTE
-    TOKEN_KEYWORD_DATA
-    TOKEN_KEYWORD_DEFAULT
-    TOKEN_KEYWORD_ECHO
-    TOKEN_KEYWORD_ELSE
-    TOKEN_KEYWORD_EXISTS
-    TOKEN_KEYWORD_FAIL
-    TOKEN_KEYWORD_FILL
-    TOKEN_KEYWORD_IF
-    TOKEN_KEYWORD_INCLUDE
-    TOKEN_KEYWORD_LENGTH
-    TOKEN_KEYWORD_OBJECT
     TOKEN_KEYWORD_PARAMS
     TOKEN_KEYWORD_PROC
-    TOKEN_KEYWORD_RAM
     TOKEN_KEYWORD_RETURN
     TOKEN_KEYWORD_SECTION
     TOKEN_KEYWORD_SLOT
-    TOKEN_KEYWORD_START
-    TOKEN_KEYWORD_STOP
-    TOKEN_KEYWORD_STRUCT
-    TOKEN_KEYWORD_TABLE
-    TOKEN_KEYWORD_VAR
-    TOKEN_KEYWORD_WORD
     [_TOKEN_KEYWORDS_END]
     
     TOKEN_NUMBER
@@ -303,12 +278,11 @@ Public Enum OZ80_TOKEN
     TOKEN_BLOCKOPEN
     TOKEN_BLOCKCLOSE
     
-    TOKEN_QUOTE
+    TOKEN_QUOTE                         'e.g. `"..."`
     TOKEN_LABEL                         'e.g. `:myProc`
     TOKEN_SECTION                       'e.g. `::section`
     TOKEN_PROPERTY_USE
     TOKEN_PROPERTY_NEW
-    TOKEN_VARIABLE                      'e.g. `#myVar`
     TOKEN_RAM                           'e.g. `$.thing`
     
     [_TOKEN_LAST]                       'Do not go above 255!
@@ -356,42 +330,54 @@ Public Enum OZ80_MASK
     'The LD instruction can take most 16-bit registers
     MASK_REGS_BC_DE_HL_SP_IXY = MASK_REGS_BC_DE_HL_SP Or MASK_REG_IX Or MASK_REG_IY
     
-    MASK_VAL = 2 ^ 20
+    MASK_VAL8 = 2 ^ 20                  '8-bit value
+    MASK_VAL16 = 2 ^ 21                 '16-bit value
+    MASK_VAL = MASK_VAL8 Or MASK_VAL16
     
     '..................................................................................
     
     'Register C & Flag C cannot be distinguished by the tokeniser (it isn't aware of
      'context) so they are treated as the same thing. Another bit covers NC/Z/NZ so
      'that these are not accidentally taken as Register C elsewhere
-    MASK_FLAGS_CZ = MASK_REG_C Or (2 ^ 21)
-    MASK_FLAGS_MP = (2 ^ 22)
+    MASK_FLAGS_CZ = MASK_REG_C Or (2 ^ 22)
+    MASK_FLAGS_MP = (2 ^ 23)
     
     MASK_FLAGS = MASK_FLAGS_CZ Or MASK_FLAGS_MP
     
     '..................................................................................
     
-    'HL/IX & IY are synonymous - opcode prefixes are used to determine which
-    MASK_MEM_HLIXY = 2 ^ 23
+    'Memory HL/IX & IY are synonymous - opcode prefixes are used to determine which
+    MASK_MEM_HLIXY = 2 ^ 24
     
     'The Z80 clumps HL/IX & IY memory references together with 8-bit registers when
      'building opcodes, i.e. A|B|C|D|E|H|L|(HL|IX+$8|IY+$8)
     MASK_REGS_ABCDEHL_MEM_HLIXY = MASK_REGS_ABCDEHL Or MASK_MEM_HLIXY
     
     'The IN and OUT instructions can use port "C" (which is, in reality, BC)
-    MASK_MEM_BC = 2 ^ 24
-    MASK_MEM_DE = 2 ^ 25
-    MASK_MEM_SP = 2 ^ 26
+    MASK_MEM_BC = 2 ^ 25
+    MASK_MEM_DE = 2 ^ 26
+    MASK_MEM_SP = 2 ^ 27
     
-    MASK_MEM_VAL = 2 ^ 27
+    MASK_MEM_VAL8 = 2 ^ 28              '8-bit memory reference, only used by IN/OUT
+    MASK_MEM_VAL16 = 2 ^ 29             '16-bit memory reference, e.g. `LD A, ($1234)`
+    MASK_MEM_VAL = MASK_MEM_VAL8 Or MASK_MEM_VAL16
 End Enum
-
-'--------------------------------------------------------------------------------------
 
 Public Type oz80Param
     Mask As OZ80_MASK
     Token As OZ80_TOKEN
     Value As Long
 End Type
+
+'--------------------------------------------------------------------------------------
+
+'Whilst in the syntax `SLOT` uses a list (i.e. `SLOT 0, 1, 2`), we convert that into _
+ a bit pattern to make it quick and easy to work with instead of iterating an array
+Public Enum OZ80_SLOT
+    SLOT0 = 2 ^ 0
+    SLOT1 = 2 ^ 1
+    SLOT2 = 2 ^ 2
+End Enum
 
 '/// PUBLIC PROCEDURES ////////////////////////////////////////////////////////////////
 
@@ -409,12 +395,6 @@ Public Sub GetOZ80Error( _
         Let ReturnTitle = "Duplicate Definition"
         'TODO
         Let ReturnDescription = ""
-    
-    Case OZ80_ERROR_DUPLICATE_SECTION_BANK
-        '..............................................................................
-        Let ReturnTitle = "Duplicate Parameter"
-        Let ReturnDescription = _
-            "You cannot specify the `BANK` parameter twice in one `SECTION`!"
         
     Case OZ80_ERROR_DUPLICATE_SECTION
         '..............................................................................
@@ -422,12 +402,6 @@ Public Sub GetOZ80Error( _
         Let ReturnDescription = _
             "You cannot define a section name twice. There should be only one " & _
             "`SECTION` statement for each section in use."
-        
-    Case OZ80_ERROR_DUPLICATE_SECTION_SLOT
-        '..............................................................................
-        Let ReturnTitle = "Duplicate Parameter"
-        Let ReturnDescription = _
-            "You cannot specify the `SLOT` parameter twice in one `SECTION`!"
         
     Case OZ80_ERROR_ENDOFFILE
         '..............................................................................

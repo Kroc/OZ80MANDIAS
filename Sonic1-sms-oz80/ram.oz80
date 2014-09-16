@@ -6,10 +6,10 @@
 ``the programmers use the IY register as a shortcut to $D200
   to access commonly used variables and flags`` 
 
-OBJECT #vars {				`$D200:
-	
+OBJECT  #vars                                   `$D200:
+{	
 	`program flow control / loading flags?
-	.flags0			AS BYTE	`IY+$00
+	.flags0			AS BYTE	        `IY+$00
 	`bit 0 - `waitForInterrupt` will loop until the bit is set
 	`bit 1 - unknown (set at level load)
 	`bit 3 - flag to load palette on IRQ
@@ -18,15 +18,15 @@ OBJECT #vars {				`$D200:
 	`bit 7 - set when the camera has moved up
 	
 	`this is used only as the comparison byte in `:loadFloorLayout`
-	.temp			AS BYTE	`IY+$01
+	.temp			AS BYTE	        `IY+$01
 	
-	.flags2			AS BYTE	`IY+$02
+	.flags2			AS BYTE	        `IY+$02
 	`bit 0 - unknown
 	`bit 1 - unknown
 	`bit 2 - unknown
 	
 	`value of joypad port 1 - the bits are 1 for unpressed and 0 for pressed
-	.joypad			AS BYTE	`IY+$03
+	.joypad			AS BYTE	        `IY+$03
 	`bit 0 - joypad 1 up
 	`bit 1 - joypad 1 down
 	`bit 2 - joypad 1 left
@@ -35,11 +35,11 @@ OBJECT #vars {				`$D200:
 	`bit 5 - joypad button B
 	
 	`this does not appear referenced in any code
-	.unused			AS BYTE	`IY+$04
+	.unused			AS BYTE	        `IY+$04
 	
 	`taken from the level header, this controls screen scrolling and the
 	 `presence of the "rings" count on the HUD
-	.scrollRingFlags	AS BYTE	`IY+$05
+	.scrollRingFlags	AS BYTE	        `IY+$05
 	`bit 0 - unknown, but causes Sonic to immediately die
 	`bit 1 - demo mode
 	`bit 2 - ring count displayed in HUD, rings visible in the level
@@ -49,7 +49,7 @@ OBJECT #vars {				`$D200:
 	`bit 6 - up and down wave scrolling
 	`bit 7 - screen does not scroll down
 	
-	.flags6			AS BYTE	`IY+$06
+	.flags6			AS BYTE	        `IY+$06
 	`bit 0 - make Sonic upside down! (some incomplete functionality left in)
 	`bit 1 - disable controls
 	`bit 3 - clock is active when set
@@ -60,7 +60,7 @@ OBJECT #vars {				`$D200:
 	
 	`taken from the level header, this controls the presence of the time on
 	 `the HUD and if the lightning effect is in use
-	.timeLightningFlags	AS BYTE	`IY+$07
+	.timeLightningFlags	AS BYTE	        `IY+$07
 	`bit 0 - centres the time in the screen on special stages
 	`bit 1 - enables the lightning effect
 	`bit 4 - use the boss underwater palette (specially for Labyrinth Act 3)
@@ -69,18 +69,18 @@ OBJECT #vars {				`$D200:
         `bit 7 - 0 = timer counts up, 1 = timer counts down (e.g. special stage)
 	
 	`part of the level header -- always "0" for all levels, but unknown function
-	.unknown0		AS BYTE	`IY+$08
+	.unknown0		AS BYTE	        `IY+$08
 	
-	.flags9			AS BYTE	`IY+$09
+	.flags9			AS BYTE	        `IY+$09
 	`bit 0 - unknown
 	`bit 1 - enables interrupts during `decompressArt`
 	
-	.spriteUpdateCount	AS BYTE	`IY+$0A, number of sprites requiring updates
-	.origScrollRingFlags	AS BYTE	`IY+$0B, copy made during level loading UNUSED
-	.origFlags6		AS BYTE	`IY+$0C, copy made during level loading
+	.spriteUpdateCount	AS BYTE	        `IY+$0A, # sprites requiring updates
+	.origScrollRingFlags	AS BYTE	        `IY+$0B, copy made during level loading UNUSED
+	.origFlags6		AS BYTE	        `IY+$0C, copy made during level loading
         
         `currently unknown purpose
-        .unknown_0D             AS BYTE `IY+$0D
+        .unknown_0D             AS BYTE         `IY+$0D
 }
 
 `--------------------------------------------------------------------------------------
@@ -103,7 +103,7 @@ RAM     `name                   `size                                           
         .OVERSCROLLCACHE_HORZ   AS BYTE x 128                                   `$D180
         
         ``throughout the codebase, IY is used as a shorthand to $D200 where many
-          commonly used RAM variables exist. therefore these use the `(iy+#vars.abc)`
+          commonly used RAM variables exist. therefore these use the `(iy+#VARS.abc)`
           form of addressing. for the sake of completeness, we'll also define the
           absolute location of these variables too, i.e. `$.VARS.abc```
         .VARS                   AS _vars                                        `$D200
@@ -155,9 +155,9 @@ RAM     `name                   `size                                           
         
         .D234                   AS BYTE                                         `UNUSED
         
-        `these keep track of which bank is in which page; page 0 is always bank 0
-        .PAGE_1                 AS BYTE                                         `$D235
-        .PAGE_2                 AS BYTE                                         `$D236
+        `these keep track of which bank is in which slot; slot 0 is always bank 0
+        .SLOT1                  AS BYTE                                         `$D235
+        .SLOT2                  AS BYTE                                         `$D236
         
         .D237                   AS BYTE                                         `UNUSED
         

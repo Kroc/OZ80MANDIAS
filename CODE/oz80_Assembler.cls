@@ -48,14 +48,10 @@ Attribute Token.VB_VarHelpID = -1
  expressions that could not be evaluated, but we need to clear out the variable _
  values produced during the first pass so that they don't change the behaviour of _
  the second pass
-
-Private Variables As Scripting.Dictionary
 Private Labels As Scripting.Dictionary
 
-'Sections need to be defined first before they can be used, _
- i.e. `SECTION ::stuff BANK 0 SLOT 0`
+'Sections need to be defined first before they can be used
 Private SectionNames As Scripting.Dictionary
-Private SectionBanks As Scripting.Dictionary
 Private SectionSlots As Scripting.Dictionary
 
 'Assembling / Output: _
@@ -88,12 +84,13 @@ Event Error( _
 'CLASS Initialize _
  ======================================================================================
 Private Sub Class_Initialize()
+    'If too many possible tokens are created, things will screw up
+    Debug.Assert OZ80_TOKEN.[_TOKEN_LAST] < 256
+    
     Set Stopwatch = New PerformanceCounter
-    Set Variables = New Scripting.Dictionary
     Set Labels = New Scripting.Dictionary
     Set Blocks = New Scripting.Dictionary
     Set SectionNames = New Scripting.Dictionary
-    Set SectionBanks = New Scripting.Dictionary
     Set SectionSlots = New Scripting.Dictionary
 End Sub
 
@@ -101,12 +98,10 @@ End Sub
  ======================================================================================
 Private Sub Class_Terminate()
     Set Stopwatch = Nothing
-    Set Variables = Nothing
     Set Labels = Nothing
     Set Block = Nothing: Set Blocks = Nothing
     Set Token = Nothing: Set Files = Nothing
     Set SectionNames = Nothing
-    Set SectionBanks = Nothing
     Set SectionSlots = Nothing
     Erase ROM
 End Sub
@@ -171,7 +166,7 @@ Public Function Assemble(ByVal FilePath As String) As OZ80_ERROR
     Call ScopeRoot
     If My_Error Then GoTo Finish
     
-    'Phase 2: Assign Addresses _
+    'Phase 2: Layout the ROM banks _
      ----------------------------------------------------------------------------------
     RaiseEvent Message(0, OZ80_LOG_ACTION, "Phase 2")
     'TODO
@@ -274,33 +269,11 @@ Continue:
     
     'ERROR: Not a keyword on root scope
     If Not Token.IsKeyword Then Call RaiseError(OZ80_ERROR_EXPECTED_ROOT): Exit Sub
-    
-    '----------------------------------------------------------------------------------
-    '`INCLUDE <text>` _
-     ----------------------------------------------------------------------------------
-    If Token.Kind = TOKEN_KEYWORD_INCLUDE Then
-        'ERROR: The file ended before the first parameter
-        If Not Token.Forward() Then Call RaiseError(OZ80_ERROR_ENDOFFILE): Exit Sub
-    
-        'TODO: Capture the filename
-        'TODO: Parse the file
-        'TODO: Return to the previous file
-        Stop
-        
-    '----------------------------------------------------------------------------------
-    '`OBJECT #<objectName> { [...] }` _
-     ----------------------------------------------------------------------------------
-    ElseIf Token.Kind = TOKEN_KEYWORD_OBJECT Then
-        'ERROR: The file ended before the first parameter
-        If Not Token.Forward() Then Call RaiseError(OZ80_ERROR_ENDOFFILE): Exit Sub
-        
-        'TODO
-        Stop
         
     '----------------------------------------------------------------------------------
     '`PROC :<name> [SECTION ::<name>] [PARAMS <list>] [RETURN <list>] { [...] }` _
      ----------------------------------------------------------------------------------
-    ElseIf Token.Kind = TOKEN_KEYWORD_PROC Then
+    If Token.Kind = TOKEN_KEYWORD_PROC Then
         'Hand off to the function that will process this
         Call ProcessProc
         
@@ -310,28 +283,7 @@ Continue:
     ElseIf Token.Kind = TOKEN_KEYWORD_SECTION Then
         'Hand off to the function that will process this
         Call ProcessSection
-    
-    '----------------------------------------------------------------------------------
-    '`STRUCT :<structureName> AS #<objectName> { [...] }` _
-     ----------------------------------------------------------------------------------
-    ElseIf Token.Kind = TOKEN_KEYWORD_STRUCT Then
-        'TODO
-        Stop
         
-    '----------------------------------------------------------------------------------
-    '`TABLE :<tableName> { [...] }` _
-     ----------------------------------------------------------------------------------
-    ElseIf Token.Kind = TOKEN_KEYWORD_TABLE Then
-        'TODO
-        Stop
-    
-    '----------------------------------------------------------------------------------
-    '`VAR #<variable> [<expr>]` _
-     ----------------------------------------------------------------------------------
-    ElseIf Token.Kind = TOKEN_KEYWORD_VAR Then
-        'Hand off to the function that will process this
-        Call ProcessVar
-    
     'ERROR: Not a valid keyword at this scope! _
      ----------------------------------------------------------------------------------
     Else
@@ -477,27 +429,20 @@ Private Function ScopeValue() As Double
     'Is it a named value?
     'TODO: Handle scope expansion for names
     If Token.Kind = TOKEN_LABEL _
-    Or Token.Kind = TOKEN_PROPERTY_USE Then
+    Or Token.Kind = TOKEN_PROPERTY_USE Then '..........................................
         'TODO: get the full label from the property
         
         'If the named value is not yet known, the expression cannot be evaluated _
          until it is defined later on
         If Not Labels.Exists(Token.Value) Then _
             Let ScopeValue = OZ80_INDEFINITE Else _
-            Let ScopeValue = Variables(Token.Value)
-        
-    ElseIf Token.Kind = TOKEN_VARIABLE Then
-        'If the named value is not yet known, the expression cannot be evaluated _
-         until it is defined later on
-        If Not Variables.Exists(Token.Value) Then _
-            Let ScopeValue = OZ80_INDEFINITE Else _
-            Let ScopeValue = Variables(Token.Value)
+            Let ScopeValue = Labels(Token.Value)
         
     'This is an easy one
-    ElseIf Token.Kind = TOKEN_NUMBER Then
+    ElseIf Token.Kind = TOKEN_NUMBER Then '............................................
         Let ScopeValue = Token.Value
         
-    Else
+    Else '.............................................................................
         'ERROR: Not a valid operand. We won't produce an error message here as the _
          error might be exepected (i.e. an optional parameter). We fold upwards and _
          whomever knows best will deal with the error
@@ -660,15 +605,11 @@ SkipReturn:
     'TODO: Update `.size`, `.cycles` properties?
 End Sub
 
-'ProcessSection : Process a section directive _
+'ProcessSection : Define a Section _
  ======================================================================================
-'SECTION    ::<name>    [BANKS  <expr>]
-'                       [BANK   <list>]
-'                       [SLOT   <list>]
+'SECTION    ::<name>    [SLOT   <list>]
 '======================================================================================
 Private Sub ProcessSection()
-    'TODO: Convert to lists, add `BANKS` directive
-    
     'ERROR: The file ended before the first parameter
     If Not Token.Forward() Then Call RaiseError(OZ80_ERROR_ENDOFFILE): Exit Sub
     
@@ -689,8 +630,6 @@ Private Sub ProcessSection()
     'Define the section name - fetch the string from the TokenStream's _
      string database (identified by the CRC value on the token)
     Call SectionNames.Add(SectionKey, Token.Strings(SectionKey))
-    'Default bank as undefined, the assembler will choose
-    Call SectionBanks.Add(SectionKey, -1)
     Call SectionSlots.Add(SectionKey, 0)
     
     '----------------------------------------------------------------------------------
@@ -698,127 +637,97 @@ Private Sub ProcessSection()
     'If the file ends here it's valid, as the params are optional
     If Not Token.Forward() Then GoTo Finish
     
-NextParam:
-    'We need to remember the current token as the call to `ScopeExpression` will _
-     move the token pointer forward, invalidating `Token.Kind` at this scope
-    Dim ParamToken As OZ80_TOKEN
-    Let ParamToken = Token.Kind
-    
-    If ParamToken = TOKEN_KEYWORD_BANK _
-    Or ParamToken = TOKEN_KEYWORD_SLOT _
-    Then
-        'Don't allow a duplicate param
-        Dim IsBankDefined As Boolean, IsSlotDefined As Boolean
-        If IsBankDefined And (ParamToken = TOKEN_KEYWORD_BANK) Then
-            'TODO: specific error message
-            Call RaiseError(OZ80_ERROR_DUPLICATE_SECTION_BANK)
-            Exit Sub
-            
-        ElseIf IsSlotDefined And (ParamToken = TOKEN_KEYWORD_SLOT) Then
-            'TODO: specific error message
-            Call RaiseError(OZ80_ERROR_DUPLICATE_SECTION_SLOT)
-            Exit Sub
-            
-        End If
-        
+    'The only parameter is the Slot list
+    If Token.Kind = TOKEN_KEYWORD_SLOT Then
         'ERROR: File ending before we have the value
         If Not Token.Forward() Then Call RaiseError(OZ80_ERROR_ENDOFFILE): Exit Sub
         
-        'ERROR: If not an expression, it can't be accepted as a value
+        'ERROR: If not an expression, it can't be accepted as a list
         If Not Token.IsExpression Then Call RaiseError( _
             OZ80_ERROR_EXPECTED _
         ): Exit Sub
         
-        'Evaluate the expression
-        Dim Value As Double
-        Let Value = ScopeExpression()
-        'Was there an error evaluating the expression?
-        If My_Error Then Exit Sub
+        'TODO: Parse list
         
-        'You can't use an indefinite value for a bank/slot number
-        If Value = OZ80_INDEFINITE Then Call RaiseError( _
-            OZ80_ERROR_INDEFINITE _
-        ): Exit Sub
+        'The only allowed Slot lists are: 0 / 1 / 2 / 0, 1 / 0, 1, 2 / 1, 2
+        
+'        'Evaluate the expression
+'        Dim Value As Double
+'        Let Value = ScopeExpression()
+'        'Was there an error evaluating the expression?
+'        If My_Error Then Exit Sub
+        
+'        'You can't use an indefinite value for a slot number
+'        If Value = OZ80_INDEFINITE Then Call RaiseError( _
+'            OZ80_ERROR_INDEFINITE _
+'        ): Exit Sub
         
         'TODO: Is the value within range?
         
-        'Assign the value to the right place
-        If ParamToken = TOKEN_KEYWORD_BANK Then
-            Let SectionBanks(SectionKey) = Value
-            Let IsBankDefined = True
-        ElseIf ParamToken = TOKEN_KEYWORD_SLOT Then
-            Let SectionSlots(SectionKey) = Value
-            Let IsSlotDefined = True
-        End If
-        
-        'Loop around to check for a second param
-        'NOTE: `ScopeExpression` will have moved the token pointer ahead, _
-               so we should already be on the next keyword
-        GoTo NextParam
+'        Let SectionSlots(SectionKey) = Value
     End If
 
 Finish:
-    RaiseEvent Message(1, OZ80_LOG_STATUS, _
+    RaiseEvent Message(2, OZ80_LOG_STATUS, _
         "SECTION " & Token.Strings(SectionKey) & _
-        " BANK " & IIf(SectionBanks(SectionKey) = -1, "?", SectionBanks(SectionKey)) & _
-        " SLOT " & IIf(SectionSlots(SectionKey) = -1, "?", SectionSlots(SectionKey)) _
+        " SLOT " & IIf(SectionSlots(SectionKey) = 0, "?", SectionSlots(SectionKey)) _
     )
 End Sub
 
-'ProcessVar : Process a variable definition statement _
- ======================================================================================
-'VAR #<name> [<expr>] [AS #<name>]
-'======================================================================================
-Private Sub ProcessVar()
-    'ERROR: The file ended before the first parameter
-    If Not Token.Forward() Then Call RaiseError(OZ80_ERROR_ENDOFFILE): Exit Sub
-    
-    'ERROR: Not a variable name for `VAR`
-    If Token.Kind <> TOKEN_VARIABLE Then Call RaiseError( _
-        OZ80_ERROR_EXPECTED_VAR_NAME _
-    ): Exit Sub
-    
-    'Fetch the key for the variable name in the string database, _
-     (i.e. remember the variable name before moving past the token)
-    Dim StringKey As Long, Value As Double
-    Let StringKey = Token.Value
-    
-    'Move forward to the value parameter
-    'NOTE: the value parameter is optional, and the file could end right here -- _
-           if so, it'll skip over retreiving the value
-    If Token.Forward() And Token.IsExpression Then
-        'Calculate the value of the expression
-        Let Value = ScopeExpression()
-        'If the expression is faulty, an error will already have been raised, _
-         we only need to fold upward to terminate the assembling
-        If My_Error Then Exit Sub
-        'ERROR: A value must be known in order to define a variable, i.e. _
-         yet-unknown values, such as label addresses, cannot be used
-        If Value = OZ80_INDEFINITE Then Call RaiseError( _
-            OZ80_ERROR_INDEFINITE _
-        ): Exit Sub
-    Else
-        'There is no given value for the label, re-use the existing value, _
-         otherwise use zero
-        If Variables.Exists(StringKey) Then _
-            Let Value = Variables.Item(StringKey) Else _
-            Let Value = 0
-    End If
-    
-    'TODO: `AS #object`
-    
-    'Is the variable already defined?
-    If Variables.Exists(StringKey) Then _
-        Let Variables(StringKey) = Value Else _
-        Call Variables.Add(StringKey, Value)
-    
-    'Log the variable
-    RaiseEvent Message(1, OZ80_LOG_STATUS, _
-        "VAR " & Token.Strings(StringKey) & " " & _
-        Right$(Space(40) & Value, 40 - Len(Token.Strings(StringKey))) & _
-        " $" & Right$("000" & Hex(Value), 4) _
-    )
-End Sub
+''ProcessVar : Process a variable definition statement _
+' ======================================================================================
+''VAR #<name> [<expr>] [AS #<name>]
+''======================================================================================
+'Private Sub ProcessVar()
+'    'ERROR: The file ended before the first parameter
+'    If Not Token.Forward() Then Call RaiseError(OZ80_ERROR_ENDOFFILE): Exit Sub
+'
+'    'ERROR: Not a variable name for `VAR`
+'    If Token.Kind <> TOKEN_VARIABLE Then Call RaiseError( _
+'        OZ80_ERROR_EXPECTED_VAR_NAME _
+'    ): Exit Sub
+'
+'    'Fetch the key for the variable name in the string database, _
+'     (i.e. remember the variable name before moving past the token)
+'    Dim StringKey As Long, Value As Double
+'    Let StringKey = Token.Value
+'
+'    'Move forward to the value parameter
+'    'NOTE: the value parameter is optional, and the file could end right here -- _
+'           if so, it'll skip over retreiving the value
+'    If Token.Forward() And Token.IsExpression Then
+'        'Calculate the value of the expression
+'        Let Value = ScopeExpression()
+'        'If the expression is faulty, an error will already have been raised, _
+'         we only need to fold upward to terminate the assembling
+'        If My_Error Then Exit Sub
+'        'ERROR: A value must be known in order to define a variable, i.e. _
+'         yet-unknown values, such as label addresses, cannot be used
+'        If Value = OZ80_INDEFINITE Then Call RaiseError( _
+'            OZ80_ERROR_INDEFINITE _
+'        ): Exit Sub
+'    Else
+'        'There is no given value for the label, re-use the existing value, _
+'         otherwise use zero
+'        If Variables.Exists(StringKey) Then _
+'            Let Value = Variables.Item(StringKey) Else _
+'            Let Value = 0
+'    End If
+'
+'    'TODO: `AS #object`
+'
+'    'Is the variable already defined?
+'    If Variables.Exists(StringKey) Then _
+'        Let Variables(StringKey) = Value Else _
+'        Call Variables.Add(StringKey, Value)
+'
+'    'Log the variable
+'    RaiseEvent Message(2, OZ80_LOG_STATUS, _
+'        "VAR " & Token.Strings(StringKey) & " " & _
+'        Right$(Space(40) & Value, 40 - Len(Token.Strings(StringKey))) & _
+'        " $" & Right$("000" & Hex(Value), 4) _
+'    )
+'End Sub
 
 'ProcessZ80 : Process a Z80 instruction (and parameters) _
  ======================================================================================
@@ -835,28 +744,31 @@ Private Sub ProcessZ80()
     'TODO: Handle POP / PUSH
     
     'Up to three parameters are supported to allow for the undocumented instructions, _
-     e.g. `SET 0 (IX+$8) A` which sets bit 0 of the address and copies the result to B
+     e.g. `SET 0 (IX+$8) A` which sets bit 0 of the address and copies the result to A
     Dim Param1 As oz80Param, Param2 As oz80Param, Param3 As oz80Param
     
     'Is there a first parameter?
     If Token.IsParameter Then
         'Parameter expressions might return an unknown value _
          (such as when a label, which has not yet been addressed, is used)
+        
         'Get the first parameter
         Let Param1 = GetZ80Parameter()
-        If My_Error Then Stop
+        'If there was an error, the error number will already have been set, _
+         we only need to fold upwards to end the assembling
+        If My_Error Then Exit Sub
         
         'Check if a second parameter exists
         If Token.IsParameter Then
             'Fetch the second parameter
             Let Param2 = GetZ80Parameter()
-            If My_Error Then Stop
+            If My_Error Then Exit Sub
             
             'Check if a third parameter exists
             If Token.IsParameter Then
                 'Fetch the third parameter (very uncommon)
                 Let Param2 = GetZ80Parameter()
-                If My_Error Then Stop
+                If My_Error Then Exit Sub
             End If
         End If
     End If
@@ -998,10 +910,8 @@ AddExpr:    'Look for the `+` following the register name
         
         'Memory references with IX & IY will have already set the register, but for _
          direct memory references, e.g. `jp ($1234)`, we declare this as a pure number
-        If GetZ80Parameter.Token = TOKEN_NONE Then
-            Let GetZ80Parameter.Token = TOKEN_NUMBER
-            Let GetZ80Parameter.Mask = MASK_MEM_VAL
-        End If
+        If GetZ80Parameter.Token = TOKEN_NONE _
+            Then Let GetZ80Parameter.Token = TOKEN_NUMBER
         
         GoTo GetValue
     
@@ -1057,23 +967,38 @@ EndScope:
     'Anything else classes as a calculable expression
     '----------------------------------------------------------------------------------
     ElseIf Token.IsExpression Then
+        'We manually build a number token, since we don't want to use the first _
+         token of the expression -- it might be a label for instance and we can _
+         only send tokens or numbers to be assembled into opcodes
         Let GetZ80Parameter.Token = TOKEN_NUMBER
-        Let GetZ80Parameter.Mask = MASK_VAL
 
 GetValue:
         'Try and calculate the expression
         Dim Value As Double
         Let Value = ScopeExpression()
         
-        'If there was an error in the expression, the error event will already have _
-         been raised, we only need to fold upwards
+        'If there was an error in the expression, the error event _
+         will already have been raised, we only need to fold upwards
         If My_Error Then Exit Function
         
         'TODO: Handle indefinite value
+        'TODO: Error if number is over 16-bit
         'TODO: Issue warning for rounding
         
         Let GetZ80Parameter.Value = Value
+        
+        'IX/IY values are always 8-bit, so don't use the MASK_VAL bits
+        If GetZ80Parameter.Token = TOKEN_NUMBER Then
+            'Set the mask bits for 8 and 16-bit number ranges: _
+             (this is used to check for overflow when assembling opcodes)
+            'Any number will class as 16-bit since it's the maximum allowed
+            Let GetZ80Parameter.Mask = GetZ80Parameter.Mask Or MASK_VAL16
+            'Is the number within 8-bits? i.e. $00-$FF
+            If Value < 256 _
+                Then Let GetZ80Parameter.Mask = GetZ80Parameter.Mask Or MASK_VAL8
+        End If
     
+    '----------------------------------------------------------------------------------
     Else
         'ERROR: Not a Z80 parameter
         'TODO: parameter specific error number
@@ -1083,7 +1008,9 @@ End Function
 
 'ParseFile : Parse a source code file into a TokenStream object _
  ======================================================================================
-Private Sub ParseFile(ByRef FilePath As String)
+Private Sub ParseFile( _
+    ByRef FilePath As String _
+)
     'Since we have a "scrrun.dll" reference for Dictionary object, this also gives _
      us the `FileSystemObject` to simplify a lot of mucky folder / file checking
     Dim FSO As FileSystemObject
@@ -1098,13 +1025,13 @@ Private Sub ParseFile(ByRef FilePath As String)
     Dim TestPath As String
     
     'If the given path is already absolute, it does not need normalising. _
-     Note that file/folder case will be corrected and could throw a false negative
+     NOTE: Upper/lower case will be corrected and could throw a false negative
     If LCase$(FSO.GetAbsolutePathName(FilePath)) = LCase$(FilePath) Then
         'We'll skip ahead to checking the file exists
         Let TestPath = FilePath
     Else
-        'Path is relative! If no other file has been parsed yet we will need to use _
-         the current directory as a base
+        'Path is relative! If no other file has been parsed yet _
+         we will need to use the current directory as a base
         If Token Is Nothing Then
             Let TestPath = FSO.BuildPath(CurDir(), FilePath)
         Else

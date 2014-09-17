@@ -22,7 +22,7 @@ PROC    :_7b95                                  SECTION ::objects {
 	ld	a,(hl)
 	ld	(ix+#object.spriteLayout.lo),e
 	ld	(ix+#object.spriteLayout.hi),d
-	ld	($D302),a
+	ld	($.D302),a
 	jr	._2
 	
 ._1	ld	(ix+#object.spriteLayout.lo),a

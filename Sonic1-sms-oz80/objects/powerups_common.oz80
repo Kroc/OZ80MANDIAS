@@ -130,8 +130,8 @@ PROC	:doObjectCode_powerUp_life              SECTION ::objects {
 	ld	(ix+#object.height),24
 	call	:_5da8
 	
-	`check if the level has its bit flag set at $D305+
-	ld	hl,$D305
+	`check if the level has its bit flag set at $.D305+
+	ld	hl,$.D305
 	call	:getLevelBitFlag
 	ld	a,(hl)
 	and	c
@@ -151,8 +151,8 @@ PROC	:doObjectCode_powerUp_life              SECTION ::objects {
 	ld	hl,$.LIVES
 	inc	(hl)
 	
-	`set the level's bit flag at $D305+
-	ld	hl,$D305
+	`set the level's bit flag at $.D305+
+	ld	hl,$.D305
 	call	:getLevelBitFlag
 	ld	a,(hl)
 	or	c
@@ -205,7 +205,7 @@ PROC	:doObjectCode_powerUp_life              SECTION ::objects {
 	jr	._3
 	
 ._6	set	2,(ix+$18)
-	ld	hl,$D317
+	ld	hl,$.D317
 	call	:getLevelBitFlag
 	ld	a,(hl)
 	ld	hl,$5180
@@ -294,7 +294,7 @@ PROC	:doObjectCode_powerUp_checkpoint        SECTION ::objects {
 	call	:_5deb
 	jr	c,._1
 	
-	ld	hl,$D311
+	ld	hl,$.D311
 	call	:getLevelBitFlag
 	ld	a,(hl)
 	or	c
@@ -304,9 +304,9 @@ PROC	:doObjectCode_powerUp_checkpoint        SECTION ::objects {
 	add	a,a
 	ld	e,a
 	ld	d,$00
-	ld	hl,$D32E
+	ld	hl,$.D32E
 	add	hl,de
-	ex	de,hl			        `DE is $D32E + level number * 2
+	ex	de,hl			        `DE is $.D32E + level number * 2
 	ld	l,(ix+#object.X.lo)
 	ld	h,(ix+#object.X.hi)
 	add	hl,hl
@@ -484,7 +484,7 @@ PROC	:_5deb                                  SECTION ::objects {
 
 PROC	:doObjectCode_powerUp_emerald           SECTION ::objects {
 	
-	ld	hl,$D30B
+	ld	hl,$.D30B
 	call	:getLevelBitFlag
 	ld	a,(hl)
 	and	c
@@ -501,7 +501,7 @@ PROC	:doObjectCode_powerUp_emerald           SECTION ::objects {
 	ld	($.TEMP6),hl
 	call	:_LABEL_3956_11
 	jr	c,._2
-	ld	hl,$D30B
+	ld	hl,$.D30B
 	call	:getLevelBitFlag
 	ld	a,(hl)
 	or	c

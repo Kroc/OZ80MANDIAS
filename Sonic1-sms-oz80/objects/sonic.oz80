@@ -487,7 +487,7 @@ PROC	:doObjectCode_Sonic                     SECTION ::objects
 	ld	bc,:_7000                       `immediate $7000 or label?
 ._24	bit	5,(iy+#vars.flags6)
 	call	nz,._5206
-	ld	a,($D302)
+	ld	a,($.D302)
 	and	a
 	call	nz,._4e48
 	ld	a,d
@@ -511,7 +511,7 @@ PROC	:doObjectCode_Sonic                     SECTION ::objects
 	ld	a,($D410)
 	cp	$13
 	call	z,._5213
-	ld	a,($D302)
+	ld	a,($.D302)
 	and	a
 	call	nz,._4e4d
 	ld	($D40B),hl
@@ -549,7 +549,7 @@ PROC	:doObjectCode_Sonic                     SECTION ::objects
 	ld	a,($.D2E1)
 	and	a
 	call	nz,._5231
-	ld	a,($D321)
+	ld	a,($.D321)
 	and	a
 	call	nz,._4e51
 	bit	1,(iy+#vars.flags6)
@@ -685,7 +685,7 @@ PROC	:doObjectCode_Sonic                     SECTION ::objects
 	and	$F0
 	ld	l,a
 	ld	($.D2AB),hl
-	ld	($D31D),hl
+	ld	($.D31D),hl
 	ld	a,c
 	xor	b
 	ld	(de),a
@@ -697,9 +697,9 @@ PROC	:doObjectCode_Sonic                     SECTION ::objects
 	add	a,$08
 	ld	l,a
 	ld	($.D2AD),hl
-	ld	($D31F),hl
+	ld	($.D31F),hl
 	ld	a,$06
-	ld	($D321),a
+	ld	($.D321),a
 	ld	hl,._595d
 	ld	($.D2AF),hl
 	ld	a,$01
@@ -720,10 +720,10 @@ PROC	:doObjectCode_Sonic                     SECTION ::objects
         `--------------------------------------------------------------------[$4E51]---
 
 ._4e51	dec	a
-	ld	($D321),a
-	ld	hl,($D31D)
+	ld	($.D321),a
+	ld	hl,($.D31D)
 	ld	($.TEMP1),hl
-	ld	hl,($D31F)
+	ld	hl,($.D31F)
 	ld	($.TEMP3),hl
 	ld	hl,$0000
 	ld	($.TEMP4),hl
@@ -752,12 +752,12 @@ PROC	:doObjectCode_Sonic                     SECTION ::objects
 	ld	($.TEMP1),hl
 	ld	hl,($.SONIC.Y)
 	ld	($.TEMP3),hl
-	ld	hl,$D2F3
+	ld	hl,$.D2F3
 	ld	a,($.FRAMECOUNT)
 	rrca	
 	rrca	
 	jr	nc,._35
-	ld	hl,$D2F7
+	ld	hl,$.D2F7
 ._35	ld	de,$.TEMP4
 	ldi	
 	ldi	
@@ -773,10 +773,10 @@ PROC	:doObjectCode_Sonic                     SECTION ::objects
 	and	$07
 	ret	nz
 	ld	b,$02
-	ld	hl,$D2F3
+	ld	hl,$.D2F3
 	bit	3,c
 	jr	z,._37
-	ld	hl,$D2F7
+	ld	hl,$.D2F7
 ._37	push    hl
 	call	:_LABEL_625_57
 	pop	hl
@@ -1239,7 +1239,7 @@ PROC	:doObjectCode_Sonic                     SECTION ::objects
 	and	$fa
 	ld	($D414),a
 	ld	(ix+$14),$14
-	ld	hl,$D2FB
+	ld	hl,$.D2FB
 	dec	(hl)
 	ret	nz
 	res	2,(iy+#vars.unknown0)
@@ -1367,7 +1367,7 @@ PROC	:doObjectCode_Sonic                     SECTION ::objects
 	pop	hl
 	set	1,(ix+$18)
 	ld	(ix+$14),$18
-	ld	hl,$D2FE
+	ld	hl,$.D2FE
 	bit	0,(iy+#vars.unknown_0D)
 	jr	nz,._52
 	ld	(hl),$50

@@ -29,7 +29,7 @@ PROC    :doObjectCode_boss_jungle               SECTION ::objects {
 	rst	:rst_playMusic
 	
 	xor	a;zero
-	ld	($D2EC),a;zero
+	ld	($.D2EC),a;zero
 	
 	`there's a routine at `_7c8c` for setting the scroll positions that should
 	 `have been used here?
@@ -122,7 +122,7 @@ PROC    :doObjectCode_boss_jungle               SECTION ::objects {
 ._7	ld	a,(ix+$11)
 	xor	$02
 	ld	(ix+$11),a
-	ld	a,($D2EC)
+	ld	a,($.D2EC)
 	cp	$08
 	jr	nc,._8
 	call	:_7c7b

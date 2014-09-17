@@ -29,7 +29,7 @@ PROC    :doObjectCode_boss_greenHill            SECTION ::objects {
 	rst	:rst_playMusic
 	
 	xor	a;zero
-	ld	($D2EC),a;zero
+	ld	($.D2EC),a;zero
 	ld	(ix+$12),a;zero
 	ld	(ix+$14),$a1
 	ld	(ix+$15),$72

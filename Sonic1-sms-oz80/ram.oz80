@@ -137,7 +137,7 @@ RAM     `name                   `size                                           
         
         .FRAMECOUNT	        AS WORD                                         `$D223
         
-        `referenced by unused function ":unused_0323"
+        `referenced only by unused function ":unused_0323"
         .UNUSED_D225            AS WORD                                         `$D225
         .UNUSED_D227            AS WORD                                         `$D227
         .UNUSED_D229            AS WORD                                         `$D229
@@ -217,7 +217,8 @@ RAM     `name                   `size                                           
         .LEVEL_TOP		AS WORD                                         `$D277
         .LEVEL_BOTTOM		AS WORD                                         `$D279
         
-        .CAMERA_X_GOTO		AS WORD	`a point to move the camera to          `$D27B
+        `a point to move the camera to
+        .CAMERA_X_GOTO		AS WORD	                                        `$D27B
         .CAMERA_Y_GOTO		AS WORD                                         `$D27D
         
         .D27F                   AS BYTE `UNKNOWN ($D27F/80)                     `$D27F
@@ -316,11 +317,60 @@ RAM     `name                   `size                                           
         
         .D2EB                   AS BYTE                                         `UNUSED
         
+        .D2EC                   AS BYTE `used by boss objects                   `$D2EC
+        .D2ED                   AS WORD                                         `$D2ED
+
+        .D2EF                   AS BYTE x 3                                     `UNUSED
+        
+        .D2F2                   AS BYTE `used as temporary in :loadObjectLayout `$D2F2
+        .D2F3                   AS BYTE `used by Sonic                          `$D2F3
+        
+        .D2F4                   AS BYTE x 3                                     `$D2F4
+        
+        .D2F7                   AS BYTE `used by Sonic                          `$D2F7
+        
+        .D2F8                   AS BYTE x 3                                     `UNUSED
+        
+        .D2FB                   AS BYTE                                         `$D2FB
+        ``a copy of the level music index is kept so that the music can be started
+          again (?) after other sound events like invincibility``
+        .LEVEL_MUSIC            AS BYTE                                         `$D2FC
+        .D2FD                   AS BYTE                                         `$D2FD
+        .D2FE                   AS BYTE                                         `$D2FE
+        .D2FF                   AS BYTE                                         `$D2FF
+        
+        .D300                   AS BYTE x 2                                     `UNUSED
+        
+        .D302                   AS BYTE                                         `$D302
+        
+        .D303                   AS BYTE x 2                                     `$D303
+        
+        `these are a series of bit flags, each set assigns one bit per-level
+        .D305                   AS BYTE x 6     `set by life monitor            `$D305
+        .D30B                   AS BYTE x 6     `set by emerald                 `$D30B
+        .D311                   AS BYTE x 6     `set by continue monitor        `$D311
+        .D317                   AS BYTE x 6     `set by switch                  `$D317
+        
+        .D31D                   AS WORD                                         `$D31D
+        .D31F                   AS WORD `used by Sonic                          `$D31F
+        .D321                   AS BYTE `used by Sonic                          `$D321
+        .D322                   AS BYTE `used in credits screen?                `$D322
+        
+        `note: 11 bytes is typical of text storage
+        .D323                   AS BYTE x 11                                    `UNUSED
+        
+        `2-bytes per level, 19 levels (excluding warps and special stages)
+        .D32E                   AS WORD x 19                                    `$D32E
+        
+        `the level's header is copied here, though little of it seems actually used
+        `(40 bytes are copied instead of 37, the level header was probably reduced)
+        .D354                   AS BYTE `Solidity Pointer                       `$D354
+        .D355                   AS WORD `Floor Width                            `UNUSED
+        .D357                   AS WORD `Floor Height                           `UNUSED
+        .D359                   AS WORD `Level X Offset                         `UNUSED
+        .D35B                   AS BYTE `unknown byte (some kind of flags)      `UNUSED
+        
         `...
 }
-
-`a copy of the level music index is kept so that the music can be started again (?)
- `after other sound events like invincibility
-VAR $.LEVEL_MUSIC		$D2FC
 
 VAR $.PALETTE		        $D3BC

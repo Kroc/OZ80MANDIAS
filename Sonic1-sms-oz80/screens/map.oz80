@@ -1046,7 +1046,7 @@ PROC    :_1401
 	jr	._4
 	
 	`get the bit flag for the level
-._6	ld	hl,$D311
+._6	ld	hl,$.D311
 	call	:getLevelBitFlag
 	ld	a,c
 	cpl				        `invert the level bits (create a mask)
@@ -1363,7 +1363,7 @@ PROC    :_172f
         `jumped to from $155E
 {
 	ld	a,$ff
-	ld	($D2FD),a
+	ld	($.D2FD),a
 	ld	c,$00
 	ld	a,($.D27F)
 	cp	$06
@@ -1406,7 +1406,7 @@ PROC    :_172f
 	add	a,$0a
 	daa	
 	ld	c,a
-._6	ld	hl,$D2FF
+._6	ld	hl,$.D2FF
 	ld	(hl),c
 	inc	hl
 	ld	(hl),$00
@@ -1487,7 +1487,7 @@ PROC    :_172f
 
 ._11	ld	bc,$001e
 	call	:_1860
-	ld	a,($D2FF)
+	ld	a,($.D2FF)
 	and	a
 	jr	z,._13
 	dec	a
@@ -1499,7 +1499,7 @@ PROC    :_172f
 	sub	$06
 	ld	c,a
 ._12	ld	a,c
-	ld	($D2FF),a
+	ld	($.D2FF),a
 	ld	de,$0000
 	ld	c,$01
 	call	:_39d8
@@ -1574,7 +1574,7 @@ PROC    :_1860
 	ld	($.SPRITES_CURRENT),hl
 	jr	._3
 	
-._2	ld	hl,$D2FF
+._2	ld	hl,$.D2FF
 	ld	de,$.D2BE
 	ld	b,$03
 	call	:_1b13
@@ -1961,7 +1961,7 @@ PROC    :_LABEL_1C49_62
 	ld	($.LIVES), a
 	
 	ld	a, $05
-	ld	($D2FD), a
+	ld	($.D2FD), a
 	
 	ld	a, $1C
 	ld	($.D23F), a
@@ -1983,7 +1983,7 @@ PROC    :_LABEL_1C49_62
 	ld	b, $04
 	call	:_fillMemoryWithValue
 	
-	ld	hl, $D305
+	ld	hl, $.D305
 	ld	b, $18
 	call	:_fillMemoryWithValue
 	
@@ -2228,7 +2228,7 @@ PROC    :_LABEL_1CED_131
 	call	nz,:_239c
 	
 	xor	a;zero			        `set A to 0
-	ld	($D302),a;zero
+	ld	($.D302),a;zero
 	ld	($.D2DE),a;zero
 	ld	(iy+#vars.spriteUpdateCount),$15
 	ld	hl,$D03F		        `lives icon sprite table entry
@@ -2674,14 +2674,14 @@ PROC    :loadLevel
 	res	0, (iy+#vars.flags0)
 	call	:waitForInterrupt
 	
-	`copy the level header from ROM to RAM starting at $D354
+	`copy the level header from ROM to RAM starting at $.D353
 	 `(this copies 40 bytes, even though level headers are 37 bytes long.
 	 ` the developers probably removed header bytes later in development)
-	ld	de, $D354
+	ld	de, $.D353
 	ld	bc, 40
 	ldir
 	
-	ld	hl, $D354		        `position HL at the start of the header
+	ld	hl, $.D353		        `position HL at the start of the header
 	push	hl			        `remember the start point
 	
 	`read the current Scrolling / Ring HUD value
@@ -2713,11 +2713,11 @@ PROC    :loadLevel
 	`get the bit flag for the level:
 	 `C returns a byte with bit x set, where x is the level number mod 8
 	 `DE will be the level number divided by 8
-	 `HL will be $D311 + the level number divided by 8
-	ld	hl, $D311
+	 `HL will be $.D311 + the level number divided by 8
+	ld	hl, $.D311
 	call	:getLevelBitFlag
 	
-	`DE will now be $D311 + the level number divided by 8
+	`DE will now be $.D311 + the level number divided by 8
 	ex	de, hl
 	
 	ld	hl, $0800
@@ -2816,15 +2816,15 @@ PROC    :loadLevel
 	`get the level bit flag:
 	 `C returns a byte with bit x set, where x is the level number mod 8
 	 `DE will be the level number divided by 8
-	 `HL will be $D311 + the level number divided by 8
-	ld	hl,$D311
+	 `HL will be $.D311 + the level number divided by 8
+	ld	hl,$.D311
 	call	:getLevelBitFlag
 	
 	ld	a,(hl)
-	ex	de,hl			        `DE will now be $D311+
+	ex	de,hl			        `DE will now be $.D311+
 	
 	`return to the "SX" byte in the level header,
-	 `A will have been set from $D311+
+	 `A will have been set from $.D311+
 	pop	hl
 	
 	and	c			
@@ -2832,7 +2832,7 @@ PROC    :loadLevel
 	
 	cpl				        `NOT A
 	ld	c,a
-	ld	a,(de)			        `Set A to the value at $D311+0-7
+	ld	a,(de)			        `Set A to the value at $.D311+0-7
 	and	c			        `unset the level bit
 	ld	(de),a			
 	
@@ -2848,10 +2848,10 @@ PROC    :loadLevel
 	ld	e,a			        `put it into DE
 	ld	d,$00
 	
-	ld	hl,$D32E		
-	add	hl,de			        `$D32E + (level number * 2)
+	ld	hl,$.D32E		
+	add	hl,de			        `$.D32E + (level number * 2)
 	
-	`NOTE: since other data in RAM begins at $D354 (a copy of the level header)
+	`NOTE: since other data in RAM begins at $.D353 (a copy of the level header)
 	 `this places a limit -- 19 -- on the number of main levels.
 	 `special stages and levels visited by teleporter are not included -- AFAIK
 	
@@ -2917,7 +2917,7 @@ PROC    :loadLevel
 	inc	hl			        `and "SY"
 	
 	`since we skip Sonic's X/Y position, where do these get used?
-	 `assumedly from the level header copied to RAM at $D354+?
+	 `assumedly from the level header copied to RAM at $.D353+?
 	
 	`FL: Floor Layout
 	ld	e,(hl)
@@ -3202,7 +3202,7 @@ PROC    :loadObjectLayout
         `--------------------------------------------------------------------[$232B]---
 PARAMS  hl      `address of an object layout
 {       
-        `NOTE: $D2F2 is used only here -- perhaps a regular temp variable could be used
+        `NOTE: $.D2F2 is used only here -- perhaps a regular temp variable could be used
         
 	push	hl
 	
@@ -3221,7 +3221,7 @@ PARAMS  hl      `address of an object layout
 	ld	a,(hl)			        `number of objects
 	inc	hl
 	
-	ld	($D2F2),a		        `put aside the number of objects in the layout
+	ld	($.D2F2),a		        `put aside the number of objects in the layout
 	dec	a			        `reduce by 1,
 	ld	b,a			        `and set as the loop counter
 	
@@ -3232,7 +3232,7 @@ PARAMS  hl      `address of an object layout
 	djnz	._1
 	
 	`------------------------------------------------------------------------------
-	ld	a,($D2F2)		        `retrieve the number of objects in the layout
+	ld	a,($.D2F2)		        `retrieve number of objects in layout
 	ld	b,a
 	ld	a,$20
 	sub	b
@@ -3260,9 +3260,9 @@ PARAMS	a	`object type
 	ld	(ix+#object.type),a	        `set the object type
 	
 	`--- X position ---------------------------------------------------------------
-	ld	a,(hl)			        `get the X position from the object layout
+	ld	a,(hl)			        `get X position from the object layout
 	exx
-	ld	l,a			        `convert X-position to 16-bit number in HL
+	ld	l,a			        `convert X-pos to 16-bit number in HL
 	ld	h,$00
 	ld	(ix+#object.Xsubpixel),h	`?
 	`multiply by 32
@@ -3632,7 +3632,7 @@ PROC    :_LABEL_258B_133
 	call	:decompressScreen
 	
 	xor	a;zero			        `set A to 0
-	ld	hl,$D322
+	ld	hl,$.D322
 	ld	(hl),$48
 	inc	hl
 	ld	(hl),$28
@@ -3687,7 +3687,7 @@ PROC    :_2718
 	ld	(iy+#vars.spriteUpdateCount),$00
 	ld	hl,$.SPRITES
 	ld	($.SPRITES_CURRENT),hl
-	ld	hl,$D322
+	ld	hl,$.D322
 	ld	b,$04
 	
 ._2	push	bc
@@ -6122,7 +6122,7 @@ PROC    :_39d8
 	adc	a,(hl)
 	daa	
 	ld	(hl),a
-	ld	hl,$D2FD
+	ld	hl,$.D2FD
 	ld	a,c
 	cp	(hl)
 	ret	c

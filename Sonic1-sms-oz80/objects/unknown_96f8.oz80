@@ -98,7 +98,7 @@ PROC    :_96f8                                  SECTION ::objects
 	ld	($.D29B),hl;zero
 	set	2,(iy+#vars.unknown0)
 	ld	a,$20
-	ld	($D2FB),a
+	ld	($.D2FB),a
 	ld	(ix+$12),$10
 	ld	a,$22
 	rst	:rst_playSFX

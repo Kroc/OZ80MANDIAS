@@ -1,9 +1,9 @@
 `OZ80MANDIAS test code
 
-SECTION ::section1                      `section with default slot pattern
-
-`simple procedure
-PROC :test {
-        adc a, a
-}
-
+SECTION ::section
+SECTION ::section0      SLOT 0
+SECTION ::section1      SLOT 1
+SECTION ::section2      SLOT 2
+SECTION ::section01     SLOT 0, 1
+SECTION ::section12     SLOT 1, 2
+SECTION ::section012    SLOT 0, 1, 2

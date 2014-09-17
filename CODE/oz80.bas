@@ -14,9 +14,9 @@ Option Explicit
 Public CRC As New CRC32
 
 'Some expressions cannot be calculated until the Z80 code has been assembled, _
- for example label addresses are chosen after all code has been parsed and the sizes _
- of the blocks are known. A special value is used that lies outside of the allowable _
- range of numbers in OZ80 (32-bit) to mark an expression with a yet-unknown value
+ for example Label addresses are chosen after all code has been parsed and the sizes _
+ of the blocks are known. A special Value is used that lies outside of the allowable _
+ range of numbers in OZ80 (32-bit) to mark an Expression with a yet-unknown Value
 
 'VB does not allow implicit Double (64-bit) values greater than 32-bits, _
  a trick is used here to build the largest possible 64-bit number: _
@@ -118,8 +118,8 @@ Public Enum OZ80_ERROR
     OZ80_ERROR_EXPECTED_SECTION_NAME    '- A section name must follow `SECTION`
     OZ80_ERROR_EXPRESSION               'Not a valid expression
     OZ80_ERROR_EXPRESSION_Z80           '- Not a valid Z80 instruction parameter
-    OZ80_ERROR_FILENOTFOUND             'Requested file does not exist
-    OZ80_ERROR_FILEREAD                 'Some kind of problem with file handle open
+    OZ80_ERROR_FILE_NOTFOUND            'Requested file does not exist
+    OZ80_ERROR_FILE_READ                'Some kind of problem with file handle open
     OZ80_ERROR_INDEFINITE               'Indefinite value cannot be used here
     OZ80_ERROR_INVALID_NAME             'Invalid label/property/variable name
     OZ80_ERROR_INVALID_NAME_RAM         '- Invalid RAM name, i.e. `$.name`
@@ -128,6 +128,7 @@ Public Enum OZ80_ERROR
     OZ80_ERROR_INVALID_NUMBER_HEX       '- Invalid hexadecimal number
     OZ80_ERROR_INVALID_NUMBER_BIN       '- Invalid binary number
     OZ80_ERROR_INVALID_SECTION          'Section used, but not defined
+    OZ80_ERROR_INVALID_SLOT             'Incorrect use of the Slot parameter
     OZ80_ERROR_INVALID_WORD             'Couldn't parse a word
     OZ80_ERROR_INVALID_Z80PARAMS        'Not the right parameters for a Z80 instruction
     OZ80_ERROR_OVERFLOW                 'A number overflowed the maximum
@@ -452,13 +453,13 @@ Public Sub GetOZ80Error( _
             "(`a`, `b`, `c` etc.), a Z80 memory expression `(ix+$FF)` or a valid " & _
             "numerical expression, i.e. a calculation, a label name or RAM name."
             
-    Case OZ80_ERROR_FILENOTFOUND
+    Case OZ80_ERROR_FILE_NOTFOUND
         '..............................................................................
         Let ReturnTitle = "File Not Found"
         'TODO
         Let ReturnDescription = ""
         
-    Case OZ80_ERROR_FILEREAD
+    Case OZ80_ERROR_FILE_READ
         '..............................................................................
         Let ReturnTitle = "Cannot Read File"
         'TODO

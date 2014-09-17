@@ -574,9 +574,8 @@ Public Function Tokenise(ByRef FilePath As String) As OZ80_ERROR
     'Read the whole file into a single string _
      ----------------------------------------------------------------------------------
     'Check the file even exists first...
-    If Not FileExists(FilePath) Then Call RaiseError( _
-        OZ80_ERROR_FILENOTFOUND _
-    ): GoTo Finish
+    If Not FileExists(FilePath) _
+        Then Call RaiseError(OZ80_ERROR_FILE_NOTFOUND): GoTo Finish
     
     'The source text file is held here as a byte-array whilst it gets parsed
     Dim Text() As Byte
@@ -1306,7 +1305,7 @@ ErrorOpenFile:
     On Error GoTo 0
     Close #FileNumber
     'TODO: Send the system error details, Err.Number / Err.Description
-    Call RaiseError(OZ80_ERROR_FILEREAD)
+    Call RaiseError(OZ80_ERROR_FILE_READ)
     GoTo Finish
 
 ErrorOverflow: '.......................................................................
@@ -1515,7 +1514,7 @@ Private Function FormatToken() As String
         Let Msg = "[     Z80] " & TokenNames(TokenKind)
     ElseIf TokenKind = TOKEN_PARENOPEN _
         Or TokenKind = TOKEN_PARENCLOSE Then
-        Let Msg = "[  Z80MEM] " & TokenNames(TokenKind)
+        Let Msg = "[  MEMZ80] " & TokenNames(TokenKind)
     End If
     'TODO: need to check how the 64-bit number gets clipped to 32-bits here
     Let FormatToken = _

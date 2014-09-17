@@ -362,13 +362,13 @@ RAM     `name                   `size                                           
         `2-bytes per level, 19 levels (excluding warps and special stages)
         .D32E                   AS WORD x 19                                    `$D32E
         
-        `the level's header is copied here, though little of it seems actually used
-        `(40 bytes are copied instead of 37, the level header was probably reduced)
+        ``the level's header is copied here, though little of it seems actually used;
+          other addresses are used as duplicates of these values. NOTE: 40 bytes are
+          copied instead of 37, the header was probably reduced during development)``
         .D354                   AS BYTE `Solidity Pointer                       `$D354
         .D355                   AS WORD `Floor Width                            `UNUSED
         .D357                   AS WORD `Floor Height                           `UNUSED
         .D359                   AS WORD `Level X Offset                         `UNUSED
-        .D35B                   AS BYTE `unknown byte (some kind of flags)      `UNUSED
         
         `...
 }

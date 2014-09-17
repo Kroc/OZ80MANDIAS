@@ -329,131 +329,6 @@ Finish:
     Call Token.Forward
 End Sub
 
-'ScopeExpression: Evaluate a calculation into a value _
- ======================================================================================
-Private Function ScopeExpression() As Double
-    'TODO: Handle prefixing, e.g. `-1-!-3`
-    
-    Dim Operand1 As Long                'Left-hand value in a calculation
-    Dim Operand2 As Long                'Right-hand value in a calculation
-    Dim Operator As OZ80_TOKEN          'Operator to use
-    
-    'Begin with fetching the first operand
-    Let Operand1 = ScopeValue()
-    If My_Error Then Stop
-    Let ScopeExpression = Operand1
-    
-    'The file could legitimately end with an expression, so don't error out if the _
-     token stream comes to an end since the expression is valid. The parent scopes _
-     will handle an unexpected end error
-    If Token.EOF Then Exit Function
-    
-    'If next token is not an operator assume the expression has finished, _
-      the parent will handle whatever the next token is used for
-    If Not Token.IsOperator Then Exit Function
-    
-Continue:
-    'Remember the operator for after we have operand 2 to work with
-    Let Operator = Token.Kind
-    
-    'Get the second operand
-    'TODO: Error - unexpected end
-    If Not Token.Forward() Then Stop
-    Let Operand2 = ScopeValue()
-    'Cannot have an operator hanging there without an operand following
-    If My_Error Then
-        'TODO: Error - invalid use of operator
-        Stop
-    End If
-    
-    'If either operand were a yet-unknowable value (such as a label or property), _
-     then don't bother applying the operator, but do continue the expression so that _
-     we may reach the end and continue processing the tokens that follow
-    If Operand1 = OZ80_INDEFINITE _
-    Or Operand2 = OZ80_INDEFINITE Then
-        'Mark expression result as indefinite and skip applying the operator
-        Let ScopeExpression = OZ80_INDEFINITE
-    
-    ElseIf Operator = TOKEN_OPERATOR_ADD Then
-        'TODO: Check for overflow beforehand
-        Let ScopeExpression = Operand1 + Operand2
-        
-    ElseIf Operator = TOKEN_OPERATOR_SUB Then
-        'TODO: Check for overflow beforehand
-        Let ScopeExpression = Operand1 - Operand2
-    
-    ElseIf Operator = TOKEN_OPERATOR_MUL Then
-        'TODO: Check for overflow beforehand
-        Let ScopeExpression = Operand1 * Operand2
-    
-    ElseIf Operator = TOKEN_OPERATOR_DIV Then
-        'TODO: Check for divide by 0
-        Let ScopeExpression = Operand1 / Operand2
-    
-    ElseIf Operator = TOKEN_OPERATOR_POW Then
-        'TODO: Check for overflow
-        Let ScopeExpression = Operand1 ^ Operand2
-    
-    ElseIf Operator = TOKEN_OPERATOR_MOD Then
-        Let ScopeExpression = Operand1 Mod Operand2
-    
-    ElseIf Operator = TOKEN_OPERATOR_AND Then
-        Let ScopeExpression = Operand1 And Operand2
-    
-    ElseIf Operator = TOKEN_OPERATOR_OR Then
-        Let ScopeExpression = Operand1 Or Operand2
-        
-    ElseIf Operator = TOKEN_OPERATOR_XOR Then
-        Let ScopeExpression = Operand1 Xor Operand2
-        
-    Else
-        Stop
-    End If
-    
-'    'The file could legitimately end with an expression, so don't error out if the _
-'     token stream comes to an end since the expression is valid. The parent scopes _
-'     will handle an unexpected end error
-'    If NextToken() = False Then Exit Function
-    
-    'Does the expression continue?
-    If Token.IsOperator Then
-        'Set the current result as the first operand and go around again
-        Let Operand1 = ScopeExpression
-        GoTo Continue
-    End If
-End Function
-
-'ScopeValue : Get a single value as part of an expression _
- ======================================================================================
-Private Function ScopeValue() As Double
-    'Is it a named value?
-    'TODO: Handle scope expansion for names
-    If Token.Kind = TOKEN_LABEL _
-    Or Token.Kind = TOKEN_PROPERTY_USE Then '..........................................
-        'TODO: get the full label from the property
-        
-        'If the named value is not yet known, the expression cannot be evaluated _
-         until it is defined later on
-        If Not Labels.Exists(Token.Value) Then _
-            Let ScopeValue = OZ80_INDEFINITE Else _
-            Let ScopeValue = Labels(Token.Value)
-        
-    'This is an easy one
-    ElseIf Token.Kind = TOKEN_NUMBER Then '............................................
-        Let ScopeValue = Token.Value
-        
-    Else '.............................................................................
-        'ERROR: Not a valid operand. We won't produce an error message here as the _
-         error might be exepected (i.e. an optional parameter). We fold upwards and _
-         whomever knows best will deal with the error
-        Let ScopeValue = OZ80_INDEFINITE
-        Let My_Error = OZ80_ERROR_EXPRESSION
-    End If
-    
-    'Move beyond the current token now it's been processed
-    Call Token.Forward
-End Function
-
 '/// STATEMENT PROCESSORS /////////////////////////////////////////////////////////////
 'Somewhat like a scope, these functions handle the main statements, e.g. `PROC`
 
@@ -622,12 +497,12 @@ Private Sub ProcessSection()
     Dim SectionKey As Long
     Let SectionKey = Token.Value
     
-    'Has this section already been defined?
+    'Has this Section already been defined?
     If SectionNames.Exists(SectionKey) Then Call RaiseError( _
         OZ80_ERROR_DUPLICATE_SECTION _
     ): Exit Sub
     
-    'Define the section name - fetch the string from the TokenStream's _
+    'Define the Section name - fetch the string from the TokenStream's _
      string database (identified by the CRC value on the token)
     Call SectionNames.Add(SectionKey, Token.Strings(SectionKey))
     Call SectionSlots.Add(SectionKey, 0)
@@ -637,41 +512,83 @@ Private Sub ProcessSection()
     'If the file ends here it's valid, as the params are optional
     If Not Token.Forward() Then GoTo Finish
     
+    'The only allowed Slot lists are: 0 / 1 / 2 / 0, 1 / 0, 1, 2 / 1, 2. _
+     These are stored as a bit-pattern allowing packing into one value, _
+     which when zero infers the default "let the assembler choose for me"
+    Dim Slot As OZ80_SLOT
+    
     'The only parameter is the Slot list
     If Token.Kind = TOKEN_KEYWORD_SLOT Then
         'ERROR: File ending before we have the value
         If Not Token.Forward() Then Call RaiseError(OZ80_ERROR_ENDOFFILE): Exit Sub
         
-        'ERROR: If not an expression, it can't be accepted as a list
+        'ERROR: There needs to be at least one item in the list
         If Not Token.IsExpression Then Call RaiseError( _
             OZ80_ERROR_EXPECTED _
         ): Exit Sub
         
-        'TODO: Parse list
+        'Get the list of Slots assigned to the Section
+        Dim List As Scripting.Dictionary
+        Set List = GetListAsDictionary()
         
-        'The only allowed Slot lists are: 0 / 1 / 2 / 0, 1 / 0, 1, 2 / 1, 2
+        'Can't be more than three -- "0, 1, 2"
+        If List.Count > 3 Then Call RaiseError(OZ80_ERROR_INVALID_SLOT): Exit Sub
         
-'        'Evaluate the expression
-'        Dim Value As Double
-'        Let Value = ScopeExpression()
-'        'Was there an error evaluating the expression?
-'        If My_Error Then Exit Sub
+        'An indefinite value cannot be used for the Slot
+        If List.Item(0) = OZ80_INDEFINITE Then GoTo ErrIndefinite
         
-'        'You can't use an indefinite value for a slot number
-'        If Value = OZ80_INDEFINITE Then Call RaiseError( _
-'            OZ80_ERROR_INDEFINITE _
-'        ): Exit Sub
+        'Check for one item: 0, 1 or 2
+        If List.Count = 1 Then
+            If List.Item(0) = 0 Then Let Slot = SLOT0: GoTo Finish
+            If List.Item(0) = 1 Then Let Slot = SLOT1: GoTo Finish
+            If List.Item(0) = 2 Then Let Slot = SLOT2: GoTo Finish
+            'An invalid value
+            GoTo ErrInvalid
+        End If
         
-        'TODO: Is the value within range?
+        'Check for two items: 0, 1 or 1, 2
+        If List.Count = 2 Then
+            'An indefinite value cannot be used for the Slot
+            If List.Item(1) = OZ80_INDEFINITE Then GoTo ErrIndefinite
+            If List.Item(0) = 0 And List.Item(1) = 1 Then Let Slot = SLOT0 Or SLOT1: GoTo Finish
+            If List.Item(0) = 1 And List.Item(1) = 2 Then Let Slot = SLOT1 Or SLOT2: GoTo Finish
+            'An invalid value
+            GoTo ErrInvalid
+        End If
         
-'        Let SectionSlots(SectionKey) = Value
+        'Check for 0, 1, 2
+        If List.Item(0) <> 0 Then GoTo ErrInvalid
+        If List.Item(1) <> 1 Then GoTo ErrInvalid
+        If List.Item(2) <> 2 Then GoTo ErrInvalid
+        Let Slot = SLOT0 Or SLOT1 Or SLOT2
+        
     End If
 
 Finish:
+    'Record the result:
+    Let SectionSlots(SectionKey) = Slot
     RaiseEvent Message(2, OZ80_LOG_STATUS, _
         "SECTION " & Token.Strings(SectionKey) & _
-        " SLOT " & IIf(SectionSlots(SectionKey) = 0, "?", SectionSlots(SectionKey)) _
+        " SLOT " & IIf( _
+            Slot = 0, "?", _
+                IIf(Slot And OZ80_SLOT.SLOT0, "0 ", "") & _
+                IIf(Slot And OZ80_SLOT.SLOT1, "1 ", "") & _
+                IIf(Slot And OZ80_SLOT.SLOT2, "2 ", "") _
+            ) _
     )
+    Exit Sub
+
+    '----------------------------------------------------------------------------------
+ErrInvalid:
+    'Only a specific Slot pattern can be used
+    Call RaiseError(OZ80_ERROR_INVALID_SLOT)
+    Exit Sub
+
+ErrIndefinite:
+    'An indefinite value cannot be used for a Slot number, we will only be _
+     able to define the indefinite values (i.e. Label locations in ROM) once _
+     the whole code is parsed and we use the Sections to layout the ROM
+    Call RaiseError(OZ80_ERROR_INDEFINITE)
 End Sub
 
 ''ProcessVar : Process a variable definition statement _
@@ -829,10 +746,46 @@ Private Sub DefineLabel( _
     End If
 End Sub
 
-'GetList : Keeps reading tokens into a list as long as they're valid expressions _
-=======================================================================================
-Private Function GetList() As Scripting.Dictionary
-    '
+'GetListAsDictionary : Reads a whole list into a Dictionary _
+ ======================================================================================
+Private Function GetListAsDictionary() As Scripting.Dictionary
+    'Instantiate the return object
+    Set GetListAsDictionary = New Scripting.Dictionary
+    
+    'As long as the list continues, keep fetching Values
+    Do While Token.IsExpression
+        'Parse the Expression; if it's indefinite, _
+         leave that up to the caller to handle
+        Call GetListAsDictionary.Add(GetListAsDictionary.Count, ParseExpression())
+        
+        'If there was an error in the expression, the error event _
+         will already have been raised, we only need to fold upwards
+        If My_Error Then Exit Function
+    Loop
+End Function
+
+'GetListItem : Read in an Expression from a list _
+ ======================================================================================
+Private Function GetListItem( _
+             ByRef Value As Double, _
+    Optional ByRef Length As Long = 0 _
+) As Boolean
+    'If the current token is not an expression, the list has ended; return False
+    If Not Token.IsExpression Then Exit Function
+    
+    'Parse the Expression; if it's indefinite, _
+     leave that up to the caller to handle
+    Let Value = ParseExpression()
+    
+    'If there was an error in the expression, the error event _
+     will already have been raised, we only need to fold upwards
+    If My_Error Then Exit Function
+    
+    'Increases the number of items read from the list thus far
+    Let Length = Length + 1
+    
+    'Return True as the list has not ended yet
+    Let GetListItem = True
 End Function
 
 'GetZ80Parameter : Fetch the type / value of a Z80 instruction parameter _
@@ -964,8 +917,8 @@ EndScope:
         'Now move beyond the register token
         Call Token.Forward
         
-    'Anything else classes as a calculable expression
-    '----------------------------------------------------------------------------------
+    'Anything else classes as a calculable expression _
+     ----------------------------------------------------------------------------------
     ElseIf Token.IsExpression Then
         'We manually build a number token, since we don't want to use the first _
          token of the expression -- it might be a label for instance and we can _
@@ -975,7 +928,7 @@ EndScope:
 GetValue:
         'Try and calculate the expression
         Dim Value As Double
-        Let Value = ScopeExpression()
+        Let Value = ParseExpression()
         
         'If there was an error in the expression, the error event _
          will already have been raised, we only need to fold upwards
@@ -1003,6 +956,101 @@ GetValue:
         'ERROR: Not a Z80 parameter
         'TODO: parameter specific error number
         Call RaiseError(OZ80_ERROR_EXPRESSION_Z80)
+    End If
+End Function
+
+'ParseExpression: Evaluate a calculation into a value _
+ ======================================================================================
+Private Function ParseExpression() As Double
+    'TODO: Handle prefixing, e.g. `-1-!-3`
+    'TODO: Handle functions like LO, HI, NOT8/16
+    
+    Dim Operand1 As Long                'Left-hand value in a calculation
+    Dim Operand2 As Long                'Right-hand value in a calculation
+    Dim Operator As OZ80_TOKEN          'Operator to use
+    
+    'Begin with fetching the first operand
+    Let Operand1 = ScopeValue()
+    If My_Error Then Stop
+    Let ParseExpression = Operand1
+    
+    'The file could legitimately end with an expression, so don't error out if the _
+     token stream comes to an end since the expression is valid. The parent scopes _
+     will handle an unexpected end error
+    If Token.EOF Then Exit Function
+    
+    'If next token is not an operator assume the expression has finished, _
+      the parent will handle whatever the next token is used for
+    If Not Token.IsOperator Then Exit Function
+    
+Continue:
+    'Remember the operator for after we have operand 2 to work with
+    Let Operator = Token.Kind
+    
+    'Get the second operand
+    'TODO: Error - unexpected end
+    If Not Token.Forward() Then Stop
+    Let Operand2 = ScopeValue()
+    'Cannot have an operator hanging there without an operand following
+    If My_Error Then
+        'TODO: Error - invalid use of operator
+        Stop
+    End If
+    
+    'If either operand were a yet-unknowable value (such as a label or property), _
+     then don't bother applying the operator, but do continue the expression so that _
+     we may reach the end and continue processing the tokens that follow
+    If Operand1 = OZ80_INDEFINITE _
+    Or Operand2 = OZ80_INDEFINITE Then
+        'Mark expression result as indefinite and skip applying the operator
+        Let ParseExpression = OZ80_INDEFINITE
+    
+    ElseIf Operator = TOKEN_OPERATOR_ADD Then
+        'TODO: Check for overflow beforehand
+        Let ParseExpression = Operand1 + Operand2
+        
+    ElseIf Operator = TOKEN_OPERATOR_SUB Then
+        'TODO: Check for overflow beforehand
+        Let ParseExpression = Operand1 - Operand2
+    
+    ElseIf Operator = TOKEN_OPERATOR_MUL Then
+        'TODO: Check for overflow beforehand
+        Let ParseExpression = Operand1 * Operand2
+    
+    ElseIf Operator = TOKEN_OPERATOR_DIV Then
+        'TODO: Check for divide by 0
+        Let ParseExpression = Operand1 / Operand2
+    
+    ElseIf Operator = TOKEN_OPERATOR_POW Then
+        'TODO: Check for overflow
+        Let ParseExpression = Operand1 ^ Operand2
+    
+    ElseIf Operator = TOKEN_OPERATOR_MOD Then
+        Let ParseExpression = Operand1 Mod Operand2
+    
+    ElseIf Operator = TOKEN_OPERATOR_AND Then
+        Let ParseExpression = Operand1 And Operand2
+    
+    ElseIf Operator = TOKEN_OPERATOR_OR Then
+        Let ParseExpression = Operand1 Or Operand2
+        
+    ElseIf Operator = TOKEN_OPERATOR_XOR Then
+        Let ParseExpression = Operand1 Xor Operand2
+        
+    Else
+        Stop
+    End If
+    
+'    'The file could legitimately end with an expression, so don't error out if the _
+'     token stream comes to an end since the expression is valid. The parent scopes _
+'     will handle an unexpected end error
+'    If NextToken() = False Then Exit Function
+    
+    'Does the expression continue?
+    If Token.IsOperator Then
+        'Set the current result as the first operand and go around again
+        Let Operand1 = ParseExpression
+        GoTo Continue
     End If
 End Function
 
@@ -1047,7 +1095,7 @@ Private Sub ParseFile( _
      ----------------------------------------------------------------------------------
     'ERROR: File Not Found
     If Not FSO.FileExists(TestPath) Then Call RaiseError( _
-        OZ80_ERROR_FILENOTFOUND _
+        OZ80_ERROR_FILE_NOTFOUND _
     ): GoTo Finish
     
     '[3] Parse the file into a TokenStream: _
@@ -1080,6 +1128,37 @@ Finish:
      raised, we only need to fold upwards and the parent will handle terminating the _
      assembling process early
 End Sub
+
+'ParseValue : Get a single Value as part of an Expression _
+ ======================================================================================
+Private Function ScopeValue() As Double
+    'Is it a named value?
+    'TODO: Handle scope expansion for names
+    If Token.Kind = TOKEN_LABEL _
+    Or Token.Kind = TOKEN_PROPERTY_USE Then '..........................................
+        'TODO: get the full label from the property
+        
+        'If the named value is not yet known, the expression cannot be evaluated _
+         until it is defined later on
+        If Not Labels.Exists(Token.Value) Then _
+            Let ScopeValue = OZ80_INDEFINITE Else _
+            Let ScopeValue = Labels(Token.Value)
+        
+    'This is an easy one
+    ElseIf Token.Kind = TOKEN_NUMBER Then '............................................
+        Let ScopeValue = Token.Value
+        
+    Else '.............................................................................
+        'ERROR: Not a valid operand. We won't produce an error message here as the _
+         error might be exepected (i.e. an optional parameter). We fold upwards and _
+         whomever knows best will deal with the error
+        Let ScopeValue = OZ80_INDEFINITE
+        Let My_Error = OZ80_ERROR_EXPRESSION
+    End If
+    
+    'Move beyond the current token now it's been processed
+    Call Token.Forward
+End Function
 
 'RiaseError : provide error details through an event _
  ======================================================================================

@@ -659,8 +659,8 @@ TABLE   :_1171					`unused -- same as _114d
         DATA $70, $74, $76, $78, $FF, $FF
         DATA $FF, $FF, $FF, $FF, $FF, $FF
 }
-TABLE   :_1183					`Green Hill, Bridge, Jungle & Labyrinth Act 3
-{
+TABLE   :_1183					`Green Hill, Bridge, Jungle 
+{                                                `& Labyrinth Act 3
         DATA $5A, $5C, $5E, $FF, $FF, $FF
         DATA $7A, $7C, $7E, $FF, $FF, $FF
         DATA $FF, $FF, $FF, $FF, $FF, $FF
@@ -796,7 +796,7 @@ PROC    :titleScreen
 	
 	`load the palette
 	ld	hl, .S1_TitleScreen_Palette
-	ld	a, %00000011		        `flags to load tile and sprite palettes
+	ld	a, %00000011		        `flags to load tile & sprite palettes
 	call	:loadPaletteOnInterrupt
 	
 	set	1, (iy+#vars.flags0)
@@ -2211,11 +2211,11 @@ PROC    :_LABEL_1CED_131
 	
 	`auto scrolling to the right? (ala Bridge 2)
 	bit	3,(iy+#vars.scrollRingFlags)
-	call	nz,:_1ee2
+	call	nz,:autoscrollRight
 	
 	`auto scrolling upwards?
 	bit	4,(iy+#vars.scrollRingFlags)
-	call	nz,:_1ef2
+	call	nz,:autoscrollUp
 	
 	`no down scrolling (ala Jungle 2)
 	bit	7,(iy+#vars.scrollRingFlags)
@@ -2334,7 +2334,7 @@ PROC    :lockCameraHorizontal
 	ret
 }
 
-PROC    :_1ee2
+PROC    :autoscrollRight
         `====================================================================[$1EE2]===
         `move the left-hand side of the level across -- i.e. Bridge Act 2
 {        
@@ -2347,17 +2347,24 @@ PROC    :_1ee2
 	inc	hl
 	ld	($.LEVEL_LEFT),hl
 	`prevent scrolling to the right by limiting the width of the level to the same
+        ``NOTE: removing this would allow the player to continue running right,
+                but not return left beyond a moving point -- this would be useful
+                for some kind of chase scene (i.e. wall of lava)`` 
 	ld	($.LEVEL_RIGHT),hl
 	ret
 }
 
-PROC    :_1ef2
+PROC    :autoscrollUp
         `====================================================================[$1EF2]===
-{        
+        `autoscroll upwards -- unused by the game, but working
+{       
+        ``ensure there's a pause before starting to scroll upwards,
+          otherwise the player won't have time to react``
 	ld	a,($.FRAMECOUNT)
 	rrca	
 	ret	nc
 	
+        `shift the bottom of the level up one pixel
 	ld	hl,($.LEVEL_BOTTOM)
 	dec	hl
 	ld	($.LEVEL_BOTTOM),hl
@@ -2554,7 +2561,7 @@ PROC    :_1fa9
 
 TABLE   :_2023                                  `$2023
 {                                               
-        DATA $0000, :_202d, :_2031, :_2039, :_203f
+        WORD $0000, :_202d, :_2031, :_2039, :_203f
 }
 
 PROC    :_202d
@@ -2674,14 +2681,14 @@ PROC    :loadLevel
 	res	0, (iy+#vars.flags0)
 	call	:waitForInterrupt
 	
-	`copy the level header from ROM to RAM starting at $.D353
+	`copy the level header from ROM to RAM starting at $D354
 	 `(this copies 40 bytes, even though level headers are 37 bytes long.
 	 ` the developers probably removed header bytes later in development)
-	ld	de, $.D353
+	ld	de, $.D354
 	ld	bc, 40
 	ldir
 	
-	ld	hl, $.D353		        `position HL at the start of the header
+	ld	hl, $.D354		        `position HL at the start of the header
 	push	hl			        `remember the start point
 	
 	`read the current Scrolling / Ring HUD value
@@ -2851,7 +2858,7 @@ PROC    :loadLevel
 	ld	hl,$.D32E		
 	add	hl,de			        `$.D32E + (level number * 2)
 	
-	`NOTE: since other data in RAM begins at $.D353 (a copy of the level header)
+	`NOTE: since other data in RAM begins at $D354 (a copy of the level header)
 	 `this places a limit -- 19 -- on the number of main levels.
 	 `special stages and levels visited by teleporter are not included -- AFAIK
 	
@@ -2917,7 +2924,7 @@ PROC    :loadLevel
 	inc	hl			        `and "SY"
 	
 	`since we skip Sonic's X/Y position, where do these get used?
-	 `assumedly from the level header copied to RAM at $.D353+?
+	 `assumedly from the level header copied to RAM at $D354+?
 	
 	`FL: Floor Layout
 	ld	e,(hl)
@@ -4588,19 +4595,22 @@ PROC    :_3122
 
 PARAMS  hl
 {
-	ld	de,($.LEVEL_TOP)
+	ld	de;ypos,($.LEVEL_TOP)
 	and	a
-	sbc	hl,de
+	sbc	hl,de;ypos
 	ret	z
-	jr	c,._1
-	inc	de
-	ld	($.LEVEL_TOP),de
-	ld	($.LEVEL_BOTTOM),de
+	jr	c,.up
+        
+        `scroll downwards
+	inc	de;ypos
+	ld	($.LEVEL_TOP),de;ypos
+	ld	($.LEVEL_BOTTOM),de;ypos
 	ret
 	
-._1	dec	de
-	ld	($.LEVEL_TOP),de
-	ld	($.LEVEL_BOTTOM),de
+        `scroll upwards
+.up	dec	de;ypos
+	ld	($.LEVEL_TOP),de;ypos
+	ld	($.LEVEL_BOTTOM),de;ypos
 	ret
 }
 
@@ -4611,7 +4621,7 @@ PROC    :_3140
 PARAMS  hl      `(RAM_CAMERA_X_GOTO)  
 {
 	ld	de,($.LEVEL_LEFT)
-	and	a			        `reset the carry so it doesn't affect `sbc`
+	and	a			        `reset carry so it doesn't affect `sbc`
 	sbc	hl,de
 	ret	z			        `if HL = DE then return -- no change
 	jr	c,._1			        `is DE > HL?

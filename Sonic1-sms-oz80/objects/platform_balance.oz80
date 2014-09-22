@@ -189,7 +189,7 @@ PROC    :doObjectCode_platform_balance          SECTION ::objects
 	xor	a;zero
 	sbc	hl,bc
 	ld	($.SONIC.Y),hl
-	ld	hl,$D414
+	ld	hl,$.SONIC.unknown18
 	set	7,(hl)
 	ret
         

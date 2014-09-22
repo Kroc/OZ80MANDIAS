@@ -49,7 +49,7 @@ PROC	:doObjectCode_badnick_crabMeat  SECTION ::objects
 	ld	($.TEMP4),hl
 	ld	hl,$fffc
 	ld	($.TEMP6),hl
-	call	:_7c7b
+	call	:findEmptyObject
 	jp	c,._6
 	ld	de,$0000
 	ld	c,e
@@ -59,7 +59,7 @@ PROC	:doObjectCode_badnick_crabMeat  SECTION ::objects
 	ld	($.TEMP4),hl
 	ld	hl,$fffc
 	ld	($.TEMP6),hl
-	call	:_7c7b
+	call	:findEmptyObject
 	jr	c,._6
 	ld	de,$000e
 	ld	bc,$0000

@@ -18,7 +18,7 @@ PROC :doObjectCode_explosion                    SECTION ::objects {
 	ld	a,($.CURRENT_LEVEL)
 	cp	$12
 	jr	z,._1
-	ld	a,($D414)
+	ld	a,($.SONIC.unknown18)
 	rlca	
 	jr	c,._1
 	ld	a,($.D2E8)

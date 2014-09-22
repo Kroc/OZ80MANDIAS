@@ -1288,9 +1288,11 @@ PROC    :fillScreenWithFloorLayout              SECTION ::main
         ``this routine is only called during level loading to populate the screen with
           the visible portion of the Floor Layout. Scrolling fills in the new tiles so
           a full refresh of the screen is not required``
-{        
-	`page in banks 4 & 5 (containing the block mappings)
-	di				        `disable interrupts
+{       
+        `interrupts are disabled during this routine due to it writing to the display
+        di
+        
+	`page in the Block Mappings
 	ld	a;bank,:S1_BlockMappings.bank
 	ld	($.SMS.SLOT1),a;bank
 	ld	($.SLOT1),a;bank
@@ -1303,18 +1305,14 @@ PROC    :fillScreenWithFloorLayout              SECTION ::main
 	
 	`------------------------------------------------------------------------------
 	ld	de,$.VDP.SCREENNAMETABLE
-	`in 192-line mode, the screen is 6 blocks tall,
-	 `in 224-line mode it's 7 blocks tall
-	ld	b,#SMS_SCREENHEIGHT_BLOCKS
+	``in 192-line mode, the screen is 6 blocks tall,
+	  in 224-line mode it's 7 blocks tall``
+	ld	b,!SCREENHEIGHT_BLOCKS
 	
-._1	push	bc
-	push	hl
-	push	de
-	ld	b,8			        `the screen is 8 blocks wide
+._1	push	bc, hl, de
+	ld	b,!SCREENWIDTH_BLOCKS
 	
-._2	push	bc
-	push	hl
-	push	de
+._2	push	bc, hl, de
 	
 	`get the block index at the current location in the Floor Layout
 	ld	a,(hl)
@@ -1626,7 +1624,7 @@ PARAMS  hl
 	ld	(iy+#vars.spriteUpdateCount),c
 	
 	`wait for 9 more frames
-	ld	b,$09
+	ld	b,9
 ._1	ld	a,(iy+#vars.spriteUpdateCount)
 	res	0,(iy+#vars.flags0)
 	call	:waitForInterrupt

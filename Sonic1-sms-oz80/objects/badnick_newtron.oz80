@@ -30,7 +30,7 @@ PROC    :doObjectCode_badnick_newtron           SECTION ::objects {
 	ld	a,(ix+$17)
 	cp	$64
 	jr	nz,._5
-	call	:_7c7b
+	call	:findEmptyObject
 	jp	c,._5
 	push	bc
 	ld	e,(ix+#object.X.lo)

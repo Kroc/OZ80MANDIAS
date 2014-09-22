@@ -86,7 +86,7 @@ PROC    :doObjectCode_badnick_buzzBomber        SECTION ::objects {
 ._7	ld	a,(ix+$11)
 	cp	$20
 	jp	nz,._9
-	call	:_7c7b
+	call	:findEmptyObject
 	jp	c,._9
 	push	bc
 	ld	e,(ix+#object.X.lo)

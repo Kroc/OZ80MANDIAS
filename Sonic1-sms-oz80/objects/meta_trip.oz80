@@ -11,7 +11,7 @@ PROC    :doObjectCode_meta_trip                 SECTION ::objects {
 	ret	c
 	bit	6,(iy+#vars.flags6)
 	ret	nz
-	ld	a,($D414)
+	ld	a,($.SONIC.unknown18)
 	and	$80
 	ret	z
 	ld	hl,$fffb
@@ -22,7 +22,7 @@ PROC    :doObjectCode_meta_trip                 SECTION ::objects {
 	xor	a;zero
 	ld	($.SONIC.Xspeed.lo),a;zero
 	ld	($.SONIC.Xspeed.hi),hl
-	ld	hl,$D414
+	ld	hl,$.SONIC.unknown18
 	res	1,(hl)
 	set	6,(iy+#vars.flags6)
 	ld	(iy+#vars.joypad),$ff

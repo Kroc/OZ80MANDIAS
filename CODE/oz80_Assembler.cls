@@ -57,12 +57,12 @@ Private SectionSlots As Scripting.Dictionary
 'Assembling / Output: _
  --------------------------------------------------------------------------------------
 
-'Each block of code / data is assembled separately from the others and with no final _
+'Each chunk of code / data is assembled separately from the others and with no final _
  position in the ROM in mind until all source has been parsed. Once all source is _
- parsed, the banks are chosen for the blocks and the assembly copied into the ROM
-Private Blocks As Scripting.Dictionary
-'The current block being assembled into
-Private Block As oz80_Block
+ parsed, the banks are chosen for the chunks and the assembly copied into the ROM
+Private Chunks As Scripting.Dictionary
+'The current chunk being assembled into
+Private Chunk As oz80_Chunk
 
 Private ROM() As Byte                   'The output!
 Private ROMSize As Long                 'Size of the ROM (32/64/128/256/512/1024 KB)
@@ -89,7 +89,7 @@ Private Sub Class_Initialize()
     
     Set Stopwatch = New PerformanceCounter
     Set Labels = New Scripting.Dictionary
-    Set Blocks = New Scripting.Dictionary
+    Set Chunks = New Scripting.Dictionary
     Set SectionNames = New Scripting.Dictionary
     Set SectionSlots = New Scripting.Dictionary
 End Sub
@@ -99,7 +99,7 @@ End Sub
 Private Sub Class_Terminate()
     Set Stopwatch = Nothing
     Set Labels = Nothing
-    Set Block = Nothing: Set Blocks = Nothing
+    Set Chunk = Nothing: Set Chunks = Nothing
     Set Token = Nothing: Set Files = Nothing
     Set SectionNames = Nothing
     Set SectionSlots = Nothing
@@ -224,10 +224,9 @@ End Function
 '           OBJECT      #object     {           <object>
 '                                   }
 '
-'           PROC        :label      [PARAMS     register
-'                                               number]
-'                                   [RETURN     register
-'                                               number]
+'           PROC        :label      [PARAMS     <list>]
+'                                   [RETURN     <list>]
+'                                   [INTERRUPT  <expr>]
 '                                   {           <code>
 '                                   }
 '
@@ -271,14 +270,14 @@ Continue:
     If Not Token.IsKeyword Then Call RaiseError(OZ80_ERROR_EXPECTED_ROOT): Exit Sub
         
     '----------------------------------------------------------------------------------
-    '`PROC :<name> [SECTION ::<name>] [PARAMS <list>] [RETURN <list>] { [...] }` _
+    '`PROC :<label> { [...] }` _
      ----------------------------------------------------------------------------------
     If Token.Kind = TOKEN_KEYWORD_PROC Then
         'Hand off to the function that will process this
         Call ProcessProc
         
     '----------------------------------------------------------------------------------
-    '`SECTION ::<sectionName> [BANK <expr>] [SLOT <expr>]` _
+    '`SECTION ::<section>` _
      ----------------------------------------------------------------------------------
     ElseIf Token.Kind = TOKEN_KEYWORD_SECTION Then
         'Hand off to the function that will process this
@@ -287,7 +286,7 @@ Continue:
     'ERROR: Not a valid keyword at this scope! _
      ----------------------------------------------------------------------------------
     Else
-        Call RaiseError(OZ80_ERROR_ENDOFFILE)
+        Call RaiseError(OZ80_ERROR_FILE_END)
         Exit Sub
     End If
     
@@ -295,13 +294,13 @@ Continue:
     GoTo Continue
 End Sub
 
-'ScopeBlock: Within a code/data block, i.e. `PROC`, `TABLE` _
+'ScopeChunk: Within a code/data chunk, i.e. `PROC`, `TABLE` _
  ======================================================================================
-Private Sub ScopeBlock()
-    'Within a code/data block we can have local labels, data statements and Z80 code
+Private Sub ScopeChunk()
+    'Within a code/data chunk we can have local labels, data statements and Z80 code
     
-    'The block might be empty `{}`, in which case we don't want to walk it
-    If Token.Kind = TOKEN_BLOCKCLOSE Then GoTo Finish
+    'The chunk might be empty `{}`, in which case we don't want to walk it
+    If Token.Kind = TOKEN_CHUNKCLOSE Then GoTo Finish
     
 Continue:
     
@@ -313,51 +312,57 @@ Continue:
     
     '----------------------------------------------------------------------------------
     
-    'Move to the next token. If the file ends unexpectedly, the block has not been _
+    'Move to the next token. If the file ends unexpectedly, the chunk has not been _
      closed properly (closing brace is expected)
     If Not Token.Forward() Then
-        Call RaiseError(OZ80_ERROR_ENDOFFILE)
+        Call RaiseError(OZ80_ERROR_FILE_END)
     
     'When the closing brace is encountered, we'll drop out of the scope
-    ElseIf Token.Kind <> TOKEN_BLOCKCLOSE Then
+    ElseIf Token.Kind <> TOKEN_CHUNKCLOSE Then
         GoTo Continue
     End If
     
 Finish:
     'Move onto the next token ready for the root scope to process. _
-     The file could end just after the block, so no error is necessary
+     The file could end just after the chunk, so no error is necessary
     Call Token.Forward
 End Sub
 
 '/// STATEMENT PROCESSORS /////////////////////////////////////////////////////////////
 'Somewhat like a scope, these functions handle the main statements, e.g. `PROC`
 
-'ProcessProc : Process a procedure block _
+'ProcessProc : Process a procedure chunk _
  ======================================================================================
-'PROC   :<name>
-'       [SECTION    ::<name>]
+'PROC   :<label>
+'       [SECTION    ::<section>]
 '       [PARAMS     <list>]
 '       [RETURN     <list>]
+'       [INTERRUPT  <expr>]
 '{ [...] }
 '======================================================================================
 Private Sub ProcessProc()
     'ERROR: The file ended before the first parameter
-    If Not Token.Forward() Then Call RaiseError(OZ80_ERROR_ENDOFFILE): Exit Sub
+    If Not Token.Forward() Then Call RaiseError(OZ80_ERROR_FILE_END): Exit Sub
     
     'ERROR: No label name for procedure
     If Token.Kind <> TOKEN_LABEL Then Call RaiseError( _
         OZ80_ERROR_EXPECTED_PROC_NAME _
     ): Exit Sub
     
-    'Remember the String ID of the label name
+    'Remember the String ID of the Label name, _
+     we can't create the Label until the parameters are read
     Dim LabelKey As Long
     Let LabelKey = Token.Value
     
-    'ERROR: The file cannot end until the block has been opened and closed
-    If Not Token.Forward() Then Call RaiseError(OZ80_ERROR_ENDOFFILE): Exit Sub
+    'ERROR: The file cannot end until the chunk has been opened and closed
+    If Not Token.Forward() Then Call RaiseError(OZ80_ERROR_FILE_END): Exit Sub
+    
+    'The `INTERRUPT` parameter is optional, but can be zero, so use -1 for 'undefined'
+    Dim Interrupt As Double
+    Let Interrupt = -1
     
 ReadParams:
-    
+    '----------------------------------------------------------------------------------
     '`SECTION` Parameter : Set which Section the procedure belongs to _
      ----------------------------------------------------------------------------------
     If Token.Kind = TOKEN_KEYWORD_SECTION Then
@@ -370,7 +375,7 @@ ReadParams:
         ): Exit Sub
         
         'ERROR: File ended before the section name?
-        If Not Token.Forward() Then Call RaiseError(OZ80_ERROR_ENDOFFILE): Exit Sub
+        If Not Token.Forward() Then Call RaiseError(OZ80_ERROR_FILE_END): Exit Sub
         
         'ERROR: Not a section name following the section keyword
         If Token.Kind <> TOKEN_SECTION Then Call RaiseError( _
@@ -385,7 +390,8 @@ ReadParams:
         'Record the section name
         Let SectionKey = Token.Value
         Let IsSectionDefined = True
-        
+     
+    '----------------------------------------------------------------------------------
     '`PARAMS` Parameter : Document which Z80 parameters the procedure uses _
      ----------------------------------------------------------------------------------
     ElseIf Token.Kind = TOKEN_KEYWORD_PARAMS Then
@@ -400,7 +406,7 @@ ReadParams:
          
 SkipParam:
         'ERROR: File cannot end in the midst of the list
-        If Not Token.Forward() Then Call RaiseError(OZ80_ERROR_ENDOFFILE): Exit Sub
+        If Not Token.Forward() Then Call RaiseError(OZ80_ERROR_FILE_END): Exit Sub
         
         'If a Keyword, the list has come to the end
         If Token.IsKeyword() Then
@@ -416,6 +422,7 @@ SkipParam:
         
         GoTo SkipParam
         
+    '----------------------------------------------------------------------------------
     '`RETURN` Parameter : Document what the procedure sets / returns _
      ----------------------------------------------------------------------------------
     ElseIf Token.Kind = TOKEN_KEYWORD_RETURN Then
@@ -430,7 +437,7 @@ SkipParam:
          
 SkipReturn:
         'ERROR: File cannot end in the midst of the list
-        If Not Token.Forward() Then Call RaiseError(OZ80_ERROR_ENDOFFILE): Exit Sub
+        If Not Token.Forward() Then Call RaiseError(OZ80_ERROR_FILE_END): Exit Sub
         
         'If a Keyword, the list has come to the end
         If Token.IsKeyword() Then
@@ -446,17 +453,56 @@ SkipReturn:
         
         GoTo SkipReturn
         
+    '----------------------------------------------------------------------------------
+    '`INTERRUPT` Parameter : Define a fixed-location Interrupt Procedure _
+     ----------------------------------------------------------------------------------
+    ElseIf Token.Kind = TOKEN_KEYWORD_INTERRUPT Then
+        'The `INTERRUPT` parameter fixes a Procedure to a specific location in the _
+         ROM intended for hardware interrupts. Whilst you shouldn't specify a Section _
+         for an Interrupt Procedure, you can do so but the Section must use Slot 0 or _
+         Slot 1 KB. This is not validated here! Sections Slots are validated after _
+         the first assembly pass when we try and layout the Chunks in the ROM
+        Dim IsInterruptDefined As Boolean
+        
+        'ERROR: The interrupt parameter has already been specified
+        If IsInterruptDefined Then Call RaiseError( _
+            OZ80_ERROR_DUPLICATE_PROC_INTERRUPT _
+        ): Exit Sub
+        
+        'ERROR: File cannot end before the parameter Expression!
+        If Not Token.Forward() Then Call RaiseError(OZ80_ERROR_FILE_END): Exit Sub
+        
+        'Is this an Expression at all?
+        If Not Token.IsExpression Then Call RaiseError(OZ80_ERROR_EXPECTED): Exit Sub
+        
+        'Calculate the Expression:
+        Let Interrupt = ParseExpression()
+        'If there was an error in the expression, the error event _
+         will already have been raised, we only need to fold upwards
+        If My_Error Then Exit Sub
+        
+        'An indefinite value cannot be used for an Interrupt address, we will only be _
+         able to define the indefinite values (i.e. Label locations in ROM) once _
+         the whole code is parsed and we use the Sections to layout the ROM
+        If Interrupt = OZ80_INDEFINITE Then Call RaiseError(OZ80_ERROR_INDEFINITE)
+        
+        'Validate the Value, only certain Interrupt addresses are allowed
+        If Not ((Interrupt = &H0) Or (Interrupt = &H8) Or (Interrupt = &H10) _
+            Or (Interrupt = &H18) Or (Interrupt = &H20) Or (Interrupt = &H28) _
+            Or (Interrupt = &H30) Or (Interrupt = &H38) Or (Interrupt = &H66)) _
+        Then Call RaiseError(OZ80_ERROR_INVALID_INTERRUPT): Exit Sub
+        
     End If
     
     '----------------------------------------------------------------------------------
     
-    'With the parameters read, the only allowed token is the opening of the block
-    If Token.Kind <> TOKEN_BLOCKOPEN Then Call RaiseError( _
+    'With the parameters read, the only allowed token is the opening of the chunk
+    If Token.Kind <> TOKEN_CHUNKOPEN Then Call RaiseError( _
         OZ80_ERROR_EXPECTED _
     ): Exit Sub
     
-    'The block cannot be left open
-    If Not Token.Forward() Then Call RaiseError(OZ80_ERROR_ENDOFFILE): Exit Sub
+    'The chunk cannot be left open
+    If Not Token.Forward() Then Call RaiseError(OZ80_ERROR_FILE_END): Exit Sub
     
     'Now define the label name; if a section was given, it needs to be prepended
     Dim LabelName As String
@@ -464,29 +510,36 @@ SkipReturn:
         Let LabelName = Token.Strings(SectionKey) & Token.Strings(LabelKey) Else _
         Let LabelName = Token.Strings(LabelKey)
     
-    'TODO: Is this block already defined?
+    'TODO: Is this chunk already defined?
     
     'Define the current label location as indefinite, it will be placed in the ROM _
-     after the first assembly phase (once the block sizes are known)
+     after the first assembly phase (once the chunk sizes are known)
     Call DefineLabel(LabelName)
     
-    'Create the block
-    'TODO: bad use of CRC
-    Call AddBlock(oz80.CRC.Calculate(LabelName))
+    'Create the chunk
+    'TODO: messy use of CRC
+    Call AddChunk(oz80.CRC.Calculate(LabelName))
     
-    'Enter the procedure block to process its innards
-    Call ScopeBlock
+    'Apply the Interrupt parameter to the new Chunk
+    Let Chunk.Interrupt = Interrupt
     
-    'TODO: Update `.size`, `.cycles` properties?
+    RaiseEvent Message(2, OZ80_LOG_STATUS, _
+        "PROC " & LabelName & " " & _
+        IIf(Interrupt < 0, "", "INTERRUPT $" & Hex(Interrupt)) _
+    )
+    
+    'Enter the procedure chunk to process its innards
+    Call ScopeChunk
+    
 End Sub
 
 'ProcessSection : Define a Section _
  ======================================================================================
-'SECTION    ::<name>    [SLOT   <list>]
+'SECTION    ::<section>    [SLOT   <list>]
 '======================================================================================
 Private Sub ProcessSection()
     'ERROR: The file ended before the first parameter
-    If Not Token.Forward() Then Call RaiseError(OZ80_ERROR_ENDOFFILE): Exit Sub
+    If Not Token.Forward() Then Call RaiseError(OZ80_ERROR_FILE_END): Exit Sub
     
     'ERROR: Not a section name following the section keyword
     If Token.Kind <> TOKEN_SECTION Then Call RaiseError( _
@@ -520,7 +573,7 @@ Private Sub ProcessSection()
     'The only parameter is the Slot list
     If Token.Kind = TOKEN_KEYWORD_SLOT Then
         'ERROR: File ending before we have the value
-        If Not Token.Forward() Then Call RaiseError(OZ80_ERROR_ENDOFFILE): Exit Sub
+        If Not Token.Forward() Then Call RaiseError(OZ80_ERROR_FILE_END): Exit Sub
         
         'ERROR: There needs to be at least one item in the list
         If Not Token.IsExpression Then Call RaiseError( _
@@ -648,15 +701,15 @@ End Sub
 
 'ProcessZ80 : Process a Z80 instruction (and parameters) _
  ======================================================================================
-'<z80> [<param>] [<param>]
+'<z80> [<param>] [<param>] [<param>]
 '======================================================================================
 Private Sub ProcessZ80()
     'Remember which Z80 instruction is being processed
     Dim Instruction As OZ80_TOKEN
     Let Instruction = Token.Kind
     'Skip over the Z80 instruction token now that we know it. _
-     If the file ends it's an error because the block has not been closed
-    If Not Token.Forward() Then Call RaiseError(OZ80_ERROR_ENDOFFILE): Exit Sub
+     If the file ends it's an error because the chunk has not been closed
+    If Not Token.Forward() Then Call RaiseError(OZ80_ERROR_FILE_END): Exit Sub
     
     'TODO: Handle POP / PUSH
     
@@ -691,19 +744,19 @@ Private Sub ProcessZ80()
     End If
     
     'TODO: Error handling return
-    Call Block.AddInstruction(Instruction, Param1, Param2, Param3)
+    Call Chunk.AddInstruction(Instruction, Param1, Param2, Param3)
     
 End Sub
 
 '/// PRIVATE PROCEDURES ///////////////////////////////////////////////////////////////
 
-'AddBlock : Begin a new block to hold assembled Z80 code / data _
+'AddChunk : Begin a new Chunk to hold assembled Z80 code / data _
  ======================================================================================
-Private Sub AddBlock(ByRef StringID As Long)
-    'Create and attach the new block
-    Set Block = New oz80_Block
+Private Sub AddChunk(ByRef StringID As Long)
+    'Create and attach the new chunk
+    Set Chunk = New oz80_Chunk
     'Add it to the collection
-    Call Blocks.Add(StringID, Block)
+    Call Chunks.Add(StringID, Chunk)
 End Sub
 
 'AddUpdateLabel: Blindly adds to or updates the label names array _
@@ -796,7 +849,7 @@ Private Function GetZ80Parameter() As oz80Param
     '----------------------------------------------------------------------------------
     If Token.Kind = TOKEN_PARENOPEN Then
         'ERROR: File ends just as the memory expression is opened
-        If Not Token.Forward() Then Call RaiseError(OZ80_ERROR_ENDOFFILE): Exit Function
+        If Not Token.Forward() Then Call RaiseError(OZ80_ERROR_FILE_END): Exit Function
     
         'The first item in the memory expression can be a register
         If Token.IsRegister Then
@@ -833,19 +886,19 @@ Private Function GetZ80Parameter() As oz80Param
             
             'ERROR: File ends before the memory expression is closed
             If Not Token.Forward() _
-                Then Call RaiseError(OZ80_ERROR_ENDOFFILE): Exit Function
+                Then Call RaiseError(OZ80_ERROR_FILE_END): Exit Function
             
             GoTo EndScope
             
 AddExpr:    'Look for the `+` following the register name
             If Not Token.Forward() _
-                Then Call RaiseError(OZ80_ERROR_ENDOFFILE): Exit Function
+                Then Call RaiseError(OZ80_ERROR_FILE_END): Exit Function
             
             'If present, skip over it and check for an expression
             If Token.Kind = TOKEN_OPERATOR_ADD Then
                 'ERROR: Something must follow the "+"!
                 If Not Token.Forward() _
-                    Then Call RaiseError(OZ80_ERROR_ENDOFFILE): Exit Function
+                    Then Call RaiseError(OZ80_ERROR_FILE_END): Exit Function
                 
             'If it's just a register in parens, then finish
             ElseIf Token.Kind = TOKEN_PARENCLOSE Then

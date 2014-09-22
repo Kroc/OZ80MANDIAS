@@ -50,8 +50,8 @@ Private Enum OZ80_SYNTAX
     SYNTAX_NEXT = ASC_COM               ' , - item seperator, optional
     SYNTAX_PAREN_OPEN = ASC_LP          ' ( - memory reference open parenthesis
     SYNTAX_PAREN_CLOSE = ASC_RP         ' ) - memory reference close parenthesis
-    SYNTAX_BLOCK_OPEN = ASC_LB          ' { - open brace
-    SYNTAX_BLOCK_CLOSE = ASC_RB         ' } - close brace
+    SYNTAX_CHUNK_OPEN = ASC_LB          ' { - open brace
+    SYNTAX_CHUNK_CLOSE = ASC_RB         ' } - close brace
     SYNTAX_OPERATOR_ADD = ASC_PLUS      ' + - Add
     SYNTAX_OPERATOR_SUB = ASC_HYP       ' - - Subtract
     SYNTAX_OPERATOR_MUL = ASC_STAR      ' * - Multiply
@@ -90,7 +90,7 @@ Public SourceFile As String
 Private LineBegin As Long, ColBegin As Long
 
 'We need to be able to tell the difference between a property being used as a _
- parameter on a Z80 instruction, and a label-property definition (within a block) _
+ parameter on a Z80 instruction, and a label-property definition (within a chunk) _
  which occurs on a new line. We keep track of the previous line number used and _
  look for a property occuring on a new line
 Private PrevLine As Long
@@ -294,8 +294,8 @@ Private Sub Class_Initialize()
     
     Let TokenNames(TOKEN_PARENOPEN) = Chr$(SYNTAX_PAREN_OPEN)
     Let TokenNames(TOKEN_PARENCLOSE) = Chr$(SYNTAX_PAREN_CLOSE)
-    Let TokenNames(TOKEN_BLOCKOPEN) = Chr$(SYNTAX_BLOCK_OPEN)
-    Let TokenNames(TOKEN_BLOCKCLOSE) = Chr$(SYNTAX_BLOCK_CLOSE)
+    Let TokenNames(TOKEN_CHUNKOPEN) = Chr$(SYNTAX_CHUNK_OPEN)
+    Let TokenNames(TOKEN_CHUNKCLOSE) = Chr$(SYNTAX_CHUNK_CLOSE)
     
     Let TokenNames(TOKEN_QUOTE) = Chr$(SYNTAX_QUOTE)
     Let TokenNames(TOKEN_LABEL) = Chr$(SYNTAX_LABEL)
@@ -725,8 +725,8 @@ ReadChar:
             If AscChar = SYNTAX_NEXT Then GoTo Punctuation
             If AscChar = SYNTAX_PAREN_OPEN Then GoTo Punctuation
             If AscChar = SYNTAX_PAREN_CLOSE Then GoTo Punctuation
-            If AscChar = SYNTAX_BLOCK_OPEN Then GoTo Punctuation
-            If AscChar = SYNTAX_BLOCK_CLOSE Then GoTo Punctuation
+            If AscChar = SYNTAX_CHUNK_OPEN Then GoTo Punctuation
+            If AscChar = SYNTAX_CHUNK_CLOSE Then GoTo Punctuation
             
             If AscChar = SYNTAX_OPERATOR_ADD Then GoTo Punctuation
             If AscChar = SYNTAX_OPERATOR_SUB Then GoTo Punctuation
@@ -757,8 +757,8 @@ ReadChar:
             If AscChar = SYNTAX_NEXT Then GoTo WordBreak
             If AscChar = SYNTAX_PAREN_OPEN Then GoTo WordBreak
             If AscChar = SYNTAX_PAREN_CLOSE Then GoTo WordBreak
-            If AscChar = SYNTAX_BLOCK_OPEN Then GoTo WordBreak
-            If AscChar = SYNTAX_BLOCK_CLOSE Then GoTo WordBreak
+            If AscChar = SYNTAX_CHUNK_OPEN Then GoTo WordBreak
+            If AscChar = SYNTAX_CHUNK_CLOSE Then GoTo WordBreak
             
             If AscChar = SYNTAX_OPERATOR_ADD Then GoTo WordBreak
             If AscChar = SYNTAX_OPERATOR_SUB Then GoTo WordBreak
@@ -984,7 +984,7 @@ TokenWord:
             GoTo Finish
         Else
             'If the property appears on a new line, it's a label-property definition _
-             i.e. it defines a new sub-label of a block
+             i.e. it defines a new sub-label of a chunk
             If LineBegin <> PrevLine Then _
                 Call AddString(TOKEN_PROPERTY_NEW) Else _
                 Call AddString(TOKEN_PROPERTY_USE)
@@ -1055,6 +1055,8 @@ TokenWord:
         If CompStr("indr") Then Call Add(TOKEN_Z80_INDR): GoTo NextWord
         If CompStr("ini") Then Call Add(TOKEN_Z80_INI): GoTo NextWord
         If CompStr("inir") Then Call Add(TOKEN_Z80_INIR): GoTo NextWord
+        'keywords
+        If CompStr("interrupt") Then Call Add(TOKEN_KEYWORD_INTERRUPT): GoTo NextWord
         
     ElseIf Asc1 = ASC_J Then '................................................. `j` ...
         'Z80 instructions
@@ -1202,10 +1204,10 @@ TokenWord:
         'There is no 'z' register
         GoTo WordError
         
-    ElseIf Asc1 = SYNTAX_BLOCK_OPEN Then '..................................... `{` ...
-        Call Add(TOKEN_BLOCKOPEN): GoTo NextWord
-    ElseIf Asc1 = SYNTAX_BLOCK_CLOSE Then  '................................... `}` ...
-        Call Add(TOKEN_BLOCKCLOSE): GoTo NextWord
+    ElseIf Asc1 = SYNTAX_CHUNK_OPEN Then '..................................... `{` ...
+        Call Add(TOKEN_CHUNKOPEN): GoTo NextWord
+    ElseIf Asc1 = SYNTAX_CHUNK_CLOSE Then  '................................... `}` ...
+        Call Add(TOKEN_CHUNKCLOSE): GoTo NextWord
     ElseIf Asc1 = SYNTAX_PAREN_OPEN Then '..................................... `(` ...
         Call Add(TOKEN_PARENOPEN): GoTo NextWord
     ElseIf Asc1 = SYNTAX_PAREN_CLOSE Then '.................................... `)` ...
@@ -1372,7 +1374,7 @@ Private Sub Add( _
     )
     
     'Remember the line number used for this token to check for properties occuring _
-     on a new line -- this constitutes a property definition in a block
+     on a new line -- this constitutes a property definition in a chunk
     Let PrevLine = LineBegin
     
     'Move to the next token number
@@ -1484,9 +1486,9 @@ End Function
  ======================================================================================
 Private Function FormatToken() As String
     Dim Msg As String
-    If TokenKind = TOKEN_BLOCKOPEN _
-    Or TokenKind = TOKEN_BLOCKCLOSE Then
-        Let Msg = "[   BLOCK] " & TokenNames(TokenKind)
+    If TokenKind = TOKEN_CHUNKOPEN _
+    Or TokenKind = TOKEN_CHUNKCLOSE Then
+        Let Msg = "[   CHUNK] " & TokenNames(TokenKind)
     ElseIf My_IsKeyword(TokenKind) Then
         Let Msg = "[ KEYWORD] " & UCase(TokenNames(TokenKind))
     ElseIf TokenKind = TOKEN_LABEL Then

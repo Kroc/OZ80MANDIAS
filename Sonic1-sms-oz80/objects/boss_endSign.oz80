@@ -45,7 +45,7 @@ SECTION ::doObjectCode_boss_endSign             SECTION ::objects {
 	ld	($.D26D),hl
 	
 	ld	c,(ix+$13)
-	ld	a,($D414)
+	ld	a,($.SONIC.unknown18)
 	and	$80
 	ld	(ix+$13),a
 	jr	z,._3

@@ -111,7 +111,7 @@ PROC	:doObjectCode_powerUp_speed             SECTION ::objects {
 	call	:_5deb
 	jr	c,._1
 	ld	a,$f0
-	ld	($D411),a
+	ld	($.SONIC.unknown15),a
 	ld	a,$02
 	rst	:rst_playSFX
 	jp	:doObjectCode_powerUp_ring._5b29
@@ -393,7 +393,7 @@ PROC	:_5deb                                  SECTION ::objects {
 	
 	ld	hl,$0804
 	ld	($.TEMP1),hl
-	ld	a,($D414)
+	ld	a,($.SONIC.unknown18)
 	and	$01
 	jr	nz,._2
 	ld	de,($.SONIC.X)
@@ -409,7 +409,7 @@ PROC	:_5deb                                  SECTION ::objects {
 	and	a
 	sbc	hl,de
 	jr	c,._4
-	ld	a,($D414)
+	ld	a,($.SONIC.unknown18)
 	and	$04
 	jr	nz,._1
 	ld	l,(ix+#object.Y.lo)
@@ -425,7 +425,7 @@ PROC	:_5deb                                  SECTION ::objects {
 	ld	hl,($.D2E6)
 	ld	($.SONIC.Yspeed),hl
 	ld	($.SONIC.Ydirection),a
-	ld	hl,$D414
+	ld	hl,$.SONIC.unknown18
 	set	7,(hl)
 	scf	
 	ret

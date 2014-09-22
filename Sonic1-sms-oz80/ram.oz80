@@ -3,9 +3,62 @@
    for MaSS1VE: The Master System Sonic 1 Visual Editor <github.com/Kroc/MaSS1VE>
    ================================================================================= ``
 
-``the programmers use the IY register as a shortcut to $D200
-  to access commonly used variables and flags`` 
+OBJECT  #levelHeader
+{
+        .solidity               AS BYTE         `solidity data index
+        .floorWidth             AS WORD         `width of the floor in blocks
+        .floorHeight            AS WORD         `height of the floor in blocks
+        .levelLeft              AS WORD         `left side of level on the floor px
+        .levelRight             AS WORD         `right side of level on the floor (px)
+        .levelTop               AS WORD         `top of the level on the floor (px)
+        .levelBottom            AS WORD         `bottom of the level on the floor (px)
+        .startX                 AS BYTE         `Sonic's starting X position in blocks
+        .startY                 AS BYTE         `Sonic's starting Y position in blocks
+        .floorLayout            AS WORD         `address of the floor layout data
+        .floorSize              AS WORD         `size in bytes of the compressed data
+        .blockMapping           AS WORD         `address for level's block mappings
+        .levelArt               AS WORD         `address of compressed level art
+        .spriteArt              AS WORD         `address of compressed sprite art
+        .bank                   AS BYTE         `bank number for sprite art (always 9)
+        .initialPalette         AS BYTE         `index of initial level palette
+        .cycleSpeed             AS BYTE         `speed of palette animation
+        .cycleCount             AS BYTE         `number of palettes in cycle
+        .cyclePalette           AS BYTE         `index of cycle palette
+        .objectLayout           AS LONG         `address of Object layout data
+        .scrollRingFlags        AS BYTE         
+        .underwaterFlag         AS BYTE
+        .timeLightningFlags     AS BYTE
+        .zero                   AS BYTE
+        .music                  AS BYTE         `index of music
+}
 
+OBJECT  #object                 `26 bytes
+{
+	.type			AS BYTE	`IX+$00    - the object type index number
+	.Xsubpixel		AS BYTE	`IX+$01    - sub-pixel accuracy of X position
+	.X			AS WORD	`IX+$02/03 - in px
+	.Ysubpixel		AS BYTE	`IX+$04    - sub-pixel accuracy of Y position
+	.Y			AS WORD	`IX+$05/06 - in px
+	.Xspeed			AS WORD	`IX+$07/08 - in px, signed (i.e. $F??? = left)
+        .Xdirection		AS BYTE	`IX+$09    - $FF for left, else $00
+	.Yspeed			AS WORD	`IX+$0A/0B - in px, signed  (i.e. $F??? = left)
+	.Ydirection		AS BYTE	`IX+$0C    - $FF for left, else $00
+	.width			AS BYTE	`IX+$0D    - in px
+	.height			AS BYTE	`IX+$0E    - in px
+	.spriteLayout		AS WORD	`IX+$0F/10 - address to current sprite layout
+	.unknown11		AS BYTE
+	.unknown12		AS BYTE
+	.unknown13		AS BYTE
+	.unknown14		AS BYTE
+	.unknown15		AS BYTE
+	.unknown16		AS BYTE
+	.unknown17		AS BYTE
+	.unknown18		AS BYTE
+	.unknown19		AS BYTE	`unused?
+}
+
+``the programmers use the IY register as a shortcut to $D200
+  to access commonly used variables and flags``   
 OBJECT  #vars                                   `$D200:
 {	
 	`program flow control / loading flags?
@@ -318,7 +371,7 @@ RAM     `name                   `size                                           
         .D2EB                   AS BYTE                                         `UNUSED
         
         .D2EC                   AS BYTE `used by boss objects                   `$D2EC
-        .D2ED                   AS WORD                                         `$D2ED
+        .D2ED                   AS WORD `UNKNOWN                                `$D2ED
 
         .D2EF                   AS BYTE x 3                                     `UNUSED
         
@@ -365,12 +418,72 @@ RAM     `name                   `size                                           
         ``the level's header is copied here, though little of it seems actually used;
           other addresses are used as duplicates of these values. NOTE: 40 bytes are
           copied instead of 37, the header was probably reduced during development)``
-        .D354                   AS BYTE `Solidity Pointer                       `$D354
-        .D355                   AS WORD `Floor Width                            `UNUSED
-        .D357                   AS WORD `Floor Height                           `UNUSED
-        .D359                   AS WORD `Level X Offset                         `UNUSED
+        .LEVEL_HEADER           AS #levelHeader                                 `$D354
+                                `.solidity                               `$D354 `UNUSED
+                                `.floorWidth                             `$D355 `UNUSED
+                                `.floorHeight                            `$D357 `UNUSED
+                                `.levelLeft                              `$D359 `UNUSED
+                                `.levelRight                             `$D35B `UNUSED
+                                `.levelTop                               `$D35D `UNUSED
+                                `.levelBottom                            `$D35F `UNUSED
+                                `.startX                                 `$D361 `UNUSED
+                                `.startY                                 `$D362 `UNUSED
+                                `.floorLayout                            `$D363 `UNUSED
+                                `.floorSize                              `$D365 `UNUSED
+                                `.blockMapping                           `$D367 `UNUSED
+                                `.levelArt                               `$D369 `UNUSED
+                                `.spriteArt                              `$D36B `UNUSED
+                                `.bank                                   `$D36D `UNUSED
+                                `.initialPalette                         `$D36E `UNUSED
+                                `.cycleSpeed                             `$D36F `UNUSED
+                                `.cycleCount                             `$D370 `UNUSED
+                                `.cyclePalette                           `$D371 `UNUSED
+                                `.objectLayout                           `$D372 `UNUSED
+                                `.scrollRingFlags                        `$D374 `UNUSED
+                                `.underwaterFlag                         `$D375 `UNUSED
+                                `.timeLightningFlags                     `$D376 `UNUSED
+                                `.zero                                   `$D377 `UNUSED
+                                `.music                                  `$D378 `UNUSED
         
-        `...
+        .D379                   AS BYTE x 3                                     `UNUSED
+        
+        `a list of the active objects in the level?
+        .D37C                   AS BYTE x 64                                    `$D37C
+        
+        `a working-copy of the palette, for fade effects
+        .PALETTE		AS BYTE x 32                                    `$D3BC
+        
+        .D3DC                   AS BYTE x 32                                    `UNUSED
+        
+        `objects: the 32 objects in the level begin here:
+        `------------------------------------------------------------------------------
+        
+        `the player is an object like any other and has reserved parameters in memory
+        .SONIC                  AS #object                                      `$D3FC
+                                `.type			                        `$D3FC
+                                `.Xsubpixel		                        `$D3FD
+                                `.X			                        `$D3FE
+                                `.Ysubpixel		                        `$D400
+                                `.Y			                        `$D401
+                                `.Xspeed		                        `$D403
+                                `.Xdirection		                        `$D405
+                                `.Yspeed		                        `$D406
+                                `.Ydirecton		                        `$D408
+                                `.width			                        `$D409
+                                `.height		                        `$D40A
+                                `.spriteLayout		                        `$D40B
+                                `.unknown11                                     `$D40D
+                                `.unknown12                                     `$D40E
+                                `.unknown13                                     `$D40F
+                                `.unknown14                                     `$D410
+                                `.unknown15                                     `$D411
+                                `.unknown16                                     `$D412
+                                `.unknown17                                     `$D413
+                                `.unknown18                                     `$D414
+                                `.unknown19                                     `$D415
+                                
+        `remaining 31 objects are here
+        .OBJECTS                AS BYTE x {#object.size * 31}                   `$D416
+        
+                                                                                `$D73C
 }
-
-VAR $.PALETTE		        $D3BC

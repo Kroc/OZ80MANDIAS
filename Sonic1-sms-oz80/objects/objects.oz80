@@ -3,51 +3,6 @@
    for MaSS1VE: The Master System Sonic 1 Visual Editor <github.com/Kroc/MaSS1VE>
    ================================================================================= ``
 
-OBJECT  #object
-{
-	.type			AS BYTE	`IX+$00    - the object type index number
-	.Xsubpixel		AS BYTE	`IX+$01    - sub-pixel accuracy of X position
-	.X			AS WORD	`IX+$02/03 - in px
-	.Ysubpixel		AS BYTE	`IX+$04    - sub-pixel accuracy of Y position
-	.Y			AS WORD	`IX+$05/06 - in px
-	.Xspeed			AS WORD	`IX+$07/08 - in px, signed (i.e. $F??? = left)
-        .Xdirection		AS BYTE	`IX+$09    - $FF for left, else $00
-	.Yspeed			AS WORD	`IX+$0A/0B - in px, signed  (i.e. $F??? = left)
-	.Ydirection		AS BYTE	`IX+$0C    - $FF for left, else $00
-	.width			AS BYTE	`IX+$0D    - in px
-	.height			AS BYTE	`IX+$0E    - in px
-	.spriteLayout		AS WORD	`IX+$0F/10 - address to current sprite layout
-	.unknown11		AS BYTE
-	.unknown12		AS BYTE
-	.unknown13		AS BYTE
-	.unknown14		AS BYTE
-	.unknown15		AS BYTE
-	.unknown16		AS BYTE
-	.unknown17		AS BYTE
-	.unknown18		AS BYTE
-	.unknown19		AS BYTE	`unused?
-}
-
-`the player is an object like any other and has reserved object parameters in memory
-RAM     $D3FC
-{
-        .SONIC                  AS #object
-	`type			$D3FC
-	`Xsubpixel		$D3FD
-	`X			$D3FE/F
-	`Ysubpixel		$D400
-	`Y			$D401/2
-	`Xspeed			$D403/4
-	`Xdirection		$D405
-	`Yspeed			$D406/7
-	`Ydirecton		$D408
-	`width			$D409
-	`height			$D40A
-	`spriteLayout		$D40B/C
-}
-
-`--------------------------------------------------------------------------------------
-   
 INCLUDE "sonic.oz80"
 
 INCLUDE "powerups_common.oz80"
@@ -87,7 +42,7 @@ PROC    :_77be                                  SECTION ::objects
 	ret	c
 	bit	0,(iy+#vars.scrollRingFlags)
 	ret	nz
-	ld	a,($D414)
+	ld	a,($.SONIC.unknown18)
 	rrca	
 	jr	c,._1
 	and	$02
@@ -328,7 +283,7 @@ PROC    :_79fa                                  SECTION ::objects
 
 PROC    :_7a3a                                  SECTION ::objects
 {
-	call	:_7c7b
+	call	:findEmptyObject
 	ret	c
 	push	hl
 	call	:_LABEL_625_57
@@ -421,23 +376,25 @@ PARAMS  de      `e.g. $7DE1
 	inc	(ix+$17)
 	inc	(ix+$17)
 	ret
-}
+}	
 
-`____________________________________________________________________________[$7C7B]___	
-
-PROC    :_7c7b                                  SECTION ::objects
+PROC    :findEmptyObject                                  SECTION ::objects
+        `====================================================================[$7C7B]===
+        `search through the object storage and find the first empty object available
+        `(this is used for spawning new objects, such as bullets)
 {
-	ld	hl,$D416
-	ld	de,$001a
-	ld	b,$1f
-	
+	ld	hl,$.OBJECTS
+	ld	de,#object.size
+	ld	b, 31
+        
 .loop	ld	a,(hl)
-	cp	$ff
-	ret	z
+	cp	$FF                             `"No Object" number
+	ret	z                               `if = $FF then exit, empty slot found
 	add	hl,de
 	djnz	.loop
 	
-	scf	
+        `no free object place found!
+	scf	                                `set the carry as a return flag
 	ret
 }
 
@@ -510,7 +467,7 @@ PARAMS  d       `bit 7 sets A to $FF instead of 0 -- direction?
 	ld	($.SONIC.Yspeed), hl
 	ld	($.SONIC.Ydirection), a
 	
-	ld	hl, $D414
+	ld	hl, $.SONIC.unknown18
 	set	7, (hl)
 	
 	ret
@@ -936,7 +893,7 @@ PROC    :doObjectCode_boss_bridge               SECTION ::objects
 PROC    :_85d1                                  SECTION ::objects
 {
 	push	bc
-	call	:_7c7b
+	call	:findEmptyObject
 	pop	bc
 	ret	c
 	push	ix
@@ -1083,7 +1040,7 @@ INCLUDE "platform_float.oz80"
 
 PROC    :_91eb                                  SECTION ::objects
 {
-	call	:_7c7b
+	call	:findEmptyObject
 	ret	c
 	ld	c,$42
 	ld	a,(ix+#object.type)
@@ -1258,7 +1215,7 @@ PROC    :doObjectCode_boss_labyrinth            SECTION ::objects
 	ld	a,($.D2EC)
 	cp	$08
 	jp	nc,._
-	call	:_7c7b
+	call	:findEmptyObject
 	jp	c,._
 	push	ix
 	push	hl
@@ -1963,7 +1920,7 @@ PROC :doObjectCode_badnick_ballHog {
 	ld	a,(ix+$11)
 	cp	$ed
 	jp	nz,._6
-	call	:_7c7b
+	call	:findEmptyObject
 	jp	c,._6
 	ld	e,(ix+#object.X.lo)
 	ld	d,(ix+#object.X.hi)
@@ -2006,7 +1963,7 @@ PROC :doObjectCode_badnick_ballHog {
 	ld	a,(ix+$11)
 	cp	$ed
 	jr	nz,._6
-	call	:_7c7b
+	call	:findEmptyObject
 	jp	c,._6
 	ld	e,(ix+#object.X.lo)
 	ld	d,(ix+#object.X.hi)
@@ -2609,7 +2566,7 @@ PROC :doObjectCode_boss_scrapBrain {
 	ld	($.SONIC.Xspeed),hl;zero
 	ld	($.SONIC.Xdirection),a;zero
 ._7	ld	a,$80
-	ld	($D414),a
+	ld	($.SONIC.unknown18),a
 	ld	hl,$05a0
 	ld	($.SONIC.X),hl
 	ld	(iy+#vars.joypad),$ff
@@ -2900,7 +2857,7 @@ PROC :doObjectCode_badnick_bomb {
 	ld	($.TEMP4),hl
 	ld	hl,$fffc
 	ld	($.TEMP6),hl
-	call	:_7c7b
+	call	:findEmptyObject
 	jp	c,._8
 	ld	de,$0000
 	ld	c,e
@@ -2910,7 +2867,7 @@ PROC :doObjectCode_badnick_bomb {
 	ld	($.TEMP4),hl
 	ld	hl,$fffc
 	ld	($.TEMP6),hl
-	call	:_7c7b
+	call	:findEmptyObject
 	jp	c,._8
 	ld	de,$0008
 	ld	bc,$0000
@@ -2919,7 +2876,7 @@ PROC :doObjectCode_badnick_bomb {
 	ld	($.TEMP4),hl
 	ld	hl,$fffe
 	ld	($.TEMP6),hl
-	call	:_7c7b
+	call	:findEmptyObject
 	jp	c,._8
 	ld	de,$0000
 	ld	bc,$0008
@@ -2928,7 +2885,7 @@ PROC :doObjectCode_badnick_bomb {
 	ld	($.TEMP4),hl
 	ld	hl,$fffe
 	ld	($.TEMP6),hl
-	call	:_7c7b
+	call	:findEmptyObject
 	jp	c,._8
 	ld	de,$0008
 	ld	bc,$0008
@@ -3080,7 +3037,7 @@ PROC :doObjectCode_trap_cannon{
 ._1	ld	a,(ix+$11)
 	cp	$64
 	jr	nz,._2
-	call	:_7c7b
+	call	:findEmptyObject
 	jr	c,._2
 	push	ix
 	ld	e,(ix+#object.X.lo)
@@ -3344,7 +3301,7 @@ PROC :_af98 {
 
 PROC :_afdb {
 	ld	(hl),$fe
-	call	:_7c7b
+	call	:findEmptyObject
 	ret	c
 	push	ix
 	ld	e,(ix+#object.X.lo)
@@ -3862,7 +3819,7 @@ PROC    :_b5c2                                  SECTION ::objects
 {
 	push	bc
 	push	de
-	call	:_7c7b
+	call	:findEmptyObject
 	pop	de
 	pop	bc
 	ret	c
@@ -4101,7 +4058,7 @@ PROC    :doObjectCode_boss_skyBase              SECTION ::objects
 	ret	nz
 	bit	0,(iy+#vars.scrollRingFlags)
 	ret	nz
-	ld	a,($D414)
+	ld	a,($.SONIC.unknown18)
 	rrca	
 	jr	c,._10
 	and	$02
@@ -4332,7 +4289,7 @@ PROC    :doObjectCode_boss_skyBase              SECTION ::objects
 
 ._b9d5  bit	5,(iy+#vars.unknown0)
 	ret	nz
-	call	:_7c7b
+	call	:findEmptyObject
 	ret	c
 	push	ix
 	push	hl

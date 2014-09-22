@@ -91,11 +91,11 @@ Licenced under a Creative Commons 3.0 Attribution Licence
         
 :: "Scope"
         The nesting-depth of statements within each other.
-        For example, Z80 instructions go within a PROC block.
+        For example, Z80 instructions go within a PROC chunk.
         Root is the top-most scope, not nested within anything else.
         
-:: "Block"
-        An encapsulation. `PROC`, `TABLE` & `STRUCT` are all types of Blocks.
+:: "Chunk"
+        An encapsulation. `PROC`, `TABLE` & `STRUCT` are all types of Chunks.
 
 
 The use of small angle-brackets "‹ ›" represents an optional component of the syntax.
@@ -369,7 +369,7 @@ Amstrad CPC).
 ---------------------------------------------------------------------------------------
 5.1.    Master System
 ---------------------------------------------------------------------------------------
-Scopes: Root; before any Block
+Scopes: Root; before any Chunk
 Format: 
         SYSTEM  "SMS"
         ‹[
@@ -430,7 +430,7 @@ placed over the top of the ROM header area (by default $7FF0 - $7FFF).
         ```````````````````````````````````````````````````````````````````````````````
         Two bytes in the header are unused and their content varies greatly from one
         game to another. "$00 $00", "$20 $20", "$FF $FF" are common. If this property
-        is ommited "$00 $00" is used.
+        is omitted "$00 $00" is used.
         
 .HEADER.RAW «list»
         ```````````````````````````````````````````````````````````````````````````````
@@ -446,7 +446,7 @@ placed over the top of the ROM header area (by default $7FF0 - $7FFF).
                 
         The list provided *must* equate to 15 bytes, otherwise assembly will fail.
         
-        NOTE: The presence of other header properties will overide these bytes;
+        NOTE: The presence of other header properties will override these bytes;
               the raw header acts as a background to the other header properties,
               and the raw header will be used instead of the defaults.
         
@@ -495,7 +495,7 @@ A label gives a name to a place in the code and the assembler will fill in the f
 ROM address (accounting for the correct bank & slot) everywhere the name is used.
 
 Unlike other assemblers, OZ80MANDIAS requires that all code / data be wrapped in a
-relevant structure that will define the beginning and end of the block of code / data.
+relevant structure that will define the beginning and end of the Chunk of code / data.
 Many of the unique features of OZ80MANDIAS require that it know the boundaries of the
 code and data.
 
@@ -515,7 +515,7 @@ For example:
                 ret
         }
         
-The curly braces form a "block", a special encapsulation that defines the beginning
+The curly braces form a "Chunk", a special encapsulation that defines the beginning
 and end of the code that makes up the procedure.
         
 In the example, some Z80 code is encapsulated in a procedure named ":doThing".
@@ -571,7 +571,7 @@ Scopes: PROC
 Format:
         .«labelName»
 
-Within procedure blocks, special labels can be provided for the procedure to reference
+Within procedure Chunks, special labels can be provided for the procedure to reference
 internal locations, i.e. jumps and "private" pieces of data. These are placed at the
 beginning of a line and start with a dot, followed by the name.
 
@@ -608,32 +608,37 @@ Format:
 The Z80 interrupt routines exist at fixed locations in Bank 0. Since OZ80, by its
 nature, does not allow you to specifically fix a procedure at a certain location
 (the point of the assembler is to avoid micro-managing everything), the Interrupt
-procedures are provided to make this simple. For example
+Procedures are provided to make this simple. For example
 
         PROC    :pause          INTERRUPT $66
         {
                 `pause button pressed ...
         }
 
-NOTE: Interrupt procedures are automatically placed in Slot 0, Bank 0 and therefore
-      do not need to be assigned to a Section. Whilst you can assign a Section to an
-      interrupt procedure, you should *not* do this unless you intend to use the
-      Codemasters mapper and page the whole of Slot 0. See the Appendix for a topic
-      on how to page Slot 0.
-        
-Whilst you can use `INTERRUPT $00` for the starting location in the ROM, you should
-use `START` instead: (this is intended for future support of other systems that do not
-use $0000 as the initial vector, e.g. Gameboy)
+   NOTE:
+        Interrupt procedures are automatically placed in Slot 0, Bank 0 and
+        therefore do not need to be assigned to a Section. Whilst you can assign
+        a Section to an Interrupt Procedure, you should *not* do this unless you
+        intend to use the Codemasters mapper and page the whole of Slot 0.
+        See the Appendix for a topic on how to do this.
+    
+Whilst you can use `INTERRUPT $00` for the starting location in the ROM,
+you should use the Start Procedure instead:
 
         START {
                 `code execution begins here...
         }
         
+(this is intended for future support of other systems that do not use $0000 as the
+ initial vector, e.g. Gameboy)
+
 You cannot provide a label name for the Start Procedure, but you can use the keyword
 `START` anywhere a label can be used, e.g. `jp START`.
 
-
-
+   TECHNICAL NOTE:
+        On the Master System, the assembler will by default begin placing Chunks
+        at $0067 in Bank 0 unless the $66 Interrupt Procedure is longer than
+        one byte.
 
         
 =======================================================================================
@@ -838,7 +843,7 @@ individual bits and provide names for each; for example:
 
         OBJECT #thing
         {
-                flags           AS BYTE BITS {
+                .flags          AS BYTE BITS {
                                         .visible
                                         .sleep
                                         .poison
@@ -998,11 +1003,6 @@ Format:
         INCLUDE «expr»
 ...
 
-Scope:  PROC, TABLE
-Format:
-        BINARY «expr» [START <expr> [LENGTH <expr>|STOP <expr>]]
-...
-
 
 =======================================================================================
 #.      Structures
@@ -1080,7 +1080,7 @@ value into the output you can break the quote and insert the value:
 #.#.    Logic
 ---------------------------------------------------------------------------------------
 Format:
-        IF [NOT] <expr>|DEF #<variableName>|EXISTS <filename> {
+        IF [NOT] <expr>|EXISTS <filename> {
                 <code>
         [} ELSE IF <expr> {
                 <code> ...]
@@ -1093,7 +1093,7 @@ TODO: "EXIT IF"
 
 #.#.    Logical Operators
 ---------------------------------------------------------------------------------------
-TODO: =, NOT, <, <=, >, >=, AND, OR (`&`/`|`/`!` are purely bitwise operators)
+TODO: =, NOT, <, <=, >, >=
 
 
 =======================================================================================
@@ -1271,7 +1271,7 @@ apply varying patterns to the Sections of your code.
                  $BFFF  +--------+              +--------+--------+--------+---
                  
         Your code will only be able to access one Bank at a time, and will have to
-        page in the correct Bank for each Block within a Section.
+        page in the correct Bank for each Chunk within a Section.
         
 ::      SEGA 1 KB Slot
 ```````````````````````````````````````````````````````````````````````````````````````
@@ -1401,7 +1401,7 @@ What this shows is that the 'game engine' remains in Slot 0, whilst Slots 1 & 2 
 paged to different Banks in the ROM to access other things. Most of these occupy 32 KB,
 but the music/SFX fit within one Bank, so only require one Slot.
 
-A Section is a grouping of code/data Blocks intended to work with a particular Slot
+A Section is a grouping of code/data Chunks intended to work with a particular Slot
 pattern (see previous heading).
 
 To begin, define your Section names and the Slot patterns they are assigned to;
@@ -1415,7 +1415,7 @@ using the example above, we would define the following Sections:
         SECTION ::musicSFX      SLOT 2
                     
 Sections are a means of specifying which banks should be used for which groups of
-code and data blocks. Since the assembly code has to implicitly change pages, you will
+code and data Chunks. Since the assembly code has to implicitly change pages, you will
 need to force groups of code & data together into certain Banks. For example, you may
 need all the music code and data to fit into one Bank.
 
@@ -1423,7 +1423,7 @@ We can achieve this by first defining a Section name:
 
         SECTION ::music
 
-Then set each PROC / TABLE block to use this Section, e.g.
+Then set each PROC / TABLE Chunk to use this Section, e.g.
 
         PROC    :playMusic      SECTION ::music
         {

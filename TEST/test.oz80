@@ -1,9 +1,39 @@
 `OZ80MANDIAS test code
 
-SECTION ::section
-SECTION ::section0      SLOT 0
-SECTION ::section1      SLOT 1
-SECTION ::section2      SLOT 2
-SECTION ::section01     SLOT 0, 1
-SECTION ::section12     SLOT 1, 2
-SECTION ::section012    SLOT 0, 1, 2
+SECTION ::default
+SECTION ::slot_0        SLOT 0
+SECTION ::slot_1        SLOT 1
+SECTION ::slot_2        SLOT 2
+SECTION ::slot_0_1      SLOT 0, 1
+SECTION ::slot_1_2      SLOT 1, 2
+SECTION ::slot_0_1_2    SLOT 0, 1, 2
+
+PROC    :start          INTERRUPT $00
+{}
+
+PROC    :int08          INTERRUPT $08
+{}
+
+PROC    :int10          INTERRUPT $10
+{}
+
+PROC    :int18          INTERRUPT $18
+{}
+
+PROC    :int20          INTERRUPT $20
+{}
+
+PROC    :int28          INTERRUPT $28
+{}
+
+PROC    :int30          INTERRUPT $30
+{}
+
+PROC    :int38          INTERRUPT $38
+{}
+
+PROC    :int66          INTERRUPT $66
+{}
+
+PROC    :init           SECTION ::default
+{}

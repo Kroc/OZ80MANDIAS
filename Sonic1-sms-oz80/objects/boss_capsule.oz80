@@ -123,7 +123,7 @@ PROC    :doObjectCode_boss_capsule              SECTION ::objects {
 	ld	hl,($.D2E6)
 	ld	($.SONIC.Yspeed),hl
 	ld	($.SONIC.Ydirection),a
-	ld	hl,$D414
+	ld	hl,$.SONIC.unknown18
 	set	7,(hl)
 	ld	a,c
 	cp	$03
@@ -185,7 +185,7 @@ PROC    :doObjectCode_boss_capsule              SECTION ::objects {
         `--------------------------------------------------------------------[$74B6]---
 
 ._74b6  ld	($.D216),a
-	call	:_7c7b
+	call	:findEmptyObject
 	ret	c
 	ld	e,(ix+#object.X.lo)
 	ld	d,(ix+#object.X.hi)

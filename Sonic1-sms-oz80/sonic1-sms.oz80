@@ -78,9 +78,11 @@ DEF !VDP_REGISTER_10	!VDP_REGISTER_WRITE | 10
 
 
 
-`how many blocks (32x32px) fit in the screen height
-DEF !SMS_SCREENHEIGHT_PX        192
-DEF !SMS_SCREENHEIGHT_BLOCKS    !SMS_SCREENHEIGHT_PX / 32
+`how many blocks (32x32px) fit in the screen width / height
+DEF !SCREENWIDTH_PX             256
+DEF !SCREENHEIGHT_PX            192
+DEF !SCREENWIDTH_BLOCKS         !SCREENWIDTH_PX / 32
+DEF !SCREENHEIGHT_BLOCKS        !SCREENHEIGHT_PX / 32
 
 `======================================================================================
 

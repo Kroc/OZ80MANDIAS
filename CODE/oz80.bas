@@ -15,7 +15,7 @@ Public CRC As New CRC32
 
 'Some expressions cannot be calculated until the Z80 code has been assembled, _
  for example Label addresses are chosen after all code has been parsed and the sizes _
- of the blocks are known. A special Value is used that lies outside of the allowable _
+ of the chunks are known. A special Value is used that lies outside of the allowable _
  range of numbers in OZ80 (32-bit) to mark an Expression with a yet-unknown Value
 
 'VB does not allow implicit Double (64-bit) values greater than 32-bits, _
@@ -105,11 +105,11 @@ End Enum
 Public Enum OZ80_ERROR
     OZ80_ERROR_NONE                     'Assembly completed successfully
     OZ80_ERROR_DUPLICATE                'A name has been defined twice
+    OZ80_ERROR_DUPLICATE_PROC_INTERRUPT '- Duplicate `INTERRUPT` parameter
     OZ80_ERROR_DUPLICATE_PROC_PARAMS    '- Duplicate `PARAMS` parameter
     OZ80_ERROR_DUPLICATE_PROC_RETURN    '- Duplicate `RETURN` parameter
     OZ80_ERROR_DUPLICATE_PROC_SECTION   '- Duplicate `SECTION` parameter
     OZ80_ERROR_DUPLICATE_SECTION        '- Can't define a section twice
-    OZ80_ERROR_ENDOFFILE                'Unexpected end of file
     OZ80_ERROR_EXPECTED                 'Incorrect content at the current scope
     OZ80_ERROR_EXPECTED_PROC_NAME       '- A label name must follow `PROC`
     OZ80_ERROR_EXPECTED_PROC_PARAMS     '- Invalid stuff in the `PARAMS` list
@@ -118,9 +118,11 @@ Public Enum OZ80_ERROR
     OZ80_ERROR_EXPECTED_SECTION_NAME    '- A section name must follow `SECTION`
     OZ80_ERROR_EXPRESSION               'Not a valid expression
     OZ80_ERROR_EXPRESSION_Z80           '- Not a valid Z80 instruction parameter
+    OZ80_ERROR_FILE_END                 'Unexpected end of file
     OZ80_ERROR_FILE_NOTFOUND            'Requested file does not exist
-    OZ80_ERROR_FILE_READ                'Some kind of problem with file handle open
+    OZ80_ERROR_FILE_READ                'Some kind of problem while file handle open
     OZ80_ERROR_INDEFINITE               'Indefinite value cannot be used here
+    OZ80_ERROR_INVALID_INTERRUPT        'Invalid Interrupt address
     OZ80_ERROR_INVALID_NAME             'Invalid label/property/variable name
     OZ80_ERROR_INVALID_NAME_RAM         '- Invalid RAM name, i.e. `$.name`
     OZ80_ERROR_INVALID_NUMBER           'Not a valid binary/hex/decimal number
@@ -260,11 +262,12 @@ Public Enum OZ80_TOKEN
     
     'Keywords .........................................................................
     [_TOKEN_KEYWORDS_BEGIN]
-    TOKEN_KEYWORD_PARAMS
-    TOKEN_KEYWORD_PROC
-    TOKEN_KEYWORD_RETURN
-    TOKEN_KEYWORD_SECTION
-    TOKEN_KEYWORD_SLOT
+    TOKEN_KEYWORD_INTERRUPT             'Interrupt `PROC :<label> INTERRUPT <expr>`
+    TOKEN_KEYWORD_PARAMS                'Parameter list `PROC :<label> PARAMS <list>`
+    TOKEN_KEYWORD_PROC                  'Procedure Chunk `PROC :<label> { ... }`
+    TOKEN_KEYWORD_RETURN                'Returns list `PROC :<label> RETURN <list>`
+    TOKEN_KEYWORD_SECTION               'Section definition `SECTION ::<section>
+    TOKEN_KEYWORD_SLOT                  'Section Slot pattern `SLOT 0, 1, 2`
     [_TOKEN_KEYWORDS_END]
     
     TOKEN_NUMBER
@@ -276,8 +279,8 @@ Public Enum OZ80_TOKEN
     'Grouping: (i.e. parenthesis, braces)
     TOKEN_PARENOPEN
     TOKEN_PARENCLOSE
-    TOKEN_BLOCKOPEN
-    TOKEN_BLOCKCLOSE
+    TOKEN_CHUNKOPEN
+    TOKEN_CHUNKCLOSE
     
     TOKEN_QUOTE                         'e.g. `"..."`
     TOKEN_LABEL                         'e.g. `:myProc`
@@ -404,7 +407,7 @@ Public Sub GetOZ80Error( _
             "You cannot define a section name twice. There should be only one " & _
             "`SECTION` statement for each section in use."
         
-    Case OZ80_ERROR_ENDOFFILE
+    Case OZ80_ERROR_FILE_END
         '..............................................................................
         Let ReturnTitle = "Unexpected End of File"
         'TODO

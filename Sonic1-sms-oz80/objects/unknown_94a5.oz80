@@ -193,7 +193,7 @@ PROC    :_94a5                                  SECTION ::objects
 	ld	a,($.FRAMECOUNT)
 	and	$0f
 	ret	nz
-	call	:_7c7b
+	call	:findEmptyObject
 	ret	c
 	push	ix
 	push	hl

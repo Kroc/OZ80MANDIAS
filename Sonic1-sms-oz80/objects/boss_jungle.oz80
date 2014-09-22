@@ -12,7 +12,7 @@ PROC    :doObjectCode_boss_jungle               SECTION ::objects {
 	and	a
 	sbc	hl,de
 	ret	nc
-	ld	a,($D414)
+	ld	a,($.SONIC.unknown18)
 	rlca	
 	ret	nc
 	`boss sprite set
@@ -125,7 +125,7 @@ PROC    :doObjectCode_boss_jungle               SECTION ::objects {
 	ld	a,($.D2EC)
 	cp	$08
 	jr	nc,._8
-	call	:_7c7b
+	call	:findEmptyObject
 	ret	c
 	ld	e,(ix+#object.X.lo)
 	ld	d,(ix+#object.X.hi)

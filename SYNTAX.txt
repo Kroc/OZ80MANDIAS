@@ -17,8 +17,8 @@ Licenced under a Creative Commons 3.0 Attribution Licence
         
         3.              Numbers
         3.1.            | Decimal
-        3.2.            | Negatives
-        3.3.            | Fractions
+        3.2.            | Fractions
+        3.3.            | Negatives
         3.4.            | Hexadecimal
         3.5.            | Binary
         3.6.            . Units
@@ -34,7 +34,7 @@ Licenced under a Creative Commons 3.0 Attribution Licence
         (What you need to do, otherwise nothing will work)
         
         5.              System Definition
-        5.1.            . Master System
+        5.1.            . SEGA Master System
         
         6.              Procedures
         6.1.            | Parameters
@@ -95,7 +95,8 @@ Licenced under a Creative Commons 3.0 Attribution Licence
         Root is the top-most scope, not nested within anything else.
         
 :: "Chunk"
-        An encapsulation. `PROC`, `TABLE` & `STRUCT` are all types of Chunks.
+        An encapsulation of code and/or data.
+        `PROC`, `TABLE` & `STRUCT` are all types of Chunks.
 
 
 The use of small angle-brackets "‹ ›" represents an optional component of the syntax.
@@ -306,7 +307,7 @@ These are the Operators supported:
 OZ80 calculates Expressions in left-to-right order, and *does not* use 'operator
 precedence' like more advanced (and compiled) languages.
 
-Therefore the following is important to note that "5 * 2 + 2" is the equivilent of
+Therefore the following is important to note that "5 * 2 + 2" is the equivalent of
 "10 + 2" and NOT "5 * 4" as it would seem. The assembler totals the calculation
 before each operator!
 
@@ -367,14 +368,14 @@ support other Z80 targets in the future (such as the Nintendo GameBoy, ZX Spectr
 Amstrad CPC).
 
 ---------------------------------------------------------------------------------------
-5.1.    Master System
+5.1.    SEGA Master System
 ---------------------------------------------------------------------------------------
 Scopes: Root; before any Chunk
 Format: 
         SYSTEM  "SMS"
-        ‹[
+        ‹{
                 .«property»      «expr»
-        ]›
+        }›
 
 At the beginning of your source code, place the following statement to tell the
 assembler to target the SEGA Master System.
@@ -385,22 +386,34 @@ This enables a number of Master System specific behaviours, notably that the ROM
 header is automatically inserted into the output file and code / data will not be
 placed over the top of the ROM header area (by default $7FF0 - $7FFF).
 
+Beyond this, you can provide special properties to control features of the assembler
+and the system-specific behaviours. To do this, extend your system declaration as
+given in the example below and populate it with the desired properties which are
+listed after this example.
+
+        SYSTEM "SMS" 
+        {
+                .HEADER.CHECKSUM        256 KB
+                `...
+        }
+        
+.HEADER $1FF0|$3FF0|$7FF0
+        ```````````````````````````````````````````````````````````````````````````````
+        Sets the location of the ROM Header. A real, non-Japanese Master System will
+        look for the header identifier ("TMR SEGA") at $1FF0, $3FF0 and $7FF0
+        (and these are the only allowed values). The header defaults to $7FF0,
+        and there's little reason to change this.
+        
    TECHNICAL NOTE:
         Because the ROM / SDSC header cannot be assembled over, Sections with
         contiguous Banks (i.e. code/data can flow over the boundary between Banks)
         will not be able to place code/data across the Bank 2 & 3 boundary,
         potentially preventing assembly from completing.
         
-.HEADER $1FF0|$3FF0|$7FF0
-        ```````````````````````````````````````````````````````````````````````````````
-        Sets the location of the ROM Header. A real, non-Japanese Master System will
-        look for the header identifier ("TMR SEGA") at $1FF0, $3FF0 and $7FF0.
-        The header defaults to $7FF0, and there's little reason to change this.
-        
 .HEADER.CHECKSUM 8|16|32|48|64|128|256|512|1024 KB
         ```````````````````````````````````````````````````````````````````````````````
         Sets the amount of the ROM to read for producing the checksum. The last four
-        bits of the header is set which the SMS uses to verify the checksum.
+        bits of the header is set which a real Master System uses to verify a checksum.
         
         The values 48 & 1024 KB have known bugs on certain BIOS versions in real
         Master Systems and should not be used.
@@ -409,6 +422,9 @@ placed over the top of the ROM header area (by default $7FF0 - $7FFF).
         the ROM. This property only concerns the amount of ROM to read to generate
         (and verify) the checksum. Setting it to a low number will speed up the boot
         time of the console.
+        
+        This value will default to the same size of the assembled ROM, if possible,
+        otherwise "32 KB" will be used.
 
 .HEADER.VERSION «expr»
         ```````````````````````````````````````````````````````````````````````````````
@@ -1446,3 +1462,9 @@ number.
                 `play the music!
                 call :playMusic
         }
+        
+        
+///////////////////////////////////////////////////////////////////////////////////////
+                                 
+                                A  P  P  E  N  D  I  X
+                                

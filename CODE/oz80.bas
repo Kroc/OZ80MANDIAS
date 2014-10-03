@@ -13,8 +13,8 @@ Option Explicit
  which both the Assembler and TokenStream classes need to do
 Public CRC As New CRC32
 
-'Some expressions cannot be calculated until the Z80 code has been assembled, _
- for example Label addresses are chosen after all code has been parsed and the sizes _
+'Some expressions cannot be calculated until the Z80 code has been assembled. _
+ For example, Label addresses are chosen after all code has been parsed and the sizes _
  of the chunks are known. A special Value is used that lies outside of the allowable _
  range of numbers in OZ80 (32-bit) to mark an Expression with a yet-unknown Value
 
@@ -23,7 +23,7 @@ Public CRC As New CRC32
  <stackoverflow.com/questions/929069/how-do-i-declare-max-double-in-vb6/933490#933490>
 Public Const OZ80_INDEFINITE As Double = 1.79769313486231E+308 + 5.88768018655736E+293
 
-'/// ENUMS ////////////////////////////////////////////////////////////////////////////
+'/// PUBLIC ENUMS /////////////////////////////////////////////////////////////////////
 
 'This makes life a whole lot easier when processing text as ASCII codes
 Public Enum ASCII
@@ -86,6 +86,39 @@ Public Enum ASCII
     ASC_TIL                             '`~` Tilde
     
     ASC_DEL                             '"Delete" -- non-visible
+End Enum
+
+'--------------------------------------------------------------------------------------
+
+'These define the various punctiation marks (in ASCII codes) for the language syntax
+Public Enum OZ80_SYNTAX
+    SYNTAX_COMMENT = ASC_BTK            ' ` - Comment marker. "``" for multi-line
+    SYNTAX_HINT1 = ASC_SCOL             ' ; - register hint, e.g. `a;index`
+    SYNTAX_HINT2 = ASC_APOS             ' ' - shadow register hint, e.g. `ex af 'af`
+    SYNTAX_QUOTE = ASC_QUOT             ' " - string identifier
+    SYNTAX_LABEL = ASC_COL              ' : - label identifier
+    SYNTAX_PROPERTY = ASC_DOT           ' . - property identifier
+    SYNTAX_OBJECT = ASC_HASH            ' # - object identifier
+    SYNTAX_RAM = ASC_DOL                ' $ - RAM constant identifier -- "$.abc"
+    SYNTAX_MACRO = ASC_AT               ' @ - macro identifier
+    SYNTAX_FUNCT = ASC_QM               ' ? - function identifier
+    SYNTAX_NUMBER_HEX = ASC_DOL         ' $ - hexadecimal number, e.g. `$FFFF`
+    SYNTAX_NUMBER_BIN = ASC_PERC        ' % - binary number, e.g. `%10101011`
+    SYNTAX_NEXT = ASC_COM               ' , - item seperator, optional
+    SYNTAX_PAREN_OPEN = ASC_LP          ' ( - memory reference open parenthesis
+    SYNTAX_PAREN_CLOSE = ASC_RP         ' ) - memory reference close parenthesis
+    SYNTAX_CHUNK_OPEN = ASC_LB          ' { - open brace
+    SYNTAX_CHUNK_CLOSE = ASC_RB         ' } - close brace
+    SYNTAX_OPERATOR_ADD = ASC_PLUS      ' + - Add
+    SYNTAX_OPERATOR_SUB = ASC_HYP       ' - - Subtract
+    SYNTAX_OPERATOR_MUL = ASC_STAR      ' * - Multiply
+    SYNTAX_OPERATOR_DIV = ASC_FSL       ' / - Divide
+    SYNTAX_OPERATOR_POW = ASC_CRT       ' ^ - Power
+    SYNTAX_OPERATOR_MOD = ASC_BSL       ' \ - Modulus
+    SYNTAX_OPERATOR_OR = ASC_VB         ' | - Bitwise OR
+    SYNTAX_OPERATOR_AND = ASC_AMP       ' & - Bitwise AND
+    SYNTAX_OPERATOR_NOT = ASC_EXC       ' ! - Bitwise NOT
+    SYNTAX_OPERATOR_XOR = ASC_TIL       ' ~ - Bitwise XOR
 End Enum
 
 '--------------------------------------------------------------------------------------
@@ -283,11 +316,11 @@ Public Enum OZ80_TOKEN
     TOKEN_CHUNKCLOSE
     
     TOKEN_QUOTE                         'e.g. `"..."`
-    TOKEN_LABEL                         'e.g. `:myProc`
+    TOKEN_LABEL                         'e.g. `:label`
     TOKEN_SECTION                       'e.g. `::section`
     TOKEN_PROPERTY_USE
     TOKEN_PROPERTY_NEW
-    TOKEN_RAM                           'e.g. `$.thing`
+    TOKEN_RAM                           'e.g. `$.ram`
     
     [_TOKEN_LAST]                       'Do not go above 255!
 End Enum
@@ -330,7 +363,7 @@ Public Enum OZ80_MASK
     'Some instructions accept BC/DE/HL/SP, but not IX & IY due to existing prefixes
     MASK_REGS_BC_DE_HL_SP = MASK_REG_BC Or MASK_REG_DE Or MASK_REG_HL Or MASK_REG_SP
     'PUSH / POP allow AF but not SP
-    MASK_REGS_AF_BC_DE_HL = MASK_REG_AF Or MASK_REG_BC Or MASK_REG_DE Or MASK_REG_HL
+    MASK_REGS_AF_BC_DE_HL_IXY = MASK_REG_AF Or MASK_REG_BC Or MASK_REG_DE Or MASK_REG_HL Or MASK_REG_IX Or MASK_REG_IY
     'The LD instruction can take most 16-bit registers
     MASK_REGS_BC_DE_HL_SP_IXY = MASK_REGS_BC_DE_HL_SP Or MASK_REG_IX Or MASK_REG_IY
     
@@ -382,6 +415,198 @@ Public Enum OZ80_SLOT
     SLOT1 = 2 ^ 1
     SLOT2 = 2 ^ 2
 End Enum
+
+'/// PUBLIC PROPERTIES ////////////////////////////////////////////////////////////////
+
+'For logging, we will want to get a text representation of any of the Tokens _
+ (oh how I wish VB6 supported static constant arrays)
+Private My_TokenName(0 To OZ80_TOKEN.[_TOKEN_LAST] - 1) As String
+'We'll have to populate the above with code, so flag it for preparation
+Private My_TokenNameInit As Boolean
+
+'Lookup table of hexadecimal prettyprint, _
+ saves repetitive text manipulation when logging
+Private My_HexStr8(0 To &HFF) As String * 2
+Private My_HexStr8Init As Boolean
+Private My_HexStr16(0 To &HFFFF&) As String * 4
+Private My_HexStr16Init As Boolean
+
+'GET HexStr8 : Get a text-representation of an 8-bit (0-255) number in hexadecimal _
+ ======================================================================================
+Public Property Get HexStr8(ByRef Index As Long) As String
+    'If the lookup array is not ready yet, populate it
+    If My_HexStr8Init = 0 Then
+        Dim i As Long
+        For i = 0 To &HF&:          Let My_HexStr8(i) = "0" & Hex$(i):  Next i
+        For i = &H10& To &HFF&:     Let My_HexStr8(i) = Hex$(i):        Next i
+        Let My_HexStr8Init = True
+    End If
+    
+    Let HexStr8 = My_HexStr8(Index And &HFF&)
+End Property
+
+'GET HexStr16 : Get a text-representation of a 16-bit (0-65535) number in hexadecimal _
+ ======================================================================================
+Public Property Get HexStr16(ByRef Index As Long) As String
+    'If the lookup array is not ready yet, populate it
+    If My_HexStr16Init = 0 Then
+        Dim i As Long
+        For i = 0 To &HF&:          Let My_HexStr16(i) = "000" & Hex$(i):   Next i
+        For i = &H10& To &HFF&:     Let My_HexStr16(i) = "00" & Hex$(i):    Next i
+        For i = &H100& To &HFFF&:   Let My_HexStr16(i) = "0" & Hex$(i):     Next i
+        For i = &H1000& To &HFFFF&: Let My_HexStr16(i) = Hex$(i):           Next i
+        Let My_HexStr16Init = True
+    End If
+    
+    Let HexStr16 = My_HexStr16(Index And &HFFFF&)
+End Property
+
+'GET TokenName : Get the string representation of a token number _
+ ======================================================================================
+Public Property Get TokenName(ByRef Token As OZ80_TOKEN) As String
+    'If the lookup array is not ready yet, populate it
+    If My_TokenNameInit = 0 Then
+        Let My_TokenNameInit = True
+        'Z80 Instructions .............................................................
+        Let My_TokenName(TOKEN_Z80_ADC) = "ADC"
+        Let My_TokenName(TOKEN_Z80_ADD) = "ADD"
+        Let My_TokenName(TOKEN_Z80_AND) = "AND"
+        Let My_TokenName(TOKEN_Z80_BIT) = "BIT"
+        Let My_TokenName(TOKEN_Z80_CALL) = "CALL"
+        Let My_TokenName(TOKEN_Z80_CCF) = "CCF"
+        Let My_TokenName(TOKEN_Z80_CP) = "CP"
+        Let My_TokenName(TOKEN_Z80_CPD) = "CPD"
+        Let My_TokenName(TOKEN_Z80_CPDR) = "CPDR"
+        Let My_TokenName(TOKEN_Z80_CPI) = "CPI"
+        Let My_TokenName(TOKEN_Z80_CPIR) = "CPIR"
+        Let My_TokenName(TOKEN_Z80_CPL) = "CPL"
+        Let My_TokenName(TOKEN_Z80_DAA) = "DAA"
+        Let My_TokenName(TOKEN_Z80_DEC) = "DEC"
+        Let My_TokenName(TOKEN_Z80_DI) = "DI"
+        Let My_TokenName(TOKEN_Z80_DJNZ) = "DJNZ"
+        Let My_TokenName(TOKEN_Z80_EI) = "EI"
+        Let My_TokenName(TOKEN_Z80_EX) = "EX"
+        Let My_TokenName(TOKEN_Z80_EXX) = "EXX"
+        Let My_TokenName(TOKEN_Z80_HALT) = "HALT"
+        Let My_TokenName(TOKEN_Z80_IM) = "IM"
+        Let My_TokenName(TOKEN_Z80_IN) = "IN"
+        Let My_TokenName(TOKEN_Z80_INC) = "INC"
+        Let My_TokenName(TOKEN_Z80_IND) = "IND"
+        Let My_TokenName(TOKEN_Z80_INDR) = "INDR"
+        Let My_TokenName(TOKEN_Z80_INI) = "INI"
+        Let My_TokenName(TOKEN_Z80_INIR) = "INIR"
+        Let My_TokenName(TOKEN_Z80_JP) = "JP"
+        Let My_TokenName(TOKEN_Z80_JR) = "JR"
+        Let My_TokenName(TOKEN_Z80_LD) = "LD"
+        Let My_TokenName(TOKEN_Z80_LDD) = "LDD"
+        Let My_TokenName(TOKEN_Z80_LDDR) = "LDDR"
+        Let My_TokenName(TOKEN_Z80_LDI) = "LDI"
+        Let My_TokenName(TOKEN_Z80_LDIR) = "LDIR"
+        Let My_TokenName(TOKEN_Z80_NEG) = "NEG"
+        Let My_TokenName(TOKEN_Z80_NOP) = "NOP"
+        Let My_TokenName(TOKEN_Z80_OR) = "OR"
+        Let My_TokenName(TOKEN_Z80_OUT) = "OUT"
+        Let My_TokenName(TOKEN_Z80_OUTD) = "OUTD"
+        Let My_TokenName(TOKEN_Z80_OTDR) = "OTDR"
+        Let My_TokenName(TOKEN_Z80_OUTI) = "OUTI"
+        Let My_TokenName(TOKEN_Z80_OTIR) = "OTIR"
+        Let My_TokenName(TOKEN_Z80_POP) = "POP"
+        Let My_TokenName(TOKEN_Z80_PUSH) = "PUSH"
+        Let My_TokenName(TOKEN_Z80_RES) = "RES"
+        Let My_TokenName(TOKEN_Z80_RET) = "RET"
+        Let My_TokenName(TOKEN_Z80_RETI) = "RETI"
+        Let My_TokenName(TOKEN_Z80_RETN) = "RETN"
+        Let My_TokenName(TOKEN_Z80_RLA) = "RLA"
+        Let My_TokenName(TOKEN_Z80_RL) = "RL"
+        Let My_TokenName(TOKEN_Z80_RLCA) = "RLCA"
+        Let My_TokenName(TOKEN_Z80_RLC) = "RLC"
+        Let My_TokenName(TOKEN_Z80_RLD) = "RLD"
+        Let My_TokenName(TOKEN_Z80_RRA) = "RRA"
+        Let My_TokenName(TOKEN_Z80_RR) = "RR"
+        Let My_TokenName(TOKEN_Z80_RRCA) = "RRCA"
+        Let My_TokenName(TOKEN_Z80_RRC) = "RRC"
+        Let My_TokenName(TOKEN_Z80_RRD) = "RRD"
+        Let My_TokenName(TOKEN_Z80_RST) = "RST"
+        Let My_TokenName(TOKEN_Z80_SBC) = "SBC"
+        Let My_TokenName(TOKEN_Z80_SCF) = "SCF"
+        Let My_TokenName(TOKEN_Z80_SET) = "SET"
+        Let My_TokenName(TOKEN_Z80_SLA) = "SLA"
+        Let My_TokenName(TOKEN_Z80_SRA) = "SRA"
+        Let My_TokenName(TOKEN_Z80_SLL) = "SLL"
+        Let My_TokenName(TOKEN_Z80_SRL) = "SRL"
+        Let My_TokenName(TOKEN_Z80_SUB) = "SUB"
+        Let My_TokenName(TOKEN_Z80_XOR) = "XOR"
+        
+        'Z80 Registers / Flags ........................................................
+        Let My_TokenName(TOKEN_Z80_A) = "A"
+        Let My_TokenName(TOKEN_Z80_AF) = "AF"
+        Let My_TokenName(TOKEN_Z80_B) = "B"
+        Let My_TokenName(TOKEN_Z80_C) = "C"
+        Let My_TokenName(TOKEN_Z80_NC) = "NC"
+        Let My_TokenName(TOKEN_Z80_BC) = "BC"
+        Let My_TokenName(TOKEN_Z80_D) = "D"
+        Let My_TokenName(TOKEN_Z80_E) = "E"
+        Let My_TokenName(TOKEN_Z80_DE) = "DE"
+        Let My_TokenName(TOKEN_Z80_H) = "H"
+        Let My_TokenName(TOKEN_Z80_L) = "L"
+        Let My_TokenName(TOKEN_Z80_HL) = "HL"
+        Let My_TokenName(TOKEN_Z80_I) = "I"
+        Let My_TokenName(TOKEN_Z80_IX) = "IX"
+        Let My_TokenName(TOKEN_Z80_IXL) = "IXL"
+        Let My_TokenName(TOKEN_Z80_IXH) = "IXH"
+        Let My_TokenName(TOKEN_Z80_IY) = "IY"
+        Let My_TokenName(TOKEN_Z80_IYL) = "IYL"
+        Let My_TokenName(TOKEN_Z80_IYH) = "IYH"
+        Let My_TokenName(TOKEN_Z80_M) = "M"
+        Let My_TokenName(TOKEN_Z80_P) = "P"
+        Let My_TokenName(TOKEN_Z80_PC) = "PC"
+        Let My_TokenName(TOKEN_Z80_PE) = "PE"
+        Let My_TokenName(TOKEN_Z80_PO) = "PO"
+        Let My_TokenName(TOKEN_Z80_R) = "R"
+        Let My_TokenName(TOKEN_Z80_SP) = "SP"
+        Let My_TokenName(TOKEN_Z80_Z) = "Z"
+        Let My_TokenName(TOKEN_Z80_NZ) = "NZ"
+        
+        'Operators ....................................................................
+        Let My_TokenName(TOKEN_OPERATOR_ADD) = Chr$(SYNTAX_OPERATOR_ADD)
+        Let My_TokenName(TOKEN_OPERATOR_SUB) = Chr$(SYNTAX_OPERATOR_SUB)
+        Let My_TokenName(TOKEN_OPERATOR_MUL) = Chr$(SYNTAX_OPERATOR_MUL)
+        Let My_TokenName(TOKEN_OPERATOR_DIV) = Chr$(SYNTAX_OPERATOR_DIV)
+        Let My_TokenName(TOKEN_OPERATOR_POW) = Chr$(SYNTAX_OPERATOR_POW)
+        Let My_TokenName(TOKEN_OPERATOR_MOD) = Chr$(SYNTAX_OPERATOR_MOD)
+        Let My_TokenName(TOKEN_OPERATOR_REP) = "x"
+        Let My_TokenName(TOKEN_OPERATOR_OR) = Chr$(SYNTAX_OPERATOR_OR)
+        Let My_TokenName(TOKEN_OPERATOR_AND) = Chr$(SYNTAX_OPERATOR_AND)
+        Let My_TokenName(TOKEN_OPERATOR_NOT) = Chr$(SYNTAX_OPERATOR_NOT)
+        Let My_TokenName(TOKEN_OPERATOR_XOR) = Chr$(SYNTAX_OPERATOR_XOR)
+        
+        'Keywords .....................................................................
+        Let My_TokenName(TOKEN_KEYWORD_INTERRUPT) = "INTERRUPT"
+        Let My_TokenName(TOKEN_KEYWORD_PARAMS) = "PARAMS"
+        Let My_TokenName(TOKEN_KEYWORD_PROC) = "PROC"
+        Let My_TokenName(TOKEN_KEYWORD_RETURN) = "RETURN"
+        Let My_TokenName(TOKEN_KEYWORD_SECTION) = "SECTION"
+        Let My_TokenName(TOKEN_KEYWORD_SLOT) = "SLOT"
+        
+        Let My_TokenName(TOKEN_PREFIX_K) = "K"
+        Let My_TokenName(TOKEN_PREFIX_KB) = "KB"
+        Let My_TokenName(TOKEN_PREFIX_KBIT) = "KBIT"
+        
+        Let My_TokenName(TOKEN_PARENOPEN) = Chr$(SYNTAX_PAREN_OPEN)
+        Let My_TokenName(TOKEN_PARENCLOSE) = Chr$(SYNTAX_PAREN_CLOSE)
+        Let My_TokenName(TOKEN_CHUNKOPEN) = Chr$(SYNTAX_CHUNK_OPEN)
+        Let My_TokenName(TOKEN_CHUNKCLOSE) = Chr$(SYNTAX_CHUNK_CLOSE)
+        
+        Let My_TokenName(TOKEN_QUOTE) = Chr$(SYNTAX_QUOTE)
+        Let My_TokenName(TOKEN_LABEL) = Chr$(SYNTAX_LABEL)
+        Let My_TokenName(TOKEN_PROPERTY_USE) = Chr$(SYNTAX_PROPERTY)
+        Let My_TokenName(TOKEN_PROPERTY_NEW) = Chr$(SYNTAX_PROPERTY)
+        Let My_TokenName(TOKEN_RAM) = Chr$(SYNTAX_NUMBER_HEX) & Chr$(SYNTAX_PROPERTY)
+        Let My_TokenName(TOKEN_SECTION) = String(2, Chr$(SYNTAX_LABEL))
+    End If
+    
+    Let TokenName = My_TokenName(Token)
+End Property
 
 '/// PUBLIC PROCEDURES ////////////////////////////////////////////////////////////////
 
@@ -540,3 +765,71 @@ Public Sub GetOZ80Error( _
         Stop
     End Select
 End Sub
+
+'ParamToString : Get a textual representation of a z80 instruction parameter _
+ ======================================================================================
+Public Function ParamToString( _
+    ByRef Param As oz80Param _
+) As String
+    If Param.Mask = MASK_REG_A Then
+        Let ParamToString = "A"
+    ElseIf Param.Mask = MASK_REG_B Then Let ParamToString = "B"
+    ElseIf Param.Mask = MASK_REG_C Then Let ParamToString = "C"
+    ElseIf Param.Mask = MASK_REG_D Then Let ParamToString = "D"
+    ElseIf Param.Mask = MASK_REG_E Then Let ParamToString = "E"
+    ElseIf Param.Mask = MASK_REG_H Then Let ParamToString = "H"
+    ElseIf Param.Mask = MASK_REG_L Then Let ParamToString = "L"
+    ElseIf Param.Mask = MASK_REG_I Then Let ParamToString = "I"
+    ElseIf Param.Mask = MASK_REG_R Then Let ParamToString = "R"
+    ElseIf Param.Mask = MASK_REG_AF Then Let ParamToString = "AF"
+    ElseIf Param.Mask = MASK_REG_BC Then Let ParamToString = "BC"
+    ElseIf Param.Mask = MASK_REG_DE Then Let ParamToString = "DE"
+    ElseIf Param.Mask = MASK_REG_HL Then Let ParamToString = "HL"
+    ElseIf Param.Mask = MASK_REG_SP Then Let ParamToString = "SP"
+    ElseIf Param.Mask = MASK_REG_IX Then Let ParamToString = "IX"
+    ElseIf Param.Mask = MASK_REG_IXL Then Let ParamToString = "IXL"
+    ElseIf Param.Mask = MASK_REG_IXH Then Let ParamToString = "IXH"
+    ElseIf Param.Mask = MASK_REG_IY Then Let ParamToString = "IY"
+    ElseIf Param.Mask = MASK_REG_IYL Then Let ParamToString = "IYL"
+    ElseIf Param.Mask = MASK_REG_IYH Then Let ParamToString = "IYH"
+    
+    ElseIf (Param.Mask And MASK_VAL8) <> 0 Then
+        Let ParamToString = "$" & oz80.HexStr8(Param.Value)
+    ElseIf (Param.Mask And MASK_VAL16) <> 0 Then
+        Let ParamToString = "$" & oz80.HexStr16(Param.Value)
+        
+    'The mask bits do not specify every flag, _
+     we refer to the token kind for that
+    ElseIf (Param.Mask And MASK_FLAGS) <> 0 Then
+        If Param.Token = TOKEN_Z80_C Then
+            Let ParamToString = "C"
+        ElseIf Param.Token = TOKEN_Z80_NC Then Let ParamToString = "NC"
+        ElseIf Param.Token = TOKEN_Z80_Z Then Let ParamToString = "Z"
+        ElseIf Param.Token = TOKEN_Z80_NZ Then Let ParamToString = "NZ"
+        ElseIf Param.Token = TOKEN_Z80_P Then Let ParamToString = "P"
+        ElseIf Param.Token = TOKEN_Z80_PE Then Let ParamToString = "PE"
+        ElseIf Param.Token = TOKEN_Z80_PO Then Let ParamToString = "PO"
+        ElseIf Param.Token = TOKEN_Z80_M Then Let ParamToString = "M"
+        End If
+    
+    'HL/IX/IY memory references are synonymous in the opcode, _
+     prefixes are used to determine which so we refer to the token kind
+    ElseIf (Param.Mask And MASK_MEM_HLIXY) <> 0 Then
+        If Param.Token = TOKEN_Z80_HL Then
+            Let ParamToString = "(HL)"
+        ElseIf Param.Token = TOKEN_Z80_IX Then
+            Let ParamToString = "(IX+$" & oz80.HexStr8(Param.Value) & ")"
+        ElseIf Param.Token = TOKEN_Z80_IY Then
+            Let ParamToString = "(IY+$" & oz80.HexStr8(Param.Value) & ")"
+        End If
+    
+    ElseIf Param.Mask = MASK_MEM_BC Then Let ParamToString = "(BC)"
+    ElseIf Param.Mask = MASK_MEM_DE Then Let ParamToString = "(DE)"
+    ElseIf Param.Mask = MASK_MEM_SP Then Let ParamToString = "(SP)"
+    
+    ElseIf (Param.Mask And MASK_MEM_VAL8) <> 0 Then
+        Let ParamToString = "($" & oz80.HexStr8(Param.Value) & ")"
+    ElseIf (Param.Mask And MASK_MEM_VAL16) <> 0 Then
+        Let ParamToString = "($" & oz80.HexStr16(Param.Value) & ")"
+    End If
+End Function

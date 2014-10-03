@@ -1,14 +1,11 @@
 VERSION 5.00
 Begin VB.Form UI 
-   BorderStyle     =   5  'Sizable ToolWindow
    Caption         =   "OZ80MANDIAS"
    ClientHeight    =   7005
    ClientLeft      =   105
-   ClientTop       =   375
+   ClientTop       =   435
    ClientWidth     =   9465
    LinkTopic       =   "Form1"
-   MaxButton       =   0   'False
-   MinButton       =   0   'False
    ScaleHeight     =   7005
    ScaleWidth      =   9465
    StartUpPosition =   3  'Windows Default
@@ -46,6 +43,14 @@ Private Const WM_SETTEXT As Long = &HC
 Private Const EM_SETSEL As Long = &HB1
 Private Const EM_REPLACESEL As Long = &HC2
 Private Const EM_GETLINECOUNT As Long = 186
+Private Const WM_SETREDRAW As Long = &HB
+Private Const WM_USER As Long = &H400
+Private Const EM_GETEVENTMASK As Long = (WM_USER + 59)
+Private Const EM_SETEVENTMASK As Long = (WM_USER + 69)
+
+Private Const WM_VSCROLL As Long = &H115
+
+Private Declare Function LockWindowUpdate Lib "user32" (ByVal hWnd As Long) As Long
 
 Private WithEvents Assembler As oz80_Assembler
 Attribute Assembler.VB_VarHelpID = -1
@@ -95,26 +100,15 @@ End Sub
 'EVENT <Assembler> Message _
  ======================================================================================
 Private Sub Assembler_Message( _
-    ByRef Depth As Long, ByRef LogLevel As OZ80_LOG, ByRef Text As String _
+    ByRef LogLevel As OZ80_LOG, ByRef Text As String _
 )
     Static PrevLog As OZ80_LOG
-    Static PrevDepth As Long
     
     Dim Prefix As String
-    If LogLevel <> OZ80_LOG_DEBUG Then
-        Let PrevDepth = Depth
-        If Depth < PrevDepth Then Let Prefix = vbCrLf
-    End If
-    
     If LogLevel = OZ80_LOG_ACTION Then Let Prefix = Prefix & "*"
-    If LogLevel = OZ80_LOG_INFO Then Let Prefix = Prefix & "-": Let Depth = Depth - 1
-    If LogLevel = OZ80_LOG_STATUS Then Let Prefix = Prefix & "=": Let Depth = Depth - 1
-    If LogLevel = OZ80_LOG_DEBUG Then Let Prefix = Prefix & ".": Let Depth = Depth - 1
-    
-    Dim D As Long
-    For D = 1 To Depth
-        Let Prefix = " " & Prefix
-    Next D
+    If LogLevel = OZ80_LOG_INFO Then Let Prefix = Prefix & "-"
+    If LogLevel = OZ80_LOG_STATUS Then Let Prefix = Prefix & "="
+    If LogLevel = OZ80_LOG_DEBUG Then Let Prefix = Prefix & "."
     
     If (LogLevel = OZ80_LOG_ACTION) And (PrevLog <> OZ80_LOG_ACTION) Then
         Let Prefix = vbCrLf & Prefix
@@ -135,16 +129,43 @@ Private Sub Log( _
     If LogLevel >= OZ80_LOG_DEBUG Then Exit Sub
     Let Text = Text & vbCrLf
     
+'    'http://weblogs.asp.net/jdanforth/88458
+'    Call SendMessage( _
+'        Me.txtLog.hWnd, WM_SETREDRAW, 0, ByVal 0 _
+'    )
+'    Dim EventMask As Long
+'    Let EventMask = SendMessage( _
+'        Me.txtLog.hWnd, EM_GETEVENTMASK, 0, ByVal 0 _
+'    )
+    
     'Thanks to Jdo300 for this execllent tip to prevent flicker _
      <xtremevbtalk.com/showpost.php?p=1330080&postcount=2>
     'Overcome the 64K text limit in VB6: _
      <www.tek-tips.com/viewthread.cfm?qid=1469439>
+    
+'    Call LockWindowUpdate(Me.txtLog.hWnd)
+    
     Call SendMessage( _
         Me.txtLog.hWnd, EM_SETSEL, _
         Len(Me.txtLog.Text), Len(Me.txtLog.Text) _
     )
+    
     Call SendMessageString( _
         Me.txtLog.hWnd, EM_REPLACESEL, _
         ByVal 0, Text _
     )
+    
+    Call SendMessage( _
+        Me.txtLog.hWnd, WM_VSCROLL, 7, ByVal 0 _
+    )
+    
+'    Call LockWindowUpdate(0)
+    
+'    Call SendMessage( _
+'        Me.txtLog.hWnd, EM_SETEVENTMASK, 0, ByVal EventMask _
+'    )
+'    Call SendMessage( _
+'        Me.txtLog.hWnd, WM_SETREDRAW, 1, ByVal 0 _
+'    )
+    DoEvents
 End Sub

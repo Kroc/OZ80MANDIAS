@@ -62,7 +62,8 @@ Private SectionSlots As Scripting.Dictionary
  parsed, the banks are chosen for the chunks and the assembly copied into the ROM
 Private Chunks As Scripting.Dictionary
 'The current chunk being assembled into
-Private Chunk As oz80_Chunk
+Private WithEvents Chunk As oz80_Chunk
+Attribute Chunk.VB_VarHelpID = -1
 
 Private ROM() As Byte                   'The output!
 Private ROMSize As Long                 'Size of the ROM (32/64/128/256/512/1024 KB)
@@ -72,7 +73,7 @@ Private ROMSize As Long                 'Size of the ROM (32/64/128/256/512/1024
 'Progress messages are passed through an event, the handler can choose to show them _
  or not, and in what format. I don't want to spam unwanted `Debug.Print` output
 Event Message( _
-    ByRef Depth As Long, ByRef LogLevel As OZ80_LOG, ByRef Text As String _
+    ByRef LogLevel As OZ80_LOG, ByRef Text As String _
 )
 
 'A class event is used to communicate error details beyond a simple error number
@@ -80,6 +81,10 @@ Event Error( _
     ByVal Number As OZ80_ERROR, ByRef Title As String, ByRef Description As String, _
     ByVal Line As Long, ByVal Col As Long _
 )
+
+Private Sub Chunk_Message(LogLevel As OZ80_LOG, Text As String)
+    RaiseEvent Message(LogLevel, Text)
+End Sub
 
 'CLASS Initialize _
  ======================================================================================
@@ -118,10 +123,10 @@ End Sub
 'EVENT <Token> Message : Basic progress message from a TokenStream object _
  ======================================================================================
 Private Sub Token_Message( _
-    ByRef Depth As Long, ByRef LogLevel As OZ80_LOG, ByRef Text As String _
+    ByRef LogLevel As OZ80_LOG, ByRef Text As String _
 )   'It's up to the controller to decide to display (or `Debug.Print` any messages), _
      we 're not going to unnecessarily spam their console
-    RaiseEvent Message(Depth, LogLevel, Text)
+    RaiseEvent Message(LogLevel, Text)
 End Sub
 
 '/// PUBLIC INTERFACE /////////////////////////////////////////////////////////////////
@@ -137,7 +142,7 @@ Public Function Assemble(ByVal FilePath As String) As OZ80_ERROR
     Let My_Error = OZ80_ERROR_NONE
     
     'Announce ourselves
-    RaiseEvent Message(0, OZ80_LOG_INFO, _
+    RaiseEvent Message(OZ80_LOG_INFO, _
         "OZ80MANDIAS v" & App.Major & "." & App.Minor & "," & App.Revision)
     
     'We'll measure the time this takes
@@ -148,8 +153,8 @@ Public Function Assemble(ByVal FilePath As String) As OZ80_ERROR
     
     'Phase 1: First Pass & Assemble _
      ----------------------------------------------------------------------------------
-    RaiseEvent Message(0, OZ80_LOG_ACTION, "Assembling " & Chr(34) & FilePath & Chr(34))
-    RaiseEvent Message(0, OZ80_LOG_ACTION, "Phase 1")
+    RaiseEvent Message(OZ80_LOG_ACTION, "Assembling " & Chr(34) & FilePath & Chr(34))
+    RaiseEvent Message(OZ80_LOG_ACTION, "Phase 1")
     
     'Start with parsing the given file into a TokenStream; _
      the assembler does not work with the original text directly
@@ -168,22 +173,22 @@ Public Function Assemble(ByVal FilePath As String) As OZ80_ERROR
     
     'Phase 2: Layout the ROM banks _
      ----------------------------------------------------------------------------------
-    RaiseEvent Message(0, OZ80_LOG_ACTION, "Phase 2")
+    RaiseEvent Message(OZ80_LOG_ACTION, "Phase 2")
     'TODO
     
     'Phase 3: Second Parse & Assemble (now with ROM Addresses) _
      ----------------------------------------------------------------------------------
-    RaiseEvent Message(0, OZ80_LOG_ACTION, "Phase 3")
+    RaiseEvent Message(OZ80_LOG_ACTION, "Phase 3")
     'TODO
     
     'Phase 4: Post Processing, e.g. Checksum _
      ----------------------------------------------------------------------------------
-    RaiseEvent Message(0, OZ80_LOG_ACTION, "Phase 4")
+    RaiseEvent Message(OZ80_LOG_ACTION, "Phase 4")
     'TODO
     
-    RaiseEvent Message(0, OZ80_LOG_ACTION, "Assembly Complete")
-    RaiseEvent Message(1, OZ80_LOG_INFO, "ROM size: " & (ROMSize \ 1024) & " KB")
-    RaiseEvent Message(1, OZ80_LOG_INFO, "Time: " & Format$(Stopwatch.Elapsed / 1000, "0.000") & "s")
+    RaiseEvent Message(OZ80_LOG_ACTION, "Assembly Complete")
+    RaiseEvent Message(OZ80_LOG_INFO, "ROM size: " & (ROMSize \ 1024) & " KB")
+    RaiseEvent Message(OZ80_LOG_INFO, "Time: " & Format$(Stopwatch.Elapsed / 1000, "0.000") & "s")
     
 Finish:
     Let Assemble = My_Error
@@ -299,16 +304,16 @@ End Sub
 Private Sub ScopeChunk()
     'Within a code/data chunk we can have local labels, data statements and Z80 code
     
-    'The chunk might be empty `{}`, in which case we don't want to walk it
-    If Token.Kind = TOKEN_CHUNKCLOSE Then GoTo Finish
-    
 Continue:
-    
     'Z80 code?
     If Token.IsInstruction Then
         Call ProcessZ80
-        
+        If My_Error Then Exit Sub
+        GoTo Continue
     End If
+    
+    'The chunk might be empty `{}`, in which case we don't want to walk it
+    If Token.Kind = TOKEN_CHUNKCLOSE Then GoTo Finish
     
     '----------------------------------------------------------------------------------
     
@@ -390,6 +395,9 @@ ReadParams:
         'Record the section name
         Let SectionKey = Token.Value
         Let IsSectionDefined = True
+        
+        'Pass over the Section name
+        If Not Token.Forward() Then Call RaiseError(OZ80_ERROR_FILE_END): Exit Sub
      
     '----------------------------------------------------------------------------------
     '`PARAMS` Parameter : Document which Z80 parameters the procedure uses _
@@ -523,14 +531,14 @@ SkipReturn:
     'Apply the Interrupt parameter to the new Chunk
     Let Chunk.Interrupt = Interrupt
     
-    RaiseEvent Message(2, OZ80_LOG_STATUS, _
-        "PROC " & LabelName & " " & _
-        IIf(Interrupt < 0, "", "INTERRUPT $" & Hex(Interrupt)) _
-    )
+    Dim LogMsg As String
+    Let LogMsg = "PROC " & LabelName
+    If Interrupt >= 0 _
+        Then Let LogMsg = LogMsg & " INTERRUPT $" & oz80.HexStr8(CLng(Interrupt))
+    RaiseEvent Message(OZ80_LOG_STATUS, LogMsg)
     
     'Enter the procedure chunk to process its innards
     Call ScopeChunk
-    
 End Sub
 
 'ProcessSection : Define a Section _
@@ -620,7 +628,7 @@ Private Sub ProcessSection()
 Finish:
     'Record the result:
     Let SectionSlots(SectionKey) = Slot
-    RaiseEvent Message(2, OZ80_LOG_STATUS, _
+    RaiseEvent Message(OZ80_LOG_STATUS, _
         "SECTION " & Token.Strings(SectionKey) & _
         " SLOT " & IIf( _
             Slot = 0, "?", _
@@ -643,61 +651,6 @@ ErrIndefinite:
      the whole code is parsed and we use the Sections to layout the ROM
     Call RaiseError(OZ80_ERROR_INDEFINITE)
 End Sub
-
-''ProcessVar : Process a variable definition statement _
-' ======================================================================================
-''VAR #<name> [<expr>] [AS #<name>]
-''======================================================================================
-'Private Sub ProcessVar()
-'    'ERROR: The file ended before the first parameter
-'    If Not Token.Forward() Then Call RaiseError(OZ80_ERROR_ENDOFFILE): Exit Sub
-'
-'    'ERROR: Not a variable name for `VAR`
-'    If Token.Kind <> TOKEN_VARIABLE Then Call RaiseError( _
-'        OZ80_ERROR_EXPECTED_VAR_NAME _
-'    ): Exit Sub
-'
-'    'Fetch the key for the variable name in the string database, _
-'     (i.e. remember the variable name before moving past the token)
-'    Dim StringKey As Long, Value As Double
-'    Let StringKey = Token.Value
-'
-'    'Move forward to the value parameter
-'    'NOTE: the value parameter is optional, and the file could end right here -- _
-'           if so, it'll skip over retreiving the value
-'    If Token.Forward() And Token.IsExpression Then
-'        'Calculate the value of the expression
-'        Let Value = ScopeExpression()
-'        'If the expression is faulty, an error will already have been raised, _
-'         we only need to fold upward to terminate the assembling
-'        If My_Error Then Exit Sub
-'        'ERROR: A value must be known in order to define a variable, i.e. _
-'         yet-unknown values, such as label addresses, cannot be used
-'        If Value = OZ80_INDEFINITE Then Call RaiseError( _
-'            OZ80_ERROR_INDEFINITE _
-'        ): Exit Sub
-'    Else
-'        'There is no given value for the label, re-use the existing value, _
-'         otherwise use zero
-'        If Variables.Exists(StringKey) Then _
-'            Let Value = Variables.Item(StringKey) Else _
-'            Let Value = 0
-'    End If
-'
-'    'TODO: `AS #object`
-'
-'    'Is the variable already defined?
-'    If Variables.Exists(StringKey) Then _
-'        Let Variables(StringKey) = Value Else _
-'        Call Variables.Add(StringKey, Value)
-'
-'    'Log the variable
-'    RaiseEvent Message(2, OZ80_LOG_STATUS, _
-'        "VAR " & Token.Strings(StringKey) & " " & _
-'        Right$(Space(40) & Value, 40 - Len(Token.Strings(StringKey))) & _
-'        " $" & Right$("000" & Hex(Value), 4) _
-'    )
-'End Sub
 
 'ProcessZ80 : Process a Z80 instruction (and parameters) _
  ======================================================================================
@@ -722,6 +675,8 @@ Private Sub ProcessZ80()
         'Parameter expressions might return an unknown value _
          (such as when a label, which has not yet been addressed, is used)
         
+'        If Token.Index >= 1491 Then Stop
+        
         'Get the first parameter
         Let Param1 = GetZ80Parameter()
         'If there was an error, the error number will already have been set, _
@@ -741,10 +696,19 @@ Private Sub ProcessZ80()
                 If My_Error Then Exit Sub
             End If
         End If
+    Else
+        'When an instruction has parameters, the parameter-reading always leaves _
+         the token stream pointing at the next Token to process. If there are no _
+         parameters, we do not want to leave the token stream pointing at the z80 _
+         instruction otherwise it'll get parsed again!
+        'Call Token.Forward
     End If
     
     'TODO: Error handling return
-    Call Chunk.AddInstruction(Instruction, Param1, Param2, Param3)
+    Let My_Error = Chunk.AddInstruction(Instruction, Param1, Param2, Param3)
+    If My_Error Then
+        Stop
+    End If
     
 End Sub
 
@@ -844,14 +808,16 @@ End Function
 'GetZ80Parameter : Fetch the type / value of a Z80 instruction parameter _
  ======================================================================================
 Private Function GetZ80Parameter() As oz80Param
-    'If the token is a memory reference, such as `(ix+$8)`, _
-     then get the associated register and value
-    '----------------------------------------------------------------------------------
+    Dim Value As Double
+    
+    'A memory reference, such as `(ix+$8)` _
+     ----------------------------------------------------------------------------------
     If Token.Kind = TOKEN_PARENOPEN Then
         'ERROR: File ends just as the memory expression is opened
         If Not Token.Forward() Then Call RaiseError(OZ80_ERROR_FILE_END): Exit Function
     
-        'The first item in the memory expression can be a register
+        'The first item in the memory expression can be a register _
+         ..............................................................................
         If Token.IsRegister Then
             'Copy the register type to the parameter being built
             Let GetZ80Parameter.Token = Token.Kind
@@ -900,28 +866,56 @@ AddExpr:    'Look for the `+` following the register name
                 If Not Token.Forward() _
                     Then Call RaiseError(OZ80_ERROR_FILE_END): Exit Function
                 
-            'If it's just a register in parens, then finish
-            ElseIf Token.Kind = TOKEN_PARENCLOSE Then
-                Exit Function
-            
-            Else
-                'TODO: ERROR: Something invalid in the expression
+                'Try and calculate the expression
+                Let Value = ParseExpression()
+                
+                'If there was an error in the expression, the error event _
+                 will already have been raised, we only need to fold upwards
+                If My_Error Then Exit Function
+                
+                'TODO: Handle indefinite value
+                'TODO: Error if number is over 16-bit
+                'TODO: Issue warning for rounding
+                
+                Let GetZ80Parameter.Value = Value
+                
+                If Token.Kind = TOKEN_PARENCLOSE Then
+                    Call Token.Forward
+                    Exit Function
+                End If
+                'ERROR: Unexpected token in memory expression
                 Stop
             End If
+        
+        '..............................................................................
+        Else
+            'Is it an expression at all?
+            'TODO: ERROR: Not a valid expression
+            If Not Token.IsExpression Then Stop
+        
+            'Besides registers, memory addresses are allowed
+            Let GetZ80Parameter.Token = TOKEN_NUMBER
+            
+            'Try and calculate the expression
+            Let Value = ParseExpression()
+            
+            'If there was an error in the expression, the error event _
+             will already have been raised, we only need to fold upwards
+            If My_Error Then Exit Function
+            
+            'TODO: Handle indefinite value
+            'TODO: Error if number is over 16-bit
+            'TODO: Issue warning for rounding
+            
+            'Any number will class as 16-bit since it's the maximum allowed
+            Let GetZ80Parameter.Mask = GetZ80Parameter.Mask Or MASK_MEM_VAL16
+            'Is the number within 8-bits? i.e. $00-$FF
+            If Value < 256 _
+                Then Let GetZ80Parameter.Mask = GetZ80Parameter.Mask Or MASK_MEM_VAL8
         End If
-        
-        'Is it an expression at all?
-        'TODO: ERROR: Not a valid expression
-        If Not Token.IsExpression Then Stop
-        
-        'Memory references with IX & IY will have already set the register, but for _
-         direct memory references, e.g. `jp ($1234)`, we declare this as a pure number
-        If GetZ80Parameter.Token = TOKEN_NONE _
-            Then Let GetZ80Parameter.Token = TOKEN_NUMBER
-        
-        GoTo GetValue
     
 EndScope:
+        '..............................................................................
         If Token.Kind = TOKEN_PARENCLOSE Then
             Call Token.Forward
             Exit Function
@@ -931,12 +925,13 @@ EndScope:
     
     'A Register _
      ----------------------------------------------------------------------------------
-    ElseIf Token.IsRegister Then
+    ElseIf Token.IsRegister Or Token.IsFlag Then
+        'Copy the register type to the parameter being built
         Let GetZ80Parameter.Token = Token.Kind
         
         'Map the register token to the mask bit; token numbers are sequential _
-         whilst parameter masks are bit combinations allowing rapid comparisons of _
-         parameters with allowed options
+         whilst parameter masks are bit combinations allowing rapid comparisons _
+         of parameters with allowed options
         If Token.Kind = TOKEN_Z80_A Then
             Let GetZ80Parameter.Mask = MASK_REG_A
         ElseIf Token.Kind = TOKEN_Z80_B Then Let GetZ80Parameter.Mask = MASK_REG_B
@@ -969,18 +964,17 @@ EndScope:
         
         'Now move beyond the register token
         Call Token.Forward
-        
+    
     'Anything else classes as a calculable expression _
      ----------------------------------------------------------------------------------
     ElseIf Token.IsExpression Then
         'We manually build a number token, since we don't want to use the first _
          token of the expression -- it might be a label for instance and we can _
-         only send tokens or numbers to be assembled into opcodes
+         only send registers or numbers to be assembled into opcodes
         Let GetZ80Parameter.Token = TOKEN_NUMBER
 
 GetValue:
         'Try and calculate the expression
-        Dim Value As Double
         Let Value = ParseExpression()
         
         'If there was an error in the expression, the error event _

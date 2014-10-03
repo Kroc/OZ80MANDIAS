@@ -34,36 +34,6 @@ Private Stopwatch As PerformanceCounter
 
 '--------------------------------------------------------------------------------------
 
-'These define the various punctiation marks (in ASCII codes) for the language syntax
-Private Enum OZ80_SYNTAX
-    SYNTAX_COMMENT = ASC_BTK            ' ` - Comment marker. "``" for multi-line
-    SYNTAX_HINT1 = ASC_SCOL             ' ; - register hint, e.g. `a;index`
-    SYNTAX_HINT2 = ASC_APOS             ' ' - shadow register hint, e.g. `ex af 'af`
-    SYNTAX_QUOTE = ASC_QUOT             ' " - string identifier
-    SYNTAX_LABEL = ASC_COL              ' : - label identifier
-    SYNTAX_PROPERTY = ASC_DOT           ' . - property identifier
-    SYNTAX_OBJECT = ASC_HASH            ' # - object identifier
-    SYNTAX_MACRO = ASC_AT               ' @ - macro identifier
-    SYNTAX_FUNCT = ASC_QM               ' ? - function identifier
-    SYNTAX_NUMBER_HEX = ASC_DOL         ' $ - hexadecimal number, e.g. `$FFFF`
-    SYNTAX_NUMBER_BIN = ASC_PERC        ' % - binary number, e.g. `%10101011`
-    SYNTAX_NEXT = ASC_COM               ' , - item seperator, optional
-    SYNTAX_PAREN_OPEN = ASC_LP          ' ( - memory reference open parenthesis
-    SYNTAX_PAREN_CLOSE = ASC_RP         ' ) - memory reference close parenthesis
-    SYNTAX_CHUNK_OPEN = ASC_LB          ' { - open brace
-    SYNTAX_CHUNK_CLOSE = ASC_RB         ' } - close brace
-    SYNTAX_OPERATOR_ADD = ASC_PLUS      ' + - Add
-    SYNTAX_OPERATOR_SUB = ASC_HYP       ' - - Subtract
-    SYNTAX_OPERATOR_MUL = ASC_STAR      ' * - Multiply
-    SYNTAX_OPERATOR_DIV = ASC_FSL       ' / - Divide
-    SYNTAX_OPERATOR_POW = ASC_CRT       ' ^ - Power
-    SYNTAX_OPERATOR_MOD = ASC_BSL       ' \ - Modulus
-    SYNTAX_OPERATOR_OR = ASC_VB         ' | - Bitwise OR
-    SYNTAX_OPERATOR_AND = ASC_AMP       ' & - Bitwise AND
-    SYNTAX_OPERATOR_NOT = ASC_EXC       ' ! - Bitwise NOT
-    SYNTAX_OPERATOR_XOR = ASC_TIL       ' ~ - Bitwise XOR
-End Enum
-
 'Look-up tables to validate ASCII codes:
 Private IsValid(0 To 255) As Boolean    'Allowable ASCII chars (i.e. no NULLs &c.)
 Private UpCase(0 To 255) As Byte        'From lower case to upper case
@@ -71,9 +41,6 @@ Private IsHex(0 To 255) As Boolean      'Validates hexadecimal digits (0-9, A-F)
 Private IsAlpha(0 To 255) As Boolean    'Validate alpha characters (both cases)
 Private IsAlphaNum(0 To 255) As Boolean 'Validate alphanumeric chars (both cases)
 Private IsNumber(0 To 255) As Boolean   'Validates decimal digits
-
-'For logging, we will want to get a text representation of any of the Tokens
-Private TokenNames(0 To OZ80_TOKEN.[_TOKEN_LAST] - 1) As String
 
 '/// CLASS STORAGE ////////////////////////////////////////////////////////////////////
 
@@ -122,7 +89,7 @@ End Type
 
 'Caches of the current token to make multiple calls to this class a little quicker, _
  it also helps with a lot of internal referencing, mainly with logging
-Private TokenKind As Byte
+Private TokenKind As OZ80_TOKEN
 Private TokenValue As Double
 Private TokenLine As Long
 Private TokenCol As Long
@@ -150,8 +117,7 @@ Public Strings As Scripting.Dictionary
 'Progress messages are passed through an event, the handler can choose to show them _
  or not. I didn't want to spam `Debug.Print` output
 Event Message( _
-    ByRef Depth As Long, ByRef LogLevel As OZ80_LOG, _
-    ByRef Text As String _
+    ByRef LogLevel As OZ80_LOG, ByRef Text As String _
 )
 
 'A class event is used to communicate error details beyond a simple error number
@@ -168,143 +134,6 @@ Private Sub Class_Initialize()
     'Initialise the string database. _
      Since it's public, we want to ensure it's instantiated from the off
     Set Strings = New Scripting.Dictionary
-    
-    Let TokenNames(TOKEN_Z80_ADC) = "ADC"
-    Let TokenNames(TOKEN_Z80_ADD) = "ADD"
-    Let TokenNames(TOKEN_Z80_AND) = "AND"
-    Let TokenNames(TOKEN_Z80_BIT) = "BIT"
-    Let TokenNames(TOKEN_Z80_CALL) = "CALL"
-    Let TokenNames(TOKEN_Z80_CCF) = "CCF"
-    Let TokenNames(TOKEN_Z80_CP) = "CP"
-    Let TokenNames(TOKEN_Z80_CPD) = "CPD"
-    Let TokenNames(TOKEN_Z80_CPDR) = "CPDR"
-    Let TokenNames(TOKEN_Z80_CPI) = "CPI"
-    Let TokenNames(TOKEN_Z80_CPIR) = "CPIR"
-    Let TokenNames(TOKEN_Z80_CPL) = "CPL"
-    Let TokenNames(TOKEN_Z80_DAA) = "DAA"
-    Let TokenNames(TOKEN_Z80_DEC) = "DEC"
-    Let TokenNames(TOKEN_Z80_DI) = "DI"
-    Let TokenNames(TOKEN_Z80_DJNZ) = "DJNZ"
-    Let TokenNames(TOKEN_Z80_EI) = "EI"
-    Let TokenNames(TOKEN_Z80_EX) = "EX"
-    Let TokenNames(TOKEN_Z80_EXX) = "EXX"
-    Let TokenNames(TOKEN_Z80_HALT) = "HALT"
-    Let TokenNames(TOKEN_Z80_IM) = "IM"
-    Let TokenNames(TOKEN_Z80_IN) = "IN"
-    Let TokenNames(TOKEN_Z80_INC) = "INC"
-    Let TokenNames(TOKEN_Z80_IND) = "IND"
-    Let TokenNames(TOKEN_Z80_INDR) = "INDR"
-    Let TokenNames(TOKEN_Z80_INI) = "INI"
-    Let TokenNames(TOKEN_Z80_INIR) = "INIR"
-    Let TokenNames(TOKEN_Z80_JP) = "JP"
-    Let TokenNames(TOKEN_Z80_JR) = "JR"
-    Let TokenNames(TOKEN_Z80_LD) = "LD"
-    Let TokenNames(TOKEN_Z80_LDD) = "LDD"
-    Let TokenNames(TOKEN_Z80_LDDR) = "LDDR"
-    Let TokenNames(TOKEN_Z80_LDI) = "LDI"
-    Let TokenNames(TOKEN_Z80_LDIR) = "LDIR"
-    Let TokenNames(TOKEN_Z80_NEG) = "NEG"
-    Let TokenNames(TOKEN_Z80_NOP) = "NOP"
-    Let TokenNames(TOKEN_Z80_OR) = "OR"
-    Let TokenNames(TOKEN_Z80_OUT) = "OUT"
-    Let TokenNames(TOKEN_Z80_OUTD) = "OUTD"
-    Let TokenNames(TOKEN_Z80_OTDR) = "OTDR"
-    Let TokenNames(TOKEN_Z80_OUTI) = "OUTI"
-    Let TokenNames(TOKEN_Z80_OTIR) = "OTIR"
-    Let TokenNames(TOKEN_Z80_POP) = "POP"
-    Let TokenNames(TOKEN_Z80_PUSH) = "PUSH"
-    Let TokenNames(TOKEN_Z80_RES) = "RES"
-    Let TokenNames(TOKEN_Z80_RET) = "RET"
-    Let TokenNames(TOKEN_Z80_RETI) = "RETI"
-    Let TokenNames(TOKEN_Z80_RETN) = "RETN"
-    Let TokenNames(TOKEN_Z80_RLA) = "RLA"
-    Let TokenNames(TOKEN_Z80_RL) = "RL"
-    Let TokenNames(TOKEN_Z80_RLCA) = "RLCA"
-    Let TokenNames(TOKEN_Z80_RLC) = "RLC"
-    Let TokenNames(TOKEN_Z80_RLD) = "RLD"
-    Let TokenNames(TOKEN_Z80_RRA) = "RRA"
-    Let TokenNames(TOKEN_Z80_RR) = "RR"
-    Let TokenNames(TOKEN_Z80_RRCA) = "RRCA"
-    Let TokenNames(TOKEN_Z80_RRC) = "RRC"
-    Let TokenNames(TOKEN_Z80_RRD) = "RRD"
-    Let TokenNames(TOKEN_Z80_RST) = "RST"
-    Let TokenNames(TOKEN_Z80_SBC) = "SBC"
-    Let TokenNames(TOKEN_Z80_SCF) = "SCF"
-    Let TokenNames(TOKEN_Z80_SET) = "SET"
-    Let TokenNames(TOKEN_Z80_SLA) = "SLA"
-    Let TokenNames(TOKEN_Z80_SRA) = "SRA"
-    Let TokenNames(TOKEN_Z80_SLL) = "SLL"
-    Let TokenNames(TOKEN_Z80_SRL) = "SRL"
-    Let TokenNames(TOKEN_Z80_SUB) = "SUB"
-    Let TokenNames(TOKEN_Z80_XOR) = "XOR"
-    
-    'Z80 Registers ....................................................................
-    Let TokenNames(TOKEN_Z80_A) = "A"
-    Let TokenNames(TOKEN_Z80_AF) = "AF"
-    Let TokenNames(TOKEN_Z80_B) = "B"
-    Let TokenNames(TOKEN_Z80_C) = "C"
-    Let TokenNames(TOKEN_Z80_NC) = "NC"
-    Let TokenNames(TOKEN_Z80_BC) = "BC"
-    Let TokenNames(TOKEN_Z80_D) = "D"
-    Let TokenNames(TOKEN_Z80_E) = "E"
-    Let TokenNames(TOKEN_Z80_DE) = "DE"
-    Let TokenNames(TOKEN_Z80_H) = "H"
-    Let TokenNames(TOKEN_Z80_L) = "L"
-    Let TokenNames(TOKEN_Z80_HL) = "HL"
-    Let TokenNames(TOKEN_Z80_I) = "I"
-    Let TokenNames(TOKEN_Z80_IX) = "IX"
-    Let TokenNames(TOKEN_Z80_IXL) = "IXL"
-    Let TokenNames(TOKEN_Z80_IXH) = "IXH"
-    Let TokenNames(TOKEN_Z80_IY) = "IY"
-    Let TokenNames(TOKEN_Z80_IYL) = "IYL"
-    Let TokenNames(TOKEN_Z80_IYH) = "IYH"
-    Let TokenNames(TOKEN_Z80_M) = "M"
-    Let TokenNames(TOKEN_Z80_P) = "P"
-    Let TokenNames(TOKEN_Z80_PC) = "PC"
-    Let TokenNames(TOKEN_Z80_PE) = "PE"
-    Let TokenNames(TOKEN_Z80_PO) = "PO"
-    Let TokenNames(TOKEN_Z80_R) = "R"
-    Let TokenNames(TOKEN_Z80_SP) = "SP"
-    Let TokenNames(TOKEN_Z80_Z) = "Z"
-    Let TokenNames(TOKEN_Z80_NZ) = "NZ"
-    
-    'Operators ........................................................................
-    Let TokenNames(TOKEN_OPERATOR_ADD) = Chr$(SYNTAX_OPERATOR_ADD)
-    Let TokenNames(TOKEN_OPERATOR_SUB) = Chr$(SYNTAX_OPERATOR_SUB)
-    Let TokenNames(TOKEN_OPERATOR_MUL) = Chr$(SYNTAX_OPERATOR_MUL)
-    Let TokenNames(TOKEN_OPERATOR_DIV) = Chr$(SYNTAX_OPERATOR_DIV)
-    Let TokenNames(TOKEN_OPERATOR_POW) = Chr$(SYNTAX_OPERATOR_POW)
-    Let TokenNames(TOKEN_OPERATOR_MOD) = Chr$(SYNTAX_OPERATOR_MOD)
-    Let TokenNames(TOKEN_OPERATOR_REP) = "x"
-    Let TokenNames(TOKEN_OPERATOR_OR) = Chr$(SYNTAX_OPERATOR_OR)
-    Let TokenNames(TOKEN_OPERATOR_AND) = Chr$(SYNTAX_OPERATOR_AND)
-    Let TokenNames(TOKEN_OPERATOR_NOT) = Chr$(SYNTAX_OPERATOR_NOT)
-    Let TokenNames(TOKEN_OPERATOR_XOR) = Chr$(SYNTAX_OPERATOR_XOR)
-    
-    'Keywords .........................................................................
-    Let TokenNames(TOKEN_KEYWORD_PARAMS) = "PARAMS"
-    Let TokenNames(TOKEN_KEYWORD_PROC) = "PROC"
-    Let TokenNames(TOKEN_KEYWORD_RETURN) = "RETURN"
-    Let TokenNames(TOKEN_KEYWORD_SECTION) = "SECTION"
-    Let TokenNames(TOKEN_KEYWORD_SLOT) = "SLOT"
-    
-    Let TokenNames(TOKEN_PREFIX_K) = "K"
-    Let TokenNames(TOKEN_PREFIX_KB) = "KB"
-    Let TokenNames(TOKEN_PREFIX_KBIT) = "KBIT"
-    
-    Let TokenNames(TOKEN_PARENOPEN) = Chr$(SYNTAX_PAREN_OPEN)
-    Let TokenNames(TOKEN_PARENCLOSE) = Chr$(SYNTAX_PAREN_CLOSE)
-    Let TokenNames(TOKEN_CHUNKOPEN) = Chr$(SYNTAX_CHUNK_OPEN)
-    Let TokenNames(TOKEN_CHUNKCLOSE) = Chr$(SYNTAX_CHUNK_CLOSE)
-    
-    Let TokenNames(TOKEN_QUOTE) = Chr$(SYNTAX_QUOTE)
-    Let TokenNames(TOKEN_LABEL) = Chr$(SYNTAX_LABEL)
-    Let TokenNames(TOKEN_PROPERTY_USE) = Chr$(SYNTAX_PROPERTY)
-    Let TokenNames(TOKEN_PROPERTY_NEW) = Chr$(SYNTAX_PROPERTY)
-    Let TokenNames(TOKEN_RAM) = Chr$(SYNTAX_NUMBER_HEX) & Chr$(SYNTAX_PROPERTY)
-    Let TokenNames(TOKEN_SECTION) = String(2, Chr$(SYNTAX_LABEL))
-    
-    '----------------------------------------------------------------------------------
     
     'Save time doing and/or comparisons by compiling look up tables of ASCII _
      codes that count as numeric / hex / alpha and alphanumeric
@@ -540,7 +369,7 @@ Public Function Forward() As Boolean
     Let Forward = True
     
     'Generate a debug message with the details of the now-current token
-    RaiseEvent Message(2, OZ80_LOG_DEBUG, FormatToken())
+    RaiseEvent Message(OZ80_LOG_DEBUG, FormatToken())
 End Function
 
 'Rewind : Go back to the start of the tokenStream _
@@ -552,7 +381,9 @@ End Sub
 
 'Tokenise : Break the source file into individual words and convert to machine tokens _
  ======================================================================================
-Public Function Tokenise(ByRef FilePath As String) As OZ80_ERROR
+Public Function Tokenise( _
+    ByRef FilePath As String _
+) As OZ80_ERROR
     'This function is tuned for speed -- it does not conform to "best practices", _
      or even structured code; GOTOs are fast, deal with it
     Let My_Error = OZ80_ERROR_NONE
@@ -594,16 +425,16 @@ Public Function Tokenise(ByRef FilePath As String) As OZ80_ERROR
     )
     
     'Cache this for speed, we'll be referring to it every loop
-    Dim TextLen As Long: Let TextLen = UBound(Text)
+    Dim TextLen As Long: Let TextLen = UBound(Text) + 1
     
     'Continue error handling normally
     Close #FileNumber
     On Error GoTo 0
     
-    RaiseEvent Message(1, OZ80_LOG_ACTION, _
+    RaiseEvent Message(OZ80_LOG_ACTION, _
         "Tokenising " & Chr(ASC_QUOT) & FilePath & Chr(ASC_QUOT) _
     )
-    RaiseEvent Message(2, OZ80_LOG_INFO, _
+    RaiseEvent Message(OZ80_LOG_INFO, _
         "Length " & Format$(TextLen, "#,#") & " bytes" _
     )
     
@@ -1333,9 +1164,9 @@ Finish:
         Let Me.SourceFile = FilePath
         
         Erase Text
-        RaiseEvent Message(2, OZ80_LOG_INFO, "Words  " & Format$(WordCount, "#,#"))
-        RaiseEvent Message(2, OZ80_LOG_INFO, "Tokens " & Format$(TokenCount, "#,#"))
-        RaiseEvent Message(2, OZ80_LOG_INFO, "Time   " & Format$(Stopwatch.Elapsed / 1000, "0.000") & "s")
+        RaiseEvent Message(OZ80_LOG_INFO, "Words  " & Format$(WordCount, "#,#"))
+        RaiseEvent Message(OZ80_LOG_INFO, "Tokens " & Format$(TokenCount, "#,#"))
+        RaiseEvent Message(OZ80_LOG_INFO, "Time   " & Format$(Stopwatch.Elapsed / 1000, "0.000") & "s")
     Else
         'clean up!
         'TODO: This leaves the class in a broken state _
@@ -1369,9 +1200,7 @@ Private Sub Add( _
     
     'Generate a debug message
     Call CacheToken
-    RaiseEvent Message( _
-        2, OZ80_LOG_DEBUG, FormatToken() _
-    )
+'    RaiseEvent Message(OZ80_LOG_DEBUG, FormatToken())
     
     'Remember the line number used for this token to check for properties occuring _
      on a new line -- this constitutes a property definition in a chunk
@@ -1471,7 +1300,7 @@ End Function
  ======================================================================================
 Private Function FormatLineCol() As String
     Let FormatLineCol = "(" & _
-        Right$("    " & LineBegin, 5) & "," & Left$(ColBegin & "  ", 3) & _
+        Right$("    " & TokenLine, 5) & "," & Left$(TokenCol & "  ", 3) & _
     ")"
 End Function
 
@@ -1488,19 +1317,19 @@ Private Function FormatToken() As String
     Dim Msg As String
     If TokenKind = TOKEN_CHUNKOPEN _
     Or TokenKind = TOKEN_CHUNKCLOSE Then
-        Let Msg = "[   CHUNK] " & TokenNames(TokenKind)
+        Let Msg = "[   CHUNK] " & oz80.TokenName(TokenKind)
     ElseIf My_IsKeyword(TokenKind) Then
-        Let Msg = "[ KEYWORD] " & UCase(TokenNames(TokenKind))
+        Let Msg = "[ KEYWORD] " & UCase(oz80.TokenName(TokenKind))
     ElseIf TokenKind = TOKEN_LABEL Then
         Let Msg = "[   LABEL] " & Chr(34) & Strings(TokenValue) & Chr(34)
     ElseIf TokenKind = TOKEN_NUMBER Then
         Let Msg = "[  NUMBER] " & Format$(Value, "#,#")
     ElseIf My_IsOperator(TokenKind) Then
-        Let Msg = "[OPERATOR] " & TokenNames(TokenKind)
+        Let Msg = "[OPERATOR] " & oz80.TokenName(TokenKind)
     ElseIf TokenKind = TOKEN_PREFIX_K _
         Or TokenKind = TOKEN_PREFIX_KB _
         Or TokenKind = TOKEN_PREFIX_KBIT Then
-        Let Msg = "[  PREFIX] " & TokenNames(TokenKind)
+        Let Msg = "[  PREFIX] " & oz80.TokenName(TokenKind)
     ElseIf TokenKind = TOKEN_PROPERTY_NEW _
         Or TokenKind = TOKEN_PROPERTY_USE Then
         Let Msg = "[PROPERTY] " & Chr(34) & Strings(TokenValue) & Chr(34)
@@ -1509,35 +1338,20 @@ Private Function FormatToken() As String
     ElseIf TokenKind = TOKEN_RAM Then
         Let Msg = "[     RAM] " & Chr(34) & Strings(TokenValue) & Chr(34)
     ElseIf My_IsRegister(TokenKind) Then
-        Let Msg = "[REGISTER] " & TokenNames(TokenKind)
+        Let Msg = "[REGISTER] " & oz80.TokenName(TokenKind)
     ElseIf TokenKind = TOKEN_SECTION Then
         Let Msg = "[ SECTION] " & Chr(34) & Strings(TokenValue) & Chr(34)
     ElseIf My_IsInstruction(TokenKind) Then
-        Let Msg = "[     Z80] " & TokenNames(TokenKind)
+        Let Msg = "[     Z80] " & oz80.TokenName(TokenKind)
     ElseIf TokenKind = TOKEN_PARENOPEN _
         Or TokenKind = TOKEN_PARENCLOSE Then
-        Let Msg = "[  MEMZ80] " & TokenNames(TokenKind)
+        Let Msg = "[  MEMZ80] " & oz80.TokenName(TokenKind)
     End If
     'TODO: need to check how the 64-bit number gets clipped to 32-bits here
     Let FormatToken = _
         "<tkn> " & Format$(TokenIndex + 1, "#,#") & _
             " " & FormatLineCol & _
             " " & FormatLong(CLng(TokenValue)) & " " & Msg
-End Function
-
-'GetValidNumber : Fully validate and convert a number from text into a real number _
- ======================================================================================
-Private Function GetValidNumber( _
-    ByRef ReturnValue As Double _
-) As OZ80_ERROR
-    'Check the first character to handle hexadecimal and binary numbers first
-'    If Text(First) = SYNTAX_NUMBER_HEX Then
-'        '
-'    ElseIf Text(First) = SYNTAX_NUMBER_BIN Then
-'        '
-'    End If
-    
-    'TODO: Validate the range
 End Function
 
 'IsValidName : Check validity for named items _
@@ -1548,7 +1362,7 @@ Private Function IsValidName() As Boolean
      occur in a row nor can a number follow a dot and the name cannot end in a dot
     
     'The first letter must be the type identifier; _
-     `:label`, `?function`, `@macro`, `.property`, `#variable`, `$.RAMname`
+     `:label`, `?function`, `@macro`, `.property`, `#object`, `$.ram`
     If WordArr(0) <> SYNTAX_LABEL And _
        WordArr(0) <> SYNTAX_FUNCT And _
        WordArr(0) <> SYNTAX_MACRO And _

@@ -3,25 +3,25 @@
 
 PROC    :doObjectCode_trap_spikeBall            SECTION ::objects
 {
-	set	5,(ix+$18)
+	set	5,(ix+#object.unknown18)
 	ld	(ix+#object.width), 8
 	ld	(ix+#object.height),12
-	bit	0,(ix+$18)
+	bit	0,(ix+#object.unknown18)
 	jr	nz,._1
 	ld	l,(ix+#object.X.lo)
 	ld	h,(ix+#object.X.hi)
 	ld	de,$0008
 	add	hl,de
-	ld	(ix+$12),l
-	ld	(ix+$13),h
+	ld	(ix+#object.unknown12),l
+	ld	(ix+#object.unknown13),h
 	ld	l,(ix+#object.Y.lo)
 	ld	h,(ix+#object.Y.hi)
 	ld	de,$0008
 	add	hl,de
-	ld	(ix+$14),l
-	ld	(ix+$15),h
-	set	0,(ix+$18)
-._1	ld	l,(ix+$11)
+	ld	(ix+#object.unknown14),l
+	ld	(ix+#object.unknown15),h
+	set	0,(ix+#object.unknown18)
+._1	ld	l,(ix+#object.unknown11)
 	ld	h,$00
 	add	hl,hl
 	ld	de,._898e
@@ -37,13 +37,13 @@ PROC    :doObjectCode_trap_spikeBall            SECTION ::objects
 ._2	bit	7,c
 	jr	z,._3
 	dec	b
-._3	ld	l,(ix+$12)
-	ld	h,(ix+$13)
+._3	ld	l,(ix+#object.unknown12)
+	ld	h,(ix+#object.unknown13)
 	add	hl,de
 	ld	(ix+#object.X.lo),l
 	ld	(ix+#object.X.hi),h
-	ld	l,(ix+$14)
-	ld	h,(ix+$15)
+	ld	l,(ix+#object.unknown14)
+	ld	h,(ix+#object.unknown15)
 	add	hl,bc
 	ld	(ix+#object.Y.lo),l
 	ld	(ix+#object.Y.hi),h
@@ -53,11 +53,11 @@ PROC    :doObjectCode_trap_spikeBall            SECTION ::objects
 	call	nc,:_35fd
 	ld	(ix+#object.spriteLayout.lo),._8987.lo
 	ld	(ix+#object.spriteLayout.hi),._8987.hi
-	inc	(ix+$11)
-	ld	a,(ix+$11)
+	inc	(ix+#object.unknown11)
+	ld	a,(ix+#object.unknown11)
 	cp	$b4
 	ret	c
-	ld	(ix+$11),$00
+	ld	(ix+#object.unknown11),$00
 	ret
  
         `sprite layout

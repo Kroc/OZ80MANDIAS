@@ -26,7 +26,7 @@ PROC    :doObjectCode_badnick_yadrin            SECTION ::objects
 	ld	(ix+#object.Yspeed.lo),l
 	ld	(ix+#object.Yspeed.hi),h
 	ld	(ix+#object.Ydirection),a
-	ld	a,(ix+$11)
+	ld	a,(ix+#object.unknown11)
 	cp	$50
 	jr	c,._1
 	ld	(ix+#object.Xspeed.lo),$40
@@ -46,11 +46,11 @@ PROC    :doObjectCode_badnick_yadrin            SECTION ::objects
 ._2	ld	a,($.FRAMECOUNT)
 	and	$07
 	ret	nz
-	inc	(ix+$11)
-	ld	a,(ix+$11)
+	inc	(ix+#object.unknown11)
+	ld	a,(ix+#object.unknown11)
 	cp	$a0
 	ret	c
-	ld	(ix+$11),$00
+	ld	(ix+#object.unknown11),$00
 	ret
         
 ._8374  DATA $00, $06, $01, $06, $FF

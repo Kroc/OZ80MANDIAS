@@ -1335,8 +1335,6 @@ TABLE   :_1711
         DATA $15, $bd, $be, $ff
 }
 
-`____________________________________________________________________________[$1719]___
-
 PROC    :_1719
         `====================================================================[$1719]===
 {        
@@ -4970,7 +4968,7 @@ PROC    :processObject
         
         `------------------------------------------------------------------------------
         
-	bit	5, (ix+$18)
+	bit	5, (ix+#object.unknown18)
 	jp	nz, :_34e6
 	ld	b, $00
 	ld	d, b
@@ -4985,7 +4983,7 @@ PROC    :processObject
 ._1	ld	c, $00
 	ld	hl, $4020
 ._2	ld	($.TEMP3), bc
-	res	6,(ix+$18)
+	res	6,(ix+#object.unknown18)
 	push	de
 	push	hl
 	call	:getFloorLayoutRAMPositionForObject
@@ -5051,7 +5049,7 @@ PROC    :processObject
 	and	$1f
 	cp	e
 	jr	nc,._7
-._5	set	6,(ix+$18)
+._5	set	6,(ix+#object.unknown18)
 	ld	a,l
 	and	$e0
 	ld	l,a
@@ -5097,7 +5095,7 @@ PROC    :processObject
 	ld	e,$00
 	ld	hl,$41ec		        `data?
 ._9	ld	($.TEMP3),de
-	res	7,(ix+$18)
+	res	7,(ix+#object.unknown18)
 	push	bc
 	push	hl
 	call	:getFloorLayoutRAMPositionForObject
@@ -5162,7 +5160,7 @@ PROC    :processObject
 	exx	
 	cp	c
 	jr	c,._34e6
-	set	7,(ix+$18)
+	set	7,(ix+#object.unknown18)
 	jp	._12
 	
 ._11	and	a
@@ -5504,7 +5502,7 @@ PROC    :_3644
 	push	hl
 	pop	ix
 	ld	(ix+#object.type),$55	        `"make Sonic blink"?
-	ld	(ix+$11),$06
+	ld	(ix+#object.unknown11),$06
 	ld	(ix+$12),$00
 	ld	hl,($.SONIC.X)
 	ld	(ix+#object.X.lo),l

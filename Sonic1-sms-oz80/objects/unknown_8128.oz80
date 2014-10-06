@@ -2,7 +2,7 @@
 `OBJECT: UNKNOWN
 
 PROC    :_8218                                  SECTION ::objects {
-	res	5,(ix+$18)
+	res	5,(ix+#object.unknown18)
 	ld	(ix+#object.width),$0c
 	ld	(ix+#object.height),$10
 	ld	hl,$0202
@@ -40,9 +40,9 @@ PROC    :_8218                                  SECTION ::objects {
 	ld	(ix+#object.Ydirection),c
 	ld	a,($.FRAMECOUNT)
 	and	$01
-	add	a,(ix+$11)
-	ld	(ix+$11),a
-	ld	a,(ix+$11)
+	add	a,(ix+#object.unknown11)
+	ld	(ix+#object.unknown11),a
+	ld	a,(ix+#object.unknown11)
 	cp	(ix+$12)
 	jr	nc,._3
 	ld	bc,._82c1
@@ -54,7 +54,7 @@ PROC    :_8218                                  SECTION ::objects {
 	ld	a,($.FRAMECOUNT)
 	and	$01
 	ret	z
-	ld	(ix+$16),$00
+	ld	(ix+#object.unknown16),$00
 	ld	a,$01
 	rst	:rst_playSFX
         
@@ -69,7 +69,7 @@ PROC    :_8218                                  SECTION ::objects {
 	
         ld	a,(ix+$12)
 	add	a,$12
-	cp	(ix+$11)
+	cp	(ix+#object.unknown11)
 	ret	nc
 	
         ld	(ix+#object.type),$FF	        `remove object?

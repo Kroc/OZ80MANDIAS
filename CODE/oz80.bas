@@ -360,10 +360,11 @@ Public Enum OZ80_MASK
     
     'HL, IX & IY are synonymous as they use an opcode prefix to determine which
     MASK_REGS_HL_IXY = MASK_REG_HL Or MASK_REG_IX Or MASK_REG_IY
+    MASK_REGS_BC_DE_SP = MASK_REG_BC Or MASK_REG_DE Or MASK_REG_SP
     'Some instructions accept BC/DE/HL/SP, but not IX & IY due to existing prefixes
-    MASK_REGS_BC_DE_HL_SP = MASK_REG_BC Or MASK_REG_DE Or MASK_REG_HL Or MASK_REG_SP
+    MASK_REGS_BC_DE_HL_SP = MASK_REGS_BC_DE_SP Or MASK_REG_HL
     'PUSH / POP allow AF but not SP
-    MASK_REGS_AF_BC_DE_HL_IXY = MASK_REG_AF Or MASK_REG_BC Or MASK_REG_DE Or MASK_REG_HL Or MASK_REG_IX Or MASK_REG_IY
+    MASK_REGS_AF_BC_DE_HL_IXY = MASK_REG_AF Or MASK_REG_BC Or MASK_REG_DE Or MASK_REGS_HL_IXY
     'The LD instruction can take most 16-bit registers
     MASK_REGS_BC_DE_HL_SP_IXY = MASK_REGS_BC_DE_HL_SP Or MASK_REG_IX Or MASK_REG_IY
     
@@ -387,7 +388,7 @@ Public Enum OZ80_MASK
     MASK_MEM_HLIXY = 2 ^ 24
     
     'The Z80 clumps HL/IX & IY memory references together with 8-bit registers when
-     'building opcodes, i.e. A|B|C|D|E|H|L|(HL|IX+$8|IY+$8)
+     'building opcodes, i.e. "A|B|C|D|E|H|L|(HL|IX+$8|IY+$8)"
     MASK_REGS_ABCDEHL_MEM_HLIXY = MASK_REGS_ABCDEHL Or MASK_MEM_HLIXY
     
     'The IN and OUT instructions can use port "C" (which is, in reality, BC)

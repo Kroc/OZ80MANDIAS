@@ -503,15 +503,15 @@ PARAMS	hl              `address to memory with column & row numbers,
 	ld	c, (hl)
 	inc	hl
 	
-	`the screen layout on the Master System is a 32x28 table of 16-bit values
-	 `(64 bytes per row). we therefore need to multiply the row number by 64
-	 `to get the right offset into the screen layout data
+	``the screen layout on the Master System is a 32x28 table of 16-bit values
+	  (64 bytes per row). we therefore need to multiply the row number by 64
+	  to get the right offset into the screen layout data``
 	ld	a, (hl)			        `read the row number
 	inc	hl
 	
-	`we multiply by 64 by first multiplying by 256 -- very simple, we just make
-	 `the value the hi-byte in a 16-bit word, e.g. "$0C00" -- and then divide
-	 `by 4 by rotating the bits to the right
+	``we multiply by 64 by first multiplying by 256 -- very simple, we just make
+	  the value the hi-byte in a 16-bit word, e.g. "$0C00" -- and then divide
+	  by 4 by rotating the bits to the right``
 	rrca				        `divide by two
 	rrca				        `and again, making it four times
 	

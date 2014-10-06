@@ -3,7 +3,7 @@
 
 PROC    :_96a8                                  SECTION ::objects
 {
-	set	5,(ix+$18)
+	set	5,(ix+#object.unknown18)
 	xor	a;zero
 	ld	(ix+#object.spriteLayout.lo),a;zero
 	ld	(ix+#object.spriteLayout.hi),a;zero
@@ -23,11 +23,11 @@ PROC    :_96a8                                  SECTION ::objects
 	add	hl,de
 	ld	a,(hl)
 	call	:_3581
-	inc	(ix+$11)
-	ld	a,(ix+$11)
+	inc	(ix+#object.unknown11)
+	ld	a,(ix+#object.unknown11)
 	cp	$0c
 	ret	c
-	ld	(ix+$11),$00
+	ld	(ix+#object.unknown11),$00
 	inc	(ix+$12)
 	ld	a,(ix+$12)
 	cp	$03

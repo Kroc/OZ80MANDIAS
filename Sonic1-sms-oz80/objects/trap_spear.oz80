@@ -3,8 +3,8 @@
 
 PROC    :doObjectCode_trap_spear                SECTION ::objects
 {
-	set	5,(ix+$18)
-	bit	0,(ix+$18)
+	set	5,(ix+#object.unknown18)
+	bit	0,(ix+#object.unknown18)
 	jr	nz,._1
 	ld	l,(ix+#object.X.lo)
 	ld	h,(ix+#object.X.hi)
@@ -12,7 +12,7 @@ PROC    :doObjectCode_trap_spear                SECTION ::objects
 	add	hl,de
 	ld	(ix+#object.X.lo),l
 	ld	(ix+#object.X.hi),h
-	set	0,(ix+$18)
+	set	0,(ix+#object.unknown18)
 ._1	ld	l,(ix+#object.X.lo)
 	ld	h,(ix+#object.X.hi)
 	ld	($.TEMP1),hl

@@ -3,16 +3,16 @@
 
 PROC    :doObjectCode_platform_float            SECTION ::objects
 {
-	set	5,(ix+$18)
+	set	5,(ix+#object.unknown18)
 	ld	(ix+#object.width), 30
 	ld	(ix+#object.height),28
 	ld	(ix+#object.spriteLayout.lo),._91de.lo
 	ld	(ix+#object.spriteLayout.hi),._91de.hi
-	bit	1,(ix+$18)
+	bit	1,(ix+#object.unknown18)
 	jr	nz,._1
 	ld	l,(ix+#object.X.lo)
 	ld	h,(ix+#object.X.hi)
-	ld	(ix+$11),l
+	ld	(ix+#object.unknown11),l
 	ld	(ix+$12),h
 	ld	l,(ix+#object.Y.lo)
 	ld	h,(ix+#object.Y.hi)
@@ -20,9 +20,9 @@ PROC    :doObjectCode_platform_float            SECTION ::objects
 	add	hl,de
 	ld	(ix+#object.Y.lo),l
 	ld	(ix+#object.Y.hi),h
-	ld	(ix+$13),l
-	ld	(ix+$14),h
-	set	1,(ix+$18)
+	ld	(ix+#object.unknown13),l
+	ld	(ix+#object.unknown14),h
+	set	1,(ix+#object.unknown18)
 ._1	ld	bc,$0010
 	ld	de,$0020
 	call	:getFloorLayoutRAMPositionForObject
@@ -46,7 +46,7 @@ PROC    :doObjectCode_platform_float            SECTION ::objects
 	ld	h,c
 	cp	$1e
 	jr	z,._2
-	bit	0,(ix+$18)
+	bit	0,(ix+#object.unknown18)
 	jr	z,._3
 	ld	l,(ix+#object.Yspeed.lo)
 	ld	h,(ix+#object.Yspeed.hi)
@@ -91,12 +91,12 @@ PROC    :doObjectCode_platform_float            SECTION ::objects
 	and	a
 	sbc	hl,de
 	jr	nc,._5
-._4	ld	l,(ix+$11)
+._4	ld	l,(ix+#object.unknown11)
 	ld	h,(ix+$12)
 	ld	(ix+#object.X.lo),l
 	ld	(ix+#object.X.hi),h
-	ld	l,(ix+$13)
-	ld	h,(ix+$14)
+	ld	l,(ix+#object.unknown13)
+	ld	h,(ix+#object.unknown14)
 	ld	(ix+#object.Y.lo),l
 	ld	(ix+#object.Y.hi),h
         
@@ -106,7 +106,7 @@ PROC    :doObjectCode_platform_float            SECTION ::objects
 	ld	(ix+#object.Yspeed.lo),a;zero
 	ld	(ix+#object.Yspeed.hi),a;zero
 	ld	(ix+#object.Ydirection),a;zero
-	res	0,(ix+$18)
+	res	0,(ix+#object.unknown18)
 	ret
 	
         `------------------------------------------------------------------------------
@@ -115,7 +115,7 @@ PROC    :doObjectCode_platform_float            SECTION ::objects
 	ld	($.TEMP6),hl
 	call	:_LABEL_3956_11
 	ret	c
-	set	0,(ix+$18)
+	set	0,(ix+#object.unknown18)
 	ld	a,($.SONIC.Yspeed.hi)
 	and	a
 	jp	p,._6

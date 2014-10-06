@@ -2,42 +2,42 @@
 `OBJECT: badnick - chopper
 
 PROC    :doObjectCode_badnick_chopper           SECTION ::objects {
-	set	5,(ix+$18)
+	set	5,(ix+#object.unknown18)
 	ld	(ix+#object.width),$08
 	ld	(ix+#object.height),$0c
-	ld	a,(ix+$14)
+	ld	a,(ix+#object.unknown14)
 	and	a
 	jr	z,._1
-	dec	(ix+$14)
+	dec	(ix+#object.unknown14)
 	xor	a;zero
 	ld	(ix+#object.spriteLayout.lo),a;zero
 	ld	(ix+#object.spriteLayout.hi),a;zero
 	ret
 	
-._1	bit	0,(ix+$18)
+._1	bit	0,(ix+#object.unknown18)
 	jr	nz,._3
-	bit	1,(ix+$18)
+	bit	1,(ix+#object.unknown18)
 	jr	nz,._2
 	ld	l,(ix+#object.Y.lo)
 	ld	h,(ix+#object.Y.hi)
 	ld	de,$fff4
 	add	hl,de
 	ld	(ix+$12),l
-	ld	(ix+$13),h
+	ld	(ix+#object.unknown13),h
 	ld	l,(ix+#object.X.lo)
 	ld	h,(ix+#object.X.hi)
 	ld	de,$0008
 	add	hl,de
 	ld	(ix+#object.X.lo),l
 	ld	(ix+#object.X.hi),h
-	set	1,(ix+$18)
+	set	1,(ix+#object.unknown18)
 ._2	ld	(ix+#object.Yspeed.lo),$00
 	ld	(ix+#object.Yspeed.hi),$fc
 	ld	(ix+#object.Ydirection),$ff
-	set	0,(ix+$18)
+	set	0,(ix+#object.unknown18)
 	ld	a,$12
 	rst	:rst_playSFX
-	ld	(ix+$11),$03
+	ld	(ix+#object.unknown11),$03
 	jr	._5
 	
 ._3	ld	l,(ix+#object.Yspeed.lo)
@@ -58,7 +58,7 @@ PROC    :doObjectCode_badnick_chopper           SECTION ::objects {
 	ld	(ix+#object.Yspeed.hi),d
 	ld	(ix+#object.Ydirection),a
 	ld	e,(ix+$12)
-	ld	d,(ix+$13)
+	ld	d,(ix+#object.unknown13)
 	ld	l,(ix+#object.Y.lo)
 	ld	h,(ix+#object.Y.hi)
 	xor	a
@@ -70,15 +70,15 @@ PROC    :doObjectCode_badnick_chopper           SECTION ::objects {
 	ld	(ix+#object.Yspeed.lo),a
 	ld	(ix+#object.Yspeed.hi),a
 	ld	(ix+#object.Ydirection),a
-	ld	(ix+$14),$1e
-	res	0,(ix+$18)
+	ld	(ix+#object.unknown14),$1e
+	res	0,(ix+#object.unknown18)
 ._5	ld	de,._7de1
 	ld	bc,._7ddc
 	call	:_7c41
-	ld	a,(ix+$11)
+	ld	a,(ix+#object.unknown11)
 	and	a
 	jr	z,._6
-	dec	(ix+$11)
+	dec	(ix+#object.unknown11)
 	ld	(ix+#object.spriteLayout.lo),._7df7.lo
 	ld	(ix+#object.spriteLayout.hi),._7df7.hi
 ._6	ld	hl,$0204

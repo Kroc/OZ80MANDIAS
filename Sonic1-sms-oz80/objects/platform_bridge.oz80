@@ -3,10 +3,10 @@
 
 PROC    :doObjectCode_platform_bridge           SECTION ::objects
 {
-	set	5,(ix+$18)
+	set	5,(ix+#object.unknown18)
 	ld	(ix+#object.width), 14
 	ld	(ix+#object.height),8
-	bit	0,(ix+$18)
+	bit	0,(ix+#object.unknown18)
 	jr	nz,._2
         
 	xor	a;zero
@@ -16,17 +16,17 @@ PROC    :doObjectCode_platform_bridge           SECTION ::objects
 	ld	h;zero,a;zero
 	ld	($.TEMP1),hl;zero
         
-	bit	1,(ix+$18)
+	bit	1,(ix+#object.unknown18)
 	jr	nz,._1
 	
         call	:_LABEL_625_57
 	and	$1f
 	inc	a
-	ld	(ix+$11),a
-	set	1,(ix+$18)
-._1	dec	(ix+$11)
+	ld	(ix+#object.unknown11),a
+	set	1,(ix+#object.unknown18)
+._1	dec	(ix+#object.unknown11)
 	jp	nz,._
-	ld	(ix+$11),$01
+	ld	(ix+#object.unknown11),$01
 	ld	a,($.D2AB+1)
 	and	$80
 	jp	z,._
@@ -40,7 +40,7 @@ PROC    :doObjectCode_platform_bridge           SECTION ::objects
 	ld	($.D2AD),hl
 	ld	hl,._848e
 	ld	($.D2AF),hl
-	set	0,(ix+$18)
+	set	0,(ix+#object.unknown18)
 	ld	a,$20
 	rst	:rst_playSFX
 ._2	ld	(ix+#object.spriteLayout.lo),._8481.lo

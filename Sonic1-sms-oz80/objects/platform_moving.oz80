@@ -2,7 +2,7 @@
 `OBJECT: wooden platform - moving (Green Hill)
 
 PROC    :doObjectCode_platform_leftRight        SECTION ::objects {
-	set	5,(ix+$18)
+	set	5,(ix+#object.unknown18)
 	
 	ld	a,($.CURRENT_LEVEL)
 	cp	$07			        `Jungle act 2?
@@ -42,10 +42,10 @@ PROC    :doObjectCode_platform_leftRight        SECTION ::objects {
 	
 	`move right 1px
 ._2	ld	l,(ix+$12)
-	ld	h,(ix+$13)
+	ld	h,(ix+#object.unknown13)
 	inc	hl
 	ld	(ix+$12),l
-	ld	(ix+$13),h
+	ld	(ix+#object.unknown13),h
 	
 	ld	de,$00A0
 	xor	a;zero			        `set A to 0
@@ -53,11 +53,11 @@ PROC    :doObjectCode_platform_leftRight        SECTION ::objects {
 	jr	c,._3
 	
 	ld	(ix+$12),a;zero
-	ld	(ix+$13),a;zero
-	inc	(ix+$14)
+	ld	(ix+#object.unknown13),a;zero
+	inc	(ix+#object.unknown14)
 	
 ._3	ld	de,$0001
-	bit	0,(ix+$14)
+	bit	0,(ix+#object.unknown14)
 	jr	z,._4
 	
 	`move left 1px?

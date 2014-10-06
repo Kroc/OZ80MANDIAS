@@ -3,7 +3,7 @@
 
 PROC    :doObjectCode_platform_bumper           SECTION ::objects
 {
-	set	5,(ix+$18)
+	set	5,(ix+#object.unknown18)
 	ld	(ix+#object.width),$1c
 	ld	(ix+#object.height),$06
 	ld	(ix+#object.spriteLayout.lo),._9b6e.lo
@@ -21,7 +21,7 @@ PROC    :doObjectCode_platform_bumper           SECTION ::objects
 	jr	c,._2
 	xor	a;zero
 ._2	ld	(ix+$12),a;zero
-	ld	a,(ix+$11)
+	ld	a,(ix+#object.unknown11)
 	and	a
 	jr	nz,._3
 	ld	hl,$0602
@@ -47,12 +47,12 @@ PROC    :doObjectCode_platform_bumper           SECTION ::objects
 	adc	a,$00
 	ld	($.SONIC.Yspeed),hl
 	ld	($.SONIC.Ydirection),a
-	ld	(ix+$11),$08
+	ld	(ix+#object.unknown11),$08
 	ld	a,$07
 	rst	:rst_playSFX
 	ret
 	
-._3	dec	(ix+$11)
+._3	dec	(ix+#object.unknown11)
 	ret
         
         `sprite layout

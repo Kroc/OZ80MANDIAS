@@ -8,35 +8,35 @@ PROC    :_9be8                                  SECTION ::objects
 	ld	(ix+#object.Xdirection),$00
 	ld	(ix+#object.spriteLayout.lo),._9c69.lo
 	ld	(ix+#object.spriteLayout.hi),._9c69.hi
-._9bfc	set	5,(ix+$18)
-	bit	0,(ix+$18)
+._9bfc	set	5,(ix+#object.unknown18)
+	bit	0,(ix+#object.unknown18)
 	jr	nz,._1
 	ld	a,(ix+#object.X.lo)
-	ld	(ix+$11),a
+	ld	(ix+#object.unknown11),a
 	ld	a,(ix+#object.X.hi)
 	ld	(ix+$12),a
 	ld	a,$18
 	rst	:rst_playSFX
-	set	0,(ix+$18)
+	set	0,(ix+#object.unknown18)
 ._1	ld	(ix+#object.width),$06
 	ld	(ix+#object.height),$08
-	ld	a,(ix+$13)
+	ld	a,(ix+#object.unknown13)
 	cp	$64
 	jr	nc,._2
 	ld	hl,$0400
 	ld	($.TEMP6),hl
 	call	:_LABEL_3956_11
 	call	nc,:_35fd
-._2	inc	(ix+$13)
-	ld	a,(ix+$13)
+._2	inc	(ix+#object.unknown13)
+	ld	a,(ix+#object.unknown13)
 	cp	$64
 	ret	c
 	cp	$f0
 	jr	c,._3
 	xor	a;zero			        `set A to 0
 	ld	(ix+#object.Xsubpixel),a;zero
-	ld	(ix+$13),a;zero
-	ld	a,(ix+$11)
+	ld	(ix+#object.unknown13),a;zero
+	ld	a,(ix+#object.unknown11)
 	ld	(ix+#object.X.lo),a
 	ld	a,(ix+$12)
 	ld	(ix+#object.X.hi),a

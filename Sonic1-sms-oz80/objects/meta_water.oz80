@@ -3,8 +3,8 @@
 
 PROC    :doObjectCode_meta_water                SECTION ::objects
 {
-	set	5,(ix+$18)
-	ld	a,(ix+$11)
+	set	5,(ix+#object.unknown18)
+	ld	a,(ix+#object.unknown11)
 	ld	e,a
 	ld	d,$00
 	ld	hl,._8e36
@@ -27,11 +27,11 @@ PROC    :doObjectCode_meta_water                SECTION ::objects
 	ld	a,($.FRAMECOUNT)
 	and	$0f
 	jr	nz,._2
-	inc	(ix+$11)
-	ld	a,(ix+$11)
+	inc	(ix+#object.unknown11)
+	ld	a,(ix+#object.unknown11)
 	cp	$20
 	jr	c,._2
-	ld	(ix+$11),$00
+	ld	(ix+#object.unknown11),$00
 ._2	ld	($.D2DC),hl
 	ld	de,($.CAMERA_Y)
 	and	a

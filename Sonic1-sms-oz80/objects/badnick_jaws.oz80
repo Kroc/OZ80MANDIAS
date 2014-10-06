@@ -3,8 +3,8 @@
 
 PROC    :doObjectCode_badnick_jaws              SECTION ::objects
 {
-	set	5,(ix+$18)
-	ld	a,(ix+$11)
+	set	5,(ix+#object.unknown18)
+	ld	a,(ix+#object.unknown11)
 	cp	$80
 	jr	nc,._1
 	ld	(ix+#object.Xspeed.lo),$20
@@ -40,7 +40,7 @@ PROC    :doObjectCode_badnick_jaws              SECTION ::objects
 ._2	ld	a,($.FRAMECOUNT)
 	and	$07
 	ret	nz
-	inc	(ix+$11)
+	inc	(ix+#object.unknown11)
 	call	:_LABEL_625_57
 	and	$1e
 	call	z,:_91eb

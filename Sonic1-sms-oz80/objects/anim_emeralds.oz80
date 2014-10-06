@@ -2,11 +2,11 @@
 `OBJECT: all emeralds animation
 
 PROC    :doObjectCode_anim_emeralds             SECTION ::objects {
-	set	5,(ix+$18)
+	set	5,(ix+#object.unknown18)
 	ld	hl,$5400		        `$15400 - emerald image
 	call	:loadPowerUpIcon
 	
-	bit	0,(ix+$18)
+	bit	0,(ix+#object.unknown18)
 	jr	nz,._1
 	
 	xor	a;zero			        `set A to 0
@@ -16,18 +16,18 @@ PROC    :doObjectCode_anim_emeralds             SECTION ::objects {
 	ld	(ix+#object.Xspeed.hi),a;zero
 	ld	(ix+#object.Xdirection),a;zero
         
-	inc	(ix+$11)
-	ld	a,(ix+$11)
+	inc	(ix+#object.unknown11)
+	ld	a,(ix+#object.unknown11)
 	cp	$50
 	ret	c
-	set	0,(ix+$18)
-	ld	(ix+$11),$64
+	set	0,(ix+#object.unknown18)
+	ld	(ix+#object.unknown11),$64
 	ret
 	
-._1	ld	a,(ix+$11)
+._1	ld	a,(ix+#object.unknown11)
 	and	a
 	jr	z,._2
-	dec	(ix+$11)
+	dec	(ix+#object.unknown11)
 	jr	._3
 	
 ._2	ld	(ix+#object.Yspeed.lo),$80

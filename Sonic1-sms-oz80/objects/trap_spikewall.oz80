@@ -3,14 +3,14 @@
 
 PROC    :_b398                                  SECTION ::objects
 {
-	set	5,(ix+$18)
-	bit	0,(ix+$18)
+	set	5,(ix+#object.unknown18)
+	bit	0,(ix+#object.unknown18)
 	jr	nz,._1
 	ld	l,(ix+#object.X.lo)
 	ld	h,(ix+#object.X.hi)
-	ld	(ix+$11),l
+	ld	(ix+#object.unknown11),l
 	ld	(ix+$12),h
-	set	0,(ix+$18)
+	set	0,(ix+#object.unknown18)
 ._1	ld	(ix+#object.width),$0c
 	ld	(ix+#object.height),$2e
 	ld	(ix+#object.spriteLayout.lo),._b45b.lo
@@ -59,7 +59,7 @@ PROC    :_b398                                  SECTION ::objects
 	and	a
 	sbc	hl,de
 	jr	nc,._2
-	ld	a,(ix+$11)
+	ld	a,(ix+#object.unknown11)
 	ld	(ix+#object.X.lo),a
 	ld	a,(ix+$12)
 	ld	(ix+#object.X.hi),a

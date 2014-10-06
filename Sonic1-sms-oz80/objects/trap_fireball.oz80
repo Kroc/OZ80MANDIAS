@@ -3,10 +3,10 @@
 
 PROC    :doObjectCode_trap_fireball             SECTION ::objects
 {
-	res	5,(ix+$18)
+	res	5,(ix+#object.unknown18)
 	ld	(ix+#object.width), 4
 	ld	(ix+#object.height),10
-	bit	0,(ix+$18)
+	bit	0,(ix+#object.unknown18)
 	jr	nz,._1
 	ld	l,(ix+#object.X.lo)
 	ld	h,(ix+#object.X.hi)
@@ -15,28 +15,28 @@ PROC    :doObjectCode_trap_fireball             SECTION ::objects
 	ld	(ix+#object.X.lo),l
 	ld	(ix+#object.X.hi),h
 	ld	(ix+$12),l
-	ld	(ix+$13),h
+	ld	(ix+#object.unknown13),h
 	ld	l,(ix+#object.Y.lo)
 	ld	h,(ix+#object.Y.hi)
 	ld	de,$0008
 	add	hl,de
 	ld	(ix+#object.Y.lo),l
 	ld	(ix+#object.Y.hi),h
-	ld	(ix+$14),l
-	ld	(ix+$15),h
-	ld	(ix+$11),$96
-	set	0,(ix+$18)
+	ld	(ix+#object.unknown14),l
+	ld	(ix+#object.unknown15),h
+	ld	(ix+#object.unknown11),$96
+	set	0,(ix+#object.unknown18)
 	ld	bc,$0000
 	ld	de,$0000
 	call	:getFloorLayoutRAMPositionForObject
 	ld	a,(hl)
 	cp	$52
 	jr	z,._3
-	set	1,(ix+$18)
-._1	ld	a,(ix+$11)
+	set	1,(ix+#object.unknown18)
+._1	ld	a,(ix+#object.unknown11)
 	and	a
 	jr	z,._4
-	dec	(ix+$11)
+	dec	(ix+#object.unknown11)
 	jr	z,._3
         
 ._2	xor	a;zero
@@ -52,7 +52,7 @@ PROC    :doObjectCode_trap_fireball             SECTION ::objects
 ._3	ld	a,$18
 	rst	:rst_playSFX
 ._4	xor	a;zero
-	bit	1,(ix+$18)
+	bit	1,(ix+#object.unknown18)
 	jr	nz,._5
 	ld	(ix+#object.Xspeed.lo),$00
 	ld	(ix+#object.Xspeed.hi),$ff
@@ -69,9 +69,9 @@ PROC    :doObjectCode_trap_fireball             SECTION ::objects
 ._6	ld	(ix+#object.Yspeed.lo),a
 	ld	(ix+#object.Yspeed.hi),a
 	ld	(ix+#object.Ydirection),a
-	bit	6,(ix+$18)
+	bit	6,(ix+#object.unknown18)
 	jr	nz,._7
-	bit	7,(ix+$18)
+	bit	7,(ix+#object.unknown18)
 	jr	nz,._7
 	ld	hl,$0402
 	ld	($.TEMP6),hl
@@ -108,14 +108,14 @@ PROC    :doObjectCode_trap_fireball             SECTION ::objects
 	ret
 	
 ._7	ld	l,(ix+$12)
-	ld	h,(ix+$13)
+	ld	h,(ix+#object.unknown13)
 	ld	(ix+#object.X.lo),l
 	ld	(ix+#object.X.hi),h
-	ld	l,(ix+$14)
-	ld	h,(ix+$15)
+	ld	l,(ix+#object.unknown14)
+	ld	h,(ix+#object.unknown15)
 	ld	(ix+#object.Y.lo),l
 	ld	(ix+#object.Y.hi),h
-	ld	(ix+$11),$96
+	ld	(ix+#object.unknown11),$96
 	jp	._2
         
         `------------------------------------------------------------------------------

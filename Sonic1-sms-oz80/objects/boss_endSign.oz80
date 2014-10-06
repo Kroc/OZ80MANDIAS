@@ -11,7 +11,7 @@ SECTION ::doObjectCode_boss_endSign             SECTION ::objects {
 	ld	(ix+#object.width), 24
 	ld	(ix+#object.height),48
         
-	bit	0,(ix+$11)
+	bit	0,(ix+#object.unknown11)
 	jr	nz,._1
 	
 	res	7,(iy+#vars.flags6)
@@ -28,7 +28,7 @@ SECTION ::doObjectCode_boss_endSign             SECTION ::objects {
 	ld	a,%00000010
 	call	:loadPaletteOnInterrupt
 	
-	set	0,(ix+$11)
+	set	0,(ix+#object.unknown11)
 	
 ._1	ld	hl,($.CAMERA_X)
 	ld	($.LEVEL_LEFT),hl
@@ -44,14 +44,14 @@ SECTION ::doObjectCode_boss_endSign             SECTION ::objects {
 	ld	hl,$0088
 	ld	($.D26D),hl
 	
-	ld	c,(ix+$13)
+	ld	c,(ix+#object.unknown13)
 	ld	a,($.SONIC.unknown18)
 	and	$80
-	ld	(ix+$13),a
+	ld	(ix+#object.unknown13),a
 	jr	z,._3
 	cp	c
 	jr	z,._3
-	bit	7,(ix+$18)
+	bit	7,(ix+#object.unknown18)
 	jr	z,._3
 	ld	e,(ix+#object.X.lo)
 	ld	d,(ix+#object.X.hi)
@@ -83,11 +83,11 @@ SECTION ::doObjectCode_boss_endSign             SECTION ::objects {
 	ld	(ix+#object.Yspeed.lo),l
 	ld	(ix+#object.Yspeed.hi),h
 	ld	(ix+#object.Ydirection),a
-	bit	3,(ix+$11)
+	bit	3,(ix+#object.unknown11)
 	jr	nz,._7
-	bit	2,(ix+$11)
+	bit	2,(ix+#object.unknown11)
 	jr	z,._4
-	bit	7,(ix+$18)
+	bit	7,(ix+#object.unknown18)
 	jr	z,._7
 	
 	ld	a,#index_music_actComplete
@@ -95,8 +95,8 @@ SECTION ::doObjectCode_boss_endSign             SECTION ::objects {
 	
 	ld	a,$0c
 	rst	:rst_playSFX
-	res	2,(ix+$11)
-	set	3,(ix+$11)
+	res	2,(ix+#object.unknown11)
+	set	3,(ix+#object.unknown11)
 	ld	a,$a0
 	ld	($.D289),a
 	set	1,(iy+#vars.flags6)
@@ -108,7 +108,7 @@ SECTION ::doObjectCode_boss_endSign             SECTION ::objects {
 	jr	c,._7
 	bit	7,(ix+#object.Ydirection)
 	jr	nz,._7
-	bit	1,(ix+$11)
+	bit	1,(ix+#object.unknown11)
 	jr	nz,._7
 	ld	de,($.SONIC.Xspeed)
 	bit	7,d
@@ -127,21 +127,21 @@ SECTION ::doObjectCode_boss_endSign             SECTION ::objects {
 	ld	de,$0300
 ._6	ex	de,hl
 	add	hl,hl
-	ld	(ix+$14),l
-	ld	(ix+$15),h
+	ld	(ix+#object.unknown14),l
+	ld	(ix+#object.unknown15),h
 	ld	(ix+$12),$00
-	set	1,(ix+$11)
+	set	1,(ix+#object.unknown11)
 	res	3,(iy+#vars.flags6)
 	ld	a,$0b
 	rst	:rst_playSFX
 	
 ._7	ld	de,._6157
-	bit	1,(ix+$11)
+	bit	1,(ix+#object.unknown11)
 	jr	nz,._
-	bit	2,(ix+$11)
+	bit	2,(ix+#object.unknown11)
 	jr	nz,._
 	ld	de,$6171
-	bit	3,(ix+$11)
+	bit	3,(ix+#object.unknown11)
 	jr	z,._
 	ld	a,($.CURRENT_LEVEL)
 	cp	$0c
@@ -204,18 +204,18 @@ SECTION ::doObjectCode_boss_endSign             SECTION ::objects {
 	add	hl,de
 	ld	(ix+#object.spriteLayout.lo),l
 	ld	(ix+#object.spriteLayout.hi),h
-	bit	1,(ix+$11)
+	bit	1,(ix+#object.unknown11)
 	jr	nz,._13
 	inc	(ix+$12)
 	ret
 	
-._13	ld	a,(ix+$14)
-	add	a,(ix+$16)
-	ld	(ix+$16),a
-	ld	a,(ix+$15)
+._13	ld	a,(ix+#object.unknown14)
+	add	a,(ix+#object.unknown16)
+	ld	(ix+#object.unknown16),a
+	ld	a,(ix+#object.unknown15)
 	push	af
-	adc	a,(ix+$17)
-	ld	(ix+$17),a
+	adc	a,(ix+#object.unknown17)
+	ld	(ix+#object.unknown17),a
 	pop	af
 	adc	a,(ix+$12)
 	cp	$18
@@ -231,8 +231,8 @@ SECTION ::doObjectCode_boss_endSign             SECTION ::objects {
 	sbc	hl,de
 	ret	nc
 ._15	ex	de,hl
-	ld	e,(ix+$14)
-	ld	d,(ix+$15)
+	ld	e,(ix+#object.unknown14)
+	ld	d,(ix+#object.unknown15)
 	ld	c,e
 	ld	b,d
 	srl	d
@@ -262,14 +262,14 @@ SECTION ::doObjectCode_boss_endSign             SECTION ::objects {
 	ld	de,$0010
 	xor	a;zero
 	sbc	hl,de
-	ld	(ix+$14),l
-	ld	(ix+$15),h
+	ld	(ix+#object.unknown14),l
+	ld	(ix+#object.unknown15),h
 	ret	nc
 ._16	ld	(ix+#object.Yspeed.lo),a;zero
 	ld	(ix+#object.Yspeed.hi),a;zero
 	ld	(ix+#object.Ydirection),a;zero
-	res	1,(ix+$11)
-	set	2,(ix+$11)
+	res	1,(ix+#object.unknown11)
+	set	2,(ix+#object.unknown11)
 	ld	(ix+$12),$00
 	ret
 

@@ -2,7 +2,7 @@
 `OBJECT: badnick - motobug
 
 PROC    :doObjectCode_badnick_motobug           SECTION ::objects {
-	res	5,(ix+$18)
+	res	5,(ix+#object.unknown18)
 	ld	(ix+#object.width), 10
 	ld	(ix+#object.height),16
 	ld	e,(ix+$12)
@@ -34,11 +34,11 @@ PROC    :doObjectCode_badnick_motobug           SECTION ::objects {
 ._5	ld	(ix+#object.Xspeed.lo),l
 	ld	(ix+#object.Xspeed.hi),h
 	ld	(ix+#object.Xdirection),c
-	ld	l,(ix+$11)
+	ld	l,(ix+#object.unknown11)
 	ld	h,(ix+$12)
 	ld	de,$0008
 	add	hl,de
-	ld	(ix+$11),l
+	ld	(ix+#object.unknown11),l
 	ld	(ix+$12),h
 	ld	(ix+#object.Yspeed.lo),$00
 	ld	(ix+#object.Yspeed.hi),$02

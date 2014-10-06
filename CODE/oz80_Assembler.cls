@@ -68,6 +68,11 @@ Attribute Chunk.VB_VarHelpID = -1
 Private ROM() As Byte                   'The output!
 Private ROMSize As Long                 'Size of the ROM (32/64/128/256/512/1024 KB)
 
+Private Const BANKSIZE As Long = 16 * 1024
+
+'A list of start & length entries that determine the layout of the Chunks in the ROM
+Private ROMMap As Scripting.Dictionary
+
 '/// EVENTS ///////////////////////////////////////////////////////////////////////////
 
 'Progress messages are passed through an event, the handler can choose to show them _
@@ -82,10 +87,6 @@ Event Error( _
     ByVal Line As Long, ByVal Col As Long _
 )
 
-Private Sub Chunk_Message(LogLevel As OZ80_LOG, Text As String)
-    RaiseEvent Message(LogLevel, Text)
-End Sub
-
 'CLASS Initialize _
  ======================================================================================
 Private Sub Class_Initialize()
@@ -97,6 +98,7 @@ Private Sub Class_Initialize()
     Set Chunks = New Scripting.Dictionary
     Set SectionNames = New Scripting.Dictionary
     Set SectionSlots = New Scripting.Dictionary
+    Set ROMMap = New Scripting.Dictionary
 End Sub
 
 'CLASS Terminate _
@@ -108,6 +110,7 @@ Private Sub Class_Terminate()
     Set Token = Nothing: Set Files = Nothing
     Set SectionNames = Nothing
     Set SectionSlots = Nothing
+    Set ROMMap = Nothing
     Erase ROM
 End Sub
 
@@ -126,6 +129,12 @@ Private Sub Token_Message( _
     ByRef LogLevel As OZ80_LOG, ByRef Text As String _
 )   'It's up to the controller to decide to display (or `Debug.Print` any messages), _
      we 're not going to unnecessarily spam their console
+    RaiseEvent Message(LogLevel, Text)
+End Sub
+
+'EVENT <Chunk> Message : Basic progress message from a Chunk _
+ ======================================================================================
+Private Sub Chunk_Message(LogLevel As OZ80_LOG, Text As String)
     RaiseEvent Message(LogLevel, Text)
 End Sub
 
@@ -171,10 +180,31 @@ Public Function Assemble(ByVal FilePath As String) As OZ80_ERROR
     Call ScopeRoot
     If My_Error Then GoTo Finish
     
-    'Phase 2: Layout the ROM banks _
+    'Phase 2: Layout the ROM _
      ----------------------------------------------------------------------------------
     RaiseEvent Message(OZ80_LOG_ACTION, "Phase 2")
-    'TODO
+    
+    Dim Bank As Long
+    'Loop through the Chunks of code/data collected
+    
+'    Dim i As Long
+'    For i = 0 To Chunks.Count - 1
+'        'Dereference the Chunk from the dictionary object
+'        Set Chunk = Chunks(i)
+'
+'        'Lookup which Section the Chunk is assigned to
+'        Dim Section As Long
+'        Let Section = Chunk.Section
+'
+'        'Look up the Slot pattern the Section uses
+'        Dim Slot As Long
+'        If Section = 0 Then
+'            Let Slot = OZ80_SLOT.SLOT0 Or OZ80_SLOT.SLOT1 Or OZ80_SLOT.SLOT2
+'        Else
+'            Let Slot = SectionSlots(Section)
+'        End If
+'    Next i
+    
     
     'Phase 3: Second Parse & Assemble (now with ROM Addresses) _
      ----------------------------------------------------------------------------------
@@ -675,8 +705,6 @@ Private Sub ProcessZ80()
         'Parameter expressions might return an unknown value _
          (such as when a label, which has not yet been addressed, is used)
         
-'        If Token.Index >= 1491 Then Stop
-        
         'Get the first parameter
         Let Param1 = GetZ80Parameter()
         'If there was an error, the error number will already have been set, _
@@ -716,7 +744,9 @@ End Sub
 
 'AddChunk : Begin a new Chunk to hold assembled Z80 code / data _
  ======================================================================================
-Private Sub AddChunk(ByRef StringID As Long)
+Private Sub AddChunk( _
+    ByRef StringID As Long _
+)
     'Create and attach the new chunk
     Set Chunk = New oz80_Chunk
     'Add it to the collection
@@ -906,6 +936,8 @@ AddExpr:    'Look for the `+` following the register name
             'TODO: Handle indefinite value
             'TODO: Error if number is over 16-bit
             'TODO: Issue warning for rounding
+            
+            Let GetZ80Parameter.Value = Value
             
             'Any number will class as 16-bit since it's the maximum allowed
             Let GetZ80Parameter.Mask = GetZ80Parameter.Mask Or MASK_MEM_VAL16

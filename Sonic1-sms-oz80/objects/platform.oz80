@@ -3,7 +3,7 @@
 `OBJECT: wooden platform (Green Hill)
 
 PROC    :doObjectCode_platform                  SECTION ::objects {
-	set	5,(ix+$18)
+	set	5,(ix+#object.unknown18)
 	
 	ld	(ix+#object.width), 26
 	ld	(ix+#object.height),16

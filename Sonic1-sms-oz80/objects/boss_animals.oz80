@@ -2,10 +2,10 @@
 `OBJECT: free animal - bird
 
 PROC    :doObjectCode_boss_freeBird             SECTION ::objects {
-	res	5,(ix+$18)
+	res	5,(ix+#object.unknown18)
 	ld	(ix+#object.width), 12
 	ld	(ix+#object.height),16
-	bit	7,(ix+$18)
+	bit	7,(ix+#object.unknown18)
 	jr	z,._1
 	ld	(ix+#object.Yspeed.lo),$00
 	ld	(ix+#object.Yspeed.hi),$fd
@@ -93,7 +93,7 @@ PROC    :doObjectCode_boss_freeBird             SECTION ::objects {
 `OBJECT: free animal - rabbit
 
 PROC    :doObjectCode_boss_freeRabbit           SECTION ::objects {
-	res	5,(ix+$18)
+	res	5,(ix+#object.unknown18)
 	ld	(ix+#object.width), 12
 	ld	(ix+#object.height),32
 	ld	hl,:_7760
@@ -109,7 +109,7 @@ PROC    :doObjectCode_boss_freeRabbit           SECTION ::objects {
 	ld	hl,:_77b1
 ._1	ld	(ix+#object.spriteLayout.lo),l
 	ld	(ix+#object.spriteLayout.hi),h
-	bit	7,(ix+$18)
+	bit	7,(ix+#object.unknown18)
 	jr	z,._4
         
 	xor	a;zero
@@ -134,8 +134,8 @@ PROC    :doObjectCode_boss_freeRabbit           SECTION ::objects {
 	ld	hl,:_77a3
 ._2	ld	(ix+#object.spriteLayout.lo),l
 	ld	(ix+#object.spriteLayout.hi),h
-	inc	(ix+$11)
-	ld	a,(ix+$11)
+	inc	(ix+#object.unknown11)
+	ld	a,(ix+#object.unknown11)
 	cp	$08
 	ret	c
 	ld	hl,$fffc
@@ -165,7 +165,7 @@ PROC    :doObjectCode_boss_freeRabbit           SECTION ::objects {
 	ld	(ix+#object.Xspeed.lo),$80
 	ld	(ix+#object.Xspeed.hi),$fe
 	ld	(ix+#object.Xdirection),$ff
-	ld	(ix+$11),$00
+	ld	(ix+#object.unknown11),$00
 	jp	:doObjectCode_boss_freeBird._7612
     
         `sprite layout

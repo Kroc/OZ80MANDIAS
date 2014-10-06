@@ -42,7 +42,7 @@ PROC	:doObjectCode_badnick_crabMeat  SECTION ::objects
 	ld	h,c
 	jp	._6
 	
-._5	ld	a,(ix+$11)
+._5	ld	a,(ix+#object.unknown11)
 	cp	$20
 	jp	nz,._6
 	ld	hl,$ffff
@@ -72,11 +72,11 @@ PROC	:doObjectCode_badnick_crabMeat  SECTION ::objects
 	ld	(ix+#object.Xspeed.hi),h
 	ld	(ix+#object.Xdirection),c
 	
-._7	ld	l,(ix+$11)
+._7	ld	l,(ix+#object.unknown11)
 	ld	h,(ix+$12)
 	ld	de,$0008
 	add	hl,de
-	ld	(ix+$11),l
+	ld	(ix+#object.unknown11),l
 	ld	(ix+$12),h
 	ld	l,(ix+#object.Yspeed.lo)
 	ld	h,(ix+#object.Yspeed.hi)

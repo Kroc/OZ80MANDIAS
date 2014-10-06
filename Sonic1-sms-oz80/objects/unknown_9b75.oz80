@@ -3,7 +3,7 @@
 
 PROC    :_9b75                                  SECTION ::objects
 {
-	set	5,(ix+$18)
+	set	5,(ix+#object.unknown18)
 	ld	(ix+#object.width),$1e
 	ld	(ix+#object.height),$60
 	ld	hl,$0000

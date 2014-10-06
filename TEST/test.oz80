@@ -218,6 +218,11 @@ PROC    :cpd            SECTION ::default
         cpd
         cpdr
         cpi
+        cpir
+}
+
+PROC    :cpl            SECTION ::default
+{
         cpl
 }
 
@@ -664,6 +669,33 @@ PROC    :ret            SECTION ::default
         ret     po
         reti
         retn
+}
+
+PROC    :rl             SECTION ::default
+{
+        rl      a
+        rl      b
+        rl      c
+        rl      d
+        rl      e
+        rl      h
+        rl      l
+        rl      (hl)
+        rl      (ix+$FF)
+        rl      (iy+$FF)
+        rla
+        rlc     a
+        rlc     b
+        rlc     c
+        rlc     d
+        rlc     e
+        rlc     h
+        rlc     l
+        rlc     (hl)
+        rlc     (ix+$FF)
+        rlc     (iy+$FF)
+        rlca
+        rld
 }
 
 PROC    :rr             SECTION ::default

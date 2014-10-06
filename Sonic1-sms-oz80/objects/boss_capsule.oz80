@@ -2,8 +2,8 @@
 `OBJECT: capsule
 
 PROC    :doObjectCode_boss_capsule              SECTION ::objects {
-	set	5,(ix+$18)
-	bit	0,(ix+$18)
+	set	5,(ix+#object.unknown18)
+	bit	0,(ix+#object.unknown18)
 	jr	nz,._1
 	ld	l,(ix+#object.Y.lo)
 	ld	h,(ix+#object.Y.hi)
@@ -11,11 +11,11 @@ PROC    :doObjectCode_boss_capsule              SECTION ::objects {
 	add	hl,de
 	ld	(ix+#object.Y.lo),l
 	ld	(ix+#object.Y.hi),h
-	set	0,(ix+$18)
+	set	0,(ix+#object.unknown18)
 ._1	ld	(ix+#object.width), 28
 	ld	(ix+#object.height),64
 	ld	hl,._7564
-	bit	1,(ix+$18)
+	bit	1,(ix+#object.unknown18)
 	jr	z,._2
 	ld	hl,._757c
 ._2	ld	a,($.FRAMECOUNT)
@@ -146,16 +146,16 @@ PROC    :doObjectCode_boss_capsule              SECTION ::objects {
 ._9	ld	a,(ix+$12)
 	cp	$08
 	jr	nc,._10
-	inc	(ix+$11)
-	ld	a,(ix+$11)
+	inc	(ix+#object.unknown11)
+	ld	a,(ix+#object.unknown11)
 	cp	$14
 	ret	c
-	ld	(ix+$11),$00
+	ld	(ix+#object.unknown11),$00
 	call	:_7a3a
 	inc	(ix+$12)
 	ret
 	
-._10	bit	1,(ix+$18)
+._10	bit	1,(ix+#object.unknown18)
 	jr	nz,._11
 	ld	a,$a0
 	ld	($.D289),a
@@ -163,7 +163,7 @@ PROC    :doObjectCode_boss_capsule              SECTION ::objects {
 	ld	a,#index_music_actComplete
 	rst	:rst_playMusic
 	
-	set	1,(ix+$18)
+	set	1,(ix+#object.unknown18)
 ._11	xor	a;zero
 	ld	(ix+#object.spriteLayout.lo),a;zero
 	ld	(ix+#object.spriteLayout.hi),a;zero
@@ -175,8 +175,8 @@ PROC    :doObjectCode_boss_capsule              SECTION ::objects {
 	and	$01
 	add	a,$23
 	call	._74b6
-	inc	(ix+$16)
-	ld	a,(ix+$16)
+	inc	(ix+#object.unknown16)
+	ld	a,(ix+#object.unknown16)
 	cp	$0c
 	ret	c
 	ld	(ix+#object.type),$FF	        `remove object?
@@ -198,8 +198,8 @@ PROC    :doObjectCode_boss_capsule              SECTION ::objects {
 	ld	(ix+#object.type),a
         
 	xor	a;zero			        `set A to 0
-	ld	(ix+$16),a;zero
-	ld	(ix+$17),a;zero
+	ld	(ix+#object.unknown16),a;zero
+	ld	(ix+#object.unknown17),a;zero
 	ld	(ix+#object.Xsubpixel),a;zero
 	ld	hl,$0008
 	add	hl,de

@@ -2,7 +2,7 @@
 `OBJECT: UNKNOWN
 
 PROC    :_6ac1                                  SECTION ::objects {
-	set	5,(ix+$18)
+	set	5,(ix+#object.unknown18)
 	ld	(ix+#object.width), 2
 	ld	(ix+#object.height),2
 	ld	hl,$0303
@@ -12,8 +12,8 @@ PROC    :_6ac1                                  SECTION ::objects {
 	ld	l,(ix+#object.Yspeed.lo)
 	ld	h,(ix+#object.Yspeed.hi)
 	ld	a,(ix+#object.Ydirection)
-	ld	e,(ix+$13)
-	ld	d,(ix+$14)
+	ld	e,(ix+#object.unknown13)
+	ld	d,(ix+#object.unknown14)
 	add	hl,de
 	adc	a,$00
 	ld	(ix+#object.Yspeed.lo),l

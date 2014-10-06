@@ -4,15 +4,15 @@
 `OBJECT: Explosion
 
 PROC :doObjectCode_explosion                    SECTION ::objects {
-	set	5,(ix+$18)
-	ld	a,(ix+$15)
+	set	5,(ix+#object.unknown18)
+	ld	a,(ix+#object.unknown15)
 	cp	$aa
 	jr	z,._1
 	xor	a;zero
-	ld	(ix+$11),a;zero
-	ld	(ix+$15),$aa
-	ld	(ix+$16),a;zero
-	ld	(ix+$17),a;zero
+	ld	(ix+#object.unknown11),a;zero
+	ld	(ix+#object.unknown15),$aa
+	ld	(ix+#object.unknown16),a;zero
+	ld	(ix+#object.unknown17),a;zero
 	bit	5,(iy+#vars.flags0)
 	jr	z,._1
 	ld	a,($.CURRENT_LEVEL)
@@ -53,8 +53,8 @@ PROC :doObjectCode_explosion                    SECTION ::objects {
 	ld	de,._69be
 	ld	bc,._69b7
 	call	:_7c41
-	inc	(ix+$11)
-	ld	a,(ix+$11)
+	inc	(ix+#object.unknown11)
+	ld	a,(ix+#object.unknown11)
 	cp	$18
 	ret	c
 	ld	(ix+#object.type),$FF	        `remove object?

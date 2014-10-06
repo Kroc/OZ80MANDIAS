@@ -2,11 +2,11 @@
 `OBJECT: boss (Green Hill)
 
 PROC    :doObjectCode_boss_greenHill            SECTION ::objects {
-	set	5,(ix+$18)
+	set	5,(ix+#object.unknown18)
 	ld	(ix+#object.width), 32
 	ld	(ix+#object.height),28
 	call	:_7ca6
-	bit	0,(ix+$11)
+	bit	0,(ix+#object.unknown11)
 	jr	nz,._1
 	ld	l,(ix+#object.Y.lo)
 	ld	h,(ix+#object.Y.hi)
@@ -31,15 +31,15 @@ PROC    :doObjectCode_boss_greenHill            SECTION ::objects {
 	xor	a;zero
 	ld	($.D2EC),a;zero
 	ld	(ix+$12),a;zero
-	ld	(ix+$14),$a1
-	ld	(ix+$15),$72
+	ld	(ix+#object.unknown14),$a1
+	ld	(ix+#object.unknown15),$72
 	
 	ld	hl,$0760
 	ld	de,$00e8
 	call	:_7c8c
 	
-	set	0,(ix+$11)
-._1	ld	a,(ix+$13)
+	set	0,(ix+#object.unknown11)
+._1	ld	a,(ix+#object.unknown13)
 	and	$3f
 	ld	e,a
 	ld	d,$00
@@ -56,8 +56,8 @@ PROC    :doObjectCode_boss_greenHill            SECTION ::objects {
 	ld	(ix+#object.Ydirection),c
 ._4	ld	e,(ix+$12)
 	ld	d,$00
-	ld	l,(ix+$14)
-	ld	h,(ix+$15)
+	ld	l,(ix+#object.unknown14)
+	ld	h,(ix+#object.unknown15)
 	add	hl,de
 	ld	($.TEMP6),hl
 	ld	a,(hl)
@@ -91,16 +91,16 @@ PROC    :doObjectCode_boss_greenHill            SECTION ::objects {
 	jp	c,._9
 	
 	ld	(ix+$12),$00
-	bit	1,(ix+$11)
+	bit	1,(ix+#object.unknown11)
 	jr	nz,._6
-	ld	(ix+$14),$a4
-	ld	(ix+$15),$72
-	set	1,(ix+$11)
+	ld	(ix+#object.unknown14),$a4
+	ld	(ix+#object.unknown15),$72
+	set	1,(ix+#object.unknown11)
 	jp	._9
 	
-._6	ld	(ix+$14),$a7
-	ld	(ix+$15),$72
-	res	1,(ix+$11)
+._6	ld	(ix+#object.unknown14),$a7
+	ld	(ix+#object.unknown15),$72
+	res	1,(ix+#object.unknown11)
 	jp	._9
 	
 	ld	hl,($.LEVEL_LEFT)
@@ -114,16 +114,16 @@ PROC    :doObjectCode_boss_greenHill            SECTION ::objects {
 	ld	hl,$0100
 	jp	nc,._9
 	ld	(ix+$12),$00
-	bit	2,(ix+$11)
+	bit	2,(ix+#object.unknown11)
 	jr	nz,._7
-	ld	(ix+$14),$a1
-	ld	(ix+$15),$72
-	set	2,(ix+$11)
+	ld	(ix+#object.unknown14),$a1
+	ld	(ix+#object.unknown15),$72
+	set	2,(ix+#object.unknown11)
 	jp	._9
 	
-._7	ld	(ix+$14),$aa
-	ld	(ix+$15),$72
-	res	2,(ix+$11)
+._7	ld	(ix+#object.unknown14),$aa
+	ld	(ix+#object.unknown15),$72
+	res	2,(ix+#object.unknown11)
 	jp	._9
 	
 	ld	(ix+#object.Yspeed.lo),$60
@@ -141,8 +141,8 @@ PROC    :doObjectCode_boss_greenHill            SECTION ::objects {
 	ld	h,c
 	jp	nc,._9
 	ld	(ix+$12),$00
-	ld	(ix+$14),$b0
-	ld	(ix+$15),$72
+	ld	(ix+#object.unknown14),$b0
+	ld	(ix+#object.unknown15),$72
 	jp	._9
 	
 	ld	c,$00
@@ -164,8 +164,8 @@ PROC    :doObjectCode_boss_greenHill            SECTION ::objects {
 	ld	h,c
 	jp	nc,._9
 	ld	(ix+$12),$00
-	ld	(ix+$14),$bc
-	ld	(ix+$15),$72
+	ld	(ix+#object.unknown14),$bc
+	ld	(ix+#object.unknown15),$72
 	jp	._9
 	
 	ld	c,$ff
@@ -180,10 +180,10 @@ PROC    :doObjectCode_boss_greenHill            SECTION ::objects {
 	ld	c,$00
 	ld	l,c
 	ld	h,c
-	ld	(ix+$14),$ad
-	ld	(ix+$15),$72
+	ld	(ix+#object.unknown14),$ad
+	ld	(ix+#object.unknown15),$72
 	ld	(ix+$12),c
-	ld	(ix+$13),c
+	ld	(ix+#object.unknown13),c
 	jr	._9
 	
 	ld	(ix+#object.Yspeed.lo),$00
@@ -209,13 +209,13 @@ PROC    :doObjectCode_boss_greenHill            SECTION ::objects {
 	ld	l,c
 	ld	h,c
 	jr	c,._8
-	ld	(ix+$14),$a1
-	ld	(ix+$15),$72
+	ld	(ix+#object.unknown14),$a1
+	ld	(ix+#object.unknown15),$72
 	ld	(ix+$12),a
 	jr	._9
 	
-._8	ld	(ix+$14),$a4
-	ld	(ix+$15),$72
+._8	ld	(ix+#object.unknown14),$a4
+	ld	(ix+#object.unknown15),$72
 	ld	(ix+$12),a
 	jr	._9
 	
@@ -233,18 +233,18 @@ PROC    :doObjectCode_boss_greenHill            SECTION ::objects {
 	jr	z,._10
 	ld	hl,._730a
 ._10	ld	e,a
-	ld	a,(ix+$18)
+	ld	a,(ix+#object.unknown18)
 	and	$fd
 	or	e
-	ld	(ix+$18),a
+	ld	(ix+#object.unknown18),a
 	ld	(ix+#object.spriteLayout.lo),l
 	ld	(ix+#object.spriteLayout.hi),h
 	ld	hl,$0012
 	ld	($.D216),hl
 	call	:_77be
 	call	:_79fa
-	inc	(ix+$13)
-	ld	a,(ix+$13)
+	inc	(ix+#object.unknown13)
+	ld	a,(ix+#object.unknown13)
 	and	$0f
 	ret	nz
 	inc	(ix+$12)

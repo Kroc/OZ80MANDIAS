@@ -3,24 +3,24 @@
 
 PROC    :doObjectCode_platform_flipper          SECTION ::objects
 {
-	set	5,(ix+$18)
+	set	5,(ix+#object.unknown18)
 	ld	(ix+#object.spriteLayout.lo),._9a7e.lo
 	ld	(ix+#object.spriteLayout.hi),._9a7e.hi
 	bit	5,(iy+#vars.joypad)
 	jr	nz,._1
-	ld	a,(ix+$11)
+	ld	a,(ix+#object.unknown11)
 	ld	(ix+$12),a
-	ld	a,(ix+$11)
+	ld	a,(ix+#object.unknown11)
 	cp	$05
 	jr	nc,._2
-	inc	(ix+$11)
+	inc	(ix+#object.unknown11)
 	jp	._2
 	
-._1	ld	a,(ix+$11)
+._1	ld	a,(ix+#object.unknown11)
 	and	a
 	jr	z,._2
-	dec	(ix+$11)
-._2	ld	a,(ix+$11)
+	dec	(ix+#object.unknown11)
+._2	ld	a,(ix+#object.unknown11)
 	cp	$01
 	jr	nc,._3
 	ld	hl,$140c
@@ -59,7 +59,7 @@ PROC    :doObjectCode_platform_flipper          SECTION ::objects
 	call	._9aaf
 	ret	nc
 	ld	a,(ix+$12)
-	cp	(ix+$11)
+	cp	(ix+#object.unknown11)
 	ret	nc
 	ld	a,($.SONIC.X)
 	add	a,$0c

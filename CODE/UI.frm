@@ -124,7 +124,7 @@ Private Sub Log( _
     Optional ByRef Text As String = vbNullString, _
     Optional ByRef LogLevel As OZ80_LOG = OZ80_LOG_ACTION _
 )
-    Debug.Print Text
+'    Debug.Print Text
     
     If LogLevel >= OZ80_LOG_DEBUG Then Exit Sub
     Let Text = Text & vbCrLf

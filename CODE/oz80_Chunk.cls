@@ -97,11 +97,11 @@ Private Enum OZ80_OPCODE
     Z0 = 0
     Z1 = 2 ^ 0
     Z2 = 2 ^ 1
-    Z3 = Y1 Or Y2
+    Z3 = Z1 Or Z2
     Z4 = 2 ^ 2
     Z5 = Z4 Or Z1
     Z6 = Z4 Or Z2
-    Z7 = Z4 Or Z4
+    Z7 = Z4 Or Z3
 End Enum
 
 'A small lookup table for converting bit-numbers in instructions to opcode-components
@@ -503,12 +503,14 @@ iADD:
         'Even though this is the same opcode as above (the prefix denotes "IX"), _
          we still need to validate the params to ensure HL & IX are not mixed
         Let Opcode = OpcodeP_RegisterPair(Param2.Token) Or Q1 Or Z1
+        Let ParamIXY = Param1
     
     '`ADD IY, BC|DE|IY|SP`
     ElseIf TestParams(MASK_REG_IY, MASK_REG_BC Or MASK_REG_DE Or MASK_REG_IY Or MASK_REG_SP) Then
         'Even though this is the same opcode as above (the prefix denotes "IY"), _
          we still need to validate the params to ensure HL & IY are not mixed
         Let Opcode = OpcodeP_RegisterPair(Param2.Token) Or Q1 Or Z1
+        Let ParamIXY = Param1
     
     '`ADD A, A|B|C|D|E|H|L|(HL|IX+$8|IY+$8)`
     ElseIf TestParams(MASK_REG_A, MASK_REGS_ABCDEHL_MEM_HLIXY) Then
@@ -607,13 +609,13 @@ iCPD:
     
 iCPDR:
     '..................................................................................
-    If TestParams() Then Let Opcode = &HED00& Or X2 Or Y4 Or Z1: GoTo Finish
+    If TestParams() Then Let Opcode = &HED00& Or X2 Or Y7 Or Z1: GoTo Finish
     'ERROR: Wrong parameters for Z80 instruction
     GoTo InvalidParams
 
 iCPI:
     '..................................................................................
-    If TestParams() Then Let Opcode = &HED00& Or X2 Or Y4 Or Z7: GoTo Finish
+    If TestParams() Then Let Opcode = &HED00& Or X2 Or Y4 Or Z1: GoTo Finish
     'ERROR: Wrong parameters for Z80 instruction
     GoTo InvalidParams
     
@@ -643,6 +645,7 @@ iDEC:
     '`DEC BC|DE|HL|SP|IX|IY`
     If TestParams(MASK_REGS_BC_DE_HL_SP_IXY) Then
         Let Opcode = OpcodeP_RegisterPair(Param1.Token) Or Q1 Or Z3
+        Let ParamIXY = Param1
     
     '`DEC A|B|C|D|E|H|L|(HL|IX+$8|IY+$8)`
     ElseIf TestParams(MASK_REGS_ABCDEHL_MEM_HLIXY) Then
@@ -667,7 +670,7 @@ iDJNZ:
     If TestParams(MASK_VAL) Then
         Let Opcode = Y2
         Let ValueParam = Param1
-        Let ValueBits = MASK_VAL16      'TODO: convert 16-bit address to 8-bit disp.
+        Let ValueBits = MASK_VAL8       'TODO: convert 16-bit address to 8-bit disp.
         GoTo Finish
     End If
     'ERROR: Wrong parameters for Z80 instruction
@@ -690,6 +693,7 @@ iEX:
     '`EX (SP), HL|IX|IY`
     ElseIf TestParams(MASK_MEM_SP, MASK_REGS_HL_IXY) Then
         Let Opcode = X3 Or Y4 Or Z3
+        Let ParamIXY = Param2
     
     '`EX DE, HL`
     ElseIf TestParams(MASK_REG_DE, MASK_REG_HL) Then
@@ -727,9 +731,9 @@ iIM:
         ElseIf Param1.Value = 0 Then
             Let Opcode = &HED00& Or X1 Or Z6
         ElseIf Param1.Value = 1 Then
-            Let Opcode = &HED00& Or X1 Or Y1 Or Z6
-        ElseIf Param1.Value = 2 Then
             Let Opcode = &HED00& Or X1 Or Y2 Or Z6
+        ElseIf Param1.Value = 2 Then
+            Let Opcode = &HED00& Or X1 Or Y3 Or Z6
         Else
             'ERROR: Wrong parameters for Z80 instruction
             GoTo InvalidParams
@@ -769,6 +773,7 @@ iINC:
     '`INC BC|DE|HL|SP|IX|IY`
     If TestParams(MASK_REGS_BC_DE_HL_SP_IXY) Then
         Let Opcode = OpcodeP_RegisterPair(Param1.Token) Or Z3
+        Let ParamIXY = Param1
     
     '`INC A|B|C|D|E|H|L|(HL|IX+$8|IY+$8)`
     ElseIf TestParams(MASK_REGS_ABCDEHL_MEM_HLIXY) Then
@@ -857,6 +862,7 @@ iLD:
         Let Opcode = OpcodeP_RegisterPair(Param1.Token) Or Z1
         Let ValueParam = Param2
         Let ValueBits = MASK_VAL16
+        Let ParamIXY = Param1
     
     '`LD (BC), A`
     ElseIf TestParams(MASK_MEM_BC, MASK_REG_A) Then
@@ -879,6 +885,7 @@ iLD:
         Let Opcode = P2 Or Z2
         Let ValueParam = Param1
         Let ValueBits = MASK_MEM_VAL16
+        Let ParamIXY = Param2
     
     '`LD ($16), A`
     ElseIf TestParams(MASK_MEM_VAL, MASK_REG_A) Then
@@ -889,6 +896,7 @@ iLD:
     '`LD HL|IX|IY, ($16)`
     ElseIf TestParams(MASK_REGS_HL_IXY, MASK_MEM_VAL) Then
         Let Opcode = P2 Or Q1 Or Z2
+        Let ParamIXY = Param1
         Let ValueParam = Param2
         Let ValueBits = MASK_MEM_VAL16
     
@@ -903,6 +911,7 @@ iLD:
         Let Opcode = OpcodeY_Register(Param1.Mask) Or Z6
         Let ValueParam = Param2
         Let ValueBits = MASK_VAL8
+        Let ParamIXY = Param1
     
     '`LD A|B|C|D|E|H|L|(HL|IX+$8|IY+$8), A|B|C|D|E|H|L`
     ElseIf TestParams(MASK_REGS_ABCDEHL_MEM_HLIXY, MASK_REGS_ABCDEHL) Then
@@ -915,15 +924,17 @@ iLD:
     '`LD SP, HL|IX|IY`
     ElseIf TestParams(MASK_REG_SP, MASK_REGS_HL_IXY) Then
         Let Opcode = X3 Or P3 Or Q1 Or Z1
+        Let ParamIXY = Param2
         
-    '`LD ($16), BC|DE|HL|SP`
-    ElseIf TestParams(MASK_MEM_VAL, MASK_REGS_BC_DE_HL_SP) Then
-        Let Opcode = &HED00& Or OpcodeP_RegisterPair(Param2.Token) Or Z3
+    '`LD ($16), BC|DE|SP`
+    ElseIf TestParams(MASK_MEM_VAL, MASK_REGS_BC_DE_SP) Then
+        Let Opcode = &HED00& Or X1 Or OpcodeP_RegisterPair(Param2.Token) Or Z3
         Let ValueParam = Param1
         Let ValueBits = MASK_MEM_VAL16
+        Let ParamIXY = Param2
     
-    '`LD BC|DE|HL|SP, ($16)`
-    ElseIf TestParams(MASK_REGS_BC_DE_HL_SP, MASK_MEM_VAL) Then
+    '`LD BC|DE|SP, ($16)`
+    ElseIf TestParams(MASK_REGS_BC_DE_SP, MASK_MEM_VAL) Then
         Let Opcode = &HED00& Or X1 Or OpcodeP_RegisterPair(Param1.Token) Or Q1 Or Z3
         Let ValueParam = Param2
         Let ValueBits = MASK_MEM_VAL16
@@ -1060,6 +1071,7 @@ iPOP:
     '`POP AF|BC|DE|HL|IX|IY`
     If TestParams(MASK_REGS_AF_BC_DE_HL_IXY) Then
         Let Opcode = X3 Or OpcodeP_RegisterPair(Param1.Token) Or Z1
+        Let ParamIXY = Param1
     Else
         'ERROR: Wrong parameters for Z80 instruction
         GoTo InvalidParams
@@ -1072,6 +1084,7 @@ iPUSH:
     '`PUSH AF|BC|DE|HL|IX|IY`
     If TestParams(MASK_REGS_AF_BC_DE_HL_IXY) Then
         Let Opcode = X3 Or OpcodeP_RegisterPair(Param1.Token) Or Z5
+        Let ParamIXY = Param1
     Else
         'ERROR: Wrong parameters for Z80 instruction
         GoTo InvalidParams
@@ -1257,7 +1270,7 @@ iSBC:
     
     '`SBC HL, BC|DE|HL|SP`
     ElseIf TestParams(MASK_REG_HL, MASK_REGS_BC_DE_HL_SP) Then
-        Let Opcode = X1 Or OpcodeP_RegisterPair(Param1.Token) Or Z2
+        Let Opcode = &HED00& Or X1 Or OpcodeP_RegisterPair(Param2.Token) Or Z2
     
     Else
         'ERROR: Wrong parameters for Z80 instruction
@@ -1439,7 +1452,7 @@ Finish:
     End If
     
     'Is it a double opcode? (i.e. prefixed with $CB/$ED)
-    If Opcode > &HFF Then
+    If Opcode > &HFF Then '............................................................
         'TODO:
         If Prefix And (Opcode And &HFF00&) = &HCB00& Then
             'write the first half of the opcode ($CB)
@@ -1450,32 +1463,48 @@ Finish:
             Call AddByte(Opcode And &HFF)
             Let LogMsg = LogMsg _
                 & " CB " & oz80.HexStr8(ParamIXY.Value) _
-                & " " & oz80.HexStr8(Opcode)
+                & " " & oz80.HexStr8(Opcode) & " ·· ··"
         Else
             'write the first half of the opcode
             Call AddByte((Opcode And &HFF00&) \ &H100)
             'Write the second half of the opcode
             Call AddByte(Opcode And &HFF)
             
-            'TODO: Value?
-            
             Let LogMsg = LogMsg _
                 & " " & oz80.HexStr8((Opcode And &HFF00&) \ &H100) _
                 & " ·· " & oz80.HexStr8(Opcode And &HFF)
+            
+            'Value?
+            If ValueParam.Token = TOKEN_NUMBER Then
+                Call AddWord(ValueParam.Value)
+                Let LogMsg = LogMsg _
+                & " " & oz80.HexStr8((ValueParam.Value And &HFF00&) \ &H100) _
+                & " " & oz80.HexStr8(ValueParam.Value And &HFF)
+            Else
+                Let LogMsg = LogMsg & " ·· ··"
+            End If
         End If
         
     'Single opcode:
-    Else
+    Else '.............................................................................
         'Add the opcode to the output
         Call AddByte(Opcode)
         Let LogMsg = LogMsg & " " & oz80.HexStr8(Opcode)
+        'An IX/IY memory reference (with value)
+        If (ParamIXY.Mask = MASK_MEM_HLIXY) And (Prefix <> 0) Then
+            Call AddByte(ParamIXY.Value)
+            Let LogMsg = LogMsg & " " & oz80.HexStr8(ParamIXY.Value) & " ··"
+        Else
+            Let LogMsg = LogMsg & " ·· ··"
+        End If
         'Is there an associated value?
         If ValueParam.Token = TOKEN_NUMBER Then
             'Is it 8 or 16 bits?
-            If ValueBits = MASK_VAL8 Then
+            If (ValueBits = MASK_VAL8) Or (ValueBits = MASK_MEM_VAL8) Then
                 'Straight-forward 8-bit number
                 Call AddByte(ValueParam.Value)
-                Let LogMsg = LogMsg & " " & oz80.HexStr8(ValueParam.Value) & " ··"
+                Let LogMsg = LogMsg & " " & oz80.HexStr8(ValueParam.Value) _
+                            & " ··"
             Else
                 'Write the 16-bit number as little-endian
                 Call AddWord(ValueParam.Value)
@@ -1483,8 +1512,6 @@ Finish:
                     & " " & oz80.HexStr8(ValueParam.Value And &HFF) _
                     & " " & oz80.HexStr8((ValueParam.Value And &HFF00&) \ &H100)
             End If
-        ElseIf (ParamIXY.Mask <> 0) And (Prefix <> 0) Then
-            Let LogMsg = LogMsg & " " & oz80.HexStr8(ParamIXY.Value) & " ··"
         Else
             Let LogMsg = LogMsg & " ·· ··"
         End If

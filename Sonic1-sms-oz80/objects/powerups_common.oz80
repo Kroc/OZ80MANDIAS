@@ -54,7 +54,7 @@ PROC	:doObjectCode_powerUp_ring              SECTION ::objects
 	ld	l,(ix+#object.Ysubpixel)
 	ld	h,(ix+#object.Y.lo)
 	ld	a,(ix+#object.Y.hi)
-	bit	7,(ix+$18)
+	bit	7,(ix+#object.unknown18)
 	jr	nz,._2
 	ld	e,(ix+#object.Yspeed.lo)
 	ld	d,(ix+#object.Yspeed.hi)
@@ -73,7 +73,7 @@ PROC	:doObjectCode_powerUp_ring              SECTION ::objects
 	ld	($.TEMP4),hl
 	ld	a,$5e
 	call	:_3581
-	bit	1,(ix+$18)
+	bit	1,(ix+#object.unknown18)
 	ret	z
 	ld	l,(ix+#object.Yspeed.lo)
 	ld	h,(ix+#object.Yspeed.hi)
@@ -146,7 +146,7 @@ PROC	:doObjectCode_powerUp_life              SECTION ::objects {
 	jr	c,._2
 	call	:_5deb
 	jr	c,._2
-	bit	2,(ix+$18)
+	bit	2,(ix+#object.unknown18)
 	jp	nz,:doObjectCode_powerUp_ring._5b24
 	ld	hl,$.LIVES
 	inc	(hl)
@@ -189,7 +189,7 @@ PROC	:doObjectCode_powerUp_life              SECTION ::objects {
 
 ._4	ld	c,$00
 	ld	de,$0040
-	ld	a,(ix+$13)
+	ld	a,(ix+#object.unknown13)
 	cp	$3c
 	jr	c,._5
 	dec	c
@@ -197,25 +197,25 @@ PROC	:doObjectCode_powerUp_life              SECTION ::objects {
 ._5	ld	(ix+#object.Yspeed.lo),e
 	ld	(ix+#object.Yspeed.hi),d
 	ld	(ix+#object.Ydirection),c
-	inc	(ix+$13)
-	ld	a,(ix+$13)
+	inc	(ix+#object.unknown13)
+	ld	a,(ix+#object.unknown13)
 	cp	$50
 	jr	c,._3
-	ld	(ix+$13),$28
+	ld	(ix+#object.unknown13),$28
 	jr	._3
 	
-._6	set	2,(ix+$18)
+._6	set	2,(ix+#object.unknown18)
 	ld	hl,$.D317
 	call	:getLevelBitFlag
 	ld	a,(hl)
 	ld	hl,$5180
 	and	c
 	jp	z,:doObjectCode_powerUp_ring._5b34
-	res	2,(ix+$18)
+	res	2,(ix+#object.unknown18)
 	ld	hl,$5280
 	jp	:doObjectCode_powerUp_ring._5b34
 	
-._7	set	1,(ix+$18)
+._7	set	1,(ix+#object.unknown18)
 	ld	(ix+#object.Xspeed.lo),$80
 	ld	(ix+#object.Xspeed.hi),$00
 	ld	(ix+#object.Xdirection),$00
@@ -356,7 +356,7 @@ PROC	:doObjectCode_powerUp_continue          SECTION ::objects {
 
 PROC	:_5da8                                  SECTION ::objects {
 	
-	bit	0,(ix+$18)
+	bit	0,(ix+#object.unknown18)
 	ret	nz
 	ld	a,($.LEVEL_SOLIDITY)
 	and	a
@@ -382,7 +382,7 @@ PROC	:_5da8                                  SECTION ::objects {
 	add	hl,bc
 	ld	(ix+#object.Y.lo),l
 	ld	(ix+#object.Y.hi),h
-	set	0,(ix+$18)
+	set	0,(ix+#object.unknown18)
 	ret
 
 }
@@ -446,7 +446,7 @@ PROC	:_5deb                                  SECTION ::objects {
 	ld	($.SONIC.Yspeed),hl
 	ld	($.SONIC.Ydirection),a
 	ld	($.D28E),a
-	set	1,(ix+$18)
+	set	1,(ix+#object.unknown18)
 	scf	
 	ret
 

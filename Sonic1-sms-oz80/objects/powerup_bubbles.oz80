@@ -3,7 +3,7 @@
 
 PROC    :doObjectCode_powerUp_bubbles           SECTION ::objects
 {
-	set	5,(ix+$18)
+	set	5,(ix+#object.unknown18)
 	ld	a,(ix+$12)
 	and	$7f
 	jr	nz,._1
@@ -21,7 +21,7 @@ PROC    :doObjectCode_powerUp_bubbles           SECTION ::objects
 	ld	l,(ix+#object.Y.lo)
 	ld	h,(ix+#object.Y.hi)
 	ld	($.TEMP3),hl
-	ld	a,(ix+$11)
+	ld	a,(ix+#object.unknown11)
 	add	a,a
 	ld	e,a
 	ld	d,$00
@@ -38,11 +38,11 @@ PROC    :doObjectCode_powerUp_bubbles           SECTION ::objects
 	ld	a,($.FRAMECOUNT)
 	and	$07
 	ret	nz
-	inc	(ix+$11)
-	ld	a,(ix+$11)
+	inc	(ix+#object.unknown11)
+	ld	a,(ix+#object.unknown11)
 	cp	$06
 	ret	c
-	ld	(ix+$11),$00
+	ld	(ix+#object.unknown11),$00
 	ret
         
 ._8eb6  DATA $08, $05, $08, $04, $07, $03, $06, $02, $07, $01, $06, $00

@@ -2,7 +2,7 @@
 `OBJECT: trip zone (Green Hill)
 
 PROC    :doObjectCode_meta_trip                 SECTION ::objects {
-	set	5,(ix+$18)
+	set	5,(ix+#object.unknown18)
 	ld	(ix+#object.width), 64
 	ld	(ix+#object.height),64
 	ld	hl,$0000

@@ -8,7 +8,7 @@
 
 PROC    :doObjectCode_platform_swinging         SECTION ::objects {
         
-	set	5,(ix+$18)
+	set	5,(ix+#object.unknown18)
 	ld	hl,$0020
 	ld	($.D267),hl
 	ld	hl,$0048
@@ -17,26 +17,26 @@ PROC    :doObjectCode_platform_swinging         SECTION ::objects {
 	ld	($.D26B),hl
 	ld	hl,$0030
 	ld	($.D26D),hl
-	bit	0,(ix+$18)
+	bit	0,(ix+#object.unknown18)
 	jr	nz,._1
 	ld	l,(ix+#object.X.lo)
 	ld	h,(ix+#object.X.hi)
 	ld	(ix+$12),l
-	ld	(ix+$13),h
+	ld	(ix+#object.unknown13),h
 	ld	l,(ix+#object.Y.lo)
 	ld	h,(ix+#object.Y.hi)
-	ld	(ix+$14),l
-	ld	(ix+$15),h
-	ld	(ix+$11),$e0
-	set	0,(ix+$18)
-	set	1,(ix+$18)
+	ld	(ix+#object.unknown14),l
+	ld	(ix+#object.unknown15),h
+	ld	(ix+#object.unknown11),$e0
+	set	0,(ix+#object.unknown18)
+	set	1,(ix+#object.unknown18)
 ._1	ld	(ix+#object.width),$1a
 	ld	(ix+#object.height),$10
 	ld	l,(ix+#object.X.lo)
 	ld	h,(ix+#object.X.hi)
 	ld	($.TEMP1),hl
 	ld	hl,._682f
-	ld	e,(ix+$11)
+	ld	e,(ix+#object.unknown11)
 	ld	d,$00
 	add	hl,de
 	ld	c,l
@@ -47,7 +47,7 @@ PROC    :doObjectCode_platform_swinging         SECTION ::objects {
 	dec	d
 ._2	ld	e,a
 	ld	l,(ix+$12)
-	ld	h,(ix+$13)
+	ld	h,(ix+#object.unknown13)
 	add	hl,de
 	ld	(ix+#object.X.lo),l
 	ld	(ix+#object.X.hi),h
@@ -62,8 +62,8 @@ PROC    :doObjectCode_platform_swinging         SECTION ::objects {
 	jp	p,._3
 	dec	d
 ._3	ld	e,a
-	ld	l,(ix+$14)
-	ld	h,(ix+$15)
+	ld	l,(ix+#object.unknown14)
+	ld	h,(ix+#object.unknown15)
 	add	hl,de
 	ld	(ix+#object.Y.lo),l
 	ld	(ix+#object.Y.hi),h
@@ -90,23 +90,23 @@ PROC    :doObjectCode_platform_swinging         SECTION ::objects {
 	ld	hl,:object_platform_spriteLayouts._6923
 ._5	ld	(ix+#object.spriteLayout.lo),l
 	ld	(ix+#object.spriteLayout.hi),h
-	bit	1,(ix+$18)
+	bit	1,(ix+#object.unknown18)
 	jr	nz,._6
-	ld	a,(ix+$11)
+	ld	a,(ix+#object.unknown11)
 	inc	a
 	inc	a
-	ld	(ix+$11),a
+	ld	(ix+#object.unknown11),a
 	cp	$e0
 	ret	c
-	set	1,(ix+$18)
+	set	1,(ix+#object.unknown18)
 	ret
 	
-._6	ld	a,(ix+$11)
+._6	ld	a,(ix+#object.unknown11)
 	dec	a
 	dec	a
-	ld	(ix+$11),a
+	ld	(ix+#object.unknown11),a
 	ret	nz
-	res	1,(ix+$18)
+	res	1,(ix+#object.unknown18)
 	ret
         
 ._682f  `this is swinging position data

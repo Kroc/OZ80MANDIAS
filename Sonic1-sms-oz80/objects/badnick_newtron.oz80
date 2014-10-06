@@ -2,10 +2,10 @@
 `OBJECT: badnick - newtron
 
 PROC    :doObjectCode_badnick_newtron           SECTION ::objects {
-	set	5,(ix+$18)
+	set	5,(ix+#object.unknown18)
 	ld	(ix+#object.width), 12
 	ld	(ix+#object.height),20
-	ld	a,(ix+$11)
+	ld	a,(ix+#object.unknown11)
 	cp	$02
 	jr	z,._1
 	and	a
@@ -16,18 +16,18 @@ PROC    :doObjectCode_badnick_newtron           SECTION ::objects {
 	ld	bc,$0000
 	jr	._3
 ._2	ld	bc,._6fed
-._3	inc	(ix+$17)
-	ld	a,(ix+$17)
+._3	inc	(ix+#object.unknown17)
+	ld	a,(ix+#object.unknown17)
 	cp	$3c
 	jp	c,._7
-	ld	(ix+$17),$00
-	inc	(ix+$11)
+	ld	(ix+#object.unknown17),$00
+	inc	(ix+#object.unknown11)
 	jp	._7
 	
 ._4	cp	$01
 	jp	nz,._6
-	inc	(ix+$17)
-	ld	a,(ix+$17)
+	inc	(ix+#object.unknown17)
+	ld	a,(ix+#object.unknown17)
 	cp	$64
 	jr	nz,._5
 	call	:findEmptyObject
@@ -51,12 +51,12 @@ PROC    :doObjectCode_badnick_newtron           SECTION ::objects {
 	add	hl,bc
 	ld	(ix+#object.Y.lo),l
 	ld	(ix+#object.Y.hi),h
-	ld	(ix+$11),a;zero
-	ld	(ix+$13),a;zero
-	ld	(ix+$14),a;zero
-	ld	(ix+$15),a;zero
-	ld	(ix+$16),a;zero
-	ld	(ix+$17),a;zero
+	ld	(ix+#object.unknown11),a;zero
+	ld	(ix+#object.unknown13),a;zero
+	ld	(ix+#object.unknown14),a;zero
+	ld	(ix+#object.unknown15),a;zero
+	ld	(ix+#object.unknown16),a;zero
+	ld	(ix+#object.unknown17),a;zero
 	ld	(ix+#object.Xspeed.lo),$00
 	ld	(ix+#object.Xspeed.hi),$fe
 	ld	(ix+#object.Xdirection),$ff
@@ -70,18 +70,18 @@ PROC    :doObjectCode_badnick_newtron           SECTION ::objects {
 ._5	ld	bc,._6fed
 	cp	$78
 	jr	c,._7
-	ld	(ix+$17),$00
-	inc	(ix+$11)
+	ld	(ix+#object.unknown17),$00
+	inc	(ix+#object.unknown11)
 	jr	._7
 	
 ._6	cp	$03
 	jr	nz,._7
 	ld	bc,$0000
-	inc	(ix+$17)
-	ld	a,(ix+$17)
+	inc	(ix+#object.unknown17)
+	ld	a,(ix+#object.unknown17)
 	and	a
 	jr	nz,._7
-	ld	(ix+$11),c
+	ld	(ix+#object.unknown11),c
 	
 ._7	ld	(ix+#object.spriteLayout.lo),c
 	ld	(ix+#object.spriteLayout.hi),b

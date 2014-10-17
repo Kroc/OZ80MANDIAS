@@ -192,9 +192,9 @@ Private Sub Class_Initialize()
              valid until we begin assembling, therefore we treat Register C and _
              Flag C as the same and the assembler will sort out the difference
             Let My_IsRegister8Bit(ii) = True
+            Let My_IsParameter(ii) = True
             Let My_IsRegister(ii) = True
             Let My_IsFlag(ii) = True
-            Let My_IsParameter(ii) = True
         
         '8-Bit registers:
         ElseIf (ii = TOKEN_Z80_A) Or (ii = TOKEN_Z80_B) Or (ii = TOKEN_Z80_C) Or _
@@ -204,8 +204,8 @@ Private Sub Class_Initialize()
                (ii = TOKEN_Z80_IYL) Or (ii = TOKEN_Z80_IYH) _
         Then
             Let My_IsRegister8Bit(ii) = True
-            Let My_IsRegister(ii) = True
             Let My_IsParameter(ii) = True
+            Let My_IsRegister(ii) = True
         
         '16-Bit registers:
         ElseIf (ii = TOKEN_Z80_AF) Or (ii = TOKEN_Z80_BC) Or (ii = TOKEN_Z80_DE) Or _
@@ -213,16 +213,16 @@ Private Sub Class_Initialize()
                (ii = TOKEN_Z80_SP) Or (ii = TOKEN_Z80_PC) _
         Then
             Let My_IsRegister16Bit(ii) = True
-            Let My_IsRegister(ii) = True
             Let My_IsParameter(ii) = True
+            Let My_IsRegister(ii) = True
         
         'Condition flags:
         ElseIf (ii = TOKEN_Z80_NC) Or (ii = TOKEN_Z80_M) Or (ii = TOKEN_Z80_P) Or _
                (ii = TOKEN_Z80_PE) Or (ii = TOKEN_Z80_PO) Or (ii = TOKEN_Z80_Z) Or _
                (ii = TOKEN_Z80_NZ) _
         Then
-            Let My_IsFlag(ii) = True
             Let My_IsParameter(ii) = True
+            Let My_IsFlag(ii) = True
         
         'If the token consititutes an expression (a calculable value)
         ElseIf (ii = TOKEN_LABEL) Or (ii = TOKEN_NUMBER) Or _
@@ -362,14 +362,14 @@ Public Property Get Value() As Double: Let Value = TokenValue: End Property
 'Forward : Move onto the next token, returns false if the TokenStream hit the end _
  ======================================================================================
 Public Function Forward() As Boolean
+    'Generate a debug message with the details of the current token
+    RaiseEvent Message(OZ80_LOG_DEBUG, FormatToken())
+    
     Let TokenIndex = TokenIndex + 1
     Call CacheToken
     
     If TokenIndex >= TokenCount Then Exit Function
     Let Forward = True
-    
-    'Generate a debug message with the details of the now-current token
-    RaiseEvent Message(OZ80_LOG_DEBUG, FormatToken())
 End Function
 
 'Rewind : Go back to the start of the tokenStream _
@@ -520,13 +520,13 @@ ReadChar:
     If IsComment Then
         'For single-line comments:
         If Not IsCommentMulti Then
+            'The end of a line ends a single-line comment:
+            If AscChar = ASC_LF Then Let IsComment = False: GoTo ReadWord
             'Is this a multi-line comment? (two backticks)
             If IsWord Then
                 If AscChar = SYNTAX_COMMENT Then Let IsCommentMulti = True
                 GoTo ReadWord
             End If
-            'The end of a line ends a single-line comment:
-            If AscChar = ASC_LF Then Let IsComment = False: GoTo ReadWord
         
         'For multi-line comments, check for backtick:
         ElseIf AscChar = SYNTAX_COMMENT Then
@@ -1086,6 +1086,11 @@ TokenWord:
     If Asc3 = SYNTAX_HINT1 Then GoTo TwoLetters
     If Asc3 = SYNTAX_HINT2 Then GoTo TwoLetters
     
+    'with all else failing, is it three letters?
+    If Asc4 = ASC_NUL Then GoTo ThreeLetters
+    If Asc4 = SYNTAX_HINT1 Then GoTo ThreeLetters
+    If Asc4 = SYNTAX_HINT2 Then GoTo ThreeLetters
+    
     GoTo WordError
 
 OneLetter:
@@ -1116,6 +1121,18 @@ TwoLetters:
         If Asc2 = ASC_C Then Call Add(TOKEN_Z80_PC): GoTo NextWord
     ElseIf Asc1 = ASC_S Then            '"sp"
         If Asc2 = ASC_P Then Call Add(TOKEN_Z80_SP): GoTo NextWord
+    End If
+    GoTo WordError
+    
+ThreeLetters:
+    If Asc1 = ASC_I Then
+        If Asc2 = ASC_X Then
+            If Asc3 = ASC_H Then Call Add(TOKEN_Z80_IXH): GoTo NextWord
+            If Asc3 = ASC_L Then Call Add(TOKEN_Z80_IXL): GoTo NextWord
+        ElseIf Asc2 = ASC_Y Then
+            If Asc3 = ASC_H Then Call Add(TOKEN_Z80_IYH): GoTo NextWord
+            If Asc3 = ASC_L Then Call Add(TOKEN_Z80_IYL): GoTo NextWord
+        End If
     End If
     GoTo WordError
     

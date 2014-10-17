@@ -43,7 +43,11 @@ PROC    :adc           SECTION ::default
         adc     a       d
         adc     a       e
         adc     a       h
+        adc     a       ixh
+        adc     a       iyh
         adc     a       l
+        adc     a       ixl
+        adc     a       iyl
         adc     a       (hl)
         adc     a       (ix+$FF)
         adc     a       (iy+$FF)
@@ -62,7 +66,11 @@ PROC    :add            SECTION ::default
         add     a       d
         add     a       e
         add     a       h
+        add     a       ixh
+        add     a       iyh
         add     a       l
+        add     a       ixl
+        add     a       iyl
         add     a       (hl)
         add     a       (ix+$FF)
         add     a       (iy+$FF)
@@ -89,7 +97,11 @@ PROC    :and            SECTION ::default
         and     d
         and     e
         and     h
+        and     ixh
+        and     iyh
         and     l
+        and     ixl
+        and     iyl
         and     (hl)
         and     (ix+$FF)
         and     (iy+$FF)
@@ -178,6 +190,119 @@ PROC    :bit            SECTION ::default
         bit     7       (hl)
         bit     7       (ix+$FF)
         bit     7       (iy+$FF)
+        `undocumented triple-parameter instructions:
+        bit     0       (ix+$FF)        a
+        bit     0       (ix+$FF)        b
+        bit     0       (ix+$FF)        c
+        bit     0       (ix+$FF)        d
+        bit     0       (ix+$FF)        e
+        bit     0       (ix+$FF)        h
+        bit     0       (ix+$FF)        l
+        bit     0       (iy+$FF)        a
+        bit     0       (iy+$FF)        b
+        bit     0       (iy+$FF)        c
+        bit     0       (iy+$FF)        d
+        bit     0       (iy+$FF)        e
+        bit     0       (iy+$FF)        h
+        bit     0       (iy+$FF)        l
+        bit     1       (ix+$FF)        a
+        bit     1       (ix+$FF)        b
+        bit     1       (ix+$FF)        c
+        bit     1       (ix+$FF)        d
+        bit     1       (ix+$FF)        e
+        bit     1       (ix+$FF)        h
+        bit     1       (ix+$FF)        l
+        bit     1       (iy+$FF)        a
+        bit     1       (iy+$FF)        b
+        bit     1       (iy+$FF)        c
+        bit     1       (iy+$FF)        d
+        bit     1       (iy+$FF)        e
+        bit     1       (iy+$FF)        h
+        bit     1       (iy+$FF)        l
+        bit     2       (ix+$FF)        a
+        bit     2       (ix+$FF)        b
+        bit     2       (ix+$FF)        c
+        bit     2       (ix+$FF)        d
+        bit     2       (ix+$FF)        e
+        bit     2       (ix+$FF)        h
+        bit     2       (ix+$FF)        l
+        bit     2       (iy+$FF)        a
+        bit     2       (iy+$FF)        b
+        bit     2       (iy+$FF)        c
+        bit     2       (iy+$FF)        d
+        bit     2       (iy+$FF)        e
+        bit     2       (iy+$FF)        h
+        bit     2       (iy+$FF)        l
+        bit     3       (ix+$FF)        a
+        bit     3       (ix+$FF)        b
+        bit     3       (ix+$FF)        c
+        bit     3       (ix+$FF)        d
+        bit     3       (ix+$FF)        e
+        bit     3       (ix+$FF)        h
+        bit     3       (ix+$FF)        l
+        bit     3       (iy+$FF)        a
+        bit     3       (iy+$FF)        b
+        bit     3       (iy+$FF)        c
+        bit     3       (iy+$FF)        d
+        bit     3       (iy+$FF)        e
+        bit     3       (iy+$FF)        h
+        bit     3       (iy+$FF)        l
+        bit     4       (ix+$FF)        a
+        bit     4       (ix+$FF)        b
+        bit     4       (ix+$FF)        c
+        bit     4       (ix+$FF)        d
+        bit     4       (ix+$FF)        e
+        bit     4       (ix+$FF)        h
+        bit     4       (ix+$FF)        l
+        bit     4       (iy+$FF)        a
+        bit     4       (iy+$FF)        b
+        bit     4       (iy+$FF)        c
+        bit     4       (iy+$FF)        d
+        bit     4       (iy+$FF)        e
+        bit     4       (iy+$FF)        h
+        bit     4       (iy+$FF)        l
+        bit     5       (ix+$FF)        a
+        bit     5       (ix+$FF)        b
+        bit     5       (ix+$FF)        c
+        bit     5       (ix+$FF)        d
+        bit     5       (ix+$FF)        e
+        bit     5       (ix+$FF)        h
+        bit     5       (ix+$FF)        l
+        bit     5       (iy+$FF)        a
+        bit     5       (iy+$FF)        b
+        bit     5       (iy+$FF)        c
+        bit     5       (iy+$FF)        d
+        bit     5       (iy+$FF)        e
+        bit     5       (iy+$FF)        h
+        bit     5       (iy+$FF)        l
+        bit     6       (ix+$FF)        a
+        bit     6       (ix+$FF)        b
+        bit     6       (ix+$FF)        c
+        bit     6       (ix+$FF)        d
+        bit     6       (ix+$FF)        e
+        bit     6       (ix+$FF)        h
+        bit     6       (ix+$FF)        l
+        bit     6       (iy+$FF)        a
+        bit     6       (iy+$FF)        b
+        bit     6       (iy+$FF)        c
+        bit     6       (iy+$FF)        d
+        bit     6       (iy+$FF)        e
+        bit     6       (iy+$FF)        h
+        bit     6       (iy+$FF)        l
+        bit     7       (ix+$FF)        a
+        bit     7       (ix+$FF)        b
+        bit     7       (ix+$FF)        c
+        bit     7       (ix+$FF)        d
+        bit     7       (ix+$FF)        e
+        bit     7       (ix+$FF)        h
+        bit     7       (ix+$FF)        l
+        bit     7       (iy+$FF)        a
+        bit     7       (iy+$FF)        b
+        bit     7       (iy+$FF)        c
+        bit     7       (iy+$FF)        d
+        bit     7       (iy+$FF)        e
+        bit     7       (iy+$FF)        h
+        bit     7       (iy+$FF)        l
 }
 
 PROC    :call           SECTION ::default
@@ -205,8 +330,12 @@ PROC    :cp             SECTION ::default
         cp      c
         cp      d
         cp      e
-        cp      h       
+        cp      h
+        cp      ixh
+        cp      iyh
         cp      l
+        cp      ixl
+        cp      iyl
         cp      (hl)
         cp      (ix+$FF)
         cp      (iy+$FF)
@@ -239,7 +368,11 @@ PROC    :dec            SECTION ::default
         dec     d
         dec     e
         dec     h
+        dec     ixh
+        dec     iyh
         dec     l
+        dec     ixl
+        dec     iyl
         dec     (hl)
         dec     (ix+$FF)
         dec     (iy+$FF)
@@ -292,7 +425,6 @@ PROC    :in             SECTION ::default
 {
         in      a       ($FF)
         in      (c)
-        in      (bc)
         in      a       (c)
         in      b       (c)
         in      c       (c)
@@ -300,13 +432,6 @@ PROC    :in             SECTION ::default
         in      e       (c)
         in      h       (c)     
         in      l       (c)
-        in      a       (bc)
-        in      b       (bc)
-        in      c       (bc)
-        in      d       (bc)
-        in      e       (bc)
-        in      h       (bc)
-        in      l       (bc)
 }
 
 PROC    :inc            SECTION ::default
@@ -317,7 +442,11 @@ PROC    :inc            SECTION ::default
         inc     d
         inc     e
         inc     h
+        inc     ixh
+        inc     iyh
         inc     l
+        inc     ixl
+        inc     iyl
         inc     (hl)
         inc     (ix+$FF)
         inc     (iy+$FF)
@@ -374,13 +503,17 @@ PROC    :ld             SECTION ::default
         ld      a       d
         ld      a       e
         ld      a       h
+        ld      a       ixh
+        ld      a       iyh
         ld      a       l
+        ld      a       ixl
+        ld      a       iyl
+        ld      a       (bc)
+        ld      a       (de)
         ld      a       (hl)
         ld      a       (ix+$FF)
         ld      a       (iy+$FF)
         ld      a       $FF
-        ld      a       (bc)
-        ld      a       (de)
         ld      a       ($FFFF)
         ld      b       a
         ld      b       b
@@ -388,7 +521,11 @@ PROC    :ld             SECTION ::default
         ld      b       d
         ld      b       e
         ld      b       h
+        ld      b       ixh
+        ld      b       iyh
         ld      b       l
+        ld      b       ixl
+        ld      b       iyl
         ld      b       (hl)
         ld      b       (ix+$FF)
         ld      b       (iy+$FF)
@@ -399,7 +536,11 @@ PROC    :ld             SECTION ::default
         ld      c       d
         ld      c       e
         ld      c       h
+        ld      c       ixh
+        ld      c       iyh
         ld      c       l
+        ld      c       ixl
+        ld      c       iyl
         ld      c       (hl)
         ld      c       (ix+$FF)
         ld      c       (iy+$FF)
@@ -410,7 +551,11 @@ PROC    :ld             SECTION ::default
         ld      d       d
         ld      d       e
         ld      d       h
+        ld      d       ixh
+        ld      d       iyh
         ld      d       l
+        ld      d       ixl
+        ld      d       iyl
         ld      d       (hl)
         ld      d       (ix+$FF)
         ld      d       (iy+$FF)
@@ -421,7 +566,11 @@ PROC    :ld             SECTION ::default
         ld      e       d
         ld      e       e
         ld      e       h
+        ld      e       ixh
+        ld      e       iyh
         ld      e       l
+        ld      e       ixl
+        ld      e       iyl
         ld      e       (hl)
         ld      e       (ix+$FF)
         ld      e       (iy+$FF)
@@ -437,6 +586,22 @@ PROC    :ld             SECTION ::default
         ld      h       (ix+$FF)
         ld      h       (iy+$FF)
         ld      h       $FF
+        ld      ixh     a
+        ld      ixh     b
+        ld      ixh     c
+        ld      ixh     d
+        ld      ixh     e
+        ld      ixh     ixh
+        ld      ixh     ixl
+        ld      ixh     $FF
+        ld      iyh     a
+        ld      iyh     b
+        ld      iyh     c
+        ld      iyh     d
+        ld      iyh     e
+        ld      iyh     iyh
+        ld      iyh     iyl
+        ld      iyh     $FF
         ld      l       a
         ld      l       b
         ld      l       c
@@ -448,6 +613,22 @@ PROC    :ld             SECTION ::default
         ld      l       (ix+$FF)
         ld      l       (iy+$FF)
         ld      l       $FF
+        ld      ixl     a
+        ld      ixl     b
+        ld      ixl     c
+        ld      ixl     d
+        ld      ixl     e
+        ld      ixl     ixh
+        ld      ixl     ixl
+        ld      ixl     $FF
+        ld      iyl     a
+        ld      iyl     b
+        ld      iyl     c
+        ld      iyl     d
+        ld      iyl     e
+        ld      iyl     iyh
+        ld      iyl     iyl
+        ld      iyl     $FF
         ld      bc      $FFFF
         ld      bc      ($FFFF)
         ld      de      $FFFF
@@ -524,7 +705,11 @@ PROC    :or             SECTION ::default
         or      d
         or      e
         or      h
+        or      ixh
+        or      iyh
         or      l
+        or      ixl
+        or      iyl
         or      (hl)
         or      (ix+$FF)
         or      (iy+$FF)
@@ -654,6 +839,119 @@ PROC    :res            SECTION ::default
         res     7       (hl)
         res     7       (ix+$FF)
         res     7       (iy+$FF)
+        `undocumented triple-parameter instructions:
+        res     0       (ix+$FF)        a
+        res     0       (ix+$FF)        b
+        res     0       (ix+$FF)        c
+        res     0       (ix+$FF)        d
+        res     0       (ix+$FF)        e
+        res     0       (ix+$FF)        h
+        res     0       (ix+$FF)        l
+        res     0       (iy+$FF)        a
+        res     0       (iy+$FF)        b
+        res     0       (iy+$FF)        c
+        res     0       (iy+$FF)        d
+        res     0       (iy+$FF)        e
+        res     0       (iy+$FF)        h
+        res     0       (iy+$FF)        l
+        res     1       (ix+$FF)        a
+        res     1       (ix+$FF)        b
+        res     1       (ix+$FF)        c
+        res     1       (ix+$FF)        d
+        res     1       (ix+$FF)        e
+        res     1       (ix+$FF)        h
+        res     1       (ix+$FF)        l
+        res     1       (iy+$FF)        a
+        res     1       (iy+$FF)        b
+        res     1       (iy+$FF)        c
+        res     1       (iy+$FF)        d
+        res     1       (iy+$FF)        e
+        res     1       (iy+$FF)        h
+        res     1       (iy+$FF)        l
+        res     2       (ix+$FF)        a
+        res     2       (ix+$FF)        b
+        res     2       (ix+$FF)        c
+        res     2       (ix+$FF)        d
+        res     2       (ix+$FF)        e
+        res     2       (ix+$FF)        h
+        res     2       (ix+$FF)        l
+        res     2       (iy+$FF)        a
+        res     2       (iy+$FF)        b
+        res     2       (iy+$FF)        c
+        res     2       (iy+$FF)        d
+        res     2       (iy+$FF)        e
+        res     2       (iy+$FF)        h
+        res     2       (iy+$FF)        l
+        res     3       (ix+$FF)        a
+        res     3       (ix+$FF)        b
+        res     3       (ix+$FF)        c
+        res     3       (ix+$FF)        d
+        res     3       (ix+$FF)        e
+        res     3       (ix+$FF)        h
+        res     3       (ix+$FF)        l
+        res     3       (iy+$FF)        a
+        res     3       (iy+$FF)        b
+        res     3       (iy+$FF)        c
+        res     3       (iy+$FF)        d
+        res     3       (iy+$FF)        e
+        res     3       (iy+$FF)        h
+        res     3       (iy+$FF)        l
+        res     4       (ix+$FF)        a
+        res     4       (ix+$FF)        b
+        res     4       (ix+$FF)        c
+        res     4       (ix+$FF)        d
+        res     4       (ix+$FF)        e
+        res     4       (ix+$FF)        h
+        res     4       (ix+$FF)        l
+        res     4       (iy+$FF)        a
+        res     4       (iy+$FF)        b
+        res     4       (iy+$FF)        c
+        res     4       (iy+$FF)        d
+        res     4       (iy+$FF)        e
+        res     4       (iy+$FF)        h
+        res     4       (iy+$FF)        l
+        res     5       (ix+$FF)        a
+        res     5       (ix+$FF)        b
+        res     5       (ix+$FF)        c
+        res     5       (ix+$FF)        d
+        res     5       (ix+$FF)        e
+        res     5       (ix+$FF)        h
+        res     5       (ix+$FF)        l
+        res     5       (iy+$FF)        a
+        res     5       (iy+$FF)        b
+        res     5       (iy+$FF)        c
+        res     5       (iy+$FF)        d
+        res     5       (iy+$FF)        e
+        res     5       (iy+$FF)        h
+        res     5       (iy+$FF)        l
+        res     6       (ix+$FF)        a
+        res     6       (ix+$FF)        b
+        res     6       (ix+$FF)        c
+        res     6       (ix+$FF)        d
+        res     6       (ix+$FF)        e
+        res     6       (ix+$FF)        h
+        res     6       (ix+$FF)        l
+        res     6       (iy+$FF)        a
+        res     6       (iy+$FF)        b
+        res     6       (iy+$FF)        c
+        res     6       (iy+$FF)        d
+        res     6       (iy+$FF)        e
+        res     6       (iy+$FF)        h
+        res     6       (iy+$FF)        l
+        res     7       (ix+$FF)        a
+        res     7       (ix+$FF)        b
+        res     7       (ix+$FF)        c
+        res     7       (ix+$FF)        d
+        res     7       (ix+$FF)        e
+        res     7       (ix+$FF)        h
+        res     7       (ix+$FF)        l
+        res     7       (iy+$FF)        a
+        res     7       (iy+$FF)        b
+        res     7       (iy+$FF)        c
+        res     7       (iy+$FF)        d
+        res     7       (iy+$FF)        e
+        res     7       (iy+$FF)        h
+        res     7       (iy+$FF)        l
 }
 
 PROC    :ret            SECTION ::default
@@ -683,6 +981,22 @@ PROC    :rl             SECTION ::default
         rl      (hl)
         rl      (ix+$FF)
         rl      (iy+$FF)
+        `undocumented:
+        rl      (ix+$FF)        a
+        rl      (ix+$FF)        b
+        rl      (ix+$FF)        c
+        rl      (ix+$FF)        d
+        rl      (ix+$FF)        e
+        rl      (ix+$FF)        h
+        rl      (ix+$FF)        l
+        rl      (iy+$FF)        a
+        rl      (iy+$FF)        b
+        rl      (iy+$FF)        c
+        rl      (iy+$FF)        d
+        rl      (iy+$FF)        e
+        rl      (iy+$FF)        h
+        rl      (iy+$FF)        l
+        `
         rla
         rlc     a
         rlc     b
@@ -694,6 +1008,22 @@ PROC    :rl             SECTION ::default
         rlc     (hl)
         rlc     (ix+$FF)
         rlc     (iy+$FF)
+        `undocumented:
+        rlc     (iy+$FF)        a
+        rlc     (iy+$FF)        b
+        rlc     (iy+$FF)        c
+        rlc     (iy+$FF)        d
+        rlc     (iy+$FF)        e
+        rlc     (iy+$FF)        h
+        rlc     (iy+$FF)        l
+        rlc     (iy+$FF)        a
+        rlc     (iy+$FF)        b
+        rlc     (iy+$FF)        c
+        rlc     (iy+$FF)        d
+        rlc     (iy+$FF)        e
+        rlc     (iy+$FF)        h
+        rlc     (iy+$FF)        l
+        `
         rlca
         rld
 }
@@ -710,6 +1040,22 @@ PROC    :rr             SECTION ::default
         rr      (hl)
         rr      (ix+$FF)
         rr      (iy+$FF)
+        `undocumented:
+        rr      (ix+$FF)        a
+        rr      (ix+$FF)        b
+        rr      (ix+$FF)        c
+        rr      (ix+$FF)        d
+        rr      (ix+$FF)        e
+        rr      (ix+$FF)        h
+        rr      (ix+$FF)        l
+        rr      (iy+$FF)        a
+        rr      (iy+$FF)        b
+        rr      (iy+$FF)        c
+        rr      (iy+$FF)        d
+        rr      (iy+$FF)        e
+        rr      (iy+$FF)        h
+        rr      (iy+$FF)        l
+        `
         rra
         rrc     a
         rrc     b
@@ -721,6 +1067,22 @@ PROC    :rr             SECTION ::default
         rrc     (hl)
         rrc     (ix+$FF)
         rrc     (iy+$FF)
+        `undocumented:
+        rrc     (ix+$FF)        a
+        rrc     (ix+$FF)        b
+        rrc     (ix+$FF)        c
+        rrc     (ix+$FF)        d
+        rrc     (ix+$FF)        e
+        rrc     (ix+$FF)        h
+        rrc     (ix+$FF)        l
+        rrc     (iy+$FF)        a
+        rrc     (iy+$FF)        b
+        rrc     (iy+$FF)        c
+        rrc     (iy+$FF)        d
+        rrc     (iy+$FF)        e
+        rrc     (iy+$FF)        h
+        rrc     (iy+$FF)        l
+        `
         rrca
         rrd
 }
@@ -744,7 +1106,11 @@ PROC    :sbc            SECTION ::default
         sbc     a       d
         sbc     a       e
         sbc     a       h
+        sbc     a       ixh
+        sbc     a       iyh
         sbc     a       l
+        sbc     a       ixl
+        sbc     a       iyl
         sbc     a       (hl)
         sbc     a       (ix+$FF)
         sbc     a       (iy+$FF)
@@ -842,6 +1208,119 @@ PROC    :set            SECTION ::default
         set     7       (hl)
         set     7       (ix+$FF)
         set     7       (iy+$FF)
+        `undocumented triple-parameter instructions:
+        set     0       (ix+$FF)        a
+        set     0       (ix+$FF)        b
+        set     0       (ix+$FF)        c
+        set     0       (ix+$FF)        d
+        set     0       (ix+$FF)        e
+        set     0       (ix+$FF)        h
+        set     0       (ix+$FF)        l
+        set     0       (iy+$FF)        a
+        set     0       (iy+$FF)        b
+        set     0       (iy+$FF)        c
+        set     0       (iy+$FF)        d
+        set     0       (iy+$FF)        e
+        set     0       (iy+$FF)        h
+        set     0       (iy+$FF)        l
+        set     1       (ix+$FF)        a
+        set     1       (ix+$FF)        b
+        set     1       (ix+$FF)        c
+        set     1       (ix+$FF)        d
+        set     1       (ix+$FF)        e
+        set     1       (ix+$FF)        h
+        set     1       (ix+$FF)        l
+        set     1       (iy+$FF)        a
+        set     1       (iy+$FF)        b
+        set     1       (iy+$FF)        c
+        set     1       (iy+$FF)        d
+        set     1       (iy+$FF)        e
+        set     1       (iy+$FF)        h
+        set     1       (iy+$FF)        l
+        set     2       (ix+$FF)        a
+        set     2       (ix+$FF)        b
+        set     2       (ix+$FF)        c
+        set     2       (ix+$FF)        d
+        set     2       (ix+$FF)        e
+        set     2       (ix+$FF)        h
+        set     2       (ix+$FF)        l
+        set     2       (iy+$FF)        a
+        set     2       (iy+$FF)        b
+        set     2       (iy+$FF)        c
+        set     2       (iy+$FF)        d
+        set     2       (iy+$FF)        e
+        set     2       (iy+$FF)        h
+        set     2       (iy+$FF)        l
+        set     3       (ix+$FF)        a
+        set     3       (ix+$FF)        b
+        set     3       (ix+$FF)        c
+        set     3       (ix+$FF)        d
+        set     3       (ix+$FF)        e
+        set     3       (ix+$FF)        h
+        set     3       (ix+$FF)        l
+        set     3       (iy+$FF)        a
+        set     3       (iy+$FF)        b
+        set     3       (iy+$FF)        c
+        set     3       (iy+$FF)        d
+        set     3       (iy+$FF)        e
+        set     3       (iy+$FF)        h
+        set     3       (iy+$FF)        l
+        set     4       (ix+$FF)        a
+        set     4       (ix+$FF)        b
+        set     4       (ix+$FF)        c
+        set     4       (ix+$FF)        d
+        set     4       (ix+$FF)        e
+        set     4       (ix+$FF)        h
+        set     4       (ix+$FF)        l
+        set     4       (iy+$FF)        a
+        set     4       (iy+$FF)        b
+        set     4       (iy+$FF)        c
+        set     4       (iy+$FF)        d
+        set     4       (iy+$FF)        e
+        set     4       (iy+$FF)        h
+        set     4       (iy+$FF)        l
+        set     5       (ix+$FF)        a
+        set     5       (ix+$FF)        b
+        set     5       (ix+$FF)        c
+        set     5       (ix+$FF)        d
+        set     5       (ix+$FF)        e
+        set     5       (ix+$FF)        h
+        set     5       (ix+$FF)        l
+        set     5       (iy+$FF)        a
+        set     5       (iy+$FF)        b
+        set     5       (iy+$FF)        c
+        set     5       (iy+$FF)        d
+        set     5       (iy+$FF)        e
+        set     5       (iy+$FF)        h
+        set     5       (iy+$FF)        l
+        set     6       (ix+$FF)        a
+        set     6       (ix+$FF)        b
+        set     6       (ix+$FF)        c
+        set     6       (ix+$FF)        d
+        set     6       (ix+$FF)        e
+        set     6       (ix+$FF)        h
+        set     6       (ix+$FF)        l
+        set     6       (iy+$FF)        a
+        set     6       (iy+$FF)        b
+        set     6       (iy+$FF)        c
+        set     6       (iy+$FF)        d
+        set     6       (iy+$FF)        e
+        set     6       (iy+$FF)        h
+        set     6       (iy+$FF)        l
+        set     7       (ix+$FF)        a
+        set     7       (ix+$FF)        b
+        set     7       (ix+$FF)        c
+        set     7       (ix+$FF)        d
+        set     7       (ix+$FF)        e
+        set     7       (ix+$FF)        h
+        set     7       (ix+$FF)        l
+        set     7       (iy+$FF)        a
+        set     7       (iy+$FF)        b
+        set     7       (iy+$FF)        c
+        set     7       (iy+$FF)        d
+        set     7       (iy+$FF)        e
+        set     7       (iy+$FF)        h
+        set     7       (iy+$FF)        l
 }
 
 PROC    :sla            SECTION ::default
@@ -856,6 +1335,22 @@ PROC    :sla            SECTION ::default
         sla     (hl)
         sla     (ix+$FF)
         sla     (iy+$FF)
+        `undocumented:
+        sla     (ix+$FF)        a
+        sla     (ix+$FF)        b
+        sla     (ix+$FF)        c
+        sla     (ix+$FF)        d
+        sla     (ix+$FF)        e
+        sla     (ix+$FF)        h
+        sla     (ix+$FF)        l
+        sla     (iy+$FF)        a
+        sla     (iy+$FF)        b
+        sla     (iy+$FF)        c
+        sla     (iy+$FF)        d
+        sla     (iy+$FF)        e
+        sla     (iy+$FF)        h
+        sla     (iy+$FF)        l
+        `
         sll     a
         sll     b
         sll     c
@@ -866,6 +1361,22 @@ PROC    :sla            SECTION ::default
         sll     (hl)
         sll     (ix+$FF)
         sll     (iy+$FF)
+        `undocumented:
+        sll     (ix+$FF)        a
+        sll     (ix+$FF)        b
+        sll     (ix+$FF)        c
+        sll     (ix+$FF)        d
+        sll     (ix+$FF)        e
+        sll     (ix+$FF)        h
+        sll     (ix+$FF)        l
+        sll     (iy+$FF)        a
+        sll     (iy+$FF)        b
+        sll     (iy+$FF)        c
+        sll     (iy+$FF)        d
+        sll     (iy+$FF)        e
+        sll     (iy+$FF)        h
+        sll     (iy+$FF)        l
+        `
 }
 
 PROC    :sra            SECTION ::default
@@ -880,6 +1391,22 @@ PROC    :sra            SECTION ::default
         sra     (hl)
         sra     (ix+$FF)
         sra     (iy+$FF)
+        `undocumented:
+        sra     (ix+$FF)        a
+        sra     (ix+$FF)        b
+        sra     (ix+$FF)        c
+        sra     (ix+$FF)        d
+        sra     (ix+$FF)        e
+        sra     (ix+$FF)        h
+        sra     (ix+$FF)        l
+        sra     (iy+$FF)        a
+        sra     (iy+$FF)        b
+        sra     (iy+$FF)        c
+        sra     (iy+$FF)        d
+        sra     (iy+$FF)        e
+        sra     (iy+$FF)        h
+        sra     (iy+$FF)        l
+        `
         srl     a
         srl     b
         srl     c
@@ -890,6 +1417,22 @@ PROC    :sra            SECTION ::default
         srl     (hl)
         srl     (ix+$FF)
         srl     (iy+$FF)
+        `undocumented:
+        srl     (ix+$FF)        a
+        srl     (ix+$FF)        b
+        srl     (ix+$FF)        c
+        srl     (ix+$FF)        d
+        srl     (ix+$FF)        e
+        srl     (ix+$FF)        h
+        srl     (ix+$FF)        l
+        srl     (iy+$FF)        a
+        srl     (iy+$FF)        b
+        srl     (iy+$FF)        c
+        srl     (iy+$FF)        d
+        srl     (iy+$FF)        e
+        srl     (iy+$FF)        h
+        srl     (iy+$FF)        l
+        `
 }
 
 PROC    :sub            SECTION ::default
@@ -900,7 +1443,11 @@ PROC    :sub            SECTION ::default
         sub     d
         sub     e
         sub     h
+        sub     ixh
+        sub     iyh
         sub     l
+        sub     ixl
+        sub     iyl
         sub     (hl)
         sub     (ix+$FF)
         sub     (iy+$FF)
@@ -915,7 +1462,11 @@ PROC    :xor            SECTION ::default
         xor     d
         xor     e
         xor     h
+        xor     ixh
+        xor     iyh
         xor     l
+        xor     ixl
+        xor     iyl
         xor     (hl)
         xor     (ix+$FF)
         xor     (iy+$FF)

@@ -249,6 +249,7 @@ Public Enum OZ80_TOKEN
     [_TOKEN_INSTRUCTIONS_END]
     
     'Z80 Registers & Flags ............................................................
+    [_TOKEN_REGISTERS_BEGIN]
     TOKEN_Z80_A                         'Accumulator
     TOKEN_Z80_AF                        'Accumulator and Flags
     TOKEN_Z80_B                         'Register B
@@ -277,6 +278,7 @@ Public Enum OZ80_TOKEN
     TOKEN_Z80_SP                        'Stack Pointer
     TOKEN_Z80_Z                         'Zero set flag
     TOKEN_Z80_NZ                        'Zero not set flag
+    [_TOKEN_REGISTERS_END]
     
     'Operators ........................................................................
     [_TOKEN_OPERATORS_BEGIN]
@@ -327,78 +329,103 @@ End Enum
 
 '--------------------------------------------------------------------------------------
 
+'In order to compare the hundreds of permutations of parameters for Z80 instructions, _
+ we assign each parameter type a single bit. We can thus check very quickly if a given _
+ parameter falls within an allowed list of accepted types
+
 Public Enum OZ80_MASK
-    'The 8-bit registers
-     '(excluding the undocumented IX/IY halves)
-    MASK_REG_A = 2 ^ 0
-    MASK_REG_B = 2 ^ 1
-    MASK_REG_C = 2 ^ 2
-    MASK_REG_D = 2 ^ 3
-    MASK_REG_E = 2 ^ 4
-    MASK_REG_H = 2 ^ 5
-    MASK_REG_L = 2 ^ 6
+    
+    MASK_REG_B = 2 ^ 0
+    MASK_REG_C = 2 ^ 1
+    MASK_REG_D = 2 ^ 2
+    MASK_REG_E = 2 ^ 3
+    MASK_REG_H = 2 ^ 4
+    MASK_REG_L = 2 ^ 5
+    MASK_MEM_HL = 2 ^ 6
+    MASK_REG_A = 2 ^ 7
+    
+    'The presence of an IX/IY prefix on the opcode changes H/L to IXH/IYH or IXL/IYL
+     'respectively, but only on instructions that use single byte opcodes.
+     'This is officially undocumented, but obviously fair game for old systems
+    MASK_REG_IXH = 2 ^ 8
+    MASK_REG_IXL = 2 ^ 9
+    MASK_REG_IYH = 2 ^ 10
+    MASK_REG_IYL = 2 ^ 11
+    
+    'The presence of an IX/IY prefix on the opcode changes a memory reference "(HL)"
+     'to IX/IY, with an offset value e.g. "(IX+$8)"
+    MASK_MEM_IX = 2 ^ 12
+    MASK_MEM_IY = 2 ^ 13
+    'A couple of undocumented instructions allow for IX/IY memory references,
+     'but not the standard "(HL)" reference
+    MASK_MEM_IXY = MASK_MEM_IX Or MASK_MEM_IY
+    'And this is the common "(HL|IX+$8|IY+$8)" form that is used often throughout
+    MASK_MEM_HLIXY = MASK_MEM_HL Or MASK_MEM_IXY
     
     'The main 8-bit registers are a common instruction parameter
     MASK_REGS_ABCDEHL = MASK_REG_A Or MASK_REG_B Or MASK_REG_C Or MASK_REG_D Or MASK_REG_E Or MASK_REG_E Or MASK_REG_H Or MASK_REG_L
+    'The Z80 clumps HL/IX & IY memory references together with 8-bit registers when
+     'building opcodes, i.e. "A|B|C|D|E|H|L|(HL|IX+$8|IY+$8)"
+    MASK_REGS_ABCDEHL_MEM_HLIXY = MASK_REGS_ABCDEHL Or MASK_MEM_HLIXY
+    'The use of the IX/IY prefix turns H/L into IXH/IXL/IYH/IYL in many instances
+    MASK_REGS_IXHL = MASK_REG_IXH Or MASK_REG_IXL
+    MASK_REGS_IYHL = MASK_REG_IYH Or MASK_REG_IYL
+    MASK_REGS_IXYHL = MASK_REGS_IXHL Or MASK_REGS_IYHL
+    MASK_REGS_ABCDEIXYHL_MEM_HLIXY = MASK_REGS_ABCDEHL_MEM_HLIXY Or MASK_REGS_IXYHL
     
-    MASK_REG_I = 2 ^ 7                  'Interrupt register
-    MASK_REG_R = 2 ^ 8                  'Refresh register, pseudo-random
+    'Very uncommon 8-bit registers
+    MASK_REG_I = 2 ^ 14                 'Interrupt register
+    MASK_REG_R = 2 ^ 15                 'Refresh register, pseudo-random
     
     'The 16-bit register pairs
-    MASK_REG_AF = 2 ^ 9                 'The Accumulator and the processor Flags
-    MASK_REG_BC = 2 ^ 10                'Registers B & C
-    MASK_REG_DE = 2 ^ 11                'Registers D & E
-    MASK_REG_HL = 2 ^ 12                'Registers H & L
-    MASK_REG_SP = 2 ^ 13                'Stack Pointer
+    MASK_REG_AF = 2 ^ 16                'The Accumulator and the processor Flags
+    MASK_REG_BC = 2 ^ 17                'Registers B & C
+    MASK_REG_DE = 2 ^ 18                'Registers D & E
+    MASK_REG_HL = 2 ^ 19                'Registers H & L
+    MASK_REG_SP = 2 ^ 20                'Stack Pointer
     
-    MASK_REG_IX = 2 ^ 14
-    MASK_REG_IXL = 2 ^ 15
-    MASK_REG_IXH = 2 ^ 16
-    MASK_REG_IY = 2 ^ 17
-    MASK_REG_IYL = 2 ^ 18
-    MASK_REG_IYH = 2 ^ 19
+    MASK_REG_IX = 2 ^ 21
+    MASK_REG_IY = 2 ^ 22
     
-    'HL, IX & IY are synonymous as they use an opcode prefix to determine which
-    MASK_REGS_HL_IXY = MASK_REG_HL Or MASK_REG_IX Or MASK_REG_IY
     MASK_REGS_BC_DE_SP = MASK_REG_BC Or MASK_REG_DE Or MASK_REG_SP
     'Some instructions accept BC/DE/HL/SP, but not IX & IY due to existing prefixes
     MASK_REGS_BC_DE_HL_SP = MASK_REGS_BC_DE_SP Or MASK_REG_HL
+    
+    'HL, IX & IY are synonymous as they use an opcode prefix to determine which
+    MASK_REGS_HL_IXY = MASK_REG_HL Or MASK_REG_IX Or MASK_REG_IY
     'PUSH / POP allow AF but not SP
     MASK_REGS_AF_BC_DE_HL_IXY = MASK_REG_AF Or MASK_REG_BC Or MASK_REG_DE Or MASK_REGS_HL_IXY
     'The LD instruction can take most 16-bit registers
     MASK_REGS_BC_DE_HL_SP_IXY = MASK_REGS_BC_DE_HL_SP Or MASK_REG_IX Or MASK_REG_IY
     
-    MASK_VAL8 = 2 ^ 20                  '8-bit value
-    MASK_VAL16 = 2 ^ 21                 '16-bit value
-    MASK_VAL = MASK_VAL8 Or MASK_VAL16
+    MASK_VAL = 2 ^ 23
     
     '..................................................................................
     
     'Register C & Flag C cannot be distinguished by the tokeniser (it isn't aware of
      'context) so they are treated as the same thing. Another bit covers NC/Z/NZ so
      'that these are not accidentally taken as Register C elsewhere
-    MASK_FLAGS_CZ = MASK_REG_C Or (2 ^ 22)
-    MASK_FLAGS_MP = (2 ^ 23)
+    MASK_FLAGS_CZ = MASK_REG_C Or (2 ^ 24)
+    MASK_FLAGS_MP = (2 ^ 25)
     
     MASK_FLAGS = MASK_FLAGS_CZ Or MASK_FLAGS_MP
     
     '..................................................................................
     
-    'Memory HL/IX & IY are synonymous - opcode prefixes are used to determine which
-    MASK_MEM_HLIXY = 2 ^ 24
-    
-    'The Z80 clumps HL/IX & IY memory references together with 8-bit registers when
-     'building opcodes, i.e. "A|B|C|D|E|H|L|(HL|IX+$8|IY+$8)"
-    MASK_REGS_ABCDEHL_MEM_HLIXY = MASK_REGS_ABCDEHL Or MASK_MEM_HLIXY
-    
     'The IN and OUT instructions can use port "C" (which is, in reality, BC)
-    MASK_MEM_BC = 2 ^ 25
-    MASK_MEM_DE = 2 ^ 26
-    MASK_MEM_SP = 2 ^ 27
+    MASK_MEM_BC = 2 ^ 26
+    MASK_MEM_DE = 2 ^ 27
+    MASK_MEM_SP = 2 ^ 28
     
-    MASK_MEM_VAL8 = 2 ^ 28              '8-bit memory reference, only used by IN/OUT
-    MASK_MEM_VAL16 = 2 ^ 29             '16-bit memory reference, e.g. `LD A, ($1234)`
-    MASK_MEM_VAL = MASK_MEM_VAL8 Or MASK_MEM_VAL16
+    MASK_MEM_VAL = 2 ^ 29
+    
+    '..................................................................................
+    
+    'This is a shorthand to check for any instance of IX/IY so that we can add the
+     'relevant opcode prefix with the simplest of tests
+    MASK_ANY_IX = MASK_REG_IX Or MASK_REG_IXH Or MASK_REG_IXL Or MASK_MEM_IX
+    MASK_ANY_IY = MASK_REG_IY Or MASK_REG_IYH Or MASK_REG_IYL Or MASK_MEM_IY
+    MASK_ANY_IXY = MASK_ANY_IX Or MASK_ANY_IY
 End Enum
 
 Public Type oz80Param
@@ -756,6 +783,12 @@ Public Sub GetOZ80Error( _
         'TODO
         Let ReturnDescription = ""
     
+    Case OZ80_ERROR_INVALID_Z80PARAMS
+        '..............................................................................
+        Let ReturnTitle = "Invalid Parameters For Z80 Instruction"
+        'TODO
+        Let ReturnDescription = ""
+    
     Case OZ80_ERROR_OVERFLOW
         '..............................................................................
         Let ReturnTitle = "Overflow"
@@ -794,10 +827,12 @@ Public Function ParamToString( _
     ElseIf Param.Mask = MASK_REG_IYL Then Let ParamToString = "IYL"
     ElseIf Param.Mask = MASK_REG_IYH Then Let ParamToString = "IYH"
     
-    ElseIf (Param.Mask And MASK_VAL8) <> 0 Then
-        Let ParamToString = "$" & oz80.HexStr8(Param.Value)
-    ElseIf (Param.Mask And MASK_VAL16) <> 0 Then
-        Let ParamToString = "$" & oz80.HexStr16(Param.Value)
+    ElseIf Param.Mask = MASK_VAL Then
+        If Param.Value > 255 Then
+            Let ParamToString = "$" & oz80.HexStr16(Param.Value)
+        Else
+            Let ParamToString = "$" & oz80.HexStr8(Param.Value)
+        End If
         
     'The mask bits do not specify every flag, _
      we refer to the token kind for that
@@ -813,24 +848,21 @@ Public Function ParamToString( _
         ElseIf Param.Token = TOKEN_Z80_M Then Let ParamToString = "M"
         End If
     
-    'HL/IX/IY memory references are synonymous in the opcode, _
-     prefixes are used to determine which so we refer to the token kind
-    ElseIf (Param.Mask And MASK_MEM_HLIXY) <> 0 Then
-        If Param.Token = TOKEN_Z80_HL Then
-            Let ParamToString = "(HL)"
-        ElseIf Param.Token = TOKEN_Z80_IX Then
-            Let ParamToString = "(IX+$" & oz80.HexStr8(Param.Value) & ")"
-        ElseIf Param.Token = TOKEN_Z80_IY Then
-            Let ParamToString = "(IY+$" & oz80.HexStr8(Param.Value) & ")"
-        End If
-    
+    'Memory references
+    ElseIf Param.Mask = MASK_MEM_HL Then
+        Let ParamToString = "(HL)"
+    ElseIf Param.Mask = MASK_MEM_IX Then
+        Let ParamToString = "(IX+$" & oz80.HexStr8(Param.Value) & ")"
+    ElseIf Param.Mask = MASK_MEM_IY Then
+        Let ParamToString = "(IY+$" & oz80.HexStr8(Param.Value) & ")"
     ElseIf Param.Mask = MASK_MEM_BC Then Let ParamToString = "(BC)"
     ElseIf Param.Mask = MASK_MEM_DE Then Let ParamToString = "(DE)"
     ElseIf Param.Mask = MASK_MEM_SP Then Let ParamToString = "(SP)"
-    
-    ElseIf (Param.Mask And MASK_MEM_VAL8) <> 0 Then
-        Let ParamToString = "($" & oz80.HexStr8(Param.Value) & ")"
-    ElseIf (Param.Mask And MASK_MEM_VAL16) <> 0 Then
-        Let ParamToString = "($" & oz80.HexStr16(Param.Value) & ")"
+    ElseIf Param.Mask = MASK_MEM_VAL Then
+        If Param.Value > 255 Then
+            Let ParamToString = "($" & oz80.HexStr16(Param.Value) & ")"
+        Else
+            Let ParamToString = "($" & oz80.HexStr8(Param.Value) & ")"
+        End If
     End If
 End Function

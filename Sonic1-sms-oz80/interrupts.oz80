@@ -457,7 +457,6 @@ PROC	:init                                   SECTION ::interrupts
         `====================================================================[$028B]===
 {	
 	`tell the SMS the cartridge has no RAM and to use ROM banking
-	 `(the meaning of bit 7 is undocumented)
 	ld	a, %10000000
 	ld	($.SMS.SLOT_CONTROL), a
 	`load banks 0, 1 & 2 of the ROM into the address space

@@ -26,11 +26,6 @@ RAM
 .SMS.SLOT1              AS BYTE $FFFE           `Slot 1 ROM Bank
 .SMS.SLOT2              AS BYTE $FFFF           `Slot 2 ROM Bank
 
-`Codemasters cartridges use their own mapper:
-.CODEMASTERS.SLOT0      AS BYTE $0000           `Slot 0 ROM Bank
-.CODEMASTERS.SLOT1      AS BYTE $4000           `Slot 1 ROM Bank
-.CODEMASTERS.SLOT2      AS BYTE $8000
-
 }
 
 `VDP:

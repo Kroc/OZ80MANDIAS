@@ -52,9 +52,7 @@ End Sub
 
 '/// PROPERTIES ///////////////////////////////////////////////////////////////////////
 
-Public Property Get Buffer() As Long
-    Let Buffer = My_Buffer
-End Property
+Public Property Get Buffer() As Long: Let Buffer = My_Buffer: End Property
 
 Public Property Let Buffer(ByVal Length As Long)
     'Validate

@@ -335,6 +335,7 @@ End Enum
 
 Public Enum OZ80_MASK
     
+    [_MASK_REGS_BEGIN] = 1
     MASK_REG_B = 2 ^ 0
     MASK_REG_C = 2 ^ 1
     MASK_REG_D = 2 ^ 2
@@ -356,6 +357,8 @@ Public Enum OZ80_MASK
      'to IX/IY, with an offset value e.g. "(IX+$8)"
     MASK_MEM_IX = 2 ^ 12
     MASK_MEM_IY = 2 ^ 13
+    [_MASK_REGS_END] = MASK_MEM_IY
+    
     'A couple of undocumented instructions allow for IX/IY memory references,
      'but not the standard "(HL)" reference
     MASK_MEM_IXY = MASK_MEM_IX Or MASK_MEM_IY
@@ -433,6 +436,15 @@ Public Type oz80Param
     Token As OZ80_TOKEN
     Value As Long
 End Type
+
+'--------------------------------------------------------------------------------------
+
+'A list of system targets. Only the SEGA Master System is supported at the moment, _
+ but I will consider supporting other Z80 systems in the future.
+Public Enum OZ80_SYSTEM
+    SYSTEM_NONE                         'System not yet defined
+    SYSTEM_SMS                          'SEGA Master System
+End Enum
 
 '--------------------------------------------------------------------------------------
 

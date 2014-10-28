@@ -656,10 +656,10 @@ You cannot provide a label name for the Start Procedure, but you can use the key
 
    TECHNICAL NOTE:
         On the Master System, the assembler will by default begin placing Chunks
-        at $0067 in Bank 0 unless the $66 Interrupt Procedure is longer than
-        one byte.
+        at $0068 in Bank 0 unless the $66 Interrupt Procedure is longer than
+        two bytes.
 
-        
+
 =======================================================================================
 7.      Constants
 =======================================================================================

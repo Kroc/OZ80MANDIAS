@@ -30,10 +30,14 @@ PROC    :int30          INTERRUPT $30
 {}
 
 PROC    :int38          INTERRUPT $38
-{}
+{
+        reti
+}
 
 PROC    :int66          INTERRUPT $66
-{}
+{
+        retn
+}
 
 PROC    :adc           SECTION ::default
 {

@@ -21,9 +21,23 @@ Option Explicit
 
 'Code and/or data is assembled in separate chunks (this class) which are arranged _
  according to Section layout before being written out to the ROM. _
- i.e. each `PROC` / `TABLE` will be its own chunk
+ i.e. each `PROC` / `TABLE` will be its own Chunk
+
+'/// API //////////////////////////////////////////////////////////////////////////////
+
+'Copy raw memory from one place to another _
+ <msdn.microsoft.com/en-us/library/windows/desktop/aa366535%28v=vs.85%29.aspx>
+Private Declare Sub api_RtlMoveMemory Lib "kernel32" Alias "RtlMoveMemory" ( _
+    ByRef ptrDestination As Any, _
+    ByRef ptrSource As Any, _
+    ByVal Length As Long _
+)
 
 '/// CLASS STORAGE ////////////////////////////////////////////////////////////////////
+
+'For ease of logging, we'll embed the printable name of the Chunk, _
+ (the actual name is stored in the TokenStream, well out of reach of many routines)
+Public LabelName As String
 
 'Which section the chunk belongs to. This will be the CRC32 of the Section name, _
  as stored in oz80_Assembler. Value will be 0 for no particular Section
@@ -34,19 +48,13 @@ Public Section As Long
  and they can be placed in their given Sections
 Public Address As Long
 
-'If the Chunk is an Interrupt Procedure its fixed address will be specified here, _
- which can be 0 (i.e. `START`), so the class will default this to -1
-Public Interrupt As Long
-
 'The assembled code/data goes here
-Private Chunk() As Byte
+Private Data() As Byte
 
-Private My_Size As Long                 'Length of the chunk in bytes
-'TODO: Support for these
-Private My_CyclesMin As Long            'Minimum number of cycles in this chunk
-Private My_CyclesMax As Long            'Maximum number of cycles in this chunk
+'Length of the chunk in bytes
+Private My_Size As Long
 
-'Each Chunk starts at this size (many chunks will be small Z80 routines). _
+'Each Chunk starts at this size (many Chunks will be small Z80 routines). _
  If this buffer size is filled, it will be doubled. Once the Chunk is "finalised", _
  the buffer will be cut down to the size of the actual contents
 Private Const BUFFER_SIZE As Long = 1024
@@ -58,20 +66,22 @@ Private Sub Class_Initialize()
     'Initialise the space where the assembled bytes go. _
      This chunk of bytes will be copied into the ROM once the location has been chosen
     Let BufferSize = BUFFER_SIZE
-    ReDim Chunk(0 To BufferSize - 1) As Byte
+    ReDim Data(0 To BufferSize - 1) As Byte
     
-    'Interrupt Procedures can be at $0000, so default this to -1
-    Let Me.Interrupt = -1
+    'The ROM address of the Chunk can of course be 0, so default to indefinite
+    Let Me.Address = -1
 End Sub
 
 'CLASS Terminate _
  ======================================================================================
 Private Sub Class_Terminate()
-    Erase Chunk
+    Erase Data
 End Sub
 
 '/// PUBLIC INTERFACE /////////////////////////////////////////////////////////////////
 
+'PROPERTY Size _
+ ======================================================================================
 Public Property Get Size() As Long: Let Size = My_Size: End Property
 
 'AddByte : Add a byte to the assembled output and move along _
@@ -80,14 +90,14 @@ Public Sub AddByte( _
     ByRef Value As Long _
 )
     'Add the byte to the ROM and move to the next byte
-    Let Chunk(My_Size) = Value And &HFF
+    Let Data(My_Size) = Value And &HFF
     Let My_Size = My_Size + 1
     
     'If the chunk's buffer is full then double the buffer size to compensate. _
      This will cause the buffer to grow exponentially, i.e. 2 KB, 4 KB, 8 KB, 16 KB
     If My_Size >= BufferSize Then
         Let BufferSize = BufferSize + BufferSize
-        ReDim Preserve Chunk(0 To BufferSize - 1) As Byte
+        ReDim Preserve Data(0 To BufferSize - 1) As Byte
     End If
 End Sub
 
@@ -244,7 +254,7 @@ Public Function AddOpcode_Value16Bit( _
         oz80.HexStr8((Value And &HFF00&) \ &H100)
 End Function
 
-'AddOpcode : Inserts an ED-prefixed double opcode into the byte stream _
+'AddOpcodeED : Inserts an ED-prefixed double opcode into the byte stream _
  ======================================================================================
 Public Function AddOpcodeED( _
     ByRef Opcode As Long _
@@ -311,3 +321,32 @@ Public Function AddOpcodeCB( _
     'Finally, insert the opcode
     Call AddByte(Opcode)
 End Function
+
+'Trim _
+ ======================================================================================
+Public Sub Trim()
+    'Chunks can be empty!
+    Dim NewSize As Long
+    If My_Size = 0 Then Let NewSize = 0 Else Let NewSize = My_Size - 1
+    'Trim the buffer size down to the actual size
+    ReDim Preserve Data(0 To NewSize) As Byte
+    'Update the buffer size to match
+    Let BufferSize = NewSize
+End Sub
+
+'CopyInto _
+ ======================================================================================
+Public Sub CopyInto( _
+    ByRef OutputArray() As Byte _
+)
+    'Check that it'll fit! We'll need to increase the ROM size if necessary
+    If Address + My_Size > UBound(OutputArray) Then
+        'Double the size of the ROM!
+        ReDim Preserve OutputArray(((UBound(OutputArray) + 1) * 2) - 1) As Byte
+        'TODO: There's a maximum size of the ROM
+    End If
+    
+    Call api_RtlMoveMemory( _
+        OutputArray(Address), Data(0), My_Size _
+    )
+End Sub

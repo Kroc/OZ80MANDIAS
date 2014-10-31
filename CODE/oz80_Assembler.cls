@@ -369,6 +369,81 @@ End Function
 '/// PARSING //////////////////////////////////////////////////////////////////////////
 '/// Read in the source code and walk it
 
+'ParseFile : Parse a source code file into a TokenStream object _
+ ======================================================================================
+Private Function ParseFile( _
+    ByRef FilePath As String _
+) As OZ80_ERROR
+    'Since we have a "scrrun.dll" reference for Dictionary object, this also gives _
+     us the `FileSystemObject` to simplify a lot of mucky folder / file checking
+    Dim FSO As FileSystemObject
+    Set FSO = New FileSystemObject
+    
+    '[1] Normalise the file path: _
+     ----------------------------------------------------------------------------------
+    'The file path handed to us might be just a file name and/or contain a relative _
+     path (i.e. "..\"). We need to normalise this given path into an absolute path _
+     (e.g. "C:\Folder\File.ext")
+    
+    Dim TestPath As String
+    
+    'If the given path is already absolute, it does not need normalising. _
+     NOTE: Upper/lower case will be auto-corrected and could throw a false negative
+    If LCase$(FSO.GetAbsolutePathName(FilePath)) = LCase$(FilePath) Then
+        'We'll skip ahead to checking the file exists
+        Let TestPath = FilePath
+    Else
+        'Path is relative! If no other file has been parsed yet _
+         we will need to use the current directory as a base
+        If Token Is Nothing Then
+            Let TestPath = FSO.BuildPath(CurDir(), FilePath)
+        Else
+            'When another file has been parsed before, _
+             we work relatively from that file's directory
+            Let TestPath = FSO.GetFile(Token.SourceFile).Path
+            'TODO: Error?
+            Let TestPath = FSO.BuildPath(TestPath, FilePath)
+        End If
+    End If
+    
+    '[2] Check file exists: _
+     ----------------------------------------------------------------------------------
+    'ERROR: File Not Found
+    If Not FSO.FileExists(TestPath) Then Let ParseFile = RaiseError( _
+        OZ80_ERROR_FILE_NOTFOUND _
+    ): GoTo Finish
+    
+    '[3] Parse the file into a TokenStream: _
+     ----------------------------------------------------------------------------------
+    'We'll use the CRC of the filepath string as its key/ID
+    Dim CRC As Long
+    Let CRC = oz80.CRC.Calculate(TestPath)
+    
+    'If the file has already been parsed, re-use it
+    If Files.Exists(CRC) Then
+        'Reference the existing TokenStream object
+        Set Token = Files.Item(CRC)
+    Else
+        'Create a tokeniser object to hold the machine representation of the text file; _
+         the assembler doesn't work with the original text directly
+        Set Token = New oz80_TokenStream
+        'Explode the source code file into tokens:
+        'If the file failed to parse, an error code / message will already have _
+         been raised via an event, we only need to exit
+        If Token.Tokenise(TestPath) Then GoTo Finish
+        'Add the TokenStream to the files collection
+        Call Files.Add(CRC, Token)
+    End If
+    
+Finish:
+    Call Token.Rewind
+    Set FSO = Nothing
+    
+    'If there were any error, an error event and message would already have been _
+     raised, we only need to fold upwards and the parent will handle terminating the _
+     assembling process early
+End Function
+
 'This is a structured map of the OZ80 syntax. _
  The first column on the left is the name of a scope. For each scope, the columns to _
  the right represent the heirarchy of allowable items in that scope. Whatever is in _
@@ -2367,81 +2442,6 @@ Continue:
         Let Operand1 = ParseExpression
         GoTo Continue
     End If
-End Function
-
-'ParseFile : Parse a source code file into a TokenStream object _
- ======================================================================================
-Private Function ParseFile( _
-    ByRef FilePath As String _
-) As OZ80_ERROR
-    'Since we have a "scrrun.dll" reference for Dictionary object, this also gives _
-     us the `FileSystemObject` to simplify a lot of mucky folder / file checking
-    Dim FSO As FileSystemObject
-    Set FSO = New FileSystemObject
-    
-    '[1] Normalise the file path: _
-     ----------------------------------------------------------------------------------
-    'The file path handed to us might be just a file name and/or contain a relative _
-     path (i.e. "..\"). We need to normalise this given path into an absolute path _
-     (e.g. "C:\Folder\File.ext")
-    
-    Dim TestPath As String
-    
-    'If the given path is already absolute, it does not need normalising. _
-     NOTE: Upper/lower case will be auto-corrected and could throw a false negative
-    If LCase$(FSO.GetAbsolutePathName(FilePath)) = LCase$(FilePath) Then
-        'We'll skip ahead to checking the file exists
-        Let TestPath = FilePath
-    Else
-        'Path is relative! If no other file has been parsed yet _
-         we will need to use the current directory as a base
-        If Token Is Nothing Then
-            Let TestPath = FSO.BuildPath(CurDir(), FilePath)
-        Else
-            'When another file has been parsed before, _
-             we work relatively from that file's directory
-            Let TestPath = FSO.GetFile(Token.SourceFile).Path
-            'TODO: Error?
-            Let TestPath = FSO.BuildPath(TestPath, FilePath)
-        End If
-    End If
-    
-    '[2] Check file exists: _
-     ----------------------------------------------------------------------------------
-    'ERROR: File Not Found
-    If Not FSO.FileExists(TestPath) Then Let ParseFile = RaiseError( _
-        OZ80_ERROR_FILE_NOTFOUND _
-    ): GoTo Finish
-    
-    '[3] Parse the file into a TokenStream: _
-     ----------------------------------------------------------------------------------
-    'We'll use the CRC of the filepath string as its key/ID
-    Dim CRC As Long
-    Let CRC = oz80.CRC.Calculate(TestPath)
-    
-    'If the file has already been parsed, re-use it
-    If Files.Exists(CRC) Then
-        'Reference the existing TokenStream object
-        Set Token = Files.Item(CRC)
-    Else
-        'Create a tokeniser object to hold the machine representation of the text file; _
-         the assembler doesn't work with the original text directly
-        Set Token = New oz80_TokenStream
-        'Explode the source code file into tokens:
-        'If the file failed to parse, an error code / message will already have _
-         been raised via an event, we only need to exit
-        If Token.Tokenise(TestPath) Then GoTo Finish
-        'Add the TokenStream to the files collection
-        Call Files.Add(CRC, Token)
-    End If
-    
-Finish:
-    Call Token.Rewind
-    Set FSO = Nothing
-    
-    'If there were any error, an error event and message would already have been _
-     raised, we only need to fold upwards and the parent will handle terminating the _
-     assembling process early
 End Function
 
 'ParseValue : Get a single Value as part of an Expression _

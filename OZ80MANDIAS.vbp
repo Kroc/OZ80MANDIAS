@@ -5,9 +5,12 @@ Class=oz80_TokenStream; CODE\oz80_Tokeniser.cls
 Class=PerformanceCounter; CODE\PerformanceCounter.cls
 Form=CODE\UI.frm
 Module=oz80; CODE\oz80.bas
-Class=CRC32; CODE\CRC32.cls
 Class=oz80_Chunk; CODE\oz80_Chunk.cls
 Class=oz80_Binary; CODE\oz80_Binary.cls
+Class=bluString; CODE\blu\bluString.cls
+Class=bluStringArray; CODE\blu\bluStringArray.cls
+Class=bluProfiler; CODE\blu\bluProfiler.cls
+IconForm="UI"
 Startup="UI"
 HelpFile=""
 Title="OZ80MANDIAS"
@@ -19,11 +22,11 @@ Description="A Z80 assembler"
 CompatibleMode="0"
 MajorVer=0
 MinorVer=0
-RevisionVer=30
+RevisionVer=33
 AutoIncrementVer=1
 ServerSupportFiles=0
 VersionCompanyName="Camen Design"
-CondComp="COMPILED = 1"
+CondComp="DEBUG = 1"
 CompilationType=0
 OptimizationType=0
 FavorPentiumPro(tm)=0

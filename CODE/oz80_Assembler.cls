@@ -25,6 +25,17 @@ Private Stopwatch As PerformanceCounter
 'Error number!
 Private My_Error As OZ80_ERROR
 
+'Formatting of output messages
+Private Const LOG_VERSION As String = "OZ80MANDIAS v$$.$$,$$"
+Private Const LOG_PHASE1 As String = "Phase 1: Structural Pass"
+Private Const LOG_PHASE2 As String = "Phase 2: Layout ROM"
+Private Const LOG_PHASE3 As String = "Phase 3: Full Assemble"
+Private Const LOG_PHASE4 As String = "Phase 4: Post Processing"
+Private Const LOG_ASM_COMPLETE As String = "Assembly Complete"
+Private Const LOG_TIME As String = "Time: $$s"
+Private Const LOG_Z80 As String = "$$ | $$: " & vbTab & "$$" & vbTab & "$$" & vbTab & "$$"
+Private Const LOG_SECTION As String = "SECTION $$"
+
 'Parsing: _
  --------------------------------------------------------------------------------------
 'Each source code file is broken down into a machine-readable representation _
@@ -129,8 +140,8 @@ Event Error( _
     ByVal Line As Long, ByVal Col As Long _
 )
 
-'CLASS Initialize _
- ======================================================================================
+'CLASS Initialize
+'======================================================================================
 Private Sub Class_Initialize()
     'If too many possible tokens are created, things will screw up
     Debug.Assert OZ80_TOKEN.[_TOKEN_LAST] < 256
@@ -245,8 +256,8 @@ Private Sub Class_Initialize()
     Let OpcodeZ_Register(MASK_REG_A) = Z7
 End Sub
 
-'CLASS Terminate _
- ======================================================================================
+'CLASS Terminate
+'======================================================================================
 Private Sub Class_Terminate()
     'Clear the Section meta
     Set SectionNames = Nothing: Set SectionSlots = Nothing
@@ -269,8 +280,8 @@ Private Sub Class_Terminate()
     Set Stopwatch = Nothing
 End Sub
 
-'EVENT <Token> Error : Detailed error message from a TokenStream object _
- ======================================================================================
+'EVENT <Token> Error : Detailed error message from a TokenStream object
+'======================================================================================
 Private Sub Token_Error( _
     ByVal Number As OZ80_ERROR, ByVal Line As Long, ByVal Col As Long _
 )   'Pass this up to the controller, this class will shortly end processing. _
@@ -278,8 +289,8 @@ Private Sub Token_Error( _
     Call RaiseError(Number, Line, Col)
 End Sub
 
-'EVENT <Token> Message : Basic progress message from a TokenStream object _
- ======================================================================================
+'EVENT <Token> Message : Basic progress message from a TokenStream object
+'======================================================================================
 Private Sub Token_Message( _
     ByRef LogLevel As OZ80_LOG, ByRef Text As String _
 )   'It's up to the controller to decide to display (or `Debug.Print` any messages), _
@@ -287,22 +298,33 @@ Private Sub Token_Message( _
     RaiseEvent Message(LogLevel, Text)
 End Sub
 
-'PROPERTY Error : Expose the internal error number _
- ======================================================================================
+'PROPERTY Error : Expose the internal error number
+'======================================================================================
 Public Property Get Error() As OZ80_ERROR: Let Error = My_Error: End Property
 
 
 
 
-'Assemble : Compile a Z80 binary from a given starting source code file _
- ======================================================================================
+'Assemble : Compile a Z80 binary from a given starting source code file
+'======================================================================================
 Public Function Assemble(ByVal FilePath As String) As OZ80_ERROR
     'Reset the error number
     Let My_Error = OZ80_ERROR_NONE
     
+    With oz80.Profiler
+        Call .RegisterEvent(EVENT_TOKENISE, "TokenStream.Tokenise")
+        Call .RegisterEvent(EVENT_TOKENISE_READFILE, "TokenStream.Tokenise;ReadFile")
+        Call .RegisterEvent(EVENT_TOKENISE_READWORD, "TokenStream.Tokenise;ReadWord")
+        Call .RegisterEvent(EVENT_TOKENISE_TOKENWORD, "TokenStream.Tokenise;TokenWord")
+        Call .RegisterEvent(EVENT_PROCESSZ80, "Assembler.ProcessZ80")
+        Call .RegisterEvent(EVENT_PROCESSZ80_LOG, "Assembler.ProcessZ80;Log")
+    End With
+    
     'Announce ourselves
-    RaiseEvent Message(OZ80_LOG_INFO, _
-        "OZ80MANDIAS v" & App.Major & "." & App.Minor & "," & App.Revision)
+    Call RaiseMessage( _
+        OZ80_LOG_INFO, LOG_VERSION, _
+        App.Major, App.Minor, App.Revision _
+    )
     
     'Clean up stuff from any previous assemble
     Set Token = Nothing: Call Files.RemoveAll
@@ -318,7 +340,7 @@ Public Function Assemble(ByVal FilePath As String) As OZ80_ERROR
     '----------------------------------------------------------------------------------
     'Phase 1: First Pass & Assemble _
      ----------------------------------------------------------------------------------
-    RaiseEvent Message(OZ80_LOG_ACTION, "Phase 1: Structural Pass")
+    Call RaiseMessage(OZ80_LOG_ACTION, LOG_PHASE1)
     
     'Start with parsing the given file into a TokenStream; _
      the assembler does not work with the original text directly
@@ -334,20 +356,20 @@ Public Function Assemble(ByVal FilePath As String) As OZ80_ERROR
     '----------------------------------------------------------------------------------
     'Phase 2: Layout the ROM _
      ----------------------------------------------------------------------------------
-    RaiseEvent Message(OZ80_LOG_ACTION, "Phase 2: Layout ROM")
+    Call RaiseMessage(OZ80_LOG_ACTION, LOG_PHASE2)
     'TODO: Error return
     If LayoutROM Then GoTo Finish
     
     '----------------------------------------------------------------------------------
     'Phase 3: Second Parse & Assemble (now with ROM Addresses) _
      ----------------------------------------------------------------------------------
-    RaiseEvent Message(OZ80_LOG_ACTION, "Phase 3: Full Assemble")
+    Call RaiseMessage(OZ80_LOG_ACTION, LOG_PHASE3)
     'TODO
     
     '----------------------------------------------------------------------------------
     'Phase 4: Post Processing, e.g. Checksum _
      ----------------------------------------------------------------------------------
-    RaiseEvent Message(OZ80_LOG_ACTION, "Phase 4: Post Processing")
+    Call RaiseMessage(OZ80_LOG_ACTION, LOG_PHASE4)
     'TODO
     
     'Finally, write the ROM to disk
@@ -356,8 +378,8 @@ Public Function Assemble(ByVal FilePath As String) As OZ80_ERROR
     Put #FileNumber, , ROM
     Close #FileNumber
     
-    RaiseEvent Message(OZ80_LOG_ACTION, "Assembly Complete")
-    RaiseEvent Message(OZ80_LOG_INFO, "Time: " & Format$(Stopwatch.Elapsed / 1000, "0.000") & "s")
+    Call RaiseMessage(OZ80_LOG_ACTION, LOG_ASM_COMPLETE)
+    Call RaiseMessage(OZ80_LOG_INFO, LOG_TIME, Format$(Stopwatch.Elapsed / 1000, "0.000"))
     
 Finish:
     Let Assemble = My_Error
@@ -369,8 +391,8 @@ End Function
 '/// PARSING //////////////////////////////////////////////////////////////////////////
 '/// Read in the source code and walk it
 
-'ParseFile : Parse a source code file into a TokenStream object _
- ======================================================================================
+'ParseFile : Parse a source code file into a TokenStream object
+'======================================================================================
 Private Function ParseFile( _
     ByRef FilePath As String _
 ) As OZ80_ERROR
@@ -385,31 +407,31 @@ Private Function ParseFile( _
      path (i.e. "..\"). We need to normalise this given path into an absolute path _
      (e.g. "C:\Folder\File.ext")
     
-    Dim TestPath As String
+    Dim TestPath As New bluString
     
     'If the given path is already absolute, it does not need normalising. _
      NOTE: Upper/lower case will be auto-corrected and could throw a false negative
     If LCase$(FSO.GetAbsolutePathName(FilePath)) = LCase$(FilePath) Then
         'We'll skip ahead to checking the file exists
-        Let TestPath = FilePath
+        Let TestPath.Text = FilePath
     Else
         'Path is relative! If no other file has been parsed yet _
          we will need to use the current directory as a base
         If Token Is Nothing Then
-            Let TestPath = FSO.BuildPath(CurDir(), FilePath)
+            Let TestPath.Text = FSO.BuildPath(CurDir(), FilePath)
         Else
             'When another file has been parsed before, _
              we work relatively from that file's directory
-            Let TestPath = FSO.GetFile(Token.SourceFile).Path
+            Let TestPath.Text = FSO.GetFile(Token.SourceFile).Path
             'TODO: Error?
-            Let TestPath = FSO.BuildPath(TestPath, FilePath)
+            Let TestPath.Text = FSO.BuildPath(TestPath.Text, FilePath)
         End If
     End If
     
     '[2] Check file exists: _
      ----------------------------------------------------------------------------------
     'ERROR: File Not Found
-    If Not FSO.FileExists(TestPath) Then Let ParseFile = RaiseError( _
+    If Not FSO.FileExists(TestPath.Text) Then Let ParseFile = RaiseError( _
         OZ80_ERROR_FILE_NOTFOUND _
     ): GoTo Finish
     
@@ -417,26 +439,35 @@ Private Function ParseFile( _
      ----------------------------------------------------------------------------------
     'We'll use the CRC of the filepath string as its key/ID
     Dim CRC As Long
-    Let CRC = oz80.CRC.Calculate(TestPath)
+    Let CRC = TestPath.CRC
     
     'If the file has already been parsed, re-use it
     If Files.Exists(CRC) Then
         'Reference the existing TokenStream object
         Set Token = Files.Item(CRC)
     Else
+        '*** time begin ***
+        Call oz80.Profiler.EventBegin(EVENT_TOKENISE)
+        
         'Create a tokeniser object to hold the machine representation of the text file; _
          the assembler doesn't work with the original text directly
         Set Token = New oz80_TokenStream
         'Explode the source code file into tokens:
         'If the file failed to parse, an error code / message will already have _
          been raised via an event, we only need to exit
-        If Token.Tokenise(TestPath) Then GoTo Finish
+        If Token.Tokenise(TestPath.Text) Then GoTo Finish
         'Add the TokenStream to the files collection
         Call Files.Add(CRC, Token)
+        
+        Call oz80.Profiler.EventEnd(EVENT_TOKENISE)
+        '*** time end ***
     End If
     
-Finish:
+    'The user will obviously want to begin at the start of the stream _
+     rather than the end
     Call Token.Rewind
+    
+Finish:
     Set FSO = Nothing
     
     'If there were any error, an error event and message would already have been _
@@ -444,7 +475,7 @@ Finish:
      assembling process early
 End Function
 
-'This is a structured map of the OZ80 syntax. _
+'This is a structured map of the OZ80 syntax: _
  The first column on the left is the name of a scope. For each scope, the columns to _
  the right represent the heirarchy of allowable items in that scope. Whatever is in _
  the third column is only allowed to follow what is in the second column. Items below _
@@ -455,54 +486,71 @@ End Function
 'NOTES: *   You can take `{ASCII}` to mean any ASCII code 0-127 _
         *   `{operator}` can be any one of `+ - * / ^ \ & | << >>`
 
-'Scope:     1           2           3           4           5           6 _
- --------------------------------------------------------------------------------------
-'<text>     "           {ASCII}     "
-'
-'<expr>     <number>    [{operator} <expr>]
-'           #var        [{operator} <expr>]
-'           :label      [{operator} <expr>]
-'           $.ram       [{operator} <expr>]
-'           {           <expr>      }
-'
-'
-'<list>     <text>      [,]         [<list>]
-'           <expr>      [,]         [<list>]
-'
-'......................................................................................
-'
-'<root>     INCLUDE     <text>
-'
-'           OBJECT      #object     {           <object>
-'                                   }
-'
-'           PROC        :label      [PARAMS     <list>]
-'                                   [RETURN     <list>]
-'                                   [INTERRUPT  <expr>]
-'                                   {           <code>
-'                                   }
-'
-'           SECTION     ::section   [BANKS      <expr>]
-'                                   [BANK       <expr>]
-'                                   [SLOT       <expr>]
-'
-'           STRUCT      :label      AS          #object     <struct>
-'
-'           TABLE       :label      <code>
-'
-'           VAR         #variable   [<list>]
-'
-'<code>     .label
-'           DATA        <list>
-'           BYTE        <list>
-'           WORD        <list>
-'           TRIP        <list>
-'           LONG        <list>
-'
-'           <asm>
+'Scope    : 1           2           3           4         ' Comment
+'---------|-----------------------------------------------'----------------------------
+'<value>  | {number}                                      '
+'         | !{name}                                       ' "Constant"
+'         | :{name}                                       ' "Label"
+'         | .{name}                                       ' "Property"
+'         | #{name}                                       ' "Object"
+'         | $.{name}                                      ' "RAM Name"
+'         | ::{name}                                      ' "Section"
+'         |                                               '
+'<expr>   | <value>    [{operator}  <expr>]               '
+'         | {           <expr>      }                     '
+'         | HI          <expr>                            ' High-8-bits of <expr>
+'         | LO          <expr>                            ' Low-8-bits of <expr>
+'         |                                               '
+'<text>   | "           {text}      "                     '
+'         |                                               '
+'<list>   | <expr>     [,]         [<list>]               '
+'         | <text>     [,]         [<list>]               '
+'         |                                               '
+'<params> | <param>    [,]         [<param>]              '
+'         |                                               '
+'<param>  | {register} [HELP        <text>]               '
+'         | $.{name}   [HELP        <text>]               '
+'         | {number}   [HELP        <text>]               '
+'         |                                               '
+'.........|...............................................'............................
+'         |                                               '
+'<root>   | DEF         !{name}    [<expr>]               ' Define Constant
+'         |                                               '
+'         | ENUM        !{name}    [<expr>]     <hash>    ' Enumerate Constants
+'         |                                               '
+'         | <if>                                          '
+'         |                                               '
+'         | INCLUDE     <text>                            '
+'         |                                               '
+'         | OBJECT      #{names}    <hash>                '
+'         |                                               '
+'         | PROC        :{name}    [HELP        <text>]   '
+'         |                        [PARAMS      <params>] '
+'         |                        [RETURN      <params>] '
+'         |                        [INTERRUPT   <expr>]   '
+'         |                         <chunk>               '
+'         |                                               '
+'         | SECTION     ::{name}   [SLOT        <list>]   '
+'         |                                               '
+'         | TABLE       :{name}    [HELP        <text>]   '
+'         |                         <chunk>               '
+'         |                                               '
+'<chunk>  | {           <code>      }                     '
+'         |                                               '
+'<code>   | .{name}                                       '
+'         | DATA        <list>                            '
+'         | BYTE        <list>                            '
+'         | WORD        <list>                            '
+'         | TRIP        <list>                            '
+'         | LONG        <list>                            '
+'         | <if>                                          '
+'         | <asm>                                         '
+'         |                                               '
+'<if>     | IF          <expr>      <chunk>               '
+'         |                        [ELSE        <if>]     '
 
-'ScopeRoot : When we're not within the scope of anything else _
- ======================================================================================
+'ScopeRoot : When we're not within the scope of anything else
+'======================================================================================
 Private Sub ScopeRoot()
     'When a file begins, it is at the top-most scope. Certain keywords are only _
      allowed here. Once all nested scopes are exhausted, we return here
@@ -546,21 +594,28 @@ Continue:
     GoTo Continue
 End Sub
 
-'ScopeChunk: Within a code/data chunk, i.e. `PROC`, `TABLE` _
- ======================================================================================
+'ScopeChunk: Within a code/data chunk, i.e. `PROC`, `TABLE`
+'======================================================================================
 Private Sub ScopeChunk()
     'Within a code/data chunk we can have local labels, data statements and Z80 code
     
 Continue:
     'Z80 code?
     If Token.IsInstruction Then
+        '*** TIMER BEGIN ***
+        Call oz80.Profiler.EventBegin(EVENT_PROCESSZ80)
+        
         Call ProcessZ80
+        
+        Call oz80.Profiler.EventEnd(EVENT_PROCESSZ80)
+        '*** TIMER END ***
+        
         If My_Error Then Exit Sub
         GoTo Continue
     End If
     
     'The chunk might be empty `{}`, in which case we don't want to walk it
-    If Token.Kind = TOKEN_CHUNKCLOSE Then GoTo Finish
+    If Token.Kind = TOKEN_CHUNK_CLOSE Then GoTo Finish
     
     '----------------------------------------------------------------------------------
     
@@ -570,7 +625,7 @@ Continue:
         Call RaiseError(OZ80_ERROR_FILE_END)
     
     'When the closing brace is encountered, we'll drop out of the scope
-    ElseIf Token.Kind <> TOKEN_CHUNKCLOSE Then
+    ElseIf Token.Kind <> TOKEN_CHUNK_CLOSE Then
         GoTo Continue
     End If
     
@@ -580,8 +635,8 @@ Finish:
     Call Token.Forward
 End Sub
 
-'ProcessSection : Define a Section _
- ======================================================================================
+'ProcessSection : Define a Section
+'======================================================================================
 'SECTION    ::<section>    [SLOT   <list>]
 '======================================================================================
 Private Sub ProcessSection()
@@ -667,15 +722,19 @@ Private Sub ProcessSection()
 Finish:
     'Record the result:
     Let SectionSlots(SectionKey) = Slot
-    RaiseEvent Message(OZ80_LOG_STATUS, _
-        "SECTION " & Token.Strings(SectionKey) & _
-        " SLOT " & IIf( _
-            Slot = 0, "?", _
-                IIf(Slot And OZ80_SLOT.SLOT0, "0 ", "") & _
-                IIf(Slot And OZ80_SLOT.SLOT1, "1 ", "") & _
-                IIf(Slot And OZ80_SLOT.SLOT2, "2 ", "") _
-            ) _
+    Call RaiseMessage( _
+        OZ80_LOG_STATUS, LOG_SECTION, _
+        Token.Strings(SectionKey) _
     )
+'    RaiseEvent Message(OZ80_LOG_STATUS, _
+'        "SECTION " & Token.Strings(SectionKey) & _
+'        " SLOT " & IIf( _
+'            Slot = 0, "?", _
+'                IIf(Slot And OZ80_SLOT.SLOT0, "0 ", "") & _
+'                IIf(Slot And OZ80_SLOT.SLOT1, "1 ", "") & _
+'                IIf(Slot And OZ80_SLOT.SLOT2, "2 ", "") _
+'            ) _
+'    )
     Exit Sub
 
     '----------------------------------------------------------------------------------
@@ -691,12 +750,13 @@ ErrIndefinite:
     Call RaiseError(OZ80_ERROR_INDEFINITE)
 End Sub
 
-'ProcessProc : Process a procedure chunk _
- ======================================================================================
+'ProcessProc : Process a procedure chunk
+'======================================================================================
 'PROC   :<label>
+'       [HELP       <text>]
 '       [SECTION    ::<section>]
-'       [PARAMS     <list>]
-'       [RETURN     <list>]
+'       [PARAMS     <params>]
+'       [RETURN     <params>]
 '       [INTERRUPT  <expr>]
 '{ [...] }
 '======================================================================================
@@ -862,7 +922,7 @@ SkipReturn:
     '----------------------------------------------------------------------------------
     
     'With the parameters read, the only allowed token is the opening of the chunk
-    If Token.Kind <> TOKEN_CHUNKOPEN Then Call RaiseError( _
+    If Token.Kind <> TOKEN_CHUNK_OPEN Then Call RaiseError( _
         OZ80_ERROR_EXPECTED _
     ): Exit Sub
     
@@ -882,18 +942,18 @@ SkipReturn:
     Dim StringID As Long
     Let StringID = BeginChunk(LabelName, Interrupt)
     
-    Dim LogMsg As String
-    Let LogMsg = "PROC " & LabelName
-    If Interrupt >= 0 _
-        Then Let LogMsg = LogMsg & " INTERRUPT $" & oz80.HexStr8(CLng(Interrupt))
-    RaiseEvent Message(OZ80_LOG_STATUS, LogMsg)
+'    Dim LogMsg As String
+'    Let LogMsg = "PROC " & LabelName
+'    If Interrupt >= 0 _
+'        Then Let LogMsg = LogMsg & " INTERRUPT $" & oz80.HexStr8(CLng(Interrupt))
+'    RaiseEvent Message(OZ80_LOG_STATUS, LogMsg)
     
     'Enter the procedure chunk to process its innards
     Call ScopeChunk
 End Sub
 
-'GetZ80Parameter : Fetch the type / value of a Z80 instruction parameter _
- ======================================================================================
+'GetZ80Parameter : Fetch the type / value of a Z80 instruction parameter
+'======================================================================================
 Private Function GetZ80Parameter() As oz80Param
     Dim Value As Double
     
@@ -903,7 +963,7 @@ Private Function GetZ80Parameter() As oz80Param
     
     'A memory reference, such as `(ix+$8)` _
      ----------------------------------------------------------------------------------
-    If Token.Kind = TOKEN_PARENOPEN Then
+    If Token.Kind = TOKEN_Z80MEM_OPEN Then
         'ERROR: File ends just as the memory expression is opened
         If Not Token.Forward() Then Call RaiseError(OZ80_ERROR_FILE_END): Exit Function
     
@@ -971,7 +1031,7 @@ AddExpr:    'Look for the `+` following the register name
                 
                 Let GetZ80Parameter.Value = Value
                 
-                If Token.Kind = TOKEN_PARENCLOSE Then
+                If Token.Kind = TOKEN_Z80MEM_CLOSE Then
                     Call Token.Forward
                     Exit Function
                 End If
@@ -1007,7 +1067,7 @@ AddExpr:    'Look for the `+` following the register name
     
 EndScope:
         '..............................................................................
-        If Token.Kind = TOKEN_PARENCLOSE Then
+        If Token.Kind = TOKEN_Z80MEM_CLOSE Then
             Call Token.Forward
             Exit Function
         End If
@@ -1063,10 +1123,10 @@ GetValue:
     End If
 End Function
 
-'ProcessZ80 : Process a Z80 instruction (and parameters) _
- ======================================================================================
-'<z80> [<param>] [<param>] [<param>] _
- ======================================================================================
+'ProcessZ80 : Process a Z80 instruction (and parameters)
+'======================================================================================
+'<z80> [<param>] [<param>] [<param>]
+'======================================================================================
 Private Sub ProcessZ80()
     'Remember which Z80 instruction is being processed
     Dim Instruction As OZ80_TOKEN
@@ -1379,10 +1439,14 @@ Private Sub ProcessZ80()
     Dim Prefix As Long, Opcode As Long, Offset As Long
     Let Offset = -1
     
-    'TODO: All this string concatenation is *SLOW* _
-           Need to find a way to do logging fast
-    Dim LogMsg As String
-    Let LogMsg = "$" & oz80.HexStr16(Chunk.Size) & ": "
+    'VB's string concatenation is chronically slow (it reallocates the whole string _
+     every time) which can cripple the speed of the assembler just printing stuff to _
+     screen! We use our super-fast bluString class to handle building the messages
+    Dim LogAsm As bluString
+    'The disassembly begins with the current offset address _
+     (each instruction can vary in the number of bytes used)
+    Dim LogAdr As String
+    Let LogAdr = oz80.HexStr16(Chunk.Size)
     
     'Since the numerical value that accompanies some instructions could be in _
      param 1 or 2, we need to record which to use at the end. This excludes _
@@ -1434,15 +1498,15 @@ iADC:
      ..................................................................................
     '`ADC A, A|B|C|D|E|H|IXH|IYH|L|IXL|IYL|(HL|IX+$8|IY+$8)`
     If TestParams(MASK_REG_A, MASK_REGS_ABCDEIXYHL_MEM_HLIXY) Then
-        Let LogMsg = LogMsg & Chunk.AddOpcode_Offset(Prefix, _
+        Set LogAsm = Chunk.AddOpcode_Offset(Prefix, _
             X2 Or Y1 Or OpcodeZ_Register(Param2.Mask), Param2.Value)
     '`ADC A, $8`
     ElseIf TestParams(MASK_REG_A, MASK_VAL) Then
-        Let LogMsg = LogMsg & Chunk.AddOpcode_Value8Bit( _
+        Set LogAsm = Chunk.AddOpcode_Value8Bit( _
             X3 Or Y1 Or Z6, Param2.Value)
     '`ADC HL, BC|DE|HL|SP`
     ElseIf TestParams(MASK_REG_HL, MASK_REGS_BC_DE_HL_SP) Then
-        Let LogMsg = LogMsg & Chunk.AddOpcodeED( _
+        Set LogAsm = Chunk.AddOpcodeED( _
             X1 Or Q1 Or Z2 Or OpcodeP_RegisterPair(Param2.Token))
     'ERROR: Wrong parameters for Z80 instruction
     Else: GoTo InvalidParams: End If
@@ -1453,27 +1517,27 @@ iADD:
      ..................................................................................
     '`ADD HL, BC|DE|HL|SP`
     If TestParams(MASK_REG_HL, MASK_REGS_BC_DE_HL_SP) Then
-        Let LogMsg = LogMsg & Chunk.AddOpcode( _
+        Set LogAsm = Chunk.AddOpcode( _
             OpcodeP_RegisterPair(Param2.Token) Or Q1 Or Z1)
     '`ADD IX, BC|DE|IX|SP`
     ElseIf TestParams(MASK_REG_IX, MASK_REG_BC Or MASK_REG_DE Or MASK_REG_IX Or MASK_REG_SP) Then
         'Even though this is the same opcode as above (the prefix denotes "IX"), _
          we still need to validate the params to ensure HL & IX are not mixed
-        Let LogMsg = LogMsg & Chunk.AddOpcodePrefix(Prefix, _
+        Set LogAsm = Chunk.AddOpcodePrefix(Prefix, _
             OpcodeP_RegisterPair(Param2.Token) Or Q1 Or Z1)
     '`ADD IY, BC|DE|IY|SP`
     ElseIf TestParams(MASK_REG_IY, MASK_REG_BC Or MASK_REG_DE Or MASK_REG_IY Or MASK_REG_SP) Then
         'Even though this is the same opcode as above (the prefix denotes "IY"), _
          we still need to validate the params to ensure HL & IY are not mixed
-        Let LogMsg = LogMsg & Chunk.AddOpcodePrefix(Prefix, _
+        Set LogAsm = Chunk.AddOpcodePrefix(Prefix, _
             OpcodeP_RegisterPair(Param2.Token) Or Q1 Or Z1)
     '`ADD A, A|B|C|D|E|H|IXH|IYH|L|IYH|IYL|(HL|IX+$8|IY+$8)`
     ElseIf TestParams(MASK_REG_A, MASK_REGS_ABCDEIXYHL_MEM_HLIXY) Then
-        Let LogMsg = LogMsg & Chunk.AddOpcode_Offset(Prefix, _
+        Set LogAsm = Chunk.AddOpcode_Offset(Prefix, _
             X2 Or OpcodeZ_Register(Param2.Mask), Param2.Value)
     '`ADD A, $8`
     ElseIf TestParams(MASK_REG_A, MASK_VAL) Then
-        Let LogMsg = LogMsg & Chunk.AddOpcode_Value8Bit(X3 Or Z6, Param2.Value)
+        Set LogAsm = Chunk.AddOpcode_Value8Bit(X3 Or Z6, Param2.Value)
     'ERROR: Wrong parameters for Z80 instruction
     Else: GoTo InvalidParams: End If
     GoTo LogEnd
@@ -1483,11 +1547,11 @@ iAND:
      ..................................................................................
     '`AND A|B|C|D|E|H|IXH|IYH|L|IXL|IYL|(HL|IX+$8|IY+$8)`
     If TestParams(MASK_REGS_ABCDEIXYHL_MEM_HLIXY) Then
-        Let LogMsg = LogMsg & Chunk.AddOpcode_Offset(Prefix, _
+        Set LogAsm = Chunk.AddOpcode_Offset(Prefix, _
             X2 Or Y4 Or OpcodeZ_Register(Param1.Mask), Param1.Value)
     '`AND $8`
     ElseIf TestParams(MASK_VAL) Then
-        Let LogMsg = LogMsg & Chunk.AddOpcode_Value8Bit(X3 Or Y4 Or Z6, Param1.Value)
+        Set LogAsm = Chunk.AddOpcode_Value8Bit(X3 Or Y4 Or Z6, Param1.Value)
     'ERROR: Wrong parameters for Z80 instruction
     Else: GoTo InvalidParams: End If
     GoTo LogEnd
@@ -1497,7 +1561,7 @@ iBIT:
      ..................................................................................
     '`BIT 0-7, A|B|C|D|E|H|L|(HL|IX+$8|IY+$8)`
     If TestParams(MASK_VAL, MASK_REGS_ABCDEHL_MEM_HLIXY) Then
-        Let LogMsg = LogMsg & Chunk.AddOpcodeCB(Prefix, _
+        Set LogAsm = Chunk.AddOpcodeCB(Prefix, _
             X1 Or OpcodeY_Bit(Param1.Value) Or OpcodeZ_Register(Param2.Mask), _
             Param2.Value)
     'ERROR: Wrong parameters for Z80 instruction
@@ -1509,11 +1573,11 @@ iCALL:
      ..................................................................................
     '`CALL NZ|Z|NC|C|PO|PE|P|M, $16` - conditional call
     If TestParams(MASK_FLAGS, MASK_VAL) Then
-        Let LogMsg = LogMsg & Chunk.AddOpcode_Value16Bit(Prefix, _
+        Set LogAsm = Chunk.AddOpcode_Value16Bit(Prefix, _
             X3 Or OpcodeY_Condition(Param1.Token) Or Z4, Param2.Value)
     '`CALL $16` - absolute call
     ElseIf TestParams(MASK_VAL) Then
-        Let LogMsg = LogMsg & Chunk.AddOpcode_Value16Bit(Prefix, _
+        Set LogAsm = Chunk.AddOpcode_Value16Bit(Prefix, _
             X3 Or Q1 Or Z5, Param1.Value)
     'ERROR: Wrong parameters for Z80 instruction
     Else: GoTo InvalidParams: End If
@@ -1521,7 +1585,7 @@ iCALL:
     
 iCCF:
     '..................................................................................
-    If TestParams() Then Let LogMsg = LogMsg & Chunk.AddOpcode(Y7 Or Z7): GoTo LogEnd
+    If TestParams() Then Set LogAsm = Chunk.AddOpcode(Y7 Or Z7): GoTo LogEnd
     'ERROR: Wrong parameters for Z80 instruction
     GoTo InvalidParams
     
@@ -1529,50 +1593,50 @@ iCP:
     '..................................................................................
     '`CP A|B|C|D|E|H|IXH|IYH|L|IXL|IYL|(HL|IX+$8|IY+$8)`
     If TestParams(MASK_REGS_ABCDEIXYHL_MEM_HLIXY) Then
-        Let LogMsg = LogMsg & Chunk.AddOpcode_Offset(Prefix, _
+        Set LogAsm = Chunk.AddOpcode_Offset(Prefix, _
             X2 Or Y7 Or OpcodeZ_Register(Param1.Mask), Param1.Value)
     '`CP $8`
     ElseIf TestParams(MASK_VAL) Then
-        Let LogMsg = LogMsg & Chunk.AddOpcode_Value8Bit(X3 Or Y7 Or Z6, Param1.Value)
+        Set LogAsm = Chunk.AddOpcode_Value8Bit(X3 Or Y7 Or Z6, Param1.Value)
     'ERROR: Wrong parameters for Z80 instruction
     Else: GoTo InvalidParams: End If
     GoTo LogEnd
     
 iCPD:
     '..................................................................................
-    If TestParams() Then Let LogMsg = LogMsg & Chunk.AddOpcodeED(X2 Or Y5 Or Z1): GoTo LogEnd
+    If TestParams() Then Set LogAsm = Chunk.AddOpcodeED(X2 Or Y5 Or Z1): GoTo LogEnd
     'ERROR: Wrong parameters for Z80 instruction
     GoTo InvalidParams
     
 iCPDR:
     '..................................................................................
-    If TestParams() Then Let LogMsg = LogMsg & Chunk.AddOpcodeED(X2 Or Y7 Or Z1): GoTo LogEnd
+    If TestParams() Then Set LogAsm = Chunk.AddOpcodeED(X2 Or Y7 Or Z1): GoTo LogEnd
     'ERROR: Wrong parameters for Z80 instruction
     GoTo InvalidParams
 
 iCPI:
     '..................................................................................
-    If TestParams() Then Let LogMsg = LogMsg & Chunk.AddOpcodeED(X2 Or Y4 Or Z1): GoTo LogEnd
+    If TestParams() Then Set LogAsm = Chunk.AddOpcodeED(X2 Or Y4 Or Z1): GoTo LogEnd
     'ERROR: Wrong parameters for Z80 instruction
     GoTo InvalidParams
     
 iCPIR:
     '..................................................................................
-    If TestParams() Then Let LogMsg = LogMsg & Chunk.AddOpcodeED(X2 Or Y6 Or Z1): GoTo LogEnd
+    If TestParams() Then Set LogAsm = Chunk.AddOpcodeED(X2 Or Y6 Or Z1): GoTo LogEnd
     'ERROR: Wrong parameters for Z80 instruction
     GoTo InvalidParams
     
 iCPL:
     'Compliment: Flip the bits of the Accumulator _
      ..................................................................................
-    If TestParams() Then Let LogMsg = LogMsg & Chunk.AddOpcode(Y5 Or Z7): GoTo LogEnd
+    If TestParams() Then Set LogAsm = Chunk.AddOpcode(Y5 Or Z7): GoTo LogEnd
     'ERROR: Wrong parameters for Z80 instruction
     GoTo InvalidParams
     
 iDAA:
     'Decimal Adjust Accumulator: _
      ..................................................................................
-    If TestParams() Then Let LogMsg = LogMsg & Chunk.AddOpcode(Y4 Or Z7): GoTo LogEnd
+    If TestParams() Then Set LogAsm = Chunk.AddOpcode(Y4 Or Z7): GoTo LogEnd
     'ERROR: Wrong parameters for Z80 instruction
     GoTo InvalidParams
 
@@ -1581,11 +1645,11 @@ iDEC:
      ..................................................................................
     '`DEC BC|DE|HL|SP|IX|IY`
     If TestParams(MASK_REGS_BC_DE_HL_SP_IXY) Then
-        Let LogMsg = LogMsg & Chunk.AddOpcode( _
+        Set LogAsm = Chunk.AddOpcode( _
             OpcodeP_RegisterPair(Param1.Token) Or Q1 Or Z3)
     '`DEC A|B|C|D|E|H|IXH|IYH|L|IXL|IYL|(HL|IX+$8|IY+$8)`
     ElseIf TestParams(MASK_REGS_ABCDEIXYHL_MEM_HLIXY) Then
-        Let LogMsg = LogMsg & Chunk.AddOpcode_Offset(Prefix, _
+        Set LogAsm = Chunk.AddOpcode_Offset(Prefix, _
             OpcodeY_Register(Param1.Mask) Or Z5, Param1.Value)
     'ERROR: Wrong parameters for Z80 instruction
     Else: GoTo InvalidParams: End If
@@ -1594,21 +1658,21 @@ iDEC:
 iDI:
     'Disable Interrupts: _
      ..................................................................................
-    If TestParams() Then Let LogMsg = LogMsg & Chunk.AddOpcode(X3 Or Y6 Or Z3): GoTo LogEnd
+    If TestParams() Then Set LogAsm = Chunk.AddOpcode(X3 Or Y6 Or Z3): GoTo LogEnd
     'ERROR: Wrong parameters for Z80 instruction
     GoTo InvalidParams
     
 iDJNZ:
     'Decrement, Jump if Not Zero: _
      ..................................................................................
-    If TestParams(MASK_VAL) Then Let LogMsg = LogMsg & Chunk.AddOpcode_Value8Bit(Y2, Param1.Value): GoTo LogEnd
+    If TestParams(MASK_VAL) Then Set LogAsm = Chunk.AddOpcode_Value8Bit(Y2, Param1.Value): GoTo LogEnd
     'ERROR: Wrong parameters for Z80 instruction
     GoTo InvalidParams
      
 iEI:
     'Enable Interrupts: _
      ..................................................................................
-    If TestParams() Then Let LogMsg = LogMsg & Chunk.AddOpcode(X3 Or Y7 Or Z3): GoTo LogEnd
+    If TestParams() Then Set LogAsm = Chunk.AddOpcode(X3 Or Y7 Or Z3): GoTo LogEnd
     'ERROR: Wrong parameters for Z80 instruction
     GoTo InvalidParams
     
@@ -1617,13 +1681,13 @@ iEX:
      ..................................................................................
     '`EX AF AF'`
     If TestParams(MASK_REG_AF, MASK_REG_AF) Then
-        Let LogMsg = LogMsg & Chunk.AddOpcode(Y1)
+        Set LogAsm = Chunk.AddOpcode(Y1)
     '`EX (SP), HL|IX|IY`
     ElseIf TestParams(MASK_MEM_SP, MASK_REGS_HL_IXY) Then
-        Let LogMsg = LogMsg & Chunk.AddOpcode(X3 Or Y4 Or Z3)
+        Set LogAsm = Chunk.AddOpcode(X3 Or Y4 Or Z3)
     '`EX DE, HL`
     ElseIf TestParams(MASK_REG_DE, MASK_REG_HL) Then
-        Let LogMsg = LogMsg & Chunk.AddOpcode(X3 Or Y5 Or Z3)
+        Set LogAsm = Chunk.AddOpcode(X3 Or Y5 Or Z3)
     'ERROR: Wrong parameters for Z80 instruction
     Else: GoTo InvalidParams: End If
     GoTo LogEnd
@@ -1631,14 +1695,14 @@ iEX:
 iEXX:
     'Exchange All: _
      ..................................................................................
-    If TestParams() Then Let LogMsg = LogMsg & Chunk.AddOpcode(X3 Or Q1 Or P1 Or Z1): GoTo LogEnd
+    If TestParams() Then Set LogAsm = Chunk.AddOpcode(X3 Or Q1 Or P1 Or Z1): GoTo LogEnd
     'ERROR: Wrong parameters for Z80 instruction
     GoTo InvalidParams
 
 iHALT:
     'Halt: Stop the processor and wait for interrupts _
      ..................................................................................
-    If TestParams() Then Let LogMsg = LogMsg & Chunk.AddOpcode(X1 Or Y6 Or Z6): GoTo LogEnd
+    If TestParams() Then Set LogAsm = Chunk.AddOpcode(X1 Or Y6 Or Z6): GoTo LogEnd
     'ERROR: Wrong parameters for Z80 instruction
     GoTo InvalidParams
         
@@ -1651,13 +1715,13 @@ iIM:
          The assembler will ensure that there are no indefinite values remaining _
          on the second parsing of the source code
         If Param1.Value = OZ80_INDEFINITE Then
-            Let LogMsg = LogMsg & Chunk.AddOpcodeED(X1 Or Z6)
+            Set LogAsm = Chunk.AddOpcodeED(X1 Or Z6)
         ElseIf Param1.Value = 0 Then
-            Let LogMsg = LogMsg & Chunk.AddOpcode(X1 Or Z6)
+            Set LogAsm = Chunk.AddOpcode(X1 Or Z6)
         ElseIf Param1.Value = 1 Then
-            Let LogMsg = LogMsg & Chunk.AddOpcode(X1 Or Y2 Or Z6)
+            Set LogAsm = Chunk.AddOpcode(X1 Or Y2 Or Z6)
         ElseIf Param1.Value = 2 Then
-            Let LogMsg = LogMsg & Chunk.AddOpcode(X1 Or Y3 Or Z6)
+            Set LogAsm = Chunk.AddOpcode(X1 Or Y3 Or Z6)
         Else
             'ERROR: Wrong parameters for Z80 instruction
             GoTo InvalidParams
@@ -1671,13 +1735,13 @@ iIN:
      ..................................................................................
     '`IN A, ($8)`
     If TestParams(MASK_REG_A, MASK_MEM_VAL) Then
-        Let LogMsg = LogMsg & Chunk.AddOpcode_Value8Bit(X3 Or Y3 Or Z3, Param2.Value)
+        Set LogAsm = Chunk.AddOpcode_Value8Bit(X3 Or Y3 Or Z3, Param2.Value)
     '`IN A|B|C|D|E|H|L, (C)`
     ElseIf TestParams(MASK_REGS_ABCDEHL, MASK_MEM_BC) Then
-        Let LogMsg = LogMsg & Chunk.AddOpcodeED(X1 Or OpcodeY_Register(Param1.Mask))
+        Set LogAsm = Chunk.AddOpcodeED(X1 Or OpcodeY_Register(Param1.Mask))
     '`IN (C)`
     ElseIf TestParams(MASK_MEM_BC) Then
-        Let LogMsg = LogMsg & Chunk.AddOpcodeED(X1 Or Y6)
+        Set LogAsm = Chunk.AddOpcodeED(X1 Or Y6)
     'ERROR: Wrong parameters for Z80 instruction
     Else: GoTo InvalidParams: End If
     GoTo LogEnd
@@ -1687,10 +1751,10 @@ iINC:
      ..................................................................................
     '`INC BC|DE|HL|SP|IX|IY`
     If TestParams(MASK_REGS_BC_DE_HL_SP_IXY) Then
-        Let LogMsg = LogMsg & Chunk.AddOpcode(OpcodeP_RegisterPair(Param1.Token) Or Z3)
+        Set LogAsm = Chunk.AddOpcode(OpcodeP_RegisterPair(Param1.Token) Or Z3)
     '`INC A|B|C|D|E|H|IXH|IYH|L|IXL|IYL|(HL|IX+$8|IY+$8)`
     ElseIf TestParams(MASK_REGS_ABCDEIXYHL_MEM_HLIXY) Then
-        Let LogMsg = LogMsg & Chunk.AddOpcode_Offset(Prefix, _
+        Set LogAsm = Chunk.AddOpcode_Offset(Prefix, _
             OpcodeY_Register(Param1.Mask) Or Z4, Param1.Value)
     'ERROR: Wrong parameters for Z80 instruction
     Else: GoTo InvalidParams: End If
@@ -1698,25 +1762,25 @@ iINC:
     
 iIND:
     '..................................................................................
-    If TestParams() Then Let LogMsg = LogMsg & Chunk.AddOpcodeED(X2 Or Y5 Or Z2): GoTo LogEnd
+    If TestParams() Then Set LogAsm = Chunk.AddOpcodeED(X2 Or Y5 Or Z2): GoTo LogEnd
     'ERROR: Wrong parameters for Z80 instruction
     GoTo InvalidParams
     
 iINDR:
     '..................................................................................
-    If TestParams() Then Let LogMsg = LogMsg & Chunk.AddOpcodeED(X2 Or Y7 Or Z2): GoTo LogEnd
+    If TestParams() Then Set LogAsm = Chunk.AddOpcodeED(X2 Or Y7 Or Z2): GoTo LogEnd
     'ERROR: Wrong parameters for Z80 instruction
     GoTo InvalidParams
 
 iINI:
     '..................................................................................
-    If TestParams() Then Let LogMsg = LogMsg & Chunk.AddOpcodeED(X2 Or Y4 Or Z2): GoTo LogEnd
+    If TestParams() Then Set LogAsm = Chunk.AddOpcodeED(X2 Or Y4 Or Z2): GoTo LogEnd
     'ERROR: Wrong parameters for Z80 instruction
     GoTo InvalidParams
     
 iINIR:
     '..................................................................................
-    If TestParams() Then Let LogMsg = LogMsg & Chunk.AddOpcodeED(X2 Or Y6 Or Z2): GoTo LogEnd
+    If TestParams() Then Set LogAsm = Chunk.AddOpcodeED(X2 Or Y6 Or Z2): GoTo LogEnd
     'ERROR: Wrong parameters for Z80 instruction
     GoTo InvalidParams
 
@@ -1725,14 +1789,14 @@ iJP:
      ..................................................................................
     '`JP (HL|IX|IY)` or `JP HL|IX|IY` - indirect absolute jump
     If TestParams(MASK_MEM_HLIXY Or MASK_REGS_HL_IXY) Then
-        Let LogMsg = LogMsg & Chunk.AddOpcode(X3 Or P2 Or Q1 Or Z1)
+        Set LogAsm = Chunk.AddOpcode(X3 Or P2 Or Q1 Or Z1)
     '`JP NZ|Z|NC|C|PO|PE|P|M, $16` - conditional absolute jump
     ElseIf TestParams(MASK_FLAGS, MASK_VAL) Then
-        Let LogMsg = LogMsg & Chunk.AddOpcode_Value16Bit(Prefix, _
+        Set LogAsm = Chunk.AddOpcode_Value16Bit(Prefix, _
             X3 Or OpcodeY_Condition(Param1.Token) Or Z2, Param2.Value)
     '`JP $16` - absolute jump
     ElseIf TestParams(MASK_VAL) Then
-        Let LogMsg = LogMsg & Chunk.AddOpcode_Value16Bit(Prefix, _
+        Set LogAsm = Chunk.AddOpcode_Value16Bit(Prefix, _
             X3 Or Z3, Param1.Value)
     'ERROR: Wrong parameters for Z80 instruction
     Else: GoTo InvalidParams: End If
@@ -1743,10 +1807,10 @@ iJR:
      ..................................................................................
     '`JR $8` - relative immediate jump
     If TestParams(MASK_VAL) Then
-        Let LogMsg = LogMsg & Chunk.AddOpcode_Value8Bit(Y3, Param1.Value)
+        Set LogAsm = Chunk.AddOpcode_Value8Bit(Y3, Param1.Value)
     '`JR NZ|Z|NC|C, $8` - conditional relative immediate jump
     ElseIf TestParams(MASK_FLAGS_CZ, MASK_VAL) Then
-        Let LogMsg = LogMsg & Chunk.AddOpcode_Value8Bit( _
+        Set LogAsm = Chunk.AddOpcode_Value8Bit( _
             OpcodeY_Condition(Param1.Token) + Y4, Param2.Value)
     'ERROR: Wrong parameters for Z80 instruction
     Else: GoTo InvalidParams: End If
@@ -1757,39 +1821,39 @@ iLD:
      ..................................................................................
     '`LD BC|DE|HL|SP|IX|IY, $16`
     If TestParams(MASK_REGS_BC_DE_HL_SP_IXY, MASK_VAL) Then
-        Let LogMsg = LogMsg & Chunk.AddOpcode_Value16Bit(Prefix, _
+        Set LogAsm = Chunk.AddOpcode_Value16Bit(Prefix, _
             OpcodeP_RegisterPair(Param1.Token) Or Z1, Param2.Value)
     '`LD (BC), A`
     ElseIf TestParams(MASK_MEM_BC, MASK_REG_A) Then
-        Let LogMsg = LogMsg & Chunk.AddOpcode(Z2)
+        Set LogAsm = Chunk.AddOpcode(Z2)
     '`LD (DE), A`
     ElseIf TestParams(MASK_MEM_DE, MASK_REG_A) Then
-        Let LogMsg = LogMsg & Chunk.AddOpcode(P1 Or Z2)
+        Set LogAsm = Chunk.AddOpcode(P1 Or Z2)
     '`LD A, (BC)`
     ElseIf TestParams(MASK_REG_A, MASK_MEM_BC) Then
-        Let LogMsg = LogMsg & Chunk.AddOpcode(Q1 Or Z2)
+        Set LogAsm = Chunk.AddOpcode(Q1 Or Z2)
     '`LD A, (DE)`
     ElseIf TestParams(MASK_REG_A, MASK_MEM_DE) Then
-        Let LogMsg = LogMsg & Chunk.AddOpcode(P1 Or Q1 Or Z2)
+        Set LogAsm = Chunk.AddOpcode(P1 Or Q1 Or Z2)
     '`LD ($16), HL|IX|IY`
     ElseIf TestParams(MASK_MEM_VAL, MASK_REGS_HL_IXY) Then
-        Let LogMsg = LogMsg & Chunk.AddOpcode_Value16Bit(Prefix, _
+        Set LogAsm = Chunk.AddOpcode_Value16Bit(Prefix, _
             P2 Or Z2, Param1.Value)
     '`LD ($16), A`
     ElseIf TestParams(MASK_MEM_VAL, MASK_REG_A) Then
-        Let LogMsg = LogMsg & Chunk.AddOpcode_Value16Bit(Prefix, _
+        Set LogAsm = Chunk.AddOpcode_Value16Bit(Prefix, _
             P3 Or Z2, Param1.Value)
     '`LD HL|IX|IY, ($16)`
     ElseIf TestParams(MASK_REGS_HL_IXY, MASK_MEM_VAL) Then
-        Let LogMsg = LogMsg & Chunk.AddOpcode_Value16Bit(Prefix, _
+        Set LogAsm = Chunk.AddOpcode_Value16Bit(Prefix, _
             P2 Or Q1 Or Z2, Param2.Value)
     '`LD A, ($16)`
     ElseIf TestParams(MASK_REG_A, MASK_MEM_VAL) Then
-        Let LogMsg = LogMsg & Chunk.AddOpcode_Value16Bit(Prefix, _
+        Set LogAsm = Chunk.AddOpcode_Value16Bit(Prefix, _
             P3 Or Q1 Or Z2, Param2.Value)
     '`LD A|B|C|D|E|H|IXH|IYH|L|IXL|IYL|(HL|IX+$8|IY+$8), $8`
     ElseIf TestParams(MASK_REGS_ABCDEIXYHL_MEM_HLIXY, MASK_VAL) Then
-        Let LogMsg = LogMsg & Chunk.AddOpcode_Value8Bit_Offset(Prefix, _
+        Set LogAsm = Chunk.AddOpcode_Value8Bit_Offset(Prefix, _
             OpcodeY_Register(Param1.Mask) Or Z6, Param2.Value, Param1.Value)
     'You can't combine IX and IY use in the same opcode, there's only one prefix, _
      so these two following checks ensure that IX & IY are not used together
@@ -1798,7 +1862,7 @@ iLD:
         MASK_REGS_ABCDEHL Or MASK_REGS_IXHL Or MASK_MEM_HL Or MASK_MEM_IX, _
         MASK_REGS_ABCDEHL Or MASK_REGS_IXHL _
     ) Then
-        Let LogMsg = LogMsg & Chunk.AddOpcode_Offset(Prefix, _
+        Set LogAsm = Chunk.AddOpcode_Offset(Prefix, _
             X1 Or OpcodeY_Register(Param1.Mask) Or OpcodeZ_Register(Param2.Mask), _
             Param1.Value)
     '`LD A|B|C|D|E|H|IYH|L|IYL(HL|IY+$8), A|B|C|D|E|H|IYH|L|IYL`
@@ -1806,7 +1870,7 @@ iLD:
         MASK_REGS_ABCDEHL Or MASK_REGS_IYHL Or MASK_MEM_HL Or MASK_MEM_IY, _
         MASK_REGS_ABCDEHL Or MASK_REGS_IYHL _
     ) Then
-        Let LogMsg = LogMsg & Chunk.AddOpcode_Offset(Prefix, _
+        Set LogAsm = Chunk.AddOpcode_Offset(Prefix, _
             X1 Or OpcodeY_Register(Param1.Mask) Or OpcodeZ_Register(Param2.Mask), _
             Param1.Value)
     'You can't have `LD (IX+$8), (IX+$8)!
@@ -1815,7 +1879,7 @@ iLD:
         MASK_REGS_ABCDEHL Or MASK_REGS_IXHL, _
         MASK_REGS_ABCDEHL Or MASK_REGS_IXHL Or MASK_MEM_HL Or MASK_MEM_IX _
     ) Then
-        Let LogMsg = LogMsg & Chunk.AddOpcode_Offset(Prefix, _
+        Set LogAsm = Chunk.AddOpcode_Offset(Prefix, _
             X1 Or OpcodeY_Register(Param1.Mask) Or OpcodeZ_Register(Param2.Mask), _
             Param2.Value)
     '`LD A|B|C|D|E|H|IYH|L|IYL, A|B|C|D|E|H|IYH|L|IYL|(HL|IY+$8)`
@@ -1823,66 +1887,66 @@ iLD:
         MASK_REGS_ABCDEHL Or MASK_REGS_IYHL, _
         MASK_REGS_ABCDEHL Or MASK_REGS_IYHL Or MASK_MEM_HL Or MASK_MEM_IY _
     ) Then
-        Let LogMsg = LogMsg & Chunk.AddOpcode_Offset(Prefix, _
+        Set LogAsm = Chunk.AddOpcode_Offset(Prefix, _
             X1 Or OpcodeY_Register(Param1.Mask) Or OpcodeZ_Register(Param2.Mask), _
             Param2.Value)
     '`LD SP, HL|IX|IY`
     ElseIf TestParams(MASK_REG_SP, MASK_REGS_HL_IXY) Then
-        Let LogMsg = LogMsg & Chunk.AddOpcode(X3 Or P3 Or Q1 Or Z1)
+        Set LogAsm = Chunk.AddOpcode(X3 Or P3 Or Q1 Or Z1)
     '`LD ($16), BC|DE|SP`
     ElseIf TestParams(MASK_MEM_VAL, MASK_REGS_BC_DE_SP) Then
-        Let LogMsg = LogMsg & Chunk.AddOpcodeED_Value16Bit( _
+        Set LogAsm = Chunk.AddOpcodeED_Value16Bit( _
             X1 Or OpcodeP_RegisterPair(Param2.Token) Or Z3, _
             Param1.Value)
     '`LD BC|DE|SP, ($16)`
     ElseIf TestParams(MASK_REGS_BC_DE_SP, MASK_MEM_VAL) Then
-        Let LogMsg = LogMsg & Chunk.AddOpcodeED_Value16Bit( _
+        Set LogAsm = Chunk.AddOpcodeED_Value16Bit( _
             X1 Or OpcodeP_RegisterPair(Param1.Token) Or Q1 Or Z3, _
             Param2.Value)
     '`LD I, A`
     ElseIf TestParams(MASK_REG_I, MASK_REG_A) Then
-        Let LogMsg = LogMsg & Chunk.AddOpcodeED(X1 Or Z7)
+        Set LogAsm = Chunk.AddOpcodeED(X1 Or Z7)
     '`LD R, A`
     ElseIf TestParams(MASK_REG_R, MASK_REG_A) Then
-        Let LogMsg = LogMsg & Chunk.AddOpcodeED(X1 Or Y1 Or Z7)
+        Set LogAsm = Chunk.AddOpcodeED(X1 Or Y1 Or Z7)
     '`LD A, I`
     ElseIf TestParams(MASK_REG_A, MASK_REG_I) Then
-        Let LogMsg = LogMsg & Chunk.AddOpcodeED(X1 Or Y2 Or Z7)
+        Set LogAsm = Chunk.AddOpcodeED(X1 Or Y2 Or Z7)
     '`LD A, R`
     ElseIf TestParams(MASK_REG_A, MASK_REG_R) Then
-        Let LogMsg = LogMsg & Chunk.AddOpcodeED(X1 Or Y3 Or Z7)
+        Set LogAsm = Chunk.AddOpcodeED(X1 Or Y3 Or Z7)
     'ERROR: Wrong parameters for Z80 instruction
     Else: GoTo InvalidParams: End If
     GoTo LogEnd
     
 iLDD:
     '..................................................................................
-    If TestParams() Then Let LogMsg = LogMsg & Chunk.AddOpcodeED(X2 Or Y5): GoTo LogEnd
+    If TestParams() Then Set LogAsm = Chunk.AddOpcodeED(X2 Or Y5): GoTo LogEnd
     'ERROR: Wrong parameters for Z80 instruction
     GoTo InvalidParams
     
 iLDDR:
     '..................................................................................
-    If TestParams() Then Let LogMsg = LogMsg & Chunk.AddOpcodeED(X2 Or Y7): GoTo LogEnd
+    If TestParams() Then Set LogAsm = Chunk.AddOpcodeED(X2 Or Y7): GoTo LogEnd
     'ERROR: Wrong parameters for Z80 instruction
     GoTo InvalidParams
 
 iLDI:
     '..................................................................................
-    If TestParams() Then Let LogMsg = LogMsg & Chunk.AddOpcodeED(X2 Or Y4): GoTo LogEnd
+    If TestParams() Then Set LogAsm = Chunk.AddOpcodeED(X2 Or Y4): GoTo LogEnd
     'ERROR: Wrong parameters for Z80 instruction
     GoTo InvalidParams
         
 iLDIR:
     '..................................................................................
-    If TestParams() Then Let LogMsg = LogMsg & Chunk.AddOpcodeED(X2 Or Y6): GoTo LogEnd
+    If TestParams() Then Set LogAsm = Chunk.AddOpcodeED(X2 Or Y6): GoTo LogEnd
     'ERROR: Wrong parameters for Z80 instruction
     GoTo InvalidParams
 
 iNEG:
     'Negate the Accumulator: _
      ..................................................................................
-    If TestParams() Then Let LogMsg = LogMsg & Chunk.AddOpcodeED(X1 Or Z4): GoTo LogEnd
+    If TestParams() Then Set LogAsm = Chunk.AddOpcodeED(X1 Or Z4): GoTo LogEnd
     'ERROR: Wrong parameters for Z80 instruction
     GoTo InvalidParams
     
@@ -1890,7 +1954,7 @@ iNOP:
     'No Operation: _
      ..................................................................................
     '`NOP` - Opcode is 0
-    If TestParams() Then Let LogMsg = LogMsg & Chunk.AddOpcode(0): GoTo LogEnd
+    If TestParams() Then Set LogAsm = Chunk.AddOpcode(0): GoTo LogEnd
     'ERROR: Wrong parameters for Z80 instruction
     GoTo InvalidParams
     
@@ -1899,10 +1963,10 @@ iOR:
      ..................................................................................
     '`OR A|B|C|D|E|H|IXH|IYH|L|IXL|IYL|(HL|IX+$8|IY+$8)`
     If TestParams(MASK_REGS_ABCDEIXYHL_MEM_HLIXY) Then
-        Let LogMsg = LogMsg & Chunk.AddOpcode(X2 Or Y6 Or OpcodeZ_Register(Param1.Mask))
+        Set LogAsm = Chunk.AddOpcode(X2 Or Y6 Or OpcodeZ_Register(Param1.Mask))
     '`OR $8`
     ElseIf TestParams(MASK_VAL) Then
-        Let LogMsg = LogMsg & Chunk.AddOpcode_Value8Bit(X3 Or Y6 Or Z6, Param1.Value)
+        Set LogAsm = Chunk.AddOpcode_Value8Bit(X3 Or Y6 Or Z6, Param1.Value)
     'ERROR: Wrong parameters for Z80 instruction
     Else: GoTo InvalidParams: End If
     GoTo LogEnd
@@ -1912,39 +1976,39 @@ iOUT:
      ..................................................................................
     '`OUT ($8), A`
     If TestParams(MASK_MEM_VAL, MASK_REG_A) Then
-        Let LogMsg = LogMsg & Chunk.AddOpcode_Value8Bit(X3 Or Y2 Or Z3, Param1.Value)
+        Set LogAsm = Chunk.AddOpcode_Value8Bit(X3 Or Y2 Or Z3, Param1.Value)
     '`OUT (C), A|B|C|D|E|H|L`
     ElseIf TestParams(MASK_MEM_BC, MASK_REGS_ABCDEHL) Then
-        Let LogMsg = LogMsg & Chunk.AddOpcodeED( _
+        Set LogAsm = Chunk.AddOpcodeED( _
             X1 Or OpcodeY_Register(Param2.Mask) Or Z1)
     '`OUT (C), 0`
     ElseIf TestParams(MASK_MEM_BC, MASK_VAL) Then
-        Let LogMsg = LogMsg & Chunk.AddOpcodeED(X1 Or Y6 Or Z1)
+        Set LogAsm = Chunk.AddOpcodeED(X1 Or Y6 Or Z1)
     'ERROR: Wrong parameters for Z80 instruction
     Else: GoTo InvalidParams: End If
     GoTo LogEnd
     
 iOUTD:
     '..................................................................................
-    If TestParams() Then Let LogMsg = LogMsg & Chunk.AddOpcodeED(X2 Or Y5 Or Z3): GoTo LogEnd
+    If TestParams() Then Set LogAsm = Chunk.AddOpcodeED(X2 Or Y5 Or Z3): GoTo LogEnd
     'ERROR: Wrong parameters for Z80 instruction
     GoTo InvalidParams
     
 iOTDR:
     '..................................................................................
-    If TestParams() Then Let LogMsg = LogMsg & Chunk.AddOpcodeED(X2 Or Y7 Or Z3): GoTo LogEnd
+    If TestParams() Then Set LogAsm = Chunk.AddOpcodeED(X2 Or Y7 Or Z3): GoTo LogEnd
     'ERROR: Wrong parameters for Z80 instruction
     GoTo InvalidParams
 
 iOUTI:
     '..................................................................................
-    If TestParams() Then Let LogMsg = LogMsg & Chunk.AddOpcodeED(X2 Or Y4 Or Z3): GoTo LogEnd
+    If TestParams() Then Set LogAsm = Chunk.AddOpcodeED(X2 Or Y4 Or Z3): GoTo LogEnd
     'ERROR: Wrong parameters for Z80 instruction
     GoTo InvalidParams
     
 iOTIR:
     '..................................................................................
-    If TestParams() Then Let LogMsg = LogMsg & Chunk.AddOpcodeED(X2 Or Y6 Or Z3): GoTo LogEnd
+    If TestParams() Then Set LogAsm = Chunk.AddOpcodeED(X2 Or Y6 Or Z3): GoTo LogEnd
     'ERROR: Wrong parameters for Z80 instruction
     GoTo InvalidParams
 
@@ -1953,7 +2017,7 @@ iPOP:
      ..................................................................................
     '`POP AF|BC|DE|HL|IX|IY`
     If TestParams(MASK_REGS_AF_BC_DE_HL_IXY) Then
-        Let LogMsg = LogMsg & Chunk.AddOpcode( _
+        Set LogAsm = Chunk.AddOpcode( _
             X3 Or OpcodeP_RegisterPair(Param1.Token) Or Z1)
     'ERROR: Wrong parameters for Z80 instruction
     Else: GoTo InvalidParams: End If
@@ -1964,7 +2028,7 @@ iPUSH:
      ..................................................................................
     '`PUSH AF|BC|DE|HL|IX|IY`
     If TestParams(MASK_REGS_AF_BC_DE_HL_IXY) Then
-        Let LogMsg = LogMsg & Chunk.AddOpcode( _
+        Set LogAsm = Chunk.AddOpcode( _
             X3 Or OpcodeP_RegisterPair(Param1.Token) Or Z5)
     'ERROR: Wrong parameters for Z80 instruction
     Else: GoTo InvalidParams: End If
@@ -1975,12 +2039,12 @@ iRES:
      ..................................................................................
     '`RES 0-7 A|B|C|D|E|H|L|(HL|IX+$8|IY+$8)`
     If TestParams(MASK_VAL, MASK_REGS_ABCDEHL_MEM_HLIXY) Then
-        Let LogMsg = LogMsg & Chunk.AddOpcodeCB(Prefix, _
+        Set LogAsm = Chunk.AddOpcodeCB(Prefix, _
             X2 Or OpcodeY_Bit(Param1.Value) Or OpcodeZ_Register(Param2.Mask), _
             Param2.Value)
     '`RES 0-7, (IX+$8|IY+$8), A|B|C|D|E|H|L` - undocumented RES memory & register
     ElseIf TestParams(MASK_VAL, MASK_MEM_IXY, MASK_REGS_ABCDEHL) Then
-        Let LogMsg = LogMsg & Chunk.AddOpcodeCB(Prefix, _
+        Set LogAsm = Chunk.AddOpcodeCB(Prefix, _
             X2 Or OpcodeY_Bit(Param1.Value) Or OpcodeZ_Register(Param3.Mask), _
             Param2.Value)
     'ERROR: Wrong parameters for Z80 instruction
@@ -1992,10 +2056,10 @@ iRET:
      ..................................................................................
     '`RET NZ|Z|NC|C|PO|PE|P|M` - conditional return
     If TestParams(MASK_FLAGS) Then
-        Let LogMsg = LogMsg & Chunk.AddOpcode(X3 Or OpcodeY_Condition(Param1.Token))
+        Set LogAsm = Chunk.AddOpcode(X3 Or OpcodeY_Condition(Param1.Token))
     '`RET`
     ElseIf TestParams() Then
-        Let LogMsg = LogMsg & Chunk.AddOpcode(X3 Or Q1 Or Z1)
+        Set LogAsm = Chunk.AddOpcode(X3 Or Q1 Or Z1)
     'ERROR: Wrong parameters for Z80 instruction
     Else: GoTo InvalidParams: End If
     GoTo LogEnd
@@ -2003,20 +2067,20 @@ iRET:
 iRETI:
     'Return from Interrupt: _
      ..................................................................................
-    If TestParams() Then Let LogMsg = LogMsg & Chunk.AddOpcodeED(X1 Or Y1 Or Z5): GoTo LogEnd
+    If TestParams() Then Set LogAsm = Chunk.AddOpcodeED(X1 Or Y1 Or Z5): GoTo LogEnd
     'ERROR: Wrong parameters for Z80 instruction
     GoTo InvalidParams
     
 iRETN:
     'Return from NMI: _
      ..................................................................................
-    If TestParams() Then Let LogMsg = LogMsg & Chunk.AddOpcodeED(X1 Or Z5): GoTo LogEnd
+    If TestParams() Then Set LogAsm = Chunk.AddOpcodeED(X1 Or Z5): GoTo LogEnd
     'ERROR: Wrong parameters for Z80 instruction
     GoTo InvalidParams
     
 iRLA:
     '..................................................................................
-    If TestParams() Then Let LogMsg = LogMsg & Chunk.AddOpcode(Y2 Or Z7): GoTo LogEnd
+    If TestParams() Then Set LogAsm = Chunk.AddOpcode(Y2 Or Z7): GoTo LogEnd
     'ERROR: Wrong parameters for Z80 instruction
     GoTo InvalidParams
     
@@ -2024,11 +2088,11 @@ iRL:
     '..................................................................................
     '`RL A|B|C|D|E|H|L|(HL|IX+$8|IY+$8)`
     If TestParams(MASK_REGS_ABCDEHL_MEM_HLIXY) Then
-        Let LogMsg = LogMsg & Chunk.AddOpcodeCB(Prefix, _
+        Set LogAsm = Chunk.AddOpcodeCB(Prefix, _
             Y2 Or OpcodeZ_Register(Param1.Mask), Param1.Value)
     '`RL (IX+$8|IY+$8), A|B|C|D|E|H|L` - undocumented RL memory and copy to register
     ElseIf TestParams(MASK_MEM_IXY, MASK_REGS_ABCDEHL) Then
-        Let LogMsg = LogMsg & Chunk.AddOpcodeCB(Prefix, _
+        Set LogAsm = Chunk.AddOpcodeCB(Prefix, _
             Y2 Or OpcodeZ_Register(Param2.Mask), Param1.Value)
     'ERROR: Wrong parameters for Z80 instruction
     Else: GoTo InvalidParams: End If
@@ -2036,7 +2100,7 @@ iRL:
 
 iRLCA:
     '..................................................................................
-    If TestParams() Then Let LogMsg = LogMsg & Chunk.AddOpcode(Z7): GoTo LogEnd
+    If TestParams() Then Set LogAsm = Chunk.AddOpcode(Z7): GoTo LogEnd
     'ERROR: Wrong parameters for Z80 instruction
     GoTo InvalidParams
     
@@ -2044,11 +2108,11 @@ iRLC:
     '..................................................................................
     '`RLC A|B|C|D|E|H|L|(HL|IX+$8|IY+$8)`
     If TestParams(MASK_REGS_ABCDEHL_MEM_HLIXY) Then
-        Let LogMsg = LogMsg & Chunk.AddOpcodeCB(Prefix, _
+        Set LogAsm = Chunk.AddOpcodeCB(Prefix, _
             OpcodeZ_Register(Param1.Mask), Param1.Value)
     '`RLC (IX+$8|IY+$8), A|B|C|D|E|H|L` - undocumented RLC memory and copy to register
     ElseIf TestParams(MASK_MEM_IXY, MASK_REGS_ABCDEHL) Then
-        Let LogMsg = LogMsg & Chunk.AddOpcodeCB(Prefix, _
+        Set LogAsm = Chunk.AddOpcodeCB(Prefix, _
             OpcodeZ_Register(Param2.Mask), Param1.Value)
     'ERROR: Wrong parameters for Z80 instruction
     Else: GoTo InvalidParams: End If
@@ -2056,13 +2120,13 @@ iRLC:
     
 iRLD:
     '..................................................................................
-    If TestParams() Then Let LogMsg = LogMsg & Chunk.AddOpcodeED(X1 Or Y5 Or Z7): GoTo LogEnd
+    If TestParams() Then Set LogAsm = Chunk.AddOpcodeED(X1 Or Y5 Or Z7): GoTo LogEnd
     'ERROR: Wrong parameters for Z80 instruction
     GoTo InvalidParams
     
 iRRA:
     '..................................................................................
-    If TestParams() Then Let LogMsg = LogMsg & Chunk.AddOpcode(Y3 Or Z7): GoTo LogEnd
+    If TestParams() Then Set LogAsm = Chunk.AddOpcode(Y3 Or Z7): GoTo LogEnd
     'ERROR: Wrong parameters for Z80 instruction
     GoTo InvalidParams
     
@@ -2070,11 +2134,11 @@ iRR:
     '..................................................................................
     '`RR A|B|C|D|E|H|L|(HL|IX+$8|IY+$8)`
     If TestParams(MASK_REGS_ABCDEHL_MEM_HLIXY) Then
-        Let LogMsg = LogMsg & Chunk.AddOpcodeCB(Prefix, _
+        Set LogAsm = Chunk.AddOpcodeCB(Prefix, _
             Y3 Or OpcodeZ_Register(Param1.Mask), Param1.Value)
     '`RR (IX+$8|IY+$8), A|B|C|D|E|H|L` - undocumented RR memory and copy to register
     ElseIf TestParams(MASK_MEM_IXY, MASK_REGS_ABCDEHL) Then
-        Let LogMsg = LogMsg & Chunk.AddOpcodeCB(Prefix, _
+        Set LogAsm = Chunk.AddOpcodeCB(Prefix, _
             Y3 Or OpcodeZ_Register(Param2.Mask), Param1.Value)
     'ERROR: Wrong parameters for Z80 instruction
     Else: GoTo InvalidParams: End If
@@ -2082,7 +2146,7 @@ iRR:
 
 iRRCA:
     '..................................................................................
-    If TestParams() Then Let LogMsg = LogMsg & Chunk.AddOpcode(Y1 Or Z7): GoTo LogEnd
+    If TestParams() Then Set LogAsm = Chunk.AddOpcode(Y1 Or Z7): GoTo LogEnd
     'ERROR: Wrong parameters for Z80 instruction
     GoTo InvalidParams
 
@@ -2090,11 +2154,11 @@ iRRC:
     '..................................................................................
     '`RRC A|B|C|D|E|H|L|(HL|IX+$8|IY+$8)`
     If TestParams(MASK_REGS_ABCDEHL_MEM_HLIXY) Then
-        Let LogMsg = LogMsg & Chunk.AddOpcodeCB(Prefix, _
+        Set LogAsm = Chunk.AddOpcodeCB(Prefix, _
             Y1 Or OpcodeZ_Register(Param1.Mask), Param1.Value)
     '`RRC (IX+$8|IY+$8), A|B|C|D|E|H|L` - undocumented RRC memory and copy to register
     ElseIf TestParams(MASK_MEM_IXY, MASK_REGS_ABCDEHL) Then
-        Let LogMsg = LogMsg & Chunk.AddOpcodeCB(Prefix, _
+        Set LogAsm = Chunk.AddOpcodeCB(Prefix, _
             Y1 Or OpcodeZ_Register(Param2.Mask), Param1.Value)
     'ERROR: Wrong parameters for Z80 instruction
     Else: GoTo InvalidParams: End If
@@ -2102,7 +2166,7 @@ iRRC:
     
 iRRD:
     '..................................................................................
-    If TestParams() Then Let LogMsg = LogMsg & Chunk.AddOpcodeED(X1 Or Y4 Or Z7): GoTo LogEnd
+    If TestParams() Then Set LogAsm = Chunk.AddOpcodeED(X1 Or Y4 Or Z7): GoTo LogEnd
     'ERROR: Wrong parameters for Z80 instruction
     GoTo InvalidParams
 
@@ -2112,7 +2176,7 @@ iRST:
     '`RST $00|$08|$10|$18|$20|$28|$30|$38`
     If TestParams(MASK_VAL) Then
         'TODO: Need to validate the number is in range at some point in the chain
-        Let LogMsg = LogMsg & Chunk.AddOpcode(X3 Or OpcodeY_RST(Param1.Value) Or Z7)
+        Set LogAsm = Chunk.AddOpcode(X3 Or OpcodeY_RST(Param1.Value) Or Z7)
     'ERROR: Wrong parameters for Z80 instruction
     Else: GoTo InvalidParams: End If
     GoTo LogEnd
@@ -2121,21 +2185,21 @@ iSBC:
     '..................................................................................
     '`SBC A, A|B|C|D|E|H|IXH|IYH|L|IXL|IYL|(HL|IX+$8|IY+$8)`
     If TestParams(MASK_REG_A, MASK_REGS_ABCDEIXYHL_MEM_HLIXY) Then
-        Let LogMsg = LogMsg & Chunk.AddOpcode_Offset(Prefix, _
+        Set LogAsm = Chunk.AddOpcode_Offset(Prefix, _
             X2 Or Y3 Or OpcodeZ_Register(Param2.Mask), Param2.Value)
     '`SBC A, $8`
     ElseIf TestParams(MASK_REG_A, MASK_VAL) Then
-        Let LogMsg = LogMsg & Chunk.AddOpcode_Value8Bit(X3 Or Y3 Or Z6, Param2.Value)
+        Set LogAsm = Chunk.AddOpcode_Value8Bit(X3 Or Y3 Or Z6, Param2.Value)
     '`SBC HL, BC|DE|HL|SP`
     ElseIf TestParams(MASK_REG_HL, MASK_REGS_BC_DE_HL_SP) Then
-        Let LogMsg = LogMsg & Chunk.AddOpcodeED(X1 Or OpcodeP_RegisterPair(Param2.Token) Or Z2)
+        Set LogAsm = Chunk.AddOpcodeED(X1 Or OpcodeP_RegisterPair(Param2.Token) Or Z2)
     'ERROR: Wrong parameters for Z80 instruction
     Else: GoTo InvalidParams: End If
     GoTo LogEnd
 
 iSCF:
     '..................................................................................
-    If TestParams() Then Let LogMsg = LogMsg & Chunk.AddOpcode(Y6 Or Z7): GoTo LogEnd
+    If TestParams() Then Set LogAsm = Chunk.AddOpcode(Y6 Or Z7): GoTo LogEnd
     'ERROR: Wrong parameters for Z80 instruction
     GoTo InvalidParams
     
@@ -2144,12 +2208,12 @@ iSET:
      ..................................................................................
     '`SET 0-7 A|B|C|D|E|H|L|(HL|IX+$8|IY+$8)`
     If TestParams(MASK_VAL, MASK_REGS_ABCDEHL_MEM_HLIXY) Then
-        Let LogMsg = LogMsg & Chunk.AddOpcodeCB(Prefix, _
+        Set LogAsm = Chunk.AddOpcodeCB(Prefix, _
             X3 Or OpcodeY_Bit(Param1.Value) Or OpcodeZ_Register(Param2.Mask), _
             Param2.Value)
     '`SET 0-7, (IX+$8|IY+$8), A|B|C|D|E|H|L` - undocumented SET memory & register
     ElseIf TestParams(MASK_VAL, MASK_MEM_IXY, MASK_REGS_ABCDEHL) Then
-        Let LogMsg = LogMsg & Chunk.AddOpcodeCB(Prefix, _
+        Set LogAsm = Chunk.AddOpcodeCB(Prefix, _
             X3 Or OpcodeY_Bit(Param1.Value) Or OpcodeZ_Register(Param3.Mask), _
             Param2.Value)
     'ERROR: Wrong parameters for Z80 instruction
@@ -2160,11 +2224,11 @@ iSLA:
     '..................................................................................
     '`SLA A|B|C|D|E|H|L|(HL|IX+$8|IY+$8)`
     If TestParams(MASK_REGS_ABCDEHL_MEM_HLIXY) Then
-        Let LogMsg = LogMsg & Chunk.AddOpcodeCB(Prefix, _
+        Set LogAsm = Chunk.AddOpcodeCB(Prefix, _
             Y4 Or OpcodeZ_Register(Param1.Mask), Param1.Value)
     '`SLA (IX+$8|IY+$8), A|B|C|D|E|H|L` - undocumented SLA memory and copy to register
     ElseIf TestParams(MASK_MEM_IXY, MASK_REGS_ABCDEHL) Then
-        Let LogMsg = LogMsg & Chunk.AddOpcodeCB(Prefix, _
+        Set LogAsm = Chunk.AddOpcodeCB(Prefix, _
             Y4 Or OpcodeZ_Register(Param2.Mask), Param1.Value)
     'ERROR: Wrong parameters for Z80 instruction
     Else: GoTo InvalidParams: End If
@@ -2174,11 +2238,11 @@ iSRA:
     '..................................................................................
     '`SRA A|B|C|D|E|H|L|(HL|IX+$8|IY+$8)`
     If TestParams(MASK_REGS_ABCDEHL_MEM_HLIXY) Then
-        Let LogMsg = LogMsg & Chunk.AddOpcodeCB(Prefix, _
+        Set LogAsm = Chunk.AddOpcodeCB(Prefix, _
             Y5 Or OpcodeZ_Register(Param1.Mask), Param1.Value)
     '`SRA (IX+$8|IY+$8), A|B|C|D|E|H|L` - undocumented SRA memory and copy to register
     ElseIf TestParams(MASK_MEM_IXY, MASK_REGS_ABCDEHL) Then
-        Let LogMsg = LogMsg & Chunk.AddOpcodeCB(Prefix, _
+        Set LogAsm = Chunk.AddOpcodeCB(Prefix, _
             Y5 Or OpcodeZ_Register(Param2.Mask), Param1.Value)
     'ERROR: Wrong parameters for Z80 instruction
     Else: GoTo InvalidParams: End If
@@ -2188,11 +2252,11 @@ iSLL:
     '..................................................................................
     '`SLL A|B|C|D|E|H|L|(HL|IX+$8|IY+$8)`
     If TestParams(MASK_REGS_ABCDEHL_MEM_HLIXY) Then
-        Let LogMsg = LogMsg & Chunk.AddOpcodeCB(Prefix, _
+        Set LogAsm = Chunk.AddOpcodeCB(Prefix, _
             Y6 Or OpcodeZ_Register(Param1.Mask), Param1.Value)
     '`SLL (IX+$8|IY+$8), A|B|C|D|E|H|L` - undocumented SLL memory and copy to register
     ElseIf TestParams(MASK_MEM_IXY, MASK_REGS_ABCDEHL) Then
-        Let LogMsg = LogMsg & Chunk.AddOpcodeCB(Prefix, _
+        Set LogAsm = Chunk.AddOpcodeCB(Prefix, _
             Y6 Or OpcodeZ_Register(Param2.Mask), Param1.Value)
     'ERROR: Wrong parameters for Z80 instruction
     Else: GoTo InvalidParams: End If
@@ -2202,11 +2266,11 @@ iSRL:
     '..................................................................................
     '`SRL A|B|C|D|E|H|L|(HL|IX+$8|IY+$8)`
     If TestParams(MASK_REGS_ABCDEHL_MEM_HLIXY) Then
-        Let LogMsg = LogMsg & Chunk.AddOpcodeCB(Prefix, _
+        Set LogAsm = Chunk.AddOpcodeCB(Prefix, _
             Y7 Or OpcodeZ_Register(Param1.Mask), Param1.Value)
     '`SRL (IX+$8|IY+$8), A|B|C|D|E|H|L` - undocumented SRL memory and copy to register
     ElseIf TestParams(MASK_MEM_IXY, MASK_REGS_ABCDEHL) Then
-        Let LogMsg = LogMsg & Chunk.AddOpcodeCB(Prefix, _
+        Set LogAsm = Chunk.AddOpcodeCB(Prefix, _
             Y7 Or OpcodeZ_Register(Param2.Mask), Param1.Value)
     'ERROR: Wrong parameters for Z80 instruction
     Else: GoTo InvalidParams: End If
@@ -2217,11 +2281,11 @@ iSUB:
      ..................................................................................
     '`SUB A|B|C|D|E|H|IXH|IYH|L|IXL|IYL|(HL|IX+$8|IY+$8)`
     If TestParams(MASK_REGS_ABCDEIXYHL_MEM_HLIXY) Then
-        Let LogMsg = LogMsg & Chunk.AddOpcode_Offset(Prefix, _
+        Set LogAsm = Chunk.AddOpcode_Offset(Prefix, _
             X2 Or Y2 Or OpcodeZ_Register(Param1.Mask), Param1.Value)
     '`SUB $8`
     ElseIf TestParams(MASK_VAL) Then
-        Let LogMsg = LogMsg & Chunk.AddOpcode_Value8Bit(X3 Or Y2 Or Z6, Param1.Value)
+        Set LogAsm = Chunk.AddOpcode_Value8Bit(X3 Or Y2 Or Z6, Param1.Value)
     'ERROR: Wrong parameters for Z80 instruction
     Else: GoTo InvalidParams: End If
     GoTo LogEnd
@@ -2231,21 +2295,27 @@ iXOR:
      ..................................................................................
     '`XOR A|B|C|D|E|H|IXH|IYH|L|IXL|IYL|(HL|IX+$8|IY+$8)`
     If TestParams(MASK_REGS_ABCDEIXYHL_MEM_HLIXY) Then
-        Let LogMsg = LogMsg & Chunk.AddOpcode_Offset(Prefix, _
+        Set LogAsm = Chunk.AddOpcode_Offset(Prefix, _
             X2 Or Y5 Or OpcodeZ_Register(Param1.Mask), Param1.Value)
     '`XOR $8`
     ElseIf TestParams(MASK_VAL) Then
-        Let LogMsg = LogMsg & Chunk.AddOpcode_Value8Bit(X3 Or Y5 Or Z6, Param1.Value)
+        Set LogAsm = Chunk.AddOpcode_Value8Bit(X3 Or Y5 Or Z6, Param1.Value)
     'ERROR: Wrong parameters for Z80 instruction
     Else: GoTo InvalidParams: End If
-    GoTo LogEnd
 
 LogEnd:
-    Let LogMsg = LogMsg & " | " & oz80.TokenName(Instruction)
-    If Param1.Mask <> 0 Then Let LogMsg = LogMsg & vbTab & oz80.ParamToString(Param1)
-    If Param2.Mask <> 0 Then Let LogMsg = LogMsg & vbTab & oz80.ParamToString(Param2)
-    If Param3.Mask <> 0 Then Let LogMsg = LogMsg & vbTab & oz80.ParamToString(Param3)
-    RaiseEvent Message(OZ80_LOG_STATUS, LogMsg)
+    '----------------------------------------------------------------------------------
+    '*** TIMER BEGIN ***
+    Call oz80.Profiler.EventBegin(EVENT_PROCESSZ80_LOG)
+    
+    Call RaiseMessage(OZ80_LOG_STATUS, LOG_Z80, _
+        LogAdr, oz80.TokenName(Instruction), _
+        oz80.ParamToString(Param1), oz80.ParamToString(Param2), _
+        oz80.ParamToString(Param3) _
+    )
+    
+    Call oz80.Profiler.EventEnd(EVENT_PROCESSZ80_LOG)
+    '*** TIMER END ***
     Exit Sub
     
 InvalidParams:
@@ -2254,8 +2324,8 @@ InvalidParams:
     Call RaiseError(OZ80_ERROR_INVALID_Z80PARAMS)
 End Sub
 
-'TestParams : Check if parameters are of the right type desired _
- ======================================================================================
+'TestParams : Check if parameters are of the right type desired
+'======================================================================================
 Private Function TestParams( _
     Optional ByRef Test1 As OZ80_MASK, _
     Optional ByRef Test2 As OZ80_MASK, _
@@ -2307,8 +2377,8 @@ Finish:
     Let TestParams = True
 End Function
 
-'GetListAsDictionary : Reads a whole list into a Dictionary _
- ======================================================================================
+'GetListAsDictionary : Reads a whole list into a Dictionary
+'======================================================================================
 Private Function GetListAsDictionary() As Scripting.Dictionary
     'Instantiate the return object
     Set GetListAsDictionary = New Scripting.Dictionary
@@ -2325,8 +2395,8 @@ Private Function GetListAsDictionary() As Scripting.Dictionary
     Loop
 End Function
 
-'GetListItem : Read in an Expression from a list _
- ======================================================================================
+'GetListItem : Read in an Expression from a list
+'======================================================================================
 Private Function GetListItem( _
              ByRef Value As Double, _
     Optional ByRef Length As Long = 0 _
@@ -2349,8 +2419,8 @@ Private Function GetListItem( _
     Let GetListItem = True
 End Function
 
-'ParseExpression: Evaluate a calculation into a value _
- ======================================================================================
+'ParseExpression: Evaluate a calculation into a value
+'======================================================================================
 Private Function ParseExpression() As Double
     'TODO: Handle prefixing, e.g. `-1-!-3`
     'TODO: Handle functions like LO, HI, NOT8/16
@@ -2444,8 +2514,8 @@ Continue:
     End If
 End Function
 
-'ParseValue : Get a single Value as part of an Expression _
- ======================================================================================
+'ParseValue : Get a single Value as part of an Expression
+'======================================================================================
 Private Function ParseValue() As Double
     'Is it a named value?
     'TODO: Handle scope expansion for names
@@ -2475,8 +2545,8 @@ Private Function ParseValue() As Double
     Call Token.Forward
 End Function
 
-'BeginChunk : Begin a new Chunk to hold assembled Z80 code / data _
- ======================================================================================
+'BeginChunk : Begin a new Chunk to hold assembled Z80 code / data
+'======================================================================================
 Private Function BeginChunk( _
              ByRef LabelName As String, _
     Optional ByRef Address As Long = -1 _
@@ -2499,14 +2569,16 @@ Private Function BeginChunk( _
     End If
 End Function
 
-'AddUpdateLabel: Blindly adds to or updates the Label database _
- ======================================================================================
+'AddUpdateLabel: Blindly adds to or updates the Label database
+'======================================================================================
 Private Function AddUpdateLabel( _
              ByRef LabelName As String, _
     Optional ByRef Value As Long = 0 _
 ) As Long
     'Hash the name to get the index/key
-    Let AddUpdateLabel = oz80.CRC.Calculate(LabelName)
+    Dim bluLabelName As New bluString
+    Let bluLabelName.Text = LabelName
+    Let AddUpdateLabel = bluLabelName.CRC
     
     'Add a new label or update an existing label value?
     If Not Labels.Exists(AddUpdateLabel) _
@@ -2514,8 +2586,8 @@ Private Function AddUpdateLabel( _
         Else Let Labels.Item(AddUpdateLabel) = Value
 End Function
 
-'LayoutROM : Pack the Chunks, assigning Label locations in the ROM _
- ======================================================================================
+'LayoutROM : Pack the Chunks, assigning Label locations in the ROM
+'======================================================================================
 Private Function LayoutROM() As OZ80_ERROR
     'For dereferencing the list of Chunks. This is slow, but will have to do until _
      the Chunk list can be converted to a traditional array
@@ -2543,10 +2615,10 @@ Private Function LayoutROM() As OZ80_ERROR
         Let LogMsg = Left$(Chunk.LabelName, 32)
         Let LogMsg = Left$(Left$(Chunk.LabelName, 32) & Space$(31), 32)
         
-        RaiseEvent Message(OZ80_LOG_INFO, _
-            LogMsg & Right$("      " & Format$(Chunk.Size, "#,#"), 6) & " B " & _
-            "$" & Right$("000000" & Hex(Chunk.Address), 6) _
-        )
+'        RaiseEvent Message(OZ80_LOG_INFO, _
+'            LogMsg & Right$("      " & Format$(Chunk.Size, "#,#"), 6) & " B " & _
+'            "$" & Right$("000000" & Hex(Chunk.Address), 6) _
+'        )
         
         'TODO: If Interrupt $38/$66 are not provided then add them
         'TODO: Check that one Chunk does not run into another, _
@@ -2571,8 +2643,36 @@ End Function
 '/// GENERIC //////////////////////////////////////////////////////////////////////////
 '/// Functions used anywhere throughout the clas
 
-'RiaseError : provide error details through an event _
- ======================================================================================
+'RaiseMessage : Provide a progress message
+'======================================================================================
+'LogLevel       | The type of log message, for filtering out lower-level messages
+'FormatText     | The message to log, which can include "$$" markers to be replaced
+'               | with the values provided below
+'FormatValues...| A lits of Variant values (Strings, Longs &c.) to fill in
+'======================================================================================
+Private Sub RaiseMessage( _
+    ByRef LogLevel As OZ80_LOG, _
+    ByRef FormatText As String, _
+    ParamArray FormatValues() As Variant _
+)
+    Dim Msg As bluString
+    Set Msg = New bluString
+    Let Msg.Text = FormatText
+    
+    'Are there any values to format?
+    If UBound(FormatValues) < 0 Then
+        'No, don't provide a null Variant, it really will confuse
+        RaiseEvent Message(LogLevel, Msg.Text)
+    Else
+        'Format the given log message before sending it up
+        RaiseEvent Message(LogLevel, Msg.Format(FormatValues).Text)
+    End If
+    
+    Set Msg = Nothing
+End Sub
+
+'RiaseError : Provide error details through an event
+'======================================================================================
 Private Function RaiseError( _
              ByRef Number As OZ80_ERROR, _
     Optional ByRef Line As Long = -1, Optional ByRef Col As Long = -1 _
@@ -2593,4 +2693,3 @@ Private Function RaiseError( _
     'We return the error number, purely for nicer looking tail-recursion
     Let RaiseError = Number
 End Function
-

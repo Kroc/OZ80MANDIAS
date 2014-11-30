@@ -19,6 +19,11 @@ Option Explicit
 '======================================================================================
 'CLASS :: oz80_Chunk
 
+'Dependencies       oz80.bas _
+                    bluString.bas [buStringArray.bas]
+
+'--------------------------------------------------------------------------------------
+
 'Code and/or data is assembled in separate chunks (this class) which are arranged _
  according to Section layout before being written out to the ROM. _
  i.e. each `PROC` / `TABLE` will be its own Chunk
@@ -26,7 +31,7 @@ Option Explicit
 '/// API //////////////////////////////////////////////////////////////////////////////
 
 'Copy raw memory from one place to another _
- <msdn.microsoft.com/en-us/library/windows/desktop/aa366535%28v=vs.85%29.aspx>
+ <msdn.microsoft.com/en-us/library/windows/desktop/aa366535(v=vs.85).aspx>
 Private Declare Sub api_RtlMoveMemory Lib "kernel32" Alias "RtlMoveMemory" ( _
     ByRef ptrDestination As Any, _
     ByRef ptrSource As Any, _
@@ -60,8 +65,15 @@ Private My_Size As Long
 Private Const BUFFER_SIZE As Long = 1024
 Private BufferSize As Long
 
-'CLASS Initialize _
- ======================================================================================
+'These are used for building the disassembly string quickly
+Private Const FORMAT_TEMPLATE As String = "$$ $$ $$ $$ $$ $$"
+Private Const FORMAT_SKIP As String = "··"
+Private Const FORMAT_ED As String = "ED"
+Private Const FORMAT_CB As String = "CB"
+Private Template As bluString
+
+'CLASS Initialize
+'======================================================================================
 Private Sub Class_Initialize()
     'Initialise the space where the assembled bytes go. _
      This chunk of bytes will be copied into the ROM once the location has been chosen
@@ -70,22 +82,28 @@ Private Sub Class_Initialize()
     
     'The ROM address of the Chunk can of course be 0, so default to indefinite
     Let Me.Address = -1
+    
+    'Initialise the template used for returning a string disassembly of the opcodes
+    Set Template = New bluString
+    Let Template.Text = FORMAT_TEMPLATE
+    Call Template.ReduceBuffer
 End Sub
 
-'CLASS Terminate _
- ======================================================================================
+'CLASS Terminate
+'======================================================================================
 Private Sub Class_Terminate()
     Erase Data
+    Set Template = Nothing
 End Sub
 
 '/// PUBLIC INTERFACE /////////////////////////////////////////////////////////////////
 
-'PROPERTY Size _
- ======================================================================================
+'PROPERTY Size
+'======================================================================================
 Public Property Get Size() As Long: Let Size = My_Size: End Property
 
-'AddByte : Add a byte to the assembled output and move along _
- ======================================================================================
+'AddByte : Add a byte to the assembled output and move along
+'======================================================================================
 Public Sub AddByte( _
     ByRef Value As Long _
 )
@@ -101,8 +119,8 @@ Public Sub AddByte( _
     End If
 End Sub
 
-'AddWord : Add a 2-byte value, in little-endian order _
- ======================================================================================
+'AddWord : Add a 2-byte value, in little-endian order
+'======================================================================================
 Public Sub AddWord( _
     ByRef Value As Long _
 )
@@ -113,52 +131,64 @@ Public Sub AddWord( _
     Call AddByte((Value And &HFF00&) \ &H100)
 End Sub
 
-'AddOpcode : Inserts a single opcode into the byte stream _
- ======================================================================================
+'AddOpcode : Inserts a single opcode into the byte stream
+'======================================================================================
 Public Function AddOpcode( _
     ByRef Opcode As Long _
-) As String
+) As bluString
     'Insert the provided opcode byte
     Call AddByte(Opcode)
     'Return a disassembly
-    Let AddOpcode = "·· " & oz80.HexStr8(Opcode) & " ·· ·· ·· ··"
+    Set AddOpcode = Template.Format( _
+        FORMAT_SKIP, oz80.HexStr8(Opcode), FORMAT_SKIP, _
+        FORMAT_SKIP, FORMAT_SKIP, FORMAT_SKIP _
+    )
 End Function
 
-'AddOpcodePrefix : Inserts a single opcode into the byte stream with IX/IY prefix _
- ======================================================================================
+'AddOpcodePrefix : Inserts a single opcode into the byte stream with IX/IY prefix
+'======================================================================================
 Public Function AddOpcodePrefix( _
     ByRef Prefix As Long, _
     ByRef Opcode As Long _
-) As String
+) As bluString
     'Is an IX/IY prefix byte is provided?
     If Prefix <> 0 Then
         'Add the prefix to the byte stream
         Call AddByte(Prefix)
         'Return a disassembly
-        Let AddOpcodePrefix = oz80.HexStr8(Prefix) & " " & oz80.HexStr8(Opcode) & " ·· ·· ·· ··"
+        Set AddOpcodePrefix = Template.Format( _
+            oz80.HexStr8(Prefix), oz80.HexStr8(Opcode), FORMAT_SKIP, _
+            FORMAT_SKIP, FORMAT_SKIP, FORMAT_SKIP _
+        )
     Else
         'Return a disassembly
-        Let AddOpcodePrefix = "··" & oz80.HexStr8(Opcode) & " ·· ·· ·· ··"
+        Set AddOpcodePrefix = Template.Format( _
+            FORMAT_SKIP, oz80.HexStr8(Opcode), FORMAT_SKIP, _
+            FORMAT_SKIP, FORMAT_SKIP, FORMAT_SKIP _
+        )
     End If
     'Insert the provided opcode byte
     Call AddByte(Opcode)
 End Function
 
-'AddOpcode_Offset : Inserts an opcode with an optional offset value, i.e. "(ix+$FF)" _
- ======================================================================================
+'AddOpcode_Offset : Inserts an opcode with an optional offset value, i.e. "(ix+$FF)"
+'======================================================================================
 Public Function AddOpcode_Offset( _
     ByRef Prefix As Long, _
     ByRef Opcode As Long, _
     ByRef Offset As Long _
-) As String
+) As bluString
+    Dim LogPrefix As String
+    
     'Is an IX/IY prefix byte is provided?
     If Prefix <> 0 Then
         'Add the prefix to the byte stream
         Call AddByte(Prefix)
-        Let AddOpcode_Offset = oz80.HexStr8(Prefix) & " "
+        Let LogPrefix = oz80.HexStr8(Prefix)
     Else
-        Let AddOpcode_Offset = "·· "
+        Let LogPrefix = FORMAT_SKIP
     End If
+    
     'Insert the provided opcode byte
     Call AddByte(Opcode)
     'If an offset exists, output it
@@ -166,47 +196,55 @@ Public Function AddOpcode_Offset( _
         'TODO: Validate 8-bit limit
         Call AddByte(Offset)
         'Return the disassembly (including the offset)
-        Let AddOpcode_Offset = AddOpcode_Offset & _
-            oz80.HexStr8(Opcode) & " " & _
-            oz80.HexStr8(Offset) & " ·· ·· ··"
+        Set AddOpcode_Offset = Template.Format( _
+            LogPrefix, oz80.HexStr8(Opcode), oz80.HexStr8(Offset), _
+            FORMAT_SKIP, FORMAT_SKIP, FORMAT_SKIP _
+        )
     Else
         'Return the disassembly (without the offset)
-        Let AddOpcode_Offset = AddOpcode_Offset & _
-            oz80.HexStr8(Opcode) & " ·· ·· ·· ··"
+        Set AddOpcode_Offset = Template.Format( _
+            LogPrefix, oz80.HexStr8(Opcode), FORMAT_SKIP, _
+            FORMAT_SKIP, FORMAT_SKIP, FORMAT_SKIP _
+        )
     End If
 End Function
 
-'AddOpcode_Value8Bit : Inserts opcode with 8-bit value, e.g. "ld a, $FF" _
- ======================================================================================
+'AddOpcode_Value8Bit : Inserts opcode with 8-bit value, e.g. "ld a, $FF"
+'======================================================================================
 Public Function AddOpcode_Value8Bit( _
     ByRef Opcode As Long, _
     ByRef Value As Long _
-) As String
+) As bluString
     'Insert the provided opcode byte
     Call AddByte(Opcode)
     'TODO: Validate 8-bit limit
     Call AddByte(Value)
     'Return a disassembly
-    Let AddOpcode_Value8Bit = _
-        "·· " & oz80.HexStr8(Opcode) & " ·· ·· " & oz80.HexStr8(Value) & " ··"
+    Set AddOpcode_Value8Bit = Template.Format( _
+        FORMAT_SKIP, oz80.HexStr8(Opcode), FORMAT_SKIP, _
+        FORMAT_SKIP, oz80.HexStr8(Value), FORMAT_SKIP _
+    )
 End Function
 
-'AddOpcode_Value8Bit_Offset : Inserts opcode with 8-bit value and optional offset _
- ======================================================================================
+'AddOpcode_Value8Bit_Offset : Inserts opcode with 8-bit value and optional offset
+'======================================================================================
 Public Function AddOpcode_Value8Bit_Offset( _
     ByRef Prefix As Long, _
     ByRef Opcode As Long, _
     ByRef Value As Long, _
     ByRef Offset As Long _
-) As String
+) As bluString
+    Dim LogPrefix As String
+    
     'Is an IX/IY prefix byte is provided?
     If Prefix <> 0 Then
         'Add the prefix to the byte stream
         Call AddByte(Prefix)
-        Let AddOpcode_Value8Bit_Offset = oz80.HexStr8(Prefix) & " "
+        Let LogPrefix = oz80.HexStr8(Prefix)
     Else
-        Let AddOpcode_Value8Bit_Offset = "·· "
+        Let LogPrefix = FORMAT_TEMPLATE
     End If
+    
     'Insert the provided opcode byte
     Call AddByte(Opcode)
     'If an offset value, e.g. "(ix+$FF)", is provided, include that
@@ -214,65 +252,72 @@ Public Function AddOpcode_Value8Bit_Offset( _
         'TODO: Validate 8-bit limit
         Call AddByte(Offset)
         'Return a disassembly
-        Let AddOpcode_Value8Bit_Offset = AddOpcode_Value8Bit_Offset & _
-            oz80.HexStr8(Opcode) & " " & _
-            oz80.HexStr8(Offset) & " ·· " & _
-            oz80.HexStr8(Value) & " ··"
+        Set AddOpcode_Value8Bit_Offset = Template.Format( _
+            LogPrefix, oz80.HexStr8(Opcode), oz80.HexStr8(Offset), _
+            FORMAT_SKIP, oz80.HexStr8(Value), FORMAT_SKIP _
+        )
     Else
-        Let AddOpcode_Value8Bit_Offset = AddOpcode_Value8Bit_Offset & _
-            oz80.HexStr8(Opcode) & " ·· ·· " & _
-            oz80.HexStr8(Value) & " ··"
+        'Return a disassembly
+        Set AddOpcode_Value8Bit_Offset = Template.Format( _
+            LogPrefix, oz80.HexStr8(Opcode), FORMAT_SKIP, _
+            FORMAT_SKIP, oz80.HexStr8(Value), FORMAT_SKIP _
+        )
     End If
     'Lastly the 8-bit value
     'TODO: Validate 8-bit limit
     Call AddByte(Value)
 End Function
 
-'AddOpcode_Value16Bit : Inserts opcode with 16-bit value, e.g. "jp $FFFF" _
- ======================================================================================
+'AddOpcode_Value16Bit : Inserts opcode with 16-bit value, e.g. "jp $FFFF"
+'======================================================================================
 Public Function AddOpcode_Value16Bit( _
     ByRef Prefix As Long, _
     ByRef Opcode As Long, _
     ByRef Value As Long _
-) As String
+) As bluString
+    Dim LogPrefix As String
+    
     'Is an IX/IY prefix byte is provided?
     If Prefix <> 0 Then
         'Add the prefix to the byte stream
         Call AddByte(Prefix)
-        Let AddOpcode_Value16Bit = oz80.HexStr8(Prefix) & " "
+        Let LogPrefix = oz80.HexStr8(Prefix)
     Else
-        Let AddOpcode_Value16Bit = "·· "
+        Let LogPrefix = FORMAT_SKIP
     End If
     'Insert the provided opcode byte
     Call AddByte(Opcode)
     'TODO: Validate 16-bit limit
     Call AddWord(Value)
     'Return a disassembly
-    Let AddOpcode_Value16Bit = AddOpcode_Value16Bit & _
-        oz80.HexStr8(Opcode) & " ·· ·· " & _
-        oz80.HexStr8(Value And &HFF) & " " & _
-        oz80.HexStr8((Value And &HFF00&) \ &H100)
+    Set AddOpcode_Value16Bit = Template.Format( _
+        LogPrefix, oz80.HexStr8(Opcode), FORMAT_SKIP, FORMAT_SKIP, _
+        oz80.HexStr8(Value And &HFF), oz80.HexStr8((Value And &HFF00&) \ &H100) _
+    )
 End Function
 
-'AddOpcodeED : Inserts an ED-prefixed double opcode into the byte stream _
- ======================================================================================
+'AddOpcodeED : Inserts an ED-prefixed double opcode into the byte stream
+'======================================================================================
 Public Function AddOpcodeED( _
     ByRef Opcode As Long _
-) As String
+) As bluString
     'Add the ED prefix
     Call AddByte(&HED)
     'and the provided opcode
     Call AddByte(Opcode)
     'Return a disassembly
-    Let AddOpcodeED = "ED " & oz80.HexStr8(Opcode) & " ·· ·· ·· ··"
+    Set AddOpcodeED = Template.Format( _
+        FORMAT_ED, oz80.HexStr8(Opcode), FORMAT_SKIP, _
+        FORMAT_SKIP, FORMAT_SKIP, FORMAT_SKIP _
+    )
 End Function
 
-'AddOpcode_Value16Bit : Inserts an ED-prefixed double opcode with 16-bit value _
- ======================================================================================
+'AddOpcode_Value16Bit : Inserts an ED-prefixed double opcode with 16-bit value
+'======================================================================================
 Public Function AddOpcodeED_Value16Bit( _
     ByRef Opcode As Long, _
     ByRef Value As Long _
-) As String
+) As bluString
     'Add the ED prefix
     Call AddByte(&HED)
     'and the provided opcode
@@ -280,50 +325,53 @@ Public Function AddOpcodeED_Value16Bit( _
     'TODO: Validate 16-bit limit
     Call AddWord(Value)
     'Return a disassembly
-    Let AddOpcodeED_Value16Bit = _
-        "ED " & _
-        oz80.HexStr8(Opcode) & " ·· ·· " & _
-        oz80.HexStr8(Value And &HFF) & " " & _
-        oz80.HexStr8((Value And &HFF00&) \ &H100)
+    Set AddOpcodeED_Value16Bit = Template.Format( _
+        FORMAT_ED, oz80.HexStr8(Opcode), FORMAT_SKIP, FORMAT_SKIP, _
+        oz80.HexStr8(Value And &HFF), oz80.HexStr8((Value And &HFF00&) \ &H100) _
+    )
 End Function
 
-'AddOpcodeCB : Inserts a CB-prefixed double opcode with optional offset value _
- ======================================================================================
+'AddOpcodeCB : Inserts a CB-prefixed double opcode with optional offset value
+'======================================================================================
 Public Function AddOpcodeCB( _
     ByRef Prefix As Long, _
     ByRef Opcode As Long, _
     ByRef Offset As Long _
-) As String
+) As bluString
+    Dim LogPrefix As String
+    
     'Is an IX/IY prefix byte is provided?
     If Prefix <> 0 Then
         'Add the prefix to the byte stream
         Call AddByte(Prefix)
-        Let AddOpcodeCB = oz80.HexStr8(Prefix) & " "
+        Let LogPrefix = oz80.HexStr8(Prefix)
     Else
-        Let AddOpcodeCB = "·· "
+        Let LogPrefix = FORMAT_SKIP
     End If
+    'Add the special opcode-prefix
     Call AddByte(&HCB)
     'If an offset value, e.g. "(ix+$FF)", is provided, include that
     If Offset >= 0 Then
         'TODO: Validate 8-bit limit
         Call AddByte(Offset)
         'Return a disassembly
-        Let AddOpcodeCB = AddOpcodeCB & _
-            "CB " & _
-            oz80.HexStr8(Offset) & " " & _
-            oz80.HexStr8(Opcode) & " ·· ··"
+        Set AddOpcodeCB = Template.Format( _
+            LogPrefix, FORMAT_CB, oz80.HexStr8(Offset), _
+            oz80.HexStr8(Opcode), FORMAT_SKIP, FORMAT_SKIP _
+        )
     Else
         'Return a disassembly
-        Let AddOpcodeCB = AddOpcodeCB & _
-            "CB ·· " & _
-            oz80.HexStr8(Opcode) & " ·· ··"
+        Set AddOpcodeCB = Template.Format( _
+            LogPrefix, FORMAT_CB, FORMAT_SKIP, _
+            oz80.HexStr8(Opcode), FORMAT_SKIP, FORMAT_SKIP _
+        )
     End If
     'Finally, insert the opcode
     Call AddByte(Opcode)
 End Function
 
-'Trim _
- ======================================================================================
+'Trim
+'======================================================================================
 Public Sub Trim()
     'Chunks can be empty!
     Dim NewSize As Long
@@ -334,8 +382,8 @@ Public Sub Trim()
     Let BufferSize = NewSize
 End Sub
 
-'CopyInto _
- ======================================================================================
+'CopyInto
+'======================================================================================
 Public Sub CopyInto( _
     ByRef OutputArray() As Byte _
 )

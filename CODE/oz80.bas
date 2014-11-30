@@ -9,10 +9,6 @@ Option Explicit
 
 'Public, shared stuff
 
-'For speed, we'll be hashing strings into numerical IDs, _
- which both the Assembler and TokenStream classes need to do
-Public CRC As New CRC32
-
 'Some expressions cannot be calculated until the Z80 code has been assembled. _
  For example, Label addresses are chosen after all code has been parsed and the sizes _
  of the chunks are known. A special Value is used that lies outside of the allowable _
@@ -22,6 +18,19 @@ Public CRC As New CRC32
  a trick is used here to build the largest possible 64-bit number: _
  <stackoverflow.com/questions/929069/how-do-i-declare-max-double-in-vb6/933490#933490>
 Public Const OZ80_INDEFINITE As Double = 1.79769313486231E+308 + 5.88768018655736E+293
+
+'/// DEBUG ////////////////////////////////////////////////////////////////////////////
+
+Public Profiler As New bluProfiler
+
+Public Enum PROFILER_EVENTS
+    EVENT_TOKENISE                      'TokenStream.Tokenise
+    EVENT_TOKENISE_READFILE             '- Read the source file into memory
+    EVENT_TOKENISE_READWORD             '- parse out a single word
+    EVENT_TOKENISE_TOKENWORD            '- Tokenise a single word
+    EVENT_PROCESSZ80                    'Assembler.ProcessZ80
+    EVENT_PROCESSZ80_LOG                '- Output the disassembly
+End Enum
 
 '/// PUBLIC ENUMS /////////////////////////////////////////////////////////////////////
 
@@ -105,10 +114,12 @@ Public Enum OZ80_SYNTAX
     SYNTAX_NUMBER_HEX = ASC_DOL         ' $ - hexadecimal number, e.g. `$FFFF`
     SYNTAX_NUMBER_BIN = ASC_PERC        ' % - binary number, e.g. `%10101011`
     SYNTAX_NEXT = ASC_COM               ' , - item seperator, optional
-    SYNTAX_PAREN_OPEN = ASC_LP          ' ( - memory reference open parenthesis
-    SYNTAX_PAREN_CLOSE = ASC_RP         ' ) - memory reference close parenthesis
+    SYNTAX_Z80MEM_OPEN = ASC_LP         ' ( - memory reference open parenthesis
+    SYNTAX_Z80MEM_CLOSE = ASC_RP        ' ) - memory reference close parenthesis
     SYNTAX_CHUNK_OPEN = ASC_LB          ' { - open brace
     SYNTAX_CHUNK_CLOSE = ASC_RB         ' } - close brace
+    SYNTAX_HASH_OPEN = ASC_LSB          ' [ - hash array open bracket
+    SYNTAX_HASH_CLOSE = ASC_RSB         ' ] - hash array close bracket
     SYNTAX_OPERATOR_ADD = ASC_PLUS      ' + - Add
     SYNTAX_OPERATOR_SUB = ASC_HYP       ' - - Subtract
     SYNTAX_OPERATOR_MUL = ASC_STAR      ' * - Multiply
@@ -297,6 +308,7 @@ Public Enum OZ80_TOKEN
     
     'Keywords .........................................................................
     [_TOKEN_KEYWORDS_BEGIN]
+    TOKEN_KEYWORD_HELP                  'Documentation marker
     TOKEN_KEYWORD_INTERRUPT             'Interrupt `PROC :<label> INTERRUPT <expr>`
     TOKEN_KEYWORD_PARAMS                'Parameter list `PROC :<label> PARAMS <list>`
     TOKEN_KEYWORD_PROC                  'Procedure Chunk `PROC :<label> { ... }`
@@ -312,10 +324,12 @@ Public Enum OZ80_TOKEN
     TOKEN_PREFIX_KBIT                   'x128 (1024 bits)
     
     'Grouping: (i.e. parenthesis, braces)
-    TOKEN_PARENOPEN
-    TOKEN_PARENCLOSE
-    TOKEN_CHUNKOPEN
-    TOKEN_CHUNKCLOSE
+    TOKEN_Z80MEM_OPEN                   '"(" Memory reference `ld a, (hl)`
+    TOKEN_Z80MEM_CLOSE                  '")"
+    TOKEN_CHUNK_OPEN                    '"{" Code/data Chunk, `PROC :<label> { ... }`
+    TOKEN_CHUNK_CLOSE                   '"}" Also, expression nesting
+    TOKEN_HASH_OPEN                     '"[" Hash array / Object
+    TOKEN_HASH_CLOSE                    '"]"
     
     TOKEN_QUOTE                         'e.g. `"..."`
     TOKEN_LABEL                         'e.g. `:label`
@@ -621,6 +635,7 @@ Public Property Get TokenName(ByRef Token As OZ80_TOKEN) As String
         Let My_TokenName(TOKEN_OPERATOR_XOR) = Chr$(SYNTAX_OPERATOR_XOR)
         
         'Keywords .....................................................................
+        Let My_TokenName(TOKEN_KEYWORD_HELP) = "HELP"
         Let My_TokenName(TOKEN_KEYWORD_INTERRUPT) = "INTERRUPT"
         Let My_TokenName(TOKEN_KEYWORD_PARAMS) = "PARAMS"
         Let My_TokenName(TOKEN_KEYWORD_PROC) = "PROC"
@@ -632,10 +647,12 @@ Public Property Get TokenName(ByRef Token As OZ80_TOKEN) As String
         Let My_TokenName(TOKEN_PREFIX_KB) = "KB"
         Let My_TokenName(TOKEN_PREFIX_KBIT) = "KBIT"
         
-        Let My_TokenName(TOKEN_PARENOPEN) = Chr$(SYNTAX_PAREN_OPEN)
-        Let My_TokenName(TOKEN_PARENCLOSE) = Chr$(SYNTAX_PAREN_CLOSE)
-        Let My_TokenName(TOKEN_CHUNKOPEN) = Chr$(SYNTAX_CHUNK_OPEN)
-        Let My_TokenName(TOKEN_CHUNKCLOSE) = Chr$(SYNTAX_CHUNK_CLOSE)
+        Let My_TokenName(TOKEN_Z80MEM_OPEN) = Chr$(SYNTAX_Z80MEM_OPEN)
+        Let My_TokenName(TOKEN_Z80MEM_CLOSE) = Chr$(SYNTAX_Z80MEM_CLOSE)
+        Let My_TokenName(TOKEN_CHUNK_OPEN) = Chr$(SYNTAX_CHUNK_OPEN)
+        Let My_TokenName(TOKEN_CHUNK_CLOSE) = Chr$(SYNTAX_CHUNK_CLOSE)
+        Let My_TokenName(TOKEN_HASH_OPEN) = Chr$(SYNTAX_HASH_OPEN)
+        Let My_TokenName(TOKEN_HASH_CLOSE) = Chr$(SYNTAX_HASH_CLOSE)
         
         Let My_TokenName(TOKEN_QUOTE) = Chr$(SYNTAX_QUOTE)
         Let My_TokenName(TOKEN_LABEL) = Chr$(SYNTAX_LABEL)

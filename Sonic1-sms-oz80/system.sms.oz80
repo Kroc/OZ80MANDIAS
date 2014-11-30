@@ -1,3 +1,18 @@
+`header:
+`--------------------------------------------------------------------------------------
+ENUM     !SYSTEM.SMS.HEADER     
+[
+        .ID                     BYTE x 8        "TMR SEGA"
+        .RESERVED               BYTE x 2        "  "
+        .CHECKSUM               WORD
+        .PRODUCT                HASH [
+                .LOW            BYTE
+                .MED            BYTE
+                .HI             NYBL ]
+        .VERSION                NYBL            0
+        .REGION                 NYBL            4
+        .SIZE                   NYBL            $C
+]
 
 `mapper: (bank switching)
 `--------------------------------------------------------------------------------------
@@ -7,26 +22,23 @@
   for more details, see http://www.smspower.org/Development/Mappers
 ``
 RAM
-{
-.SMS.SLOT_CONTROL       AS BYTE $FFFC   BITS [
-                        
-                        `the bank shifting feature is documented, but was never used
-                        `http://www.smspower.org/Development/Mappers#ROMBankShifting
-                        .BankShift x 2
-                        .RAMBank                `switches SRAM banks in Slot 2
-                        .RAM8000                `enable SRAM bank at $8000 (Slot 1)
-                        .RAMC000                `enable SRAM bank at $C000 (Slot 2)
-                        . x 2                   `unused bits
-                        ``the write-protect bit for the ROM would only be used during
-                          development and has no function or purpose for releases``
-                        .WriteProtect 
-                        
-                        ]
-.SMS.SLOT0              AS BYTE $FFFD           `Slot 0 ROM Bank
-.SMS.SLOT1              AS BYTE $FFFE           `Slot 1 ROM Bank
-.SMS.SLOT2              AS BYTE $FFFF           `Slot 2 ROM Bank
+[
+        .SMS.SLOT       $FFFC   HASH [                        
+                `bank shifting is documented, but was never used
+                `<smspower.org/Development/Mappers#ROMBankShifting>
+                .BankShift      BOOL x 2
+                .RAMBank        BOOL            `switches SRAM banks in Slot 2
+                .RAM8000        BOOL            `enable SRAM bank at $8000 (Slot 1)
+                .RAMC000        BOOL            `enable SRAM bank at $C000 (Slot 2)
+                .               BOOL x 2        `unused bits
+                ``the write-protect bit for the ROM would only be used during
+                  development and has no function or purpose for releases``
+                .WriteProtect   BOOL ]
+        .SMS.SLOT0      $FFFD   BYTE            `Slot 0 ROM Bank
+        .SMS.SLOT1      $FFFE   BYTE            `Slot 1 ROM Bank
+        .SMS.SLOT2      $FFFF   BYTE            `Slot 2 ROM Bank
 
-}
+]
 
 `VDP:
 `--------------------------------------------------------------------------------------
@@ -35,48 +47,44 @@ RAM
 ``
 
 RAM
-{       
-.VDP.SCANLINE           AS BYTE $7E             `read current vertical scanline
-.VDP.DATA               AS BYTE $BE             `graphics data port
-.VDP.CONTROL            AS BYTE $BF             `graphics control port
+[       
+.VDP.SCANLINE           $7E     AS BYTE         `read current vertical scanline
+.VDP.DATA               $BE     AS BYTE         `graphics data port
+.VDP.CONTROL            $BF     AS BYTE         `graphics control port
 
-.VDP.SCREENNAMETABLE    AS WORD $3800
+.VDP.SCREENNAMETABLE    $3800   AS WORD
 
-}
+]
 
 `sound:
 `--------------------------------------------------------------------------------------
 RAM
-{
-.SMS.PSG.DATA           AS BYTE $7F	        `write-only data port for sound chip
-}
+[
+.SMS.PSG.DATA           $7F     AS BYTE         `write-only data port for sound chip
+]
 
 `input:
 `--------------------------------------------------------------------------------------
 RAM
-{
-.SMS.JOYPADA		AS BYTE $DC     BITS [
-                        
-                        .pad1up
-                        .pad1down
-                        .pad1left
-                        .pad1right
-                        .pad1button1
-                        .pad1button2
-                        .pad2up
-                        .pad2down
-                        
-                        ]
-.SMS.JOYPADB		AS BYTE $DD     BITS [
-
-                        .pad2left
-                        .pad2right
-                        .pad2button1
-                        .pad2button2
-                        .reset                  `reset button on the console
-                        .                       `unused
-                        .lightgun1
-                        .lightgun2
-                        
-                        ]
-}
+[
+.SMS.JOYPADA		$DC     AS HASH [
+        .pad1up                 AS BOOL
+        .pad1down               AS BOOL
+        .pad1left               AS BOOL
+        .pad1right              AS BOOL
+        .pad1button1            AS BOOL
+        .pad1button2            AS BOOL
+        .pad2up                 AS BOOL
+        .pad2down               AS BOOL
+                                ]
+.SMS.JOYPADB		$DD     AS HASH [
+        .pad2left               AS BOOL
+        .pad2right              AS BOOL
+        .pad2button1            AS BOOL
+        .pad2button2            AS BOOL
+        .reset                  AS BOOL         `reset button
+        .                       AS BOOL         `unused
+        .lightgun1              AS BOOL
+        .lightgun2              AS BOOL
+                                ]
+]

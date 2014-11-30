@@ -11,9 +11,10 @@ Licenced under a Creative Commons 3.0 Attribution Licence
         
         1.              Terminology
         
-        2.              Commenting Code
+        2.              Documentation
         2.1.            | Line Comments
-        2.2.            . Register Hints
+        2.2.            | Register Hints
+        2.3.            ' Help Descriptions
         
         3.              Numbers
         3.1.            | Decimal
@@ -21,35 +22,36 @@ Licenced under a Creative Commons 3.0 Attribution Licence
         3.3.            | Negatives
         3.4.            | Hexadecimal
         3.5.            | Binary
-        3.6.            . Units
+        3.6.            ' Units
         
         4.              Expressions
         4.1.            | Operators
         4.2.            | Precedence
-        4.3.            . Helper Functions
+        4.3.            ' Helper Functions
+        
+        #.              Managing Common Values
+        #.1.            | Constants
+        #.2.            ' Enumerations
         
         ---
         
         Required Structure:
         (What you need to do, otherwise nothing will work)
         
-        5.              System Definition
-        5.1.            . SEGA Master System
+        #.              System Definition
+        #.1.            ' SEGA Master System
         
-        6.              Procedures
-        6.1.            | Parameters
-        6.2.            | Sub-Routines
-        6.3.            . Interrupts
+        #.              Procedures
+        #.1.            | Parameters
+        #.2.            | Sub-Routines
+        #.3.            ' Interrupts
         
         ---
         
-        7.              Constants
-        7.1.            . Enumerations
-        
-        8.              Objects
-        8.1.            | Data Types
-        8.2.            | Definition
-        8.3.            . Bits
+        #.              Objects
+        #.1.            | Data Types
+        #.2.            | Definition
+        #.3.            ' Bits
         
         ---
         
@@ -57,7 +59,7 @@ Licenced under a Creative Commons 3.0 Attribution Licence
         (Making big software)
         
         #.              Introduction
-        #.1.            Memory Maps
+        #.1.            ' Memory Maps
         
         #.              Slots
         
@@ -110,11 +112,11 @@ NOTE:   The use of small angle-brackets "‹ ›" throughout represent an option
         
 :: "Chunk"
         An encapsulation of code and/or data.
-        `PROC`, `TABLE` & `STRUCT` are all types of Chunks.
+        `PROC` & `TABLE` are types of Chunks.
  
  
 =======================================================================================
-2.      Commenting Code
+2.      Documentation
 =======================================================================================
 2.1.    Line Comments
 ---------------------------------------------------------------------------------------
@@ -169,17 +171,29 @@ visualise at a glance the flow of information by providing register hints like s
         add     hl;solidityData, bc;blockIndex
 
 Now we can see that `$.TEMP3` contained "solidityData" this time (even though it
-could be used for other purposes else where in the code) -- thus you do not have to
-scroll around to find where `$.TEMP3` was last modified.
+could be used for other purposes elsewhere in the code) -- thus you do not have to
+trace the code to find where `$.TEMP3` was last modified.
 
-Overall, we can see that the "blockIndex" in register A is copied to BC and then added
-to the "solidityData" in HL.
+Overall, we can see that the "blockIndex" in register A is copied to register BC and
+then added to the "solidityData" in register HL.
 
 Note that register hints are optional and completely arbitrary, anything A-Z, 0-9 and
 underscore can appear after the semi-colon and is not stored or referenced by the
 assembler. They are purely for readability.
 
+---------------------------------------------------------------------------------------
+2.3.    Help Descriptions
+---------------------------------------------------------------------------------------
+Scopes: PROC, TABLE, PARAMS, RETURN
+Format:
+        HELP "..."                      `single-line, or
+        HELP """
+                ...                     `multi-line
+        """
 
+TODO
+        
+        
 =======================================================================================
 3.      Numbers
 =======================================================================================
@@ -214,7 +228,7 @@ Expressions may also result in fractional values:
 WARNING: Whilst fractional values can be supplied to Z80 instruction parameters,
 the value will be rounded *DOWN* and a warning raised.
         
-        ld a, 1.6                       `produces a warning, result will be 1
+        ld a, 1.75                      `produces a warning, result will be 1
 
 ---------------------------------------------------------------------------------------
 3.3.    Negatives
@@ -357,12 +371,233 @@ NOTE:   Watch out for the left-to-right calculation order when using helper func
         ```````````````````````````````````````````````````````````````````````````````
         16-bit bitwise NOT. The first 16-bits of the proceeding value are inverted.
         E.g. `NOT16 $FFFF` is 0
+
+
+=======================================================================================
+#.      Managing Common Values
+=======================================================================================
+#.1.    Constants
+---------------------------------------------------------------------------------------
+Scopes: Root
+Format:
+        DEF     !«name» ‹«expr»›
+
+To reduce the amount of maintenance needed for changing values across a code base, 
+you may define names for common values and use these names throughout to provide you
+a single point to change that value in the future.
+
+In its simplest form a constant is defined using the `DEF` statement,
+a constant name and a value:
+
+        DEF     !SIR_LANCELOTS_FAVOURITE_COLOUR $30
+
+Anywhere you would normally use a value, you can now instead use the constant name:
+
+        ld      a, !SIR_LANCELOTS_FAVOURITE_COLOUR
+
+Constant names are prefixed by an exclamation mark (to represent their immutable
+nature), must be at least 2 letters long, may contain A-Z, underscore and 0-9
+(though may not begin with a number).
+
+---------------------------------------------------------------------------------------
+#.2.    Enumerations
+---------------------------------------------------------------------------------------
+Scopes: Root
+Format: 
+        ENUM    !«name» ‹«expr»›
+        [
+                .«name» ‹«expr»›        
+                .       ‹x «expr»›      `skip indices
+                ‹…›
+        ]
         
+Rather than have to manage the numbers of a list manually (especially when trying to
+remove one in the middle), an enumeration provides names for a list, numbering
+automatically for you.
 
+        ENUM    !STATUS
+        [
+                .SLEEP                  `=0, use as "!STATUS.SLEEP"
+                .PARALYZE               `=1
+                .POISON                 `=2
+                .BURN                   `=3
+                .FREEZE                 `=4
+        ]
 
+(The square brackets, and the portion within, is called a "hash" -- a group of Values
+ with Names. We will go into the detail of hashes in the section about Objects.)
 
+An Expression sets the starting number used in the Enum:
 
+        ENUM    !STEPS  6
+        [
+                .SIX                    `= 6
+                .SEVEN                  `= 7 ...
+        ]
 
+A lone dot skips a number. This is for the benefit of disassemblies, where you may
+have unused Enum indexes in the code.
+
+        ENUM    !SKIPS  1
+        [
+                .FIRST                  `= 1
+                .                       `skips number 2
+                .THIRD                  `= 3
+        ]
+
+The Value used for each entry in the Enum can be provided manually. When an unnumbered
+entry follows a numbered one, the previous Value is increased by 1.
+
+        ENUM    !MISC
+        [
+                .ABC    8
+                .DEF    3
+                .GHI                    `= 4
+        ]
+
+        
+=======================================================================================
+#.      Objects
+=======================================================================================
+In your code you will likely be handling structured data of some kind. A common example
+would be sprite definitions for players and enemies. The structured data would normally
+consist of a number of object properties offset from some starting point, for example
+X position, Y position, ID, speed and so forth.
+
+Managing these objects in a flexible manner is possible by using Object constructs,
+special enumerations that specify the size (in bytes) of each element.
+
+---------------------------------------------------------------------------------------
+#.1.    Data Types
+---------------------------------------------------------------------------------------
+Before you begin using Objects, it's important to know about the data types that
+specify the number of bytes a property occupies. These are:
+
+:: "BYTE"
+        A single byte, 8-bits.
+        
+        Maximum:          255                   (all 8 bits)
+        Minimum:         -128                   (7 bits & negative sign)
+
+:: "WORD"
+        Two-bytes, 16-bits, written in little-endian order on the Master System,
+        i.e. low-byte, high-byte.
+        
+        Maximum:          65'536                (all 16 bits)
+        Minimum:         -32'768                (15 bits & negative sign)
+        
+:: "TRIP"
+        A "triple" (three bytes). Written in low to high order of bytes, i.e.
+        For the 24-bit value $AABBCC, the order is $CC, $BB, $AA.
+        
+        Maximum:         16'777'216             (all 24 bits)
+        Minimum:         -8'388'608             (23 bits & negative sign)
+        
+:: "LONG"
+        Four bytes, 32-bits. Written in double-little-endian order (two Words), i.e.
+        For the 32-bit value $AABBCCDD, the order is $DD, $CC, $BB, $AA.
+        
+        Maximum:         4'294'967'295          (all 32 bits)
+        Minimum:        -2'147'483'648          (31 bits & negative sign)
+
+        
+In addition to these, the Repeat ("x") operator can be used to specify multiples,
+e.g. "LONG x 8" = 4 Bytes, 8 times = 32 Bytes.
+
+Number Units can be used to specify large numbers easily,
+e.g. "BYTE x 8 KB" = 8192 Bytes.
+
+There are additional data types for handling Bits, Nybbles (4-bits), Text and
+Hashes, but we will cover those in a later section.
+        
+---------------------------------------------------------------------------------------
+#.2.    Definition
+---------------------------------------------------------------------------------------
+Scopes: Root
+Format:
+        OBJECT  #«objName»
+        {
+                .«property»     BYTE|WORD|TRIP|LONG ‹x «expr»› ‹«list»›
+                `import an existing object:
+                .«property»     HASH #«objName»
+                ‹…›
+        }
+
+Let's imagine an enemy object:
+
+        OBJECT  #enemy
+        {
+                .x              WORD
+                .y              WORD
+                .id             BYTE
+                .speed          BYTE
+        }
+
+First, an Object is defined, #enemy, with a value of 0 -- the starting offset point.
+Additional properties are defined, each with a given size. These properties hold the
+value of their offset, for example.
+
+        ld ix, :alien                   `the location of an enemy instance
+        ld a,  (ix+#enemy.id)           `gives 4
+        ld bc, (ix+#enemy.x)            `gives 0
+        ld de, (ix+#enemy.y)            `gives 2
+        ld l,  (ix+#enemy.speed)        `gives 5
+
+As you can see, using an object provides the flexibility to rearrange the object's
+properties, insert new ones in the middle or remove properties from any point without
+breaking your assembly code (other than when reading bytes linearly).
+
+Objects can also contain other objects, allowing finer grained structure.
+
+        OBJECT  #position
+        {
+                .x              WORD
+                .y              WORD
+        }
+        
+        OBJECT  #path
+        {
+                .start          HASH #position
+                .end            HASH #position
+        }
+        
+These sub-properties would be accessed with `#path.start.x`, for example.
+
+---------------------------------------------------------------------------------------
+#.3.    Bit Flags
+---------------------------------------------------------------------------------------
+Scopes: OBJECT, RAM
+Format:
+        BITS {
+                .«property»     ‹x «expr»›
+                .               ‹x «expr»›      `unused bits
+                ‹…›
+        }
+        
+Manipulating individual bits is a common task in assembly. Keeping track of which bit
+has which meaning is probably the hardest part of maintaining bit flags, therefore
+OZ80 has syntax features designed to make managing bits very simple.
+
+For any property of an Object (or RAM Object), you can break down the property into
+individual bits and provide names for each; for example:
+
+        OBJECT #thing
+        {
+                .flags  AS BYTE BITS
+                                {
+                                        .visible
+                                        .sleep
+                                        .poison
+                                }
+        }
+        
+        
+...
+        
+        
+        
+        
+        
 ///////////////////////////////////////////////////////////////////////////////////////
                                  
                   R  E  Q  U  I  R  E  D      S  T  R  U  C  T  U  R  E
@@ -371,44 +606,26 @@ NOTE:   Watch out for the left-to-right calculation order when using helper func
                           
                           
 =======================================================================================
-5.      System Definition
+#.      System Definition
 =======================================================================================
 Before you can begin assembling, your source code needs to define which computer
-system you are targeting as well as some system-specific properties.
-
-At this time, OZ80 only directly supports the SEGA Master System, however it might
-support other Z80 targets in the future (such as the Nintendo GameBoy, ZX Spectrum &
-Amstrad CPC).
+system you are targeting. At this time, OZ80 only directly supports the SEGA Master
+System, however it might support other Z80 targets in the future (such as the Nintendo
+GameBoy, ZX Spectrum & Amstrad CPC).
 
 ---------------------------------------------------------------------------------------
-5.1.    SEGA Master System
+#.1.    SEGA Master System
 ---------------------------------------------------------------------------------------
-Scopes: Root; before any Chunk
-Format: 
-        SYSTEM  "SMS"
-        ‹{
-                .«property»      «expr»
-        }›
-
 At the beginning of your source code, place the following statement to tell the
 assembler to target the SEGA Master System.
 
         SYSTEM  "SMS"
         
 This enables a number of Master System specific behaviours, notably that the ROM
-header is automatically inserted into the output file and code / data will not be
+Header is automatically inserted into the output file and code / data will not be
 placed over the top of the ROM header area (by default $7FF0 - $7FFF).
 
-Beyond this, you can provide special properties to control features of the assembler
-and the system-specific behaviours. To do this, extend your system declaration as
-given in the example below and populate it with the desired properties which are
-listed after this example.
 
-        SYSTEM "SMS" 
-        {
-                .HEADER.CHECKSUM        256 KB
-                `...
-        }
         
 .HEADER $1FF0|$3FF0|$7FF0
         ```````````````````````````````````````````````````````````````````````````````
@@ -499,7 +716,7 @@ listed after this example.
        
         
 =======================================================================================
-6.      Procedures
+#.      Procedures
 =======================================================================================
 Scopes: Root
 Format:
@@ -557,7 +774,7 @@ using ":doThing" rather than a fixed number.
         }
 
 ---------------------------------------------------------------------------------------
-6.2.    Parameters
+#.2.    Parameters
 ---------------------------------------------------------------------------------------
 Scopes: Root
 Format:
@@ -591,15 +808,15 @@ Here the procedure is noted to use registers A, HL & BC as inputs and sets DE up
 return.
 
 ---------------------------------------------------------------------------------------
-6.3.    Sub-Routines
+#.3.    Sub-Routines
 ---------------------------------------------------------------------------------------
 Scopes: PROC
 Format:
         .«labelName»
 
-Within procedure Chunks, special labels can be provided for the procedure to reference
+Within Procedure Chunks, special Labels can be provided for the Procedure to reference
 internal locations, i.e. jumps and "private" pieces of data. These are placed at the
-beginning of a line and start with a dot, followed by the name.
+beginning of a line and start with a dot, followed by the name:
 
         PROC    :myProcedure
         {
@@ -617,12 +834,12 @@ beginning of a line and start with a dot, followed by the name.
         }
 
 Here the sub-routine `.loop` is defined canonically as `:myProcedure.loop` but can
-be referred to within the procedure simply as `.loop`. This prevents common labels
-within procedures (such as "loop") from clashing with other procedures' internal
-labelling. Outside of ":myProcedure", it is referred to via the full label name.
+be referred to within the Procedure simply as `.loop`. This prevents common Labels
+within Procedures (such as "loop") from clashing with other Procedures' internal
+labelling. Outside of ":myProcedure", it is referred to via the full Label name.
 
 ---------------------------------------------------------------------------------------
-6.4.    Interrupts
+#.4.    Interrupts
 ---------------------------------------------------------------------------------------
 Scopes: Root
 Format:
@@ -632,7 +849,7 @@ Format:
         }
 
 The Z80 interrupt routines exist at fixed locations in Bank 0. Since OZ80, by its
-nature, does not allow you to specifically fix a procedure at a certain location
+nature, does not allow you to specifically fix a Procedure at a certain location
 (the point of the assembler is to avoid micro-managing everything), the Interrupt
 Procedures are provided to make this simple. For example
 
@@ -658,220 +875,6 @@ You cannot provide a label name for the Start Procedure, but you can use the key
         On the Master System, the assembler will by default begin placing Chunks
         at $0068 in Bank 0 unless the $66 Interrupt Procedure is longer than
         two bytes.
-
-
-=======================================================================================
-7.      Constants
-=======================================================================================
-Scopes: Root
-Format:
-        DEF     !«name» ‹«expr»›
-
-To reduce the amount of maintenance needed for changing values across a code base, 
-you may define names for common values and use these names throughout to provide you
-a single point to change that value in the future.
-
-In its simplest form a constant is defined using the `DEF` statement,
-a constant name and a value:
-
-        DEF     !SIR_LANCELOTS_FAVOURITE_COLOUR $30
-
-Anywhere you would normally use a value, you can now instead use the constant name:
-
-        ld      a, !SIR_LANCELOTS_FAVOURITE_COLOUR
-
-Constant names are prefixed by an exclamation mark (to represent their immutable
-nature), must be at least 2 letters long, may contain A-Z, underscore and 0-9 (though
-may not begin with a number).
-
----------------------------------------------------------------------------------------
-7.1.    Enumerations
----------------------------------------------------------------------------------------
-Scopes: Root
-Format: 
-        ENUM    !«name» ‹«expr»›
-        {
-                .«name» ‹«expr»›        
-                .       ‹x «expr»›      `skip indicies
-                ‹…›
-        }
-        
-Rather than have to manage the numbers of a list manually (especially when trying to
-remove one in the middle), an enumeration provides names for a list, numbering
-automatically for you.
-
-        ENUM    !STATUS
-        {
-                .SLEEP                  `i.e. 'cp !STATUS.SLEEP'
-                .PARALYZE
-                .POISEN
-                .BURN
-                .FREEZE
-        }
-
-An Expression sets the starting number used in the Enum:
-
-        ENUM    !STEPS  6
-        {
-                .SIX                    `= 6
-                .SEVEN                  `= 7 ...
-        }
-
-A lone dot skips a number. This is for the benefit of disassemblies, where you may
-have unused Enum indexes in the code.
-
-        ENUM    !SKIPS 1
-        {
-                .FIRST                  `= 1
-                .                       `skips number 2
-                .THIRD                  `= 3
-        }
-
-The number used for each entry in the Enum can be provided manually.
-When an unnumbered entry follows a numbered one, the previous number is increased by 1.
-
-        ENUM    !MISC
-        {
-                .ABC    8
-                .DEF    3
-                .GHI                    `= 4
-        }
-
-
-=======================================================================================
-8.      Objects
-=======================================================================================
-In your code you will likely be handling structured data of some kind. A common example
-would be sprite definitions for players and enemies. The structured data would normally
-consist of a number of object properties offset from some starting point, for example
-X position, Y position, ID, speed and so forth.
-
-Managing these objects in a flexible manner is possible by using Object constructs,
-special enumerations that specify the size (in bytes) of each element.
-
----------------------------------------------------------------------------------------
-8.1.    Data Types
----------------------------------------------------------------------------------------
-Before you begin using Objects, it's important to know about the data types that
-specify the number of bytes a property occupies. These are:
-
-:: "BYTE"
-        A single byte, 8-bits.
-        
-        Maximum:          255                   (all 8 bits)
-        Minimum:         -128                   (7 bits & negative sign)
-
-:: "WORD"
-        Two-bytes, 16-bits, written in little-endian order on the Master System,
-        i.e. low-byte, high-byte.
-        
-        Maximum:          65'536                (all 16 bits)
-        Minimum:         -32'768                (15 bits & negative sign)
-        
-:: "TRIP"
-        A "triple" (three bytes). Written in low to high order of bytes, i.e.
-        For the 24-bit value $AABBCC, the order is $CC, $BB, $AA.
-        
-        Maximum:         16'777'216             (all 24 bits)
-        Minimum:         -8'388'608             (23 bits & negative sign)
-        
-:: "LONG"
-        Four bytes, 32-bits. Written in double-little-endian order (two Words), i.e.
-        For the 32-bit value $AABBCCDD, the order is $DD, $CC, $BB, $AA.
-        
-        Maximum:         4'294'967'295          (all 32 bits)
-        Minimum:        -2'147'483'648          (31 bits & negative sign)
-
-        
-In addition to these, the Repeat ("x") operator can be used to specify multiples,
-e.g. "LONG x 8" = 4 Bytes, 8 times = 32 Bytes.
-
-Number Units can be used to specify large numbers easily,
-e.g. "BYTE x 8 KB" = 8192 Bytes.
-        
----------------------------------------------------------------------------------------
-8.2.    Definition
----------------------------------------------------------------------------------------
-Scopes: Root
-Format:
-        OBJECT  #«objName»
-        {
-                .«property»     AS BYTE|WORD|TRIP|LONG ‹x «expr»› ‹DEFAULT «list»›
-                `import an existing object:
-                .«property»     AS #«objName»
-                ‹…›
-        }
-
-Let's imagine an enemy object:
-
-        OBJECT  #enemy
-        {
-                .x              AS WORD
-                .y              AS WORD
-                .id             AS BYTE
-                .speed          AS BYTE
-        }
-
-First, an Object is defined, #enemy, with a value of 0 -- the starting offset point.
-Additional properties are defined, each with a given size. These properties hold the
-value of their offset, for example.
-
-        ld ix, :alien                   `the location of an enemy instance
-        ld a,  (ix+#enemy.id)           `gives 4
-        ld bc, (ix+#enemy.x)            `gives 0
-        ld de, (ix+#enemy.y)            `gives 2
-        ld l,  (ix+#enemy.speed)        `gives 5
-
-As you can see, using an object provides the flexibility to rearrange the object's
-properties, insert new ones in the middle or remove properties from any point without
-breaking your assembly code (other than when reading bytes linearly).
-
-Objects can also contain other objects, allowing finer grained structure.
-
-        OBJECT  #position
-        {
-                .x              AS WORD
-                .y              AS WORD
-        }
-        
-        OBJECT  #path
-        {
-                .start          AS #position
-                .end            AS #position
-        }
-        
-These sub-properties would be accessed with `#path.start.x`, for example.
-
----------------------------------------------------------------------------------------
-8.3.    Bit Flags
----------------------------------------------------------------------------------------
-Scopes: OBJECT, RAM
-Format:
-        BITS {
-                .«property»     ‹x «expr»›
-                .               ‹x «expr»›      `unused bits
-                ‹…›
-        }
-        
-Manipulating individual bits is a common task in assembly. Keeping track of which bit
-has which meaning is probably the hardest part of maintaining bit flags, therefore
-OZ80 has syntax features designed to make managing bits very simple.
-
-For any property of an Object (or RAM Object), you can break down the property into
-individual bits and provide names for each; for example:
-
-        OBJECT #thing
-        {
-                .flags  AS BYTE BITS
-                                {
-                                        .visible
-                                        .sleep
-                                        .poison
-                                }
-        }
-        
-        
-...
 
 
 =======================================================================================

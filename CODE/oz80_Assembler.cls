@@ -19,11 +19,6 @@ Option Explicit
 '======================================================================================
 'CLASS :: oz80_Assembler
 
-'For timing this process
-Private Stopwatch As PerformanceCounter
-
-'Error number!
-Private My_Error As OZ80_ERROR
 
 'Formatting of output messages
 Private Const LOG_VERSION As String = "OZ80MANDIAS v$$.$$,$$"
@@ -36,35 +31,149 @@ Private Const LOG_TIME As String = "Time: $$s"
 Private Const LOG_Z80 As String = "$$ | $$: " & vbTab & "$$" & vbTab & "$$" & vbTab & "$$"
 Private Const LOG_SECTION As String = "SECTION $$"
 
+'Error number!
+Private My_Error As OZ80_ERROR
+
 'Parsing: _
  --------------------------------------------------------------------------------------
 'Each source code file is broken down into a machine-readable representation _
  ('oz80_TokenStream') which we store here. When parsing one file and we come across _
  an `INCLUDE` statement, another token stream gets added here
 Private Files As Scripting.Dictionary
-
 'The current source file being processed, attached such that we can get the _
  message and error events from it
 Private WithEvents Token As oz80_TokenStream
 Attribute Token.VB_VarHelpID = -1
 
+'Which target system is selected, e.g. SEGA Master System
+Private My_System As OZ80_SYSTEM
+
 'Sections need to be defined first before they can be used
 Private SectionNames As Scripting.Dictionary
 Private SectionSlots As Scripting.Dictionary
 
-'Parsing: _
- --------------------------------------------------------------------------------------
-'Each chunk of code / data is assembled separately from the others and with no final _
- position in the ROM in mind until all source has been parsed. Once all source is _
- parsed, the banks are chosen for the Chunks and the assembly copied into the ROM
-Private Chunks As Scripting.Dictionary
-'The current chunk being assembled into
-Public Chunk As oz80_Chunk
-
 'The database of Label locations (in ROM) and properties
 Public Labels As Scripting.Dictionary
 
-'Opcodes: _
+'Z80 Parameters: _
+ --------------------------------------------------------------------------------------
+'In order to compare the hundreds of permutations of parameters for Z80 instructions, _
+ we assign each parameter type a single bit. We can thus check very quickly if a given _
+ parameter falls within an allowed list of accepted types
+
+Private Enum OZ80_MASK
+    
+    [_MASK_REGS_BEGIN] = 1
+    MASK_REG_B = 2 ^ 0
+    MASK_REG_C = 2 ^ 1
+    MASK_REG_D = 2 ^ 2
+    MASK_REG_E = 2 ^ 3
+    MASK_REG_H = 2 ^ 4
+    MASK_REG_L = 2 ^ 5
+    MASK_MEM_HL = 2 ^ 6
+    MASK_REG_A = 2 ^ 7
+    
+    'The presence of an IX/IY prefix on the opcode changes H/L to IXH/IYH or IXL/IYL
+     'respectively, but only on instructions that use single byte opcodes.
+     'This is officially undocumented, but obviously fair game for old systems
+    MASK_REG_IXH = 2 ^ 8
+    MASK_REG_IXL = 2 ^ 9
+    MASK_REG_IYH = 2 ^ 10
+    MASK_REG_IYL = 2 ^ 11
+    
+    'The presence of an IX/IY prefix on the opcode changes a memory reference "(HL)"
+     'to IX/IY, with an offset value e.g. "(IX+$8)"
+    MASK_MEM_IX = 2 ^ 12
+    MASK_MEM_IY = 2 ^ 13
+    [_MASK_REGS_END] = MASK_MEM_IY
+    
+    'A couple of undocumented instructions allow for IX/IY memory references,
+     'but not the standard "(HL)" reference
+    MASK_MEM_IXY = MASK_MEM_IX Or MASK_MEM_IY
+    'And this is the common "(HL|IX+$8|IY+$8)" form that is used often throughout
+    MASK_MEM_HLIXY = MASK_MEM_HL Or MASK_MEM_IXY
+    
+    'The main 8-bit registers are a common instruction parameter
+    MASK_REGS_ABCDEHL = MASK_REG_A Or MASK_REG_B Or MASK_REG_C Or MASK_REG_D Or MASK_REG_E Or MASK_REG_E Or MASK_REG_H Or MASK_REG_L
+    'The Z80 clumps HL/IX & IY memory references together with 8-bit registers when
+     'building opcodes, i.e. "A|B|C|D|E|H|L|(HL|IX+$8|IY+$8)"
+    MASK_REGS_ABCDEHL_MEM_HLIXY = MASK_REGS_ABCDEHL Or MASK_MEM_HLIXY
+    'The use of the IX/IY prefix turns H/L into IXH/IXL/IYH/IYL in many instances
+    MASK_REGS_IXHL = MASK_REG_IXH Or MASK_REG_IXL
+    MASK_REGS_IYHL = MASK_REG_IYH Or MASK_REG_IYL
+    MASK_REGS_IXYHL = MASK_REGS_IXHL Or MASK_REGS_IYHL
+    MASK_REGS_ABCDEIXYHL_MEM_HLIXY = MASK_REGS_ABCDEHL_MEM_HLIXY Or MASK_REGS_IXYHL
+    
+    'Very uncommon 8-bit registers
+    MASK_REG_I = 2 ^ 14                 'Interrupt register
+    MASK_REG_R = 2 ^ 15                 'Refresh register, pseudo-random
+    
+    'The 16-bit register pairs
+    MASK_REG_AF = 2 ^ 16                'The Accumulator and the processor Flags
+    MASK_REG_BC = 2 ^ 17                'Registers B & C
+    MASK_REG_DE = 2 ^ 18                'Registers D & E
+    MASK_REG_HL = 2 ^ 19                'Registers H & L
+    MASK_REG_SP = 2 ^ 20                'Stack Pointer
+    
+    MASK_REG_IX = 2 ^ 21
+    MASK_REG_IY = 2 ^ 22
+    
+    MASK_REGS_BC_DE_SP = MASK_REG_BC Or MASK_REG_DE Or MASK_REG_SP
+    'Some instructions accept BC/DE/HL/SP, but not IX & IY due to existing prefixes
+    MASK_REGS_BC_DE_HL_SP = MASK_REGS_BC_DE_SP Or MASK_REG_HL
+    
+    'HL, IX & IY are synonymous as they use an opcode prefix to determine which
+    MASK_REGS_HL_IXY = MASK_REG_HL Or MASK_REG_IX Or MASK_REG_IY
+    'PUSH / POP allow AF but not SP
+    MASK_REGS_AF_BC_DE_HL_IXY = MASK_REG_AF Or MASK_REG_BC Or MASK_REG_DE Or MASK_REGS_HL_IXY
+    'The LD instruction can take most 16-bit registers
+    MASK_REGS_BC_DE_HL_SP_IXY = MASK_REGS_BC_DE_HL_SP Or MASK_REG_IX Or MASK_REG_IY
+    
+    MASK_VAL = 2 ^ 23
+    
+    '..................................................................................
+    
+    'Register C & Flag C cannot be distinguished by the tokeniser (it isn't aware of
+     'context) so they are treated as the same thing. Another bit covers NC/Z/NZ so
+     'that these are not accidentally taken as Register C elsewhere
+    MASK_FLAGS_CZ = MASK_REG_C Or (2 ^ 24)
+    MASK_FLAGS_MP = (2 ^ 25)
+    
+    MASK_FLAGS = MASK_FLAGS_CZ Or MASK_FLAGS_MP
+    
+    '..................................................................................
+    
+    'The IN and OUT instructions can use port "C" (which is, in reality, BC)
+    MASK_MEM_BC = 2 ^ 26
+    MASK_MEM_DE = 2 ^ 27
+    MASK_MEM_SP = 2 ^ 28
+    
+    MASK_MEM_VAL = 2 ^ 29
+    
+    '..................................................................................
+    
+    'This is a shorthand to check for any instance of IX/IY so that we can add the
+     'relevant opcode prefix with the simplest of tests
+    MASK_ANY_IX = MASK_REG_IX Or MASK_REG_IXH Or MASK_REG_IXL Or MASK_MEM_IX
+    MASK_ANY_IY = MASK_REG_IY Or MASK_REG_IYH Or MASK_REG_IYL Or MASK_MEM_IY
+    MASK_ANY_IXY = MASK_ANY_IX Or MASK_ANY_IY
+End Enum
+
+Private Type oz80Param
+    Mask As OZ80_MASK
+    Token As OZ80_TOKEN
+    Value As Long
+End Type
+
+'Whilst in the syntax `SLOT` uses a list (i.e. `SLOT 0, 1, 2`), we convert that into _
+ a bit pattern to make it quick and easy to work with instead of iterating an array
+Private Enum OZ80_SLOT
+    SLOT0 = 2 ^ 0
+    SLOT1 = 2 ^ 1
+    SLOT2 = 2 ^ 2
+End Enum
+
+'Z80 Opcodes: _
  --------------------------------------------------------------------------------------
 'Z80 opcodes are made up of various bit patterns that can be broken down into the _
  following layout: (this information from <z80.info/decoding.htm>)
@@ -116,8 +225,12 @@ Private Param3Test As oz80Param
 
 'Output: _
  --------------------------------------------------------------------------------------
-'TODO: This will eventually be defined and selected by the ´SYSTEM´ definition
-Private Const BANKSIZE As Long = 16 * 1024
+'Each chunk of code / data is assembled separately from the others and with no final _
+ position in the ROM in mind until all source has been parsed. Once all source is _
+ parsed, the banks are chosen for the Chunks and the assembly copied into the ROM
+Private Chunks As Scripting.Dictionary
+'The current chunk being assembled into
+Public Chunk As oz80_Chunk
 
 'As we layout Chunks in the ROM, we need to keep track of the start addresses and _
  their lengths so that we can avoid conflicts and find empty space
@@ -126,7 +239,7 @@ Private Layout As Scripting.Dictionary
 'This is where the output ROM image will be stored as we build it
 Private ROM() As Byte
 
-'/// EVENTS & PROPERTIES //////////////////////////////////////////////////////////////
+'/// EVENTS ///////////////////////////////////////////////////////////////////////////
 
 'Progress messages are passed through an event, the handler can choose to show them _
  or not, and in what format. I don't want to spam unwanted `Debug.Print` output
@@ -146,7 +259,6 @@ Private Sub Class_Initialize()
     'If too many possible tokens are created, things will screw up
     Debug.Assert OZ80_TOKEN.[_TOKEN_LAST] < 256
     
-    Set Stopwatch = New PerformanceCounter
     Set SectionNames = New Scripting.Dictionary
     Set SectionSlots = New Scripting.Dictionary
     
@@ -275,9 +387,6 @@ Private Sub Class_Terminate()
     Erase OpcodeP_RegisterPair, OpcodeY_Bit, OpcodeY_Condition, _
           OpcodeY_Register, OpcodeY_RST, OpcodeZ_Register
     Erase TokenRegister
-    
-    'Finally, stop timing
-    Set Stopwatch = Nothing
 End Sub
 
 'EVENT <Token> Error : Detailed error message from a TokenStream object
@@ -307,15 +416,22 @@ Public Property Get Error() As OZ80_ERROR: Let Error = My_Error: End Property
 
 'Assemble : Compile a Z80 binary from a given starting source code file
 '======================================================================================
-Public Function Assemble(ByVal FilePath As String) As OZ80_ERROR
+'FilePath       | Source code file to begin with
+'---------------+----------------------------------------------------------------------
+'Returns        | The error number
+'======================================================================================
+Public Function Assemble( _
+    ByVal FilePath As String _
+) As OZ80_ERROR
     'Reset the error number
     Let My_Error = OZ80_ERROR_NONE
     
+    'Register the events we'll be timing with the profiler
     With oz80.Profiler
         Call .RegisterEvent(EVENT_TOKENISE, "TokenStream.Tokenise")
-        Call .RegisterEvent(EVENT_TOKENISE_READFILE, "TokenStream.Tokenise;ReadFile")
         Call .RegisterEvent(EVENT_TOKENISE_READWORD, "TokenStream.Tokenise;ReadWord")
         Call .RegisterEvent(EVENT_TOKENISE_TOKENWORD, "TokenStream.Tokenise;TokenWord")
+        Call .RegisterEvent(EVENT_FORMATTOKEN, "TokenStream;FormatToken")
         Call .RegisterEvent(EVENT_PROCESSZ80, "Assembler.ProcessZ80")
         Call .RegisterEvent(EVENT_PROCESSZ80_LOG, "Assembler.ProcessZ80;Log")
     End With
@@ -333,9 +449,6 @@ Public Function Assemble(ByVal FilePath As String) As OZ80_ERROR
     Call SectionNames.RemoveAll
     Call SectionSlots.RemoveAll
     Erase ROM: Call Layout.RemoveAll
-    
-    'We'll measure the time this takes
-    Call Stopwatch.Reset
     
     '----------------------------------------------------------------------------------
     'Phase 1: First Pass & Assemble _
@@ -379,7 +492,7 @@ Public Function Assemble(ByVal FilePath As String) As OZ80_ERROR
     Close #FileNumber
     
     Call RaiseMessage(OZ80_LOG_ACTION, LOG_ASM_COMPLETE)
-    Call RaiseMessage(OZ80_LOG_INFO, LOG_TIME, Format$(Stopwatch.Elapsed / 1000, "0.000"))
+'    Call RaiseMessage(OZ80_LOG_INFO, LOG_TIME, Format$(Stopwatch.Elapsed / 1000, "0.000"))
     
 Finish:
     Let Assemble = My_Error
@@ -406,7 +519,6 @@ Private Function ParseFile( _
     'The file path handed to us might be just a file name and/or contain a relative _
      path (i.e. "..\"). We need to normalise this given path into an absolute path _
      (e.g. "C:\Folder\File.ext")
-    
     Dim TestPath As New bluString
     
     'If the given path is already absolute, it does not need normalising. _
@@ -522,7 +634,7 @@ End Function
 '         |                                               '
 '         | INCLUDE     <text>                            '
 '         |                                               '
-'         | OBJECT      #{names}    <hash>                '
+'         | OBJECT      #{name}     <hash>                '
 '         |                                               '
 '         | PROC        :{name}    [HELP        <text>]   '
 '         |                        [PARAMS      <params>] '
@@ -531,6 +643,8 @@ End Function
 '         |                         <chunk>               '
 '         |                                               '
 '         | SECTION     ::{name}   [SLOT        <list>]   '
+'         |
+'         | SYSTEM      <text>
 '         |                                               '
 '         | TABLE       :{name}    [HELP        <text>]   '
 '         |                         <chunk>               '
@@ -555,84 +669,53 @@ Private Sub ScopeRoot()
     'When a file begins, it is at the top-most scope. Certain keywords are only _
      allowed here. Once all nested scopes are exhausted, we return here
     
-    'Used for evaluating expressions in parameters
-    Dim Value As Long
-    'For remembering item names (labels, variables &c.)
-    Dim StringKey As Long
-    
 Continue:
-    If My_Error Then Exit Sub
-    'As we loop, other functions will move the Token pointer forward (such as when _
-     evaluating expressions). Check if we've hit the end of the file
-    If Token.EOF Then Exit Sub
-    
-    'ERROR: Not a keyword on root scope
-    If Not Token.IsKeyword Then Call RaiseError(OZ80_ERROR_EXPECTED_ROOT): Exit Sub
-        
     '----------------------------------------------------------------------------------
-    '`PROC :<label> { [...] }` _
-     ----------------------------------------------------------------------------------
+    '`PROC :<label> { [...] }`
+    '----------------------------------------------------------------------------------
     If Token.Kind = TOKEN_KEYWORD_PROC Then
         'Hand off to the function that will process this
         Call ProcessProc
         
     '----------------------------------------------------------------------------------
-    '`SECTION ::<section>` _
-     ----------------------------------------------------------------------------------
+    '`SECTION ::<section>`
+    '----------------------------------------------------------------------------------
     ElseIf Token.Kind = TOKEN_KEYWORD_SECTION Then
         'Hand off to the function that will process this
         Call ProcessSection
-        
+    
+    '----------------------------------------------------------------------------------
+    '`SYSTEM <text>`
+    '----------------------------------------------------------------------------------
+    ElseIf Token.Kind = TOKEN_KEYWORD_SYSTEM Then
+        'Hand off to the function that will process this
+        Call ProcessSystem
+    
     'ERROR: Not a valid keyword at this scope! _
      ----------------------------------------------------------------------------------
     Else
-        Call RaiseError(OZ80_ERROR_FILE_END)
+        Call RaiseError(OZ80_ERROR_EXPECTED_ROOT)
         Exit Sub
     End If
     
+    If My_Error Then Exit Sub
+    'As we loop, other functions will move the Token pointer forward (such as when _
+     evaluating expressions). Check if we've hit the end of the file
+    If Token.EOF Then Exit Sub
     'As long as there is content left to process in the file, keep going
     GoTo Continue
 End Sub
 
-'ScopeChunk: Within a code/data chunk, i.e. `PROC`, `TABLE`
+'ProcessSystem : Define the target system (e.g. SEGA Master System)
 '======================================================================================
-Private Sub ScopeChunk()
-    'Within a code/data chunk we can have local labels, data statements and Z80 code
+'SYSTEM     <text>
+'======================================================================================
+Private Sub ProcessSystem()
+    'ERROR: The file ended before the first parameter
+    If Not Token.Forward() Then Call RaiseError(OZ80_ERROR_FILE_END): Exit Sub
     
-Continue:
-    'Z80 code?
-    If Token.IsInstruction Then
-        '*** TIMER BEGIN ***
-        Call oz80.Profiler.EventBegin(EVENT_PROCESSZ80)
-        
-        Call ProcessZ80
-        
-        Call oz80.Profiler.EventEnd(EVENT_PROCESSZ80)
-        '*** TIMER END ***
-        
-        If My_Error Then Exit Sub
-        GoTo Continue
-    End If
+    'Check that the parameter is a list (or at least the start of one)
     
-    'The chunk might be empty `{}`, in which case we don't want to walk it
-    If Token.Kind = TOKEN_CHUNK_CLOSE Then GoTo Finish
-    
-    '----------------------------------------------------------------------------------
-    
-    'Move to the next token. If the file ends unexpectedly, the chunk has not been _
-     closed properly (closing brace is expected)
-    If Not Token.Forward() Then
-        Call RaiseError(OZ80_ERROR_FILE_END)
-    
-    'When the closing brace is encountered, we'll drop out of the scope
-    ElseIf Token.Kind <> TOKEN_CHUNK_CLOSE Then
-        GoTo Continue
-    End If
-    
-Finish:
-    'Move onto the next token ready for the root scope to process. _
-     The file could end just after the chunk, so no error is necessary
-    Call Token.Forward
 End Sub
 
 'ProcessSection : Define a Section
@@ -950,6 +1033,47 @@ SkipReturn:
     
     'Enter the procedure chunk to process its innards
     Call ScopeChunk
+End Sub
+
+'ScopeChunk: Within a code/data chunk, i.e. `PROC`, `TABLE`
+'======================================================================================
+Private Sub ScopeChunk()
+    'Within a code/data chunk we can have local labels, data statements and Z80 code
+    
+Continue:
+    'Z80 code?
+    If Token.IsInstruction Then
+        '*** TIMER BEGIN ***
+        Call oz80.Profiler.EventBegin(EVENT_PROCESSZ80)
+        
+        Call ProcessZ80
+        
+        Call oz80.Profiler.EventEnd(EVENT_PROCESSZ80)
+        '*** TIMER END ***
+        
+        If My_Error Then Exit Sub
+        GoTo Continue
+    End If
+    
+    'The chunk might be empty `{}`, in which case we don't want to walk it
+    If Token.Kind = TOKEN_CHUNK_CLOSE Then GoTo Finish
+    
+    '----------------------------------------------------------------------------------
+    
+    'Move to the next token. If the file ends unexpectedly, the chunk has not been _
+     closed properly (closing brace is expected)
+    If Not Token.Forward() Then
+        Call RaiseError(OZ80_ERROR_FILE_END)
+    
+    'When the closing brace is encountered, we'll drop out of the scope
+    ElseIf Token.Kind <> TOKEN_CHUNK_CLOSE Then
+        GoTo Continue
+    End If
+    
+Finish:
+    'Move onto the next token ready for the root scope to process. _
+     The file could end just after the chunk, so no error is necessary
+    Call Token.Forward
 End Sub
 
 'GetZ80Parameter : Fetch the type / value of a Z80 instruction parameter
@@ -2308,10 +2432,9 @@ LogEnd:
     '*** TIMER BEGIN ***
     Call oz80.Profiler.EventBegin(EVENT_PROCESSZ80_LOG)
     
-    Call RaiseMessage(OZ80_LOG_STATUS, LOG_Z80, _
+    Call RaiseMessage(OZ80_LOG_DEBUG, LOG_Z80, _
         LogAdr, oz80.TokenName(Instruction), _
-        oz80.ParamToString(Param1), oz80.ParamToString(Param2), _
-        oz80.ParamToString(Param3) _
+        ParamToString(Param1), ParamToString(Param2), ParamToString(Param3) _
     )
     
     Call oz80.Profiler.EventEnd(EVENT_PROCESSZ80_LOG)
@@ -2642,6 +2765,77 @@ End Function
 
 '/// GENERIC //////////////////////////////////////////////////////////////////////////
 '/// Functions used anywhere throughout the clas
+
+'ParamToString : Get a textual representation of a Z80 instruction parameter
+'======================================================================================
+'Param          | A Parameter Obect that will contain the details
+'---------------+----------------------------------------------------------------------
+'Returns        | A string with the Parameter's name
+'======================================================================================
+Private Function ParamToString( _
+    ByRef Param As oz80Param _
+) As String
+    If Param.Mask = MASK_REG_A Then
+        Let ParamToString = "A"
+    ElseIf Param.Mask = MASK_REG_B Then Let ParamToString = "B"
+    ElseIf Param.Mask = MASK_REG_C Then Let ParamToString = "C"
+    ElseIf Param.Mask = MASK_REG_D Then Let ParamToString = "D"
+    ElseIf Param.Mask = MASK_REG_E Then Let ParamToString = "E"
+    ElseIf Param.Mask = MASK_REG_H Then Let ParamToString = "H"
+    ElseIf Param.Mask = MASK_REG_L Then Let ParamToString = "L"
+    ElseIf Param.Mask = MASK_REG_I Then Let ParamToString = "I"
+    ElseIf Param.Mask = MASK_REG_R Then Let ParamToString = "R"
+    ElseIf Param.Mask = MASK_REG_AF Then Let ParamToString = "AF"
+    ElseIf Param.Mask = MASK_REG_BC Then Let ParamToString = "BC"
+    ElseIf Param.Mask = MASK_REG_DE Then Let ParamToString = "DE"
+    ElseIf Param.Mask = MASK_REG_HL Then Let ParamToString = "HL"
+    ElseIf Param.Mask = MASK_REG_SP Then Let ParamToString = "SP"
+    ElseIf Param.Mask = MASK_REG_IX Then Let ParamToString = "IX"
+    ElseIf Param.Mask = MASK_REG_IXL Then Let ParamToString = "IXL"
+    ElseIf Param.Mask = MASK_REG_IXH Then Let ParamToString = "IXH"
+    ElseIf Param.Mask = MASK_REG_IY Then Let ParamToString = "IY"
+    ElseIf Param.Mask = MASK_REG_IYL Then Let ParamToString = "IYL"
+    ElseIf Param.Mask = MASK_REG_IYH Then Let ParamToString = "IYH"
+    
+    ElseIf Param.Mask = MASK_VAL Then
+        If Param.Value > 255 Then
+            Let ParamToString = "$" & oz80.HexStr16(Param.Value)
+        Else
+            Let ParamToString = "$" & oz80.HexStr8(Param.Value)
+        End If
+        
+    'The mask bits do not specify every flag, _
+     we refer to the token kind for that
+    ElseIf (Param.Mask And MASK_FLAGS) <> 0 Then
+        If Param.Token = TOKEN_Z80_C Then
+            Let ParamToString = "C"
+        ElseIf Param.Token = TOKEN_Z80_NC Then Let ParamToString = "NC"
+        ElseIf Param.Token = TOKEN_Z80_Z Then Let ParamToString = "Z"
+        ElseIf Param.Token = TOKEN_Z80_NZ Then Let ParamToString = "NZ"
+        ElseIf Param.Token = TOKEN_Z80_P Then Let ParamToString = "P"
+        ElseIf Param.Token = TOKEN_Z80_PE Then Let ParamToString = "PE"
+        ElseIf Param.Token = TOKEN_Z80_PO Then Let ParamToString = "PO"
+        ElseIf Param.Token = TOKEN_Z80_M Then Let ParamToString = "M"
+        End If
+    
+    'Memory references
+    ElseIf Param.Mask = MASK_MEM_HL Then
+        Let ParamToString = "(HL)"
+    ElseIf Param.Mask = MASK_MEM_IX Then
+        Let ParamToString = "(IX+$" & oz80.HexStr8(Param.Value) & ")"
+    ElseIf Param.Mask = MASK_MEM_IY Then
+        Let ParamToString = "(IY+$" & oz80.HexStr8(Param.Value) & ")"
+    ElseIf Param.Mask = MASK_MEM_BC Then Let ParamToString = "(BC)"
+    ElseIf Param.Mask = MASK_MEM_DE Then Let ParamToString = "(DE)"
+    ElseIf Param.Mask = MASK_MEM_SP Then Let ParamToString = "(SP)"
+    ElseIf Param.Mask = MASK_MEM_VAL Then
+        If Param.Value > 255 Then
+            Let ParamToString = "($" & oz80.HexStr16(Param.Value) & ")"
+        Else
+            Let ParamToString = "($" & oz80.HexStr8(Param.Value) & ")"
+        End If
+    End If
+End Function
 
 'RaiseMessage : Provide a progress message
 '======================================================================================

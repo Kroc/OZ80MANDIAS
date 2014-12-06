@@ -20,7 +20,7 @@
 `` This source code is given to the public domain:
    
    whilst "SEGA" and "Sonic" are registered trademarks of SEGA Enterprises, Ltd.,
-   this is not their source code (I haven't broken into SEGA's offices Â¬__Â¬), so not
+   this is not their source code (I haven't broken into SEGA's offices ¬__¬), so not
    their copyright. Neither does this contain any byte-for-byte data of the original
    ROM (this is all ASCII codes, even the hex data parts). the fact that this text
    file can be processed with an algorithm and produces a file that is the same as
@@ -58,8 +58,14 @@
         A brand-new SMS-specific assembler with a new syntax designed for writing
         clean, flexible code and data
         
-   
 ``
+
+
+SYSTEM  "sms"
+INCLUDE "system.sms.oz80"
+
+
+
 
 ``VDP registers are written to by sending first the data byte, and then the 4-bit
   register number with bit 7 set. for more details, see
@@ -111,63 +117,3 @@ INCLUDE "objects\objects.oz80"
 INCLUDE "SOUND\sound_driver.asm"
 INCLUDE "SOUND\music.asm"
 
-`we might be able to set a background repeating text like this so that we don't have
- `to specify precise gap-filling like this
-AT $7FB1 - $4000
-DATA "Master System & Game Gear Version.  "
-DATA "'1991 (C)Ancient. (BANK0-4)", $A2
-DATA "SONIC THE HEDGE"
-
-`======================================================================================
-`block mappings
-
-BANK 4
-
-`[$10000]
-:S1_BlockMappings
-
-:S1_BlockMappings_GreenHill
-INCLUDE BINARY "ROM.sms" START $10000 LENGTH 2944
-
-:S1_BlockMappings_Bridge
-INCLUDE BINARY "ROM.sms" START $10B80 LENGTH 2304
-
-:S1_BlockMappings_Jungle
-INCLUDE BINARY "ROM.sms" START $11480 LENGTH 2560
-
-:S1_BlockMappings_Labyrinth
-INCLUDE BINARY "ROM.sms" START $11E80 LENGTH 2816
-
-:S1_BlockMappings_ScrapBrain
-INCLUDE BINARY "ROM.sms" START $12980 LENGTH 3072
-
-:S1_BlockMappings_SkyBaseExterior
-`INCLUDE BINARY "ROM.sms" SKIP $13580 READ 3456
-INCLUDE BINARY "ROM.sms" START $13580 LENGTH ($14000 - $13580)
-BANK 5
-AT $0000
-INCLUDE BINARY "ROM.sms" START $14000 LENGTH 3456 - ($14000 - $13580)
-
-:S1_BlockMappings_SkyBaseInterior
-INCLUDE BINARY "ROM.sms" START $14300 LENGTH 1664
-
-:S1_BlockMappings_SpecialStage
-INCLUDE BINARY "ROM.sms" START $14980 LENGTH 2048
-
-`======================================================================================
-`"blinking items"
-`(need to properly break these down)
-
-`[$15180]
-INCLUDE BINARY "ROM.sms" START $15180 LENGTH 1024
-
-`======================================================================================
-`level headers:
-
-BANK 5
-
-`[$15580]
-:S1_LevelHeader_Pointers
-
-`[$155CA]
-AT $155CA - $14000

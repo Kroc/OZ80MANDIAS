@@ -25,114 +25,14 @@ Public Profiler As New bluProfiler
 
 Public Enum PROFILER_EVENTS
     EVENT_TOKENISE                      'TokenStream.Tokenise
-    EVENT_TOKENISE_READFILE             '- Read the source file into memory
     EVENT_TOKENISE_READWORD             '- parse out a single word
     EVENT_TOKENISE_TOKENWORD            '- Tokenise a single word
+    EVENT_FORMATTOKEN                   '- Format token data for logging
     EVENT_PROCESSZ80                    'Assembler.ProcessZ80
     EVENT_PROCESSZ80_LOG                '- Output the disassembly
 End Enum
 
 '/// PUBLIC ENUMS /////////////////////////////////////////////////////////////////////
-
-'This makes life a whole lot easier when processing text as ASCII codes
-Public Enum ASCII
-    'Non-visible control codes:
-:   ASC_NUL:    ASC_SOH:    ASC_STX:    ASC_ETX:    ASC_EOT:    ASC_ENQ:    ASC_ACK
-:   ASC_BEL:    ASC_BS:     ASC_TAB:    ASC_LF:     ASC_VT:     ASC_FF:     ASC_CR
-:   ASC_SO:     ASC_SI:     ASC_DLE:    ASC_DC1:    ASC_DC2:    ASC_DC3:    ASC_DC4
-:   ASC_NAK:    ASC_SYN:    ASC_ETB:    ASC_CAN:    ASC_EM:     ASC_SUB:    ASC_ESC
-:   ASC_FS:     ASC_GS:     ASC_RS:     ASC_US
-
-    ASC_SPC                             '` ` Space
-    ASC_EXC                             '`!` Exclamation Mark
-    ASC_QUOT                            '`"` Quote
-    ASC_HASH                            '`#` Hash / Pound / Octothorpe
-    ASC_DOL                             '`$` Dollar
-    ASC_PERC                            '`%` Per-Cent
-    ASC_AMP                             '`&` Ampersand
-    ASC_APOS                            '`'` Single-Quote / Apostrophe
-    ASC_LP                              '`(` Left Parenthesis
-    ASC_RP                              '`)` Right Parenthesis
-    ASC_STAR                            '`*` Asterisk
-    ASC_PLUS                            '`+` Plus
-    ASC_COM                             '`,` Comma
-    ASC_HYP                             '`-` Hyphen
-    ASC_DOT                             '`.` Dot
-    ASC_FSL                             '`/` Forward-Slash
-
-:   ASC_0:      ASC_1:      ASC_2:      ASC_3:      ASC_4:      ASC_5:      ASC_6
-:   ASC_7:      ASC_8:      ASC_9
-    
-    ASC_COL                             '`:` Colon
-    ASC_SCOL                            '`;` Semi-Colon
-    ASC_LT                              '`<` Less-Than
-    ASC_EQ                              '`=` Equals
-    ASC_GT                              '`>` Greater-Than
-    ASC_QM                              '`?` Question Mark
-    ASC_AT                              '`@` At-Mark
-    
-:   ASC_A:      ASC_B:      ASC_C:      ASC_D:      ASC_E:      ASC_F:      ASC_G
-:   ASC_H:      ASC_I:      ASC_J:      ASC_K:      ASC_L:      ASC_M:      ASC_N
-:   ASC_O:      ASC_P:      ASC_Q:      ASC_R:      ASC_S:      ASC_T:      ASC_U
-:   ASC_V:      ASC_W:      ASC_X:      ASC_Y:      ASC_Z
-    
-    ASC_LSB                             '`[` Left Square-Bracket
-    ASC_BSL                             '`\` Back-Slash
-    ASC_RSB                             '`]` Right Square-Bracket
-    ASC_CRT                             '`^` Caret / Circumflex
-    ASC_USC                             '`_` Underscore
-    ASC_BTK                             '``` Backtick / Grave Accent
-
-    'Lower-case letters
-:   ASC_a_:     ASC_b_:     ASC_c_:     ASC_d_:     ASC_e_:     ASC_f_:     ASC_g_
-:   ASC_h_:     ASC_i_:     ASC_j_:     ASC_k_:     ASC_l_:     ASC_m_:     ASC_n_
-:   ASC_o_:     ASC_p_:     ASC_q_:     ASC_r_:     ASC_s_:     ASC_t_:     ASC_u_
-:   ASC_v_:     ASC_w_:     ASC_x_:     ASC_y_:     ASC_z_:
-
-    ASC_LB                              '`{` Left Brace
-    ASC_VB                              '`|` Vertical Bar / Pipe
-    ASC_RB                              '`}` Right Brace
-    ASC_TIL                             '`~` Tilde
-    
-    ASC_DEL                             '"Delete" -- non-visible
-End Enum
-
-'--------------------------------------------------------------------------------------
-
-'These define the various punctiation marks (in ASCII codes) for the language syntax
-Public Enum OZ80_SYNTAX
-    SYNTAX_COMMENT = ASC_BTK            ' ` - Comment marker. "``" for multi-line
-    SYNTAX_HINT1 = ASC_SCOL             ' ; - register hint, e.g. `a;index`
-    SYNTAX_HINT2 = ASC_APOS             ' ' - shadow register hint, e.g. `ex af 'af`
-    SYNTAX_QUOTE = ASC_QUOT             ' " - string identifier
-    SYNTAX_LABEL = ASC_COL              ' : - label identifier
-    SYNTAX_PROPERTY = ASC_DOT           ' . - property identifier
-    SYNTAX_OBJECT = ASC_HASH            ' # - object identifier
-    SYNTAX_RAM = ASC_DOL                ' $ - RAM constant identifier -- "$.abc"
-    SYNTAX_MACRO = ASC_AT               ' @ - macro identifier
-    SYNTAX_FUNCT = ASC_QM               ' ? - function identifier
-    SYNTAX_NUMBER_HEX = ASC_DOL         ' $ - hexadecimal number, e.g. `$FFFF`
-    SYNTAX_NUMBER_BIN = ASC_PERC        ' % - binary number, e.g. `%10101011`
-    SYNTAX_NEXT = ASC_COM               ' , - item seperator, optional
-    SYNTAX_Z80MEM_OPEN = ASC_LP         ' ( - memory reference open parenthesis
-    SYNTAX_Z80MEM_CLOSE = ASC_RP        ' ) - memory reference close parenthesis
-    SYNTAX_CHUNK_OPEN = ASC_LB          ' { - open brace
-    SYNTAX_CHUNK_CLOSE = ASC_RB         ' } - close brace
-    SYNTAX_HASH_OPEN = ASC_LSB          ' [ - hash array open bracket
-    SYNTAX_HASH_CLOSE = ASC_RSB         ' ] - hash array close bracket
-    SYNTAX_OPERATOR_ADD = ASC_PLUS      ' + - Add
-    SYNTAX_OPERATOR_SUB = ASC_HYP       ' - - Subtract
-    SYNTAX_OPERATOR_MUL = ASC_STAR      ' * - Multiply
-    SYNTAX_OPERATOR_DIV = ASC_FSL       ' / - Divide
-    SYNTAX_OPERATOR_POW = ASC_CRT       ' ^ - Power
-    SYNTAX_OPERATOR_MOD = ASC_BSL       ' \ - Modulus
-    SYNTAX_OPERATOR_OR = ASC_VB         ' | - Bitwise OR
-    SYNTAX_OPERATOR_AND = ASC_AMP       ' & - Bitwise AND
-    SYNTAX_OPERATOR_NOT = ASC_EXC       ' ! - Bitwise NOT
-    SYNTAX_OPERATOR_XOR = ASC_TIL       ' ~ - Bitwise XOR
-End Enum
-
-'--------------------------------------------------------------------------------------
 
 Public Enum OZ80_LOG
     OZ80_LOG_ACTION                     'The key important happenings
@@ -155,6 +55,7 @@ Public Enum OZ80_ERROR
     OZ80_ERROR_DUPLICATE_PROC_SECTION   '- Duplicate `SECTION` parameter
     OZ80_ERROR_DUPLICATE_SECTION        '- Can't define a section twice
     OZ80_ERROR_EXPECTED                 'Incorrect content at the current scope
+    OZ80_ERROR_EXPECTED_BRACKET         '- Close bracket ("}","]",")") without open
     OZ80_ERROR_EXPECTED_PROC_NAME       '- A label name must follow `PROC`
     OZ80_ERROR_EXPECTED_PROC_PARAMS     '- Invalid stuff in the `PARAMS` list
     OZ80_ERROR_EXPECTED_PROC_RETURN     '- Invalid stuff in the `RETURN` list
@@ -308,13 +209,16 @@ Public Enum OZ80_TOKEN
     
     'Keywords .........................................................................
     [_TOKEN_KEYWORDS_BEGIN]
+    TOKEN_KEYWORD_DEF                   'Define constant
     TOKEN_KEYWORD_HELP                  'Documentation marker
+    TOKEN_KEYWORD_INCLUDE               'Include another file
     TOKEN_KEYWORD_INTERRUPT             'Interrupt `PROC :<label> INTERRUPT <expr>`
     TOKEN_KEYWORD_PARAMS                'Parameter list `PROC :<label> PARAMS <list>`
     TOKEN_KEYWORD_PROC                  'Procedure Chunk `PROC :<label> { ... }`
     TOKEN_KEYWORD_RETURN                'Returns list `PROC :<label> RETURN <list>`
     TOKEN_KEYWORD_SECTION               'Section definition `SECTION ::<section>
     TOKEN_KEYWORD_SLOT                  'Section Slot pattern `SLOT 0, 1, 2`
+    TOKEN_KEYWORD_SYSTEM                'System identifier `SYSTEM "SMS"`
     [_TOKEN_KEYWORDS_END]
     
     TOKEN_NUMBER
@@ -343,131 +247,11 @@ End Enum
 
 '--------------------------------------------------------------------------------------
 
-'In order to compare the hundreds of permutations of parameters for Z80 instructions, _
- we assign each parameter type a single bit. We can thus check very quickly if a given _
- parameter falls within an allowed list of accepted types
-
-Public Enum OZ80_MASK
-    
-    [_MASK_REGS_BEGIN] = 1
-    MASK_REG_B = 2 ^ 0
-    MASK_REG_C = 2 ^ 1
-    MASK_REG_D = 2 ^ 2
-    MASK_REG_E = 2 ^ 3
-    MASK_REG_H = 2 ^ 4
-    MASK_REG_L = 2 ^ 5
-    MASK_MEM_HL = 2 ^ 6
-    MASK_REG_A = 2 ^ 7
-    
-    'The presence of an IX/IY prefix on the opcode changes H/L to IXH/IYH or IXL/IYL
-     'respectively, but only on instructions that use single byte opcodes.
-     'This is officially undocumented, but obviously fair game for old systems
-    MASK_REG_IXH = 2 ^ 8
-    MASK_REG_IXL = 2 ^ 9
-    MASK_REG_IYH = 2 ^ 10
-    MASK_REG_IYL = 2 ^ 11
-    
-    'The presence of an IX/IY prefix on the opcode changes a memory reference "(HL)"
-     'to IX/IY, with an offset value e.g. "(IX+$8)"
-    MASK_MEM_IX = 2 ^ 12
-    MASK_MEM_IY = 2 ^ 13
-    [_MASK_REGS_END] = MASK_MEM_IY
-    
-    'A couple of undocumented instructions allow for IX/IY memory references,
-     'but not the standard "(HL)" reference
-    MASK_MEM_IXY = MASK_MEM_IX Or MASK_MEM_IY
-    'And this is the common "(HL|IX+$8|IY+$8)" form that is used often throughout
-    MASK_MEM_HLIXY = MASK_MEM_HL Or MASK_MEM_IXY
-    
-    'The main 8-bit registers are a common instruction parameter
-    MASK_REGS_ABCDEHL = MASK_REG_A Or MASK_REG_B Or MASK_REG_C Or MASK_REG_D Or MASK_REG_E Or MASK_REG_E Or MASK_REG_H Or MASK_REG_L
-    'The Z80 clumps HL/IX & IY memory references together with 8-bit registers when
-     'building opcodes, i.e. "A|B|C|D|E|H|L|(HL|IX+$8|IY+$8)"
-    MASK_REGS_ABCDEHL_MEM_HLIXY = MASK_REGS_ABCDEHL Or MASK_MEM_HLIXY
-    'The use of the IX/IY prefix turns H/L into IXH/IXL/IYH/IYL in many instances
-    MASK_REGS_IXHL = MASK_REG_IXH Or MASK_REG_IXL
-    MASK_REGS_IYHL = MASK_REG_IYH Or MASK_REG_IYL
-    MASK_REGS_IXYHL = MASK_REGS_IXHL Or MASK_REGS_IYHL
-    MASK_REGS_ABCDEIXYHL_MEM_HLIXY = MASK_REGS_ABCDEHL_MEM_HLIXY Or MASK_REGS_IXYHL
-    
-    'Very uncommon 8-bit registers
-    MASK_REG_I = 2 ^ 14                 'Interrupt register
-    MASK_REG_R = 2 ^ 15                 'Refresh register, pseudo-random
-    
-    'The 16-bit register pairs
-    MASK_REG_AF = 2 ^ 16                'The Accumulator and the processor Flags
-    MASK_REG_BC = 2 ^ 17                'Registers B & C
-    MASK_REG_DE = 2 ^ 18                'Registers D & E
-    MASK_REG_HL = 2 ^ 19                'Registers H & L
-    MASK_REG_SP = 2 ^ 20                'Stack Pointer
-    
-    MASK_REG_IX = 2 ^ 21
-    MASK_REG_IY = 2 ^ 22
-    
-    MASK_REGS_BC_DE_SP = MASK_REG_BC Or MASK_REG_DE Or MASK_REG_SP
-    'Some instructions accept BC/DE/HL/SP, but not IX & IY due to existing prefixes
-    MASK_REGS_BC_DE_HL_SP = MASK_REGS_BC_DE_SP Or MASK_REG_HL
-    
-    'HL, IX & IY are synonymous as they use an opcode prefix to determine which
-    MASK_REGS_HL_IXY = MASK_REG_HL Or MASK_REG_IX Or MASK_REG_IY
-    'PUSH / POP allow AF but not SP
-    MASK_REGS_AF_BC_DE_HL_IXY = MASK_REG_AF Or MASK_REG_BC Or MASK_REG_DE Or MASK_REGS_HL_IXY
-    'The LD instruction can take most 16-bit registers
-    MASK_REGS_BC_DE_HL_SP_IXY = MASK_REGS_BC_DE_HL_SP Or MASK_REG_IX Or MASK_REG_IY
-    
-    MASK_VAL = 2 ^ 23
-    
-    '..................................................................................
-    
-    'Register C & Flag C cannot be distinguished by the tokeniser (it isn't aware of
-     'context) so they are treated as the same thing. Another bit covers NC/Z/NZ so
-     'that these are not accidentally taken as Register C elsewhere
-    MASK_FLAGS_CZ = MASK_REG_C Or (2 ^ 24)
-    MASK_FLAGS_MP = (2 ^ 25)
-    
-    MASK_FLAGS = MASK_FLAGS_CZ Or MASK_FLAGS_MP
-    
-    '..................................................................................
-    
-    'The IN and OUT instructions can use port "C" (which is, in reality, BC)
-    MASK_MEM_BC = 2 ^ 26
-    MASK_MEM_DE = 2 ^ 27
-    MASK_MEM_SP = 2 ^ 28
-    
-    MASK_MEM_VAL = 2 ^ 29
-    
-    '..................................................................................
-    
-    'This is a shorthand to check for any instance of IX/IY so that we can add the
-     'relevant opcode prefix with the simplest of tests
-    MASK_ANY_IX = MASK_REG_IX Or MASK_REG_IXH Or MASK_REG_IXL Or MASK_MEM_IX
-    MASK_ANY_IY = MASK_REG_IY Or MASK_REG_IYH Or MASK_REG_IYL Or MASK_MEM_IY
-    MASK_ANY_IXY = MASK_ANY_IX Or MASK_ANY_IY
-End Enum
-
-Public Type oz80Param
-    Mask As OZ80_MASK
-    Token As OZ80_TOKEN
-    Value As Long
-End Type
-
-'--------------------------------------------------------------------------------------
-
 'A list of system targets. Only the SEGA Master System is supported at the moment, _
  but I will consider supporting other Z80 systems in the future.
 Public Enum OZ80_SYSTEM
     SYSTEM_NONE                         'System not yet defined
     SYSTEM_SMS                          'SEGA Master System
-End Enum
-
-'--------------------------------------------------------------------------------------
-
-'Whilst in the syntax `SLOT` uses a list (i.e. `SLOT 0, 1, 2`), we convert that into _
- a bit pattern to make it quick and easy to work with instead of iterating an array
-Public Enum OZ80_SLOT
-    SLOT0 = 2 ^ 0
-    SLOT1 = 2 ^ 1
-    SLOT2 = 2 ^ 2
 End Enum
 
 '/// PUBLIC PROPERTIES ////////////////////////////////////////////////////////////////
@@ -485,9 +269,11 @@ Private My_HexStr8Init As Boolean
 Private My_HexStr16(0 To &HFFFF&) As String * 4
 Private My_HexStr16Init As Boolean
 
-'GET HexStr8 : Get a text-representation of an 8-bit (0-255) number in hexadecimal _
- ======================================================================================
-Public Property Get HexStr8(ByRef Index As Long) As String
+'HexStr8 : Get a text-representation of an 8-bit (0-255) number in hexadecimal
+'======================================================================================
+Public Property Get HexStr8( _
+    ByRef Index As Long _
+) As String
     'If the lookup array is not ready yet, populate it
     If My_HexStr8Init = 0 Then
         Dim i As Long
@@ -499,9 +285,11 @@ Public Property Get HexStr8(ByRef Index As Long) As String
     Let HexStr8 = My_HexStr8(Index And &HFF&)
 End Property
 
-'GET HexStr16 : Get a text-representation of a 16-bit (0-65535) number in hexadecimal _
- ======================================================================================
-Public Property Get HexStr16(ByRef Index As Long) As String
+'HexStr16 : Get a text-representation of a 16-bit (0-65535) number in hexadecimal
+'======================================================================================
+Public Property Get HexStr16( _
+    ByRef Index As Long _
+) As String
     'If the lookup array is not ready yet, populate it
     If My_HexStr16Init = 0 Then
         Dim i As Long
@@ -515,9 +303,11 @@ Public Property Get HexStr16(ByRef Index As Long) As String
     Let HexStr16 = My_HexStr16(Index And &HFFFF&)
 End Property
 
-'GET TokenName : Get the string representation of a token number _
- ======================================================================================
-Public Property Get TokenName(ByRef Token As OZ80_TOKEN) As String
+'TokenName : Get the string representation of a token number
+'======================================================================================
+Public Property Get TokenName( _
+    ByRef Token As OZ80_TOKEN _
+) As String
     'If the lookup array is not ready yet, populate it
     If My_TokenNameInit = 0 Then
         Let My_TokenNameInit = True
@@ -631,17 +421,19 @@ Public Property Get TokenName(ByRef Token As OZ80_TOKEN) As String
         Let My_TokenName(TOKEN_OPERATOR_REP) = "x"
         Let My_TokenName(TOKEN_OPERATOR_OR) = Chr$(SYNTAX_OPERATOR_OR)
         Let My_TokenName(TOKEN_OPERATOR_AND) = Chr$(SYNTAX_OPERATOR_AND)
-        Let My_TokenName(TOKEN_OPERATOR_NOT) = Chr$(SYNTAX_OPERATOR_NOT)
         Let My_TokenName(TOKEN_OPERATOR_XOR) = Chr$(SYNTAX_OPERATOR_XOR)
         
         'Keywords .....................................................................
+        Let My_TokenName(TOKEN_KEYWORD_DEF) = "DEF"
         Let My_TokenName(TOKEN_KEYWORD_HELP) = "HELP"
+        Let My_TokenName(TOKEN_KEYWORD_INCLUDE) = "INCLUDE"
         Let My_TokenName(TOKEN_KEYWORD_INTERRUPT) = "INTERRUPT"
         Let My_TokenName(TOKEN_KEYWORD_PARAMS) = "PARAMS"
         Let My_TokenName(TOKEN_KEYWORD_PROC) = "PROC"
         Let My_TokenName(TOKEN_KEYWORD_RETURN) = "RETURN"
         Let My_TokenName(TOKEN_KEYWORD_SECTION) = "SECTION"
         Let My_TokenName(TOKEN_KEYWORD_SLOT) = "SLOT"
+        Let My_TokenName(TOKEN_KEYWORD_SYSTEM) = "SYSTEM"
         
         Let My_TokenName(TOKEN_PREFIX_K) = "K"
         Let My_TokenName(TOKEN_PREFIX_KB) = "KB"
@@ -667,8 +459,8 @@ End Property
 
 '/// PUBLIC PROCEDURES ////////////////////////////////////////////////////////////////
 
-'GetOZ80Error : Return an error description for a given error number _
- ======================================================================================
+'GetOZ80Error : Return an error description for a given error number
+'======================================================================================
 Public Sub GetOZ80Error( _
     ByRef ErrorNumber As OZ80_ERROR, _
     ByRef ReturnTitle As String, _
@@ -713,8 +505,9 @@ Public Sub GetOZ80Error( _
         '..............................................................................
         Let ReturnTitle = "Keyword expected"
         Let ReturnDescription = _
-            "Only the keywords `INCLUDE`, `OBJECT`, `PROC`, `SECTION`, `STRUCT` " & _
-            "`TABLE` & `VAR` are allowed at this scope."
+            "Expected `DEF`, `IF`, `INCLUDE`, `PROC, `SECTION`, `SYSTEM` or `TABLE` " & _
+            "keywords at this scope. Have you correctly closed any brackets that were " & _
+            "open?"
     
     Case OZ80_ERROR_EXPECTED_SECTION_NAME
         '..............................................................................
@@ -829,69 +622,3 @@ Public Sub GetOZ80Error( _
     End Select
 End Sub
 
-'ParamToString : Get a textual representation of a z80 instruction parameter _
- ======================================================================================
-Public Function ParamToString( _
-    ByRef Param As oz80Param _
-) As String
-    If Param.Mask = MASK_REG_A Then
-        Let ParamToString = "A"
-    ElseIf Param.Mask = MASK_REG_B Then Let ParamToString = "B"
-    ElseIf Param.Mask = MASK_REG_C Then Let ParamToString = "C"
-    ElseIf Param.Mask = MASK_REG_D Then Let ParamToString = "D"
-    ElseIf Param.Mask = MASK_REG_E Then Let ParamToString = "E"
-    ElseIf Param.Mask = MASK_REG_H Then Let ParamToString = "H"
-    ElseIf Param.Mask = MASK_REG_L Then Let ParamToString = "L"
-    ElseIf Param.Mask = MASK_REG_I Then Let ParamToString = "I"
-    ElseIf Param.Mask = MASK_REG_R Then Let ParamToString = "R"
-    ElseIf Param.Mask = MASK_REG_AF Then Let ParamToString = "AF"
-    ElseIf Param.Mask = MASK_REG_BC Then Let ParamToString = "BC"
-    ElseIf Param.Mask = MASK_REG_DE Then Let ParamToString = "DE"
-    ElseIf Param.Mask = MASK_REG_HL Then Let ParamToString = "HL"
-    ElseIf Param.Mask = MASK_REG_SP Then Let ParamToString = "SP"
-    ElseIf Param.Mask = MASK_REG_IX Then Let ParamToString = "IX"
-    ElseIf Param.Mask = MASK_REG_IXL Then Let ParamToString = "IXL"
-    ElseIf Param.Mask = MASK_REG_IXH Then Let ParamToString = "IXH"
-    ElseIf Param.Mask = MASK_REG_IY Then Let ParamToString = "IY"
-    ElseIf Param.Mask = MASK_REG_IYL Then Let ParamToString = "IYL"
-    ElseIf Param.Mask = MASK_REG_IYH Then Let ParamToString = "IYH"
-    
-    ElseIf Param.Mask = MASK_VAL Then
-        If Param.Value > 255 Then
-            Let ParamToString = "$" & oz80.HexStr16(Param.Value)
-        Else
-            Let ParamToString = "$" & oz80.HexStr8(Param.Value)
-        End If
-        
-    'The mask bits do not specify every flag, _
-     we refer to the token kind for that
-    ElseIf (Param.Mask And MASK_FLAGS) <> 0 Then
-        If Param.Token = TOKEN_Z80_C Then
-            Let ParamToString = "C"
-        ElseIf Param.Token = TOKEN_Z80_NC Then Let ParamToString = "NC"
-        ElseIf Param.Token = TOKEN_Z80_Z Then Let ParamToString = "Z"
-        ElseIf Param.Token = TOKEN_Z80_NZ Then Let ParamToString = "NZ"
-        ElseIf Param.Token = TOKEN_Z80_P Then Let ParamToString = "P"
-        ElseIf Param.Token = TOKEN_Z80_PE Then Let ParamToString = "PE"
-        ElseIf Param.Token = TOKEN_Z80_PO Then Let ParamToString = "PO"
-        ElseIf Param.Token = TOKEN_Z80_M Then Let ParamToString = "M"
-        End If
-    
-    'Memory references
-    ElseIf Param.Mask = MASK_MEM_HL Then
-        Let ParamToString = "(HL)"
-    ElseIf Param.Mask = MASK_MEM_IX Then
-        Let ParamToString = "(IX+$" & oz80.HexStr8(Param.Value) & ")"
-    ElseIf Param.Mask = MASK_MEM_IY Then
-        Let ParamToString = "(IY+$" & oz80.HexStr8(Param.Value) & ")"
-    ElseIf Param.Mask = MASK_MEM_BC Then Let ParamToString = "(BC)"
-    ElseIf Param.Mask = MASK_MEM_DE Then Let ParamToString = "(DE)"
-    ElseIf Param.Mask = MASK_MEM_SP Then Let ParamToString = "(SP)"
-    ElseIf Param.Mask = MASK_MEM_VAL Then
-        If Param.Value > 255 Then
-            Let ParamToString = "($" & oz80.HexStr16(Param.Value) & ")"
-        Else
-            Let ParamToString = "($" & oz80.HexStr8(Param.Value) & ")"
-        End If
-    End If
-End Function

@@ -20,28 +20,36 @@ Option Explicit
 'CLASS :: oz80_Assembler
 
 
+'/// DEFINITIONS //////////////////////////////////////////////////////////////////////
+
 'Formatting of output messages
-Private Const LOG_VERSION As String = "OZ80MANDIAS v$$.$$,$$"
+Private Const LOG_VERSION As String = "OZ80MANDIAS v{$}.{$},{$}"
 Private Const LOG_PHASE1 As String = "Phase 1: Structural Pass"
 Private Const LOG_PHASE2 As String = "Phase 2: Layout ROM"
 Private Const LOG_PHASE3 As String = "Phase 3: Full Assemble"
 Private Const LOG_PHASE4 As String = "Phase 4: Post Processing"
 Private Const LOG_ASM_COMPLETE As String = "Assembly Complete"
-Private Const LOG_TIME As String = "Time: $$s"
-Private Const LOG_Z80 As String = "$$ | $$: " & vbTab & "$$" & vbTab & "$$" & vbTab & "$$"
-Private Const LOG_SECTION As String = "SECTION $$"
+Private Const LOG_TIME As String = "Time: {$}s"
+Private Const LOG_Z80 As String = "{$} | {$}: " & vbTab & "{$}" & vbTab & "{$}" & vbTab & "{$}"
+Private Const LOG_SECTION As String = "SECTION {$}"
 
 'Error number!
 Private My_Error As OZ80_ERROR
 
+'To save having to create and destroy short strings all the time, _
+ we'll keep this one around for formatting log messages
+Private LogMsg As bluString
+
 'Parsing: _
  --------------------------------------------------------------------------------------
 'Each source code file is broken down into a machine-readable representation _
- ('oz80_TokenStream') which we store here. When parsing one file and we come across _
- an `INCLUDE` statement, another token stream gets added here
-Private Files As Scripting.Dictionary
-'The current source file being processed, attached such that we can get the _
- message and error events from it
+ ('oz80_TokenStream') which we store here. When assembling one file and we come _
+ across an `INCLUDE` statement, another token stream gets added here
+Private Files() As oz80_TokenStream
+Private FileCount As Long
+'The current source file being processed, attached such that we can _
+ listen to the message and error events from it
+Private FileIndex As Long
 Private WithEvents Token As oz80_TokenStream
 Attribute Token.VB_VarHelpID = -1
 
@@ -225,6 +233,7 @@ Private Param3Test As oz80Param
 
 'Output: _
  --------------------------------------------------------------------------------------
+
 'Each chunk of code / data is assembled separately from the others and with no final _
  position in the ROM in mind until all source has been parsed. Once all source is _
  parsed, the banks are chosen for the Chunks and the assembly copied into the ROM
@@ -259,6 +268,8 @@ Private Sub Class_Initialize()
     'If too many possible tokens are created, things will screw up
     Debug.Assert OZ80_TOKEN.[_TOKEN_LAST] < 256
     
+    Set LogMsg = New bluString
+    
     Set SectionNames = New Scripting.Dictionary
     Set SectionSlots = New Scripting.Dictionary
     
@@ -268,9 +279,6 @@ Private Sub Class_Initialize()
     'Prepare space for a default 8 KB ROM, this will increase as needed
     ReDim ROM(0 To 8191) As Byte
     Set Layout = New Scripting.Dictionary
-    
-    'Initialise the database for the TokenStream representations of the source files
-    Set Files = New Scripting.Dictionary
     
     'Populate the look-up table for converting register tokens into their bit masks
     Let TokenRegister(TOKEN_Z80_A) = MASK_REG_A
@@ -374,22 +382,15 @@ Private Sub Class_Terminate()
     'Clear the Section meta
     Set SectionNames = Nothing: Set SectionSlots = Nothing
     
-    'Detach the current TokenStream and free the database of TokenStream objects
-    Set Token = Nothing: Set Files = Nothing
-    
-    Set Chunks = Nothing
-    Set Labels = Nothing
-    
-    'Clear the space used for the output ROM
-    Erase ROM: Set Layout = Nothing
-
     'Free the look-up tables for opcode building
     Erase OpcodeP_RegisterPair, OpcodeY_Bit, OpcodeY_Condition, _
           OpcodeY_Register, OpcodeY_RST, OpcodeZ_Register
     Erase TokenRegister
+    
+    Set LogMsg = Nothing
 End Sub
 
-'EVENT <Token> Error : Detailed error message from a TokenStream object
+'EVENT <Token>_Error : Detailed error message from a TokenStream object
 '======================================================================================
 Private Sub Token_Error( _
     ByVal Number As OZ80_ERROR, ByVal Line As Long, ByVal Col As Long _
@@ -398,7 +399,7 @@ Private Sub Token_Error( _
     Call RaiseError(Number, Line, Col)
 End Sub
 
-'EVENT <Token> Message : Basic progress message from a TokenStream object
+'EVENT <Token>_Message : Basic progress message from a TokenStream object
 '======================================================================================
 Private Sub Token_Message( _
     ByRef LogLevel As OZ80_LOG, ByRef Text As String _
@@ -407,7 +408,7 @@ Private Sub Token_Message( _
     RaiseEvent Message(LogLevel, Text)
 End Sub
 
-'PROPERTY Error : Expose the internal error number
+'Error : Expose the internal error number
 '======================================================================================
 Public Property Get Error() As OZ80_ERROR: Let Error = My_Error: End Property
 
@@ -443,7 +444,7 @@ Public Function Assemble( _
     )
     
     'Clean up stuff from any previous assemble
-    Set Token = Nothing: Call Files.RemoveAll
+    Set Token = Nothing: Erase Files
     Set Chunk = Nothing: Call Chunks.RemoveAll
     Call Labels.RemoveAll
     Call SectionNames.RemoveAll
@@ -495,8 +496,16 @@ Public Function Assemble( _
 '    Call RaiseMessage(OZ80_LOG_INFO, LOG_TIME, Format$(Stopwatch.Elapsed / 1000, "0.000"))
     
 Finish:
+    'Clean up:
+    Set Token = Nothing: Erase Files
+    Set Chunks = Nothing
+    Set Labels = Nothing
+    
+    'Clear the space used for the output ROM
+    Erase ROM: Set Layout = Nothing
+    
+    'Return the error code (also available in the `Error` property)
     Let Assemble = My_Error
-    Call Class_Terminate
 End Function
 
 
@@ -505,6 +514,10 @@ End Function
 '/// Read in the source code and walk it
 
 'ParseFile : Parse a source code file into a TokenStream object
+'======================================================================================
+'FilePath       | File path to the source code file (".oz80")
+'---------------+----------------------------------------------------------------------
+'Returns        | The error number
 '======================================================================================
 Private Function ParseFile( _
     ByRef FilePath As String _
@@ -534,7 +547,7 @@ Private Function ParseFile( _
         Else
             'When another file has been parsed before, _
              we work relatively from that file's directory
-            Let TestPath.Text = FSO.GetFile(Token.SourceFile).Path
+            Let TestPath.Text = FSO.GetFile(Token.SourceFile).ParentFolder.Path
             'TODO: Error?
             Let TestPath.Text = FSO.BuildPath(TestPath.Text, FilePath)
         End If
@@ -549,16 +562,18 @@ Private Function ParseFile( _
     
     '[3] Parse the file into a TokenStream: _
      ----------------------------------------------------------------------------------
-    'We'll use the CRC of the filepath string as its key/ID
-    Dim CRC As Long
-    Let CRC = TestPath.CRC
+    Dim Index As Long, i As Long
+    For i = 1 To FileCount
+        If Files(i).SourceFile = TestPath.Text Then Let Index = i: Exit For
+    Next
     
     'If the file has already been parsed, re-use it
-    If Files.Exists(CRC) Then
+    If Index <> 0 Then
         'Reference the existing TokenStream object
-        Set Token = Files.Item(CRC)
+        Let FileIndex = Index
+        Set Token = Files(FileIndex)
     Else
-        '*** time begin ***
+        '*** TIMER BEGIN ***
         Call oz80.Profiler.EventBegin(EVENT_TOKENISE)
         
         'Create a tokeniser object to hold the machine representation of the text file; _
@@ -569,10 +584,13 @@ Private Function ParseFile( _
          been raised via an event, we only need to exit
         If Token.Tokenise(TestPath.Text) Then GoTo Finish
         'Add the TokenStream to the files collection
-        Call Files.Add(CRC, Token)
+        Let FileCount = FileCount + 1
+        ReDim Preserve Files(1 To FileCount) As oz80_TokenStream
+        Let FileIndex = FileCount
+        Set Files(FileIndex) = Token
         
         Call oz80.Profiler.EventEnd(EVENT_TOKENISE)
-        '*** time end ***
+        '*** TIMER END ***
     End If
     
     'The user will obviously want to begin at the start of the stream _
@@ -595,7 +613,7 @@ End Function
 'Another scope name within a column represents a nested scope. Items within brackets _
  show optional items
 
-'NOTES: *   You can take `{ASCII}` to mean any ASCII code 0-127 _
+'NOTES: *   You can take `{text}` to mean any UCS-2 unicode point _
         *   `{operator}` can be any one of `+ - * / ^ \ & | << >>`
 
 'Scope    : 1           2           3           4         ' Comment
@@ -643,8 +661,8 @@ End Function
 '         |                         <chunk>               '
 '         |                                               '
 '         | SECTION     ::{name}   [SLOT        <list>]   '
-'         |
-'         | SYSTEM      <text>
+'         |                                               '
+'         | SYSTEM      <text>                            '
 '         |                                               '
 '         | TABLE       :{name}    [HELP        <text>]   '
 '         |                         <chunk>               '
@@ -668,12 +686,20 @@ End Function
 Private Sub ScopeRoot()
     'When a file begins, it is at the top-most scope. Certain keywords are only _
      allowed here. Once all nested scopes are exhausted, we return here
+    Call RaiseMessage(OZ80_LOG_ACTION, "Assembling ""{$}""", Token.SourceFile)
     
 Continue:
     '----------------------------------------------------------------------------------
+    '`INCLUDE <text>`
+    '----------------------------------------------------------------------------------
+    If Token.Kind = TOKEN_KEYWORD_INCLUDE Then
+        'Hand off to the function that will process this
+        Call ProcessInclude
+        
+    '----------------------------------------------------------------------------------
     '`PROC :<label> { [...] }`
     '----------------------------------------------------------------------------------
-    If Token.Kind = TOKEN_KEYWORD_PROC Then
+    ElseIf Token.Kind = TOKEN_KEYWORD_PROC Then
         'Hand off to the function that will process this
         Call ProcessProc
         
@@ -715,7 +741,21 @@ Private Sub ProcessSystem()
     If Not Token.Forward() Then Call RaiseError(OZ80_ERROR_FILE_END): Exit Sub
     
     'Check that the parameter is a list (or at least the start of one)
+    If Not Token.IsList Then Call RaiseError(OZ80_ERROR_EXPECTED_SYSTEM_NAME): Exit Sub
     
+    'Fetch the System name string from the proceeding list _
+     (if there was any error during that, fold upwards)
+    Dim SystemName As bluString
+    If GetText(SystemName) Then Exit Sub
+    
+    'Check if it's any of the allowed System names
+    If SystemName.Equals("SMS") Then
+        'Configure the assembler for the SEGA Master System
+        Let My_System = SYSTEM_SMS
+    Else
+        'Not a valid system name
+        Call RaiseError(OZ80_ERROR_EXPECTED_SYSTEM_NAME)
+    End If
 End Sub
 
 'ProcessSection : Define a Section
@@ -833,7 +873,38 @@ ErrIndefinite:
     Call RaiseError(OZ80_ERROR_INDEFINITE)
 End Sub
 
-'ProcessProc : Process a procedure chunk
+'ProcessInclude : Process an Include statement
+'======================================================================================
+'INCLUDE    <text>
+'======================================================================================
+Private Sub ProcessInclude()
+    'ERROR: The file ended before the first parameter
+    If Not Token.Forward() Then Call RaiseError(OZ80_ERROR_FILE_END): Exit Sub
+    
+    'Fetch the file path _
+     (if there's an error doing this, fold upwards)
+    Dim FilePath As bluString
+    If GetText(FilePath) Then Exit Sub
+    
+    'Remember the current file being parsed
+    Dim ReturnFile As Long, ReturnToken As Long
+    Let ReturnFile = FileIndex
+    Let ReturnToken = Token.Index
+    
+    'Parse the new file
+    If ParseFile(FilePath.Text) Then Exit Sub
+    
+    'Now assemble this file
+    Call ScopeRoot
+    If My_Error Then Exit Sub
+    
+    'Reattach the previous file
+    Let FileIndex = ReturnFile
+    Set Token = Files(FileIndex)
+    Let Token.Index = ReturnToken
+End Sub
+
+'ProcessProc : Process a Procedure Chunk
 '======================================================================================
 'PROC   :<label>
 '       [HELP       <text>]
@@ -2518,6 +2589,60 @@ Private Function GetListAsDictionary() As Scripting.Dictionary
     Loop
 End Function
 
+'GetText : Reads a list, interpretting Values as Unicode points
+'======================================================================================
+'ReturnText     | A bluString object that will be populated with the text
+'---------------+----------------------------------------------------------------------
+'Returns        | The error number
+'======================================================================================
+Private Function GetText( _
+    ByRef ReturnText As bluString _
+) As OZ80_ERROR
+    'If the bluString is not instantiated, do so now
+    If ReturnText Is Nothing Then Set ReturnText = New bluString
+    
+    'If the current token is not a list item, then the list has come to an end
+    Do While Token.IsList
+    
+        'If the current token is text, append it to what we have
+        If Token.Kind = TOKEN_QUOTE Then
+            Call ReturnText.Append(Token.Text)
+        
+        'Otherwise it'll be a calculable Expression, _
+         hopefully providing an ASCII value
+        ElseIf Token.IsExpression Then
+            'Get the Expression Value
+            Dim Value As Double
+            Let Value = ParseExpression()
+            'If there were an error in parsing the Expression, fold up
+            If My_Error Then GoTo ErrOut
+            
+            'TODO: Indefnite values? Allowed or not in Text? _
+                   If we allow for text mapping with different sized strings then _
+                   the string size cannot be determinate
+            
+            'Any UCS-2 value is allowed, it's up to the caller _
+             to do text-mapping and validation
+            If (Value < 0) Or (Value > 65535) Then
+                Call RaiseError(OZ80_ERROR_TEXT_CHAR)
+                GoTo ErrOut
+            End If
+        End If
+    
+        'Continue reading the list. Note that when the file ends, so does the list _
+         and this is not an error as far as this function is concerned. If the parent _
+         is within a scope and expecting the closing bracket, then it's up to them _
+         to raise the error
+        Call Token.Forward
+    Loop
+    
+    'The resultant string won't be changing any more
+    Call ReturnText.ReduceBuffer
+ErrOut:
+    'Return the error number
+    Let GetText = My_Error
+End Function
+
 'GetListItem : Read in an Expression from a list
 '======================================================================================
 Private Function GetListItem( _
@@ -2542,9 +2667,14 @@ Private Function GetListItem( _
     Let GetListItem = True
 End Function
 
-'ParseExpression: Evaluate a calculation into a value
+'ParseExpression : Evaluate a calculation into a Value
 '======================================================================================
-Private Function ParseExpression() As Double
+'Returns        | The calculated Value, or `OZ80_INDEFINITE`. Note that this is a
+'               | 64-bit floating-pointer number, so it's up to the caller to
+'               | validate the number according to their needs
+'======================================================================================
+Private Function ParseExpression( _
+) As Double
     'TODO: Handle prefixing, e.g. `-1-!-3`
     'TODO: Handle functions like LO, HI, NOT8/16
     
@@ -2639,7 +2769,8 @@ End Function
 
 'ParseValue : Get a single Value as part of an Expression
 '======================================================================================
-Private Function ParseValue() As Double
+Private Function ParseValue( _
+) As Double
     'Is it a named value?
     'TODO: Handle scope expansion for names
     If Token.Kind = TOKEN_LABEL _
@@ -2734,10 +2865,10 @@ Private Function LayoutROM() As OZ80_ERROR
             If Chunk.Size > 0 Then Call Chunk.CopyInto(ROM)
         End If
         
-        Dim LogMsg As String
-        Let LogMsg = Left$(Chunk.LabelName, 32)
-        Let LogMsg = Left$(Left$(Chunk.LabelName, 32) & Space$(31), 32)
-        
+'        Dim LogMsg As String
+'        Let LogMsg = Left$(Chunk.LabelName, 32)
+'        Let LogMsg = Left$(Left$(Chunk.LabelName, 32) & Space$(31), 32)
+'
 '        RaiseEvent Message(OZ80_LOG_INFO, _
 '            LogMsg & Right$("      " & Format$(Chunk.Size, "#,#"), 6) & " B " & _
 '            "$" & Right$("000000" & Hex(Chunk.Address), 6) _
@@ -2840,32 +2971,34 @@ End Function
 'RaiseMessage : Provide a progress message
 '======================================================================================
 'LogLevel       | The type of log message, for filtering out lower-level messages
-'FormatText     | The message to log, which can include "$$" markers to be replaced
+'FormatText     | The message to log, which can include "{$}" markers to be replaced
 '               | with the values provided below
-'FormatValues...| A lits of Variant values (Strings, Longs &c.) to fill in
+'FormatValues...| A list of Variant values (Strings, Longs &c.) to fill in
 '======================================================================================
 Private Sub RaiseMessage( _
     ByRef LogLevel As OZ80_LOG, _
     ByRef FormatText As String, _
     ParamArray FormatValues() As Variant _
 )
-    Dim Msg As bluString
-    Set Msg = New bluString
-    Let Msg.Text = FormatText
+    Let LogMsg.Text = FormatText
     
     'Are there any values to format?
     If UBound(FormatValues) < 0 Then
         'No, don't provide a null Variant, it really will confuse
-        RaiseEvent Message(LogLevel, Msg.Text)
+        RaiseEvent Message(LogLevel, LogMsg.Text)
     Else
         'Format the given log message before sending it up
-        RaiseEvent Message(LogLevel, Msg.Format(FormatValues).Text)
+        RaiseEvent Message(LogLevel, LogMsg.Format(FormatValues).Text)
     End If
-    
-    Set Msg = Nothing
 End Sub
 
 'RiaseError : Provide error details through an event
+'======================================================================================
+'Number         | Error number to set on the Class and raise via Event
+'[Line]         | Line number of the source file the error occurred on
+'[Col]          | Column number of the source file the error occurred on
+'---------------+----------------------------------------------------------------------
+'Returns        | The same error number, for simple tail recursion
 '======================================================================================
 Private Function RaiseError( _
              ByRef Number As OZ80_ERROR, _

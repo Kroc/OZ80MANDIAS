@@ -24,7 +24,7 @@ Begin VB.Form UI
       Left            =   0
       Locked          =   -1  'True
       MultiLine       =   -1  'True
-      ScrollBars      =   3  'Both
+      ScrollBars      =   2  'Vertical
       TabIndex        =   0
       Top             =   0
       Width           =   3372
@@ -77,9 +77,10 @@ Private Sub Form_Load()
     Debug.Print Test.CharRemove(2), Test.Text
     Debug.Print Test.CharInsert(2, 66).Text
     Debug.Print Test.Remove(14, 6).Text
-    Debug.Print Test.Replace("_1_2_3_", "$$").Text
+    Debug.Print Test.Replace("_1_2_3_", "{$}").Text
     Debug.Print Test.Wrap("""").Text
     Debug.Print Test.Format(3.141).Text
+    Debug.Print Test.Overwrite(2, "***").Text
     Debug.Print Hex(Test.CRC())
     
 '    For i = 0 To 999999

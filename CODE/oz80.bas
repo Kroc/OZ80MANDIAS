@@ -43,7 +43,7 @@ End Enum
 
 Public Enum OZ80_WARNING
     OZ80_WARNING_NONE                   'Skip "0"
-    
+    OZ80_WARNING_ROUND                  'A decimal number had to be round-down
 End Enum
 
 Public Enum OZ80_ERROR
@@ -61,6 +61,7 @@ Public Enum OZ80_ERROR
     OZ80_ERROR_EXPECTED_PROC_RETURN     '- Invalid stuff in the `RETURN` list
     OZ80_ERROR_EXPECTED_ROOT            '- Only certain keywords allowed at root
     OZ80_ERROR_EXPECTED_SECTION_NAME    '- A section name must follow `SECTION`
+    OZ80_ERROR_EXPECTED_SYSTEM_NAME     '- A system name must follow `SYSTEM`
     OZ80_ERROR_EXPRESSION               'Not a valid expression
     OZ80_ERROR_EXPRESSION_Z80           '- Not a valid Z80 instruction parameter
     OZ80_ERROR_FILE_END                 'Unexpected end of file
@@ -78,6 +79,7 @@ Public Enum OZ80_ERROR
     OZ80_ERROR_INVALID_SLOT             'Incorrect use of the Slot parameter
     OZ80_ERROR_INVALID_WORD             'Couldn't parse a word
     OZ80_ERROR_INVALID_Z80PARAMS        'Not the right parameters for a Z80 instruction
+    OZ80_ERROR_TEXT_CHAR                'Character code out of range
     OZ80_ERROR_OVERFLOW                 'A number overflowed the maximum
     OZ80_ERROR_OVERFLOW_Z80             '16-bit number used with an 8-bit instruction
 End Enum
@@ -515,7 +517,14 @@ Public Sub GetOZ80Error( _
         Let ReturnDescription = _
             "A section name must follow the `SECTION` statement. " & _
             "E.g. `SECTION ::graphics`"
-            
+    
+    Case OZ80_ERROR_EXPECTED_SYSTEM_NAME
+        '..............................................................................
+        Let ReturnTitle = "Expected Valid System Name"
+        Let ReturnDescription = _
+            "A valid System name must follow the `SYSTEM` statement. " & _
+            "E.g. `SYSTEM ""SMS""`."
+        
     Case OZ80_ERROR_EXPRESSION
         '..............................................................................
         Let ReturnTitle = "Invalid Expression"

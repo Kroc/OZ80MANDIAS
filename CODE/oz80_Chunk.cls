@@ -20,11 +20,11 @@ Option Explicit
 'CLASS :: oz80_Chunk
 
 'Dependencies       oz80.bas _
-                    bluString.bas [buStringArray.bas]
+                    bluString.bas [bluArrayStrings.bas]
 
 '--------------------------------------------------------------------------------------
 
-'Code and/or data is assembled in separate chunks (this class) which are arranged _
+'Code and/or data is assembled in separate Chunks (this class) which are arranged _
  according to Section layout before being written out to the ROM. _
  i.e. each `PROC` / `TABLE` will be its own Chunk
 
@@ -66,7 +66,7 @@ Private Const BUFFER_SIZE As Long = 1024
 Private BufferSize As Long
 
 'These are used for building the disassembly string quickly
-Private Const FORMAT_TEMPLATE As String = "$$ $$ $$ $$ $$ $$"
+Private Const FORMAT_TEMPLATE As String = "{$} {$} {$} {$} {$} {$}"
 Private Const FORMAT_SKIP As String = "··"
 Private Const FORMAT_ED As String = "ED"
 Private Const FORMAT_CB As String = "CB"

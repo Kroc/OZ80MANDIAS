@@ -124,10 +124,10 @@ Private Sub Assembler_Error( _
     Call Log("- " & Description, OZ80_LOG_INFO)
 End Sub
 
-'EVENT <Assembler> Message _
- ======================================================================================
+'EVENT <Assembler>_Message
+'======================================================================================
 Private Sub Assembler_Message( _
-    ByRef LogLevel As OZ80_LOG, ByRef Text As String _
+    ByRef LogLevel As OZ80_LOG, ByRef LogText As bluString _
 )
     Static PrevLog As OZ80_LOG
     
@@ -141,19 +141,19 @@ Private Sub Assembler_Message( _
         Let Prefix = vbCrLf & Prefix
     End If
     
-    Call Log(Prefix & " " & Text, LogLevel)
+    Call Log(Prefix & " " & LogText.Text, LogLevel)
     Let PrevLog = LogLevel
 End Sub
 
-'Log : Add a message to the log _
- ======================================================================================
+'Log : Add a message to the log
+'======================================================================================
 Private Sub Log( _
     Optional ByRef Text As String = vbNullString, _
     Optional ByRef LogLevel As OZ80_LOG = OZ80_LOG_ACTION _
 )
 '    Debug.Print Text
     
-    If LogLevel >= OZ80_LOG_DEBUG Then Exit Sub
+'    If LogLevel >= OZ80_LOG_DEBUG Then Exit Sub
     Let Text = Text & vbCrLf
     
 '    'http://weblogs.asp.net/jdanforth/88458

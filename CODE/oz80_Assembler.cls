@@ -43,15 +43,15 @@ Private LogMsg As bluString
 'Parsing: _
  --------------------------------------------------------------------------------------
 'Each source code file is broken down into a machine-readable representation _
- ('oz80_TokenStream') which we store here. When assembling one file and we come _
- across an `INCLUDE` statement, another token stream gets added here
-Private Files() As oz80_TokenStream
+ ('oz80_File') which we store here. When assembling one file and we come _
+ across an `INCLUDE` statement, another File instance gets added here
+Private Files() As oz80_File
 Private FileCount As Long
 'The current source file being processed, attached such that we can _
  listen to the message and error events from it
 Private FileIndex As Long
-Private WithEvents Token As oz80_TokenStream
-Attribute Token.VB_VarHelpID = -1
+Private WithEvents File As oz80_File
+Attribute File.VB_VarHelpID = -1
 
 'Which target system is selected, e.g. SEGA Master System
 Private My_System As OZ80_SYSTEM
@@ -251,9 +251,10 @@ Private ROM() As Byte
 '/// EVENTS ///////////////////////////////////////////////////////////////////////////
 
 'Progress messages are passed through an event, the handler can choose to show them _
- or not, and in what format. I don't want to spam unwanted `Debug.Print` output
+ or not, and in what format. I don't want to spam unwanted `Debug.Print` output. _
+ A bluString is provided to make manipulating the message before displaying very easy
 Event Message( _
-    ByRef LogLevel As OZ80_LOG, ByRef Text As String _
+    ByRef LogLevel As OZ80_LOG, ByRef LogText As bluString _
 )
 
 'A class event is used to communicate error details beyond a simple error number
@@ -390,22 +391,22 @@ Private Sub Class_Terminate()
     Set LogMsg = Nothing
 End Sub
 
-'EVENT <Token>_Error : Detailed error message from a TokenStream object
+'EVENT <File>_Error : Detailed error message from a File object
 '======================================================================================
-Private Sub Token_Error( _
+Private Sub File_Error( _
     ByVal Number As OZ80_ERROR, ByVal Line As Long, ByVal Col As Long _
 )   'Pass this up to the controller, this class will shortly end processing. _
      The `RaiseError` function will select the standard error title from the number
     Call RaiseError(Number, Line, Col)
 End Sub
 
-'EVENT <Token>_Message : Basic progress message from a TokenStream object
+'EVENT <File>_Message : Basic progress message from a File object
 '======================================================================================
-Private Sub Token_Message( _
-    ByRef LogLevel As OZ80_LOG, ByRef Text As String _
+Private Sub File_Message( _
+    ByRef LogLevel As OZ80_LOG, ByRef LogText As bluString _
 )   'It's up to the controller to decide to display (or `Debug.Print` any messages), _
      we 're not going to unnecessarily spam their console
-    RaiseEvent Message(LogLevel, Text)
+    RaiseEvent Message(LogLevel, LogText)
 End Sub
 
 'Error : Expose the internal error number
@@ -429,10 +430,10 @@ Public Function Assemble( _
     
     'Register the events we'll be timing with the profiler
     With oz80.Profiler
-        Call .RegisterEvent(EVENT_TOKENISE, "TokenStream.Tokenise")
-        Call .RegisterEvent(EVENT_TOKENISE_READWORD, "TokenStream.Tokenise;ReadWord")
-        Call .RegisterEvent(EVENT_TOKENISE_TOKENWORD, "TokenStream.Tokenise;TokenWord")
-        Call .RegisterEvent(EVENT_FORMATTOKEN, "TokenStream;FormatToken")
+        Call .RegisterEvent(EVENT_TOKENISE, "File.Tokenise")
+        Call .RegisterEvent(EVENT_TOKENISE_READWORD, "File.Tokenise;ReadWord")
+        Call .RegisterEvent(EVENT_TOKENISE_TOKENWORD, "File.Tokenise;TokenWord")
+        Call .RegisterEvent(EVENT_FORMATTOKEN, "File;FormatToken")
         Call .RegisterEvent(EVENT_PROCESSZ80, "Assembler.ProcessZ80")
         Call .RegisterEvent(EVENT_PROCESSZ80_LOG, "Assembler.ProcessZ80;Log")
     End With
@@ -444,7 +445,7 @@ Public Function Assemble( _
     )
     
     'Clean up stuff from any previous assemble
-    Set Token = Nothing: Erase Files
+    Set File = Nothing: Erase Files
     Set Chunk = Nothing: Call Chunks.RemoveAll
     Call Labels.RemoveAll
     Call SectionNames.RemoveAll
@@ -456,16 +457,12 @@ Public Function Assemble( _
      ----------------------------------------------------------------------------------
     Call RaiseMessage(OZ80_LOG_ACTION, LOG_PHASE1)
     
-    'Start with parsing the given file into a TokenStream; _
-     the assembler does not work with the original text directly
-    'If there was a problem parsing the file, an error message will already have _
-     been raised by an event, we only need to exit
-    If ParseFile(FilePath) Then GoTo Finish
-    
-    'Now walk the TokenStream that's been created, assembling it as we go. _
+    'Start with parsing the given file; the assembler does not work with the original _
+     text directly. If there was a problem parsing the file, an error message will _
+     already have been raised by an event, we only need to exit
+    'Now walk the File that's been created, assembling it as we go. _
      If an `INCLUDE` is occurred, it will be tokenised and assembled there and then
-    Call ScopeRoot
-    If My_Error Then GoTo Finish
+    If AssembleFile(FilePath) Then GoTo Finish
     
     '----------------------------------------------------------------------------------
     'Phase 2: Layout the ROM _
@@ -497,7 +494,7 @@ Public Function Assemble( _
     
 Finish:
     'Clean up:
-    Set Token = Nothing: Erase Files
+    Set File = Nothing: Erase Files
     Set Chunks = Nothing
     Set Labels = Nothing
     
@@ -513,13 +510,13 @@ End Function
 '/// PARSING //////////////////////////////////////////////////////////////////////////
 '/// Read in the source code and walk it
 
-'ParseFile : Parse a source code file into a TokenStream object
+'AssembleFile : Tokenise a source code file and then begin assembling it
 '======================================================================================
 'FilePath       | File path to the source code file (".oz80")
 '---------------+----------------------------------------------------------------------
 'Returns        | The error number
 '======================================================================================
-Private Function ParseFile( _
+Private Function AssembleFile( _
     ByRef FilePath As String _
 ) As OZ80_ERROR
     'Since we have a "scrrun.dll" reference for Dictionary object, this also gives _
@@ -542,12 +539,12 @@ Private Function ParseFile( _
     Else
         'Path is relative! If no other file has been parsed yet _
          we will need to use the current directory as a base
-        If Token Is Nothing Then
+        If File Is Nothing Then
             Let TestPath.Text = FSO.BuildPath(CurDir(), FilePath)
         Else
             'When another file has been parsed before, _
              we work relatively from that file's directory
-            Let TestPath.Text = FSO.GetFile(Token.SourceFile).ParentFolder.Path
+            Let TestPath.Text = FSO.GetFile(File.Path).ParentFolder.Path
             'TODO: Error?
             Let TestPath.Text = FSO.BuildPath(TestPath.Text, FilePath)
         End If
@@ -556,38 +553,39 @@ Private Function ParseFile( _
     '[2] Check file exists: _
      ----------------------------------------------------------------------------------
     'ERROR: File Not Found
-    If Not FSO.FileExists(TestPath.Text) Then Let ParseFile = RaiseError( _
+    If Not FSO.FileExists(TestPath.Text) Then Call RaiseError( _
         OZ80_ERROR_FILE_NOTFOUND _
     ): GoTo Finish
     
-    '[3] Parse the file into a TokenStream: _
+    '[3] Tokenise the file: _
      ----------------------------------------------------------------------------------
+    'Check to see if the file has already been tokenised
     Dim Index As Long, i As Long
     For i = 1 To FileCount
-        If Files(i).SourceFile = TestPath.Text Then Let Index = i: Exit For
+        If Files(i).Path = TestPath.Text Then Let Index = i: Exit For
     Next
     
-    'If the file has already been parsed, re-use it
+    'If the file has already been tokenised, re-use it
     If Index <> 0 Then
-        'Reference the existing TokenStream object
+        'Reference the existing File object
         Let FileIndex = Index
-        Set Token = Files(FileIndex)
+        Set File = Files(FileIndex)
     Else
         '*** TIMER BEGIN ***
         Call oz80.Profiler.EventBegin(EVENT_TOKENISE)
         
-        'Create a tokeniser object to hold the machine representation of the text file; _
+        'Create a File object to hold the machine representation of the text file; _
          the assembler doesn't work with the original text directly
-        Set Token = New oz80_TokenStream
+        Set File = New oz80_File
         'Explode the source code file into tokens:
         'If the file failed to parse, an error code / message will already have _
          been raised via an event, we only need to exit
-        If Token.Tokenise(TestPath.Text) Then GoTo Finish
-        'Add the TokenStream to the files collection
+        If File.Tokenise(TestPath.Text) Then GoTo Finish
+        'Add the File to the files collection
         Let FileCount = FileCount + 1
-        ReDim Preserve Files(1 To FileCount) As oz80_TokenStream
+        ReDim Preserve Files(1 To FileCount) As oz80_File
         Let FileIndex = FileCount
-        Set Files(FileIndex) = Token
+        Set Files(FileIndex) = File
         
         Call oz80.Profiler.EventEnd(EVENT_TOKENISE)
         '*** TIMER END ***
@@ -595,7 +593,11 @@ Private Function ParseFile( _
     
     'The user will obviously want to begin at the start of the stream _
      rather than the end
-    Call Token.Rewind
+    Call File.Rewind
+    
+    'Now begin assembling the file. If an `INCLUDE` statement is encountered, _
+     it will also be tokenised and assembled
+    Call ScopeRoot
     
 Finish:
     Set FSO = Nothing
@@ -603,6 +605,7 @@ Finish:
     'If there were any error, an error event and message would already have been _
      raised, we only need to fold upwards and the parent will handle terminating the _
      assembling process early
+    Let AssembleFile = My_Error
 End Function
 
 'This is a structured map of the OZ80 syntax: _
@@ -686,34 +689,34 @@ End Function
 Private Sub ScopeRoot()
     'When a file begins, it is at the top-most scope. Certain keywords are only _
      allowed here. Once all nested scopes are exhausted, we return here
-    Call RaiseMessage(OZ80_LOG_ACTION, "Assembling ""{$}""", Token.SourceFile)
+    Call RaiseMessage(OZ80_LOG_ACTION, "Assembling ""{$}""", File.Path)
     
 Continue:
     '----------------------------------------------------------------------------------
     '`INCLUDE <text>`
     '----------------------------------------------------------------------------------
-    If Token.Kind = TOKEN_KEYWORD_INCLUDE Then
+    If File.TokenKind = TOKEN_KEYWORD_INCLUDE Then
         'Hand off to the function that will process this
         Call ProcessInclude
         
     '----------------------------------------------------------------------------------
     '`PROC :<label> { [...] }`
     '----------------------------------------------------------------------------------
-    ElseIf Token.Kind = TOKEN_KEYWORD_PROC Then
+    ElseIf File.TokenKind = TOKEN_KEYWORD_PROC Then
         'Hand off to the function that will process this
         Call ProcessProc
         
     '----------------------------------------------------------------------------------
     '`SECTION ::<section>`
     '----------------------------------------------------------------------------------
-    ElseIf Token.Kind = TOKEN_KEYWORD_SECTION Then
+    ElseIf File.TokenKind = TOKEN_KEYWORD_SECTION Then
         'Hand off to the function that will process this
         Call ProcessSection
     
     '----------------------------------------------------------------------------------
     '`SYSTEM <text>`
     '----------------------------------------------------------------------------------
-    ElseIf Token.Kind = TOKEN_KEYWORD_SYSTEM Then
+    ElseIf File.TokenKind = TOKEN_KEYWORD_SYSTEM Then
         'Hand off to the function that will process this
         Call ProcessSystem
     
@@ -727,7 +730,7 @@ Continue:
     If My_Error Then Exit Sub
     'As we loop, other functions will move the Token pointer forward (such as when _
      evaluating expressions). Check if we've hit the end of the file
-    If Token.EOF Then Exit Sub
+    If File.EOF Then Exit Sub
     'As long as there is content left to process in the file, keep going
     GoTo Continue
 End Sub
@@ -738,10 +741,10 @@ End Sub
 '======================================================================================
 Private Sub ProcessSystem()
     'ERROR: The file ended before the first parameter
-    If Not Token.Forward() Then Call RaiseError(OZ80_ERROR_FILE_END): Exit Sub
+    If Not File.Forward() Then Call RaiseError(OZ80_ERROR_FILE_END): Exit Sub
     
     'Check that the parameter is a list (or at least the start of one)
-    If Not Token.IsList Then Call RaiseError(OZ80_ERROR_EXPECTED_SYSTEM_NAME): Exit Sub
+    If Not File.TokenIsList Then Call RaiseError(OZ80_ERROR_EXPECTED_SYSTEM_NAME): Exit Sub
     
     'Fetch the System name string from the proceeding list _
      (if there was any error during that, fold upwards)
@@ -764,31 +767,31 @@ End Sub
 '======================================================================================
 Private Sub ProcessSection()
     'ERROR: The file ended before the first parameter
-    If Not Token.Forward() Then Call RaiseError(OZ80_ERROR_FILE_END): Exit Sub
+    If Not File.Forward() Then Call RaiseError(OZ80_ERROR_FILE_END): Exit Sub
     
     'ERROR: Not a section name following the section keyword
-    If Token.Kind <> TOKEN_SECTION Then Call RaiseError( _
+    If File.TokenKind <> TOKEN_SECTION Then Call RaiseError( _
         OZ80_ERROR_EXPECTED_SECTION_NAME _
     ): Exit Sub
     
     'Keep ahold of the Section identifier
     Dim SectionKey As Long
-    Let SectionKey = Token.Value
+    Let SectionKey = File.TokenValue
     
     'Has this Section already been defined?
     If SectionNames.Exists(SectionKey) Then Call RaiseError( _
         OZ80_ERROR_DUPLICATE_SECTION _
     ): Exit Sub
     
-    'Define the Section name - fetch the string from the TokenStream's _
+    'Define the Section name - fetch the string from the File's _
      string database (identified by the CRC value on the token)
-    Call SectionNames.Add(SectionKey, Token.Strings(SectionKey))
+    Call SectionNames.Add(SectionKey, File.Strings(SectionKey))
     Call SectionSlots.Add(SectionKey, 0)
     
     '----------------------------------------------------------------------------------
     
     'If the file ends here it's valid, as the params are optional
-    If Not Token.Forward() Then GoTo Finish
+    If Not File.Forward() Then GoTo Finish
     
     'The only allowed Slot lists are: 0 / 1 / 2 / 0, 1 / 0, 1, 2 / 1, 2. _
      These are stored as a bit-pattern allowing packing into one value, _
@@ -796,12 +799,12 @@ Private Sub ProcessSection()
     Dim Slot As OZ80_SLOT
     
     'The only parameter is the Slot list
-    If Token.Kind = TOKEN_KEYWORD_SLOT Then
+    If File.TokenKind = TOKEN_KEYWORD_SLOT Then
         'ERROR: File ending before we have the value
-        If Not Token.Forward() Then Call RaiseError(OZ80_ERROR_FILE_END): Exit Sub
+        If Not File.Forward() Then Call RaiseError(OZ80_ERROR_FILE_END): Exit Sub
         
         'ERROR: There needs to be at least one item in the list
-        If Not Token.IsExpression Then Call RaiseError( _
+        If Not File.TokenIsExpression Then Call RaiseError( _
             OZ80_ERROR_EXPECTED _
         ): Exit Sub
         
@@ -847,10 +850,10 @@ Finish:
     Let SectionSlots(SectionKey) = Slot
     Call RaiseMessage( _
         OZ80_LOG_STATUS, LOG_SECTION, _
-        Token.Strings(SectionKey) _
+        File.Strings(SectionKey) _
     )
 '    RaiseEvent Message(OZ80_LOG_STATUS, _
-'        "SECTION " & Token.Strings(SectionKey) & _
+'        "SECTION " & File.Strings(SectionKey) & _
 '        " SLOT " & IIf( _
 '            Slot = 0, "?", _
 '                IIf(Slot And OZ80_SLOT.SLOT0, "0 ", "") & _
@@ -879,7 +882,7 @@ End Sub
 '======================================================================================
 Private Sub ProcessInclude()
     'ERROR: The file ended before the first parameter
-    If Not Token.Forward() Then Call RaiseError(OZ80_ERROR_FILE_END): Exit Sub
+    If Not File.Forward() Then Call RaiseError(OZ80_ERROR_FILE_END): Exit Sub
     
     'Fetch the file path _
      (if there's an error doing this, fold upwards)
@@ -889,19 +892,15 @@ Private Sub ProcessInclude()
     'Remember the current file being parsed
     Dim ReturnFile As Long, ReturnToken As Long
     Let ReturnFile = FileIndex
-    Let ReturnToken = Token.Index
+    Let ReturnToken = File.TokenIndex
     
-    'Parse the new file
-    If ParseFile(FilePath.Text) Then Exit Sub
-    
-    'Now assemble this file
-    Call ScopeRoot
-    If My_Error Then Exit Sub
+    'Tokenise & assemble the included file
+    If AssembleFile(FilePath.Text) Then Exit Sub
     
     'Reattach the previous file
     Let FileIndex = ReturnFile
-    Set Token = Files(FileIndex)
-    Let Token.Index = ReturnToken
+    Set File = Files(FileIndex)
+    Let File.TokenIndex = ReturnToken
 End Sub
 
 'ProcessProc : Process a Procedure Chunk
@@ -916,20 +915,20 @@ End Sub
 '======================================================================================
 Private Sub ProcessProc()
     'ERROR: The file ended before the first parameter
-    If Not Token.Forward() Then Call RaiseError(OZ80_ERROR_FILE_END): Exit Sub
+    If Not File.Forward() Then Call RaiseError(OZ80_ERROR_FILE_END): Exit Sub
     
     'ERROR: No label name for procedure
-    If Token.Kind <> TOKEN_LABEL Then Call RaiseError( _
+    If File.TokenKind <> TOKEN_LABEL Then Call RaiseError( _
         OZ80_ERROR_EXPECTED_PROC_NAME _
     ): Exit Sub
     
     'Remember the String ID of the Label name, _
      we can't create the Label until the parameters are read
     Dim LabelKey As Long
-    Let LabelKey = Token.Value
+    Let LabelKey = File.TokenValue
     
     'ERROR: The file cannot end until the chunk has been opened and closed
-    If Not Token.Forward() Then Call RaiseError(OZ80_ERROR_FILE_END): Exit Sub
+    If Not File.Forward() Then Call RaiseError(OZ80_ERROR_FILE_END): Exit Sub
     
     'The `INTERRUPT` parameter is optional, but can be zero, so use -1 for 'undefined'
     Dim Interrupt As Long
@@ -939,7 +938,7 @@ ReadParams:
     '----------------------------------------------------------------------------------
     '`SECTION` Parameter : Set which Section the procedure belongs to _
      ----------------------------------------------------------------------------------
-    If Token.Kind = TOKEN_KEYWORD_SECTION Then
+    If File.TokenKind = TOKEN_KEYWORD_SECTION Then
         Dim SectionKey As Long
         Dim IsSectionDefined As Boolean
     
@@ -949,29 +948,29 @@ ReadParams:
         ): Exit Sub
         
         'ERROR: File ended before the section name?
-        If Not Token.Forward() Then Call RaiseError(OZ80_ERROR_FILE_END): Exit Sub
+        If Not File.Forward() Then Call RaiseError(OZ80_ERROR_FILE_END): Exit Sub
         
         'ERROR: Not a section name following the section keyword
-        If Token.Kind <> TOKEN_SECTION Then Call RaiseError( _
+        If File.TokenKind <> TOKEN_SECTION Then Call RaiseError( _
             OZ80_ERROR_EXPECTED_SECTION_NAME _
         ): Exit Sub
         
         'ERROR: Section has not been defined
-        If Not SectionNames.Exists(Token.Value) Then Call RaiseError( _
+        If Not SectionNames.Exists(File.TokenValue) Then Call RaiseError( _
             OZ80_ERROR_INVALID_SECTION _
         ): Exit Sub
         
         'Record the section name
-        Let SectionKey = Token.Value
+        Let SectionKey = File.TokenValue
         Let IsSectionDefined = True
         
         'Pass over the Section name
-        If Not Token.Forward() Then Call RaiseError(OZ80_ERROR_FILE_END): Exit Sub
+        If Not File.Forward() Then Call RaiseError(OZ80_ERROR_FILE_END): Exit Sub
      
     '----------------------------------------------------------------------------------
     '`PARAMS` Parameter : Document which Z80 parameters the procedure uses _
      ----------------------------------------------------------------------------------
-    ElseIf Token.Kind = TOKEN_KEYWORD_PARAMS Then
+    ElseIf File.TokenKind = TOKEN_KEYWORD_PARAMS Then
         'The `PARAMS` parameter is not used by the assembler at this time, _
          neither is it a standard list as it consists of Registers and/or RAM names
          Dim IsParamsDefined As Boolean
@@ -983,17 +982,17 @@ ReadParams:
          
 SkipParam:
         'ERROR: File cannot end in the midst of the list
-        If Not Token.Forward() Then Call RaiseError(OZ80_ERROR_FILE_END): Exit Sub
+        If Not File.Forward() Then Call RaiseError(OZ80_ERROR_FILE_END): Exit Sub
         
         'If a Keyword, the list has come to the end
-        If Token.IsKeyword() Then
+        If File.TokenIsKeyword() Then
             Let IsParamsDefined = True
             GoTo ReadParams
         End If
         
         'ERROR: Only registers and RAM names are allowed at the moment
-        If (Not Token.IsRegister) And _
-           (Token.Kind <> TOKEN_RAM) Then Call RaiseError( _
+        If (Not File.TokenIsRegister) And _
+           (File.TokenKind <> TOKEN_RAM) Then Call RaiseError( _
             OZ80_ERROR_EXPECTED_PROC_PARAMS _
         ): Exit Sub
         
@@ -1002,7 +1001,7 @@ SkipParam:
     '----------------------------------------------------------------------------------
     '`RETURN` Parameter : Document what the procedure sets / returns _
      ----------------------------------------------------------------------------------
-    ElseIf Token.Kind = TOKEN_KEYWORD_RETURN Then
+    ElseIf File.TokenKind = TOKEN_KEYWORD_RETURN Then
         'The `RETURN` parameter is not used by the assembler at this time, _
          neither is it a standard list as it consists of Registers and/or RAM names
          Dim IsReturnDefined As Boolean
@@ -1014,17 +1013,17 @@ SkipParam:
          
 SkipReturn:
         'ERROR: File cannot end in the midst of the list
-        If Not Token.Forward() Then Call RaiseError(OZ80_ERROR_FILE_END): Exit Sub
+        If Not File.Forward() Then Call RaiseError(OZ80_ERROR_FILE_END): Exit Sub
         
         'If a Keyword, the list has come to the end
-        If Token.IsKeyword() Then
+        If File.TokenIsKeyword() Then
             Let IsReturnDefined = True
             GoTo ReadParams
         End If
         
         'ERROR: Only registers and RAM names are allowed at the moment
-        If (Not Token.IsRegister) _
-        And (Token.Kind <> TOKEN_RAM) Then Call RaiseError( _
+        If (Not File.TokenIsRegister) _
+        And (File.TokenKind <> TOKEN_RAM) Then Call RaiseError( _
             OZ80_ERROR_EXPECTED_PROC_RETURN _
         ): Exit Sub
         
@@ -1033,7 +1032,7 @@ SkipReturn:
     '----------------------------------------------------------------------------------
     '`INTERRUPT` Parameter : Define a fixed-location Interrupt Procedure _
      ----------------------------------------------------------------------------------
-    ElseIf Token.Kind = TOKEN_KEYWORD_INTERRUPT Then
+    ElseIf File.TokenKind = TOKEN_KEYWORD_INTERRUPT Then
         'The `INTERRUPT` parameter fixes a Procedure to a specific location in the _
          ROM intended for hardware interrupts. This parameter cannot co-exist with _
          the Section parameter
@@ -1047,10 +1046,10 @@ SkipReturn:
         'TODO: Cannot co-exist with the `SECTION
         
         'ERROR: File cannot end before the parameter Expression!
-        If Not Token.Forward() Then Call RaiseError(OZ80_ERROR_FILE_END): Exit Sub
+        If Not File.Forward() Then Call RaiseError(OZ80_ERROR_FILE_END): Exit Sub
         
         'Is this an Expression at all?
-        If Not Token.IsExpression Then Call RaiseError(OZ80_ERROR_EXPECTED): Exit Sub
+        If Not File.TokenIsExpression Then Call RaiseError(OZ80_ERROR_EXPECTED): Exit Sub
         
         'Calculate the Expression:
         Let Interrupt = ParseExpression()
@@ -1076,18 +1075,18 @@ SkipReturn:
     '----------------------------------------------------------------------------------
     
     'With the parameters read, the only allowed token is the opening of the chunk
-    If Token.Kind <> TOKEN_CHUNK_OPEN Then Call RaiseError( _
+    If File.TokenKind <> TOKEN_CHUNK_OPEN Then Call RaiseError( _
         OZ80_ERROR_EXPECTED _
     ): Exit Sub
     
     'The chunk cannot be left open
-    If Not Token.Forward() Then Call RaiseError(OZ80_ERROR_FILE_END): Exit Sub
+    If Not File.Forward() Then Call RaiseError(OZ80_ERROR_FILE_END): Exit Sub
     
     'Now define the label name; if a section was given, it needs to be prepended
     Dim LabelName As String
     If IsSectionDefined Then _
-        Let LabelName = Token.Strings(SectionKey) & Token.Strings(LabelKey) Else _
-        Let LabelName = Token.Strings(LabelKey)
+        Let LabelName = File.Strings(SectionKey) & File.Strings(LabelKey) Else _
+        Let LabelName = File.Strings(LabelKey)
     
     'You can't name two Chunks the same thing
 '    Stop
@@ -1113,7 +1112,7 @@ Private Sub ScopeChunk()
     
 Continue:
     'Z80 code?
-    If Token.IsInstruction Then
+    If File.TokenIsInstruction Then
         '*** TIMER BEGIN ***
         Call oz80.Profiler.EventBegin(EVENT_PROCESSZ80)
         
@@ -1127,24 +1126,24 @@ Continue:
     End If
     
     'The chunk might be empty `{}`, in which case we don't want to walk it
-    If Token.Kind = TOKEN_CHUNK_CLOSE Then GoTo Finish
+    If File.TokenKind = TOKEN_CHUNK_CLOSE Then GoTo Finish
     
     '----------------------------------------------------------------------------------
     
     'Move to the next token. If the file ends unexpectedly, the chunk has not been _
      closed properly (closing brace is expected)
-    If Not Token.Forward() Then
+    If Not File.Forward() Then
         Call RaiseError(OZ80_ERROR_FILE_END)
     
     'When the closing brace is encountered, we'll drop out of the scope
-    ElseIf Token.Kind <> TOKEN_CHUNK_CLOSE Then
+    ElseIf File.TokenKind <> TOKEN_CHUNK_CLOSE Then
         GoTo Continue
     End If
     
 Finish:
     'Move onto the next token ready for the root scope to process. _
      The file could end just after the chunk, so no error is necessary
-    Call Token.Forward
+    Call File.Forward
 End Sub
 
 'GetZ80Parameter : Fetch the type / value of a Z80 instruction parameter
@@ -1158,39 +1157,39 @@ Private Function GetZ80Parameter() As oz80Param
     
     'A memory reference, such as `(ix+$8)` _
      ----------------------------------------------------------------------------------
-    If Token.Kind = TOKEN_Z80MEM_OPEN Then
+    If File.TokenKind = TOKEN_Z80MEM_OPEN Then
         'ERROR: File ends just as the memory expression is opened
-        If Not Token.Forward() Then Call RaiseError(OZ80_ERROR_FILE_END): Exit Function
+        If Not File.Forward() Then Call RaiseError(OZ80_ERROR_FILE_END): Exit Function
     
         'The first item in the memory expression can be a register _
          ..............................................................................
-        If Token.IsRegister Then
+        If File.TokenIsRegister Then
             'Copy the register type to the parameter being built
-            Let GetZ80Parameter.Token = Token.Kind
+            Let GetZ80Parameter.Token = File.TokenKind
             
             'The `IN` & `OUT` instructions accept only the C register, _
              though in reality this is register pair BC
-            If Token.Kind = TOKEN_Z80_C Then
+            If File.TokenKind = TOKEN_Z80_C Then
                 Let GetZ80Parameter.Mask = MASK_MEM_BC
             
             '`LD` accepts registers BC & DE
-            ElseIf Token.Kind = TOKEN_Z80_BC Then
+            ElseIf File.TokenKind = TOKEN_Z80_BC Then
                 Let GetZ80Parameter.Mask = MASK_MEM_BC
-            ElseIf Token.Kind = TOKEN_Z80_DE Then
+            ElseIf File.TokenKind = TOKEN_Z80_DE Then
                 Let GetZ80Parameter.Mask = MASK_MEM_DE
             
             'HL / IX & IY
-            ElseIf Token.Kind = TOKEN_Z80_HL Then
+            ElseIf File.TokenKind = TOKEN_Z80_HL Then
                 Let GetZ80Parameter.Mask = MASK_MEM_HL
             'IX/IY can have an additional expression, e.g. `ld a, (ix+$8)`
-            ElseIf Token.Kind = TOKEN_Z80_IX Then
+            ElseIf File.TokenKind = TOKEN_Z80_IX Then
                 Let GetZ80Parameter.Mask = MASK_MEM_IX
                 GoTo AddExpr
-            ElseIf Token.Kind = TOKEN_Z80_IY Then
+            ElseIf File.TokenKind = TOKEN_Z80_IY Then
                 Let GetZ80Parameter.Mask = MASK_MEM_IY
                 GoTo AddExpr
                 
-            ElseIf Token.Kind = TOKEN_Z80_SP Then
+            ElseIf File.TokenKind = TOKEN_Z80_SP Then
                 Let GetZ80Parameter.Mask = MASK_MEM_SP
             Else
                 'ERROR: register not allowed here
@@ -1198,19 +1197,19 @@ Private Function GetZ80Parameter() As oz80Param
             End If
             
             'ERROR: File ends before the memory expression is closed
-            If Not Token.Forward() _
+            If Not File.Forward() _
                 Then Call RaiseError(OZ80_ERROR_FILE_END): Exit Function
             
             GoTo EndScope
             
 AddExpr:    'Look for the `+` following the register name
-            If Not Token.Forward() _
+            If Not File.Forward() _
                 Then Call RaiseError(OZ80_ERROR_FILE_END): Exit Function
             
             'If present, skip over it and check for an expression
-            If Token.Kind = TOKEN_OPERATOR_ADD Then
+            If File.TokenKind = TOKEN_OPERATOR_ADD Then
                 'ERROR: Something must follow the "+"!
-                If Not Token.Forward() _
+                If Not File.Forward() _
                     Then Call RaiseError(OZ80_ERROR_FILE_END): Exit Function
                 
                 'Try and calculate the expression
@@ -1226,8 +1225,8 @@ AddExpr:    'Look for the `+` following the register name
                 
                 Let GetZ80Parameter.Value = Value
                 
-                If Token.Kind = TOKEN_Z80MEM_CLOSE Then
-                    Call Token.Forward
+                If File.TokenKind = TOKEN_Z80MEM_CLOSE Then
+                    Call File.Forward
                     Exit Function
                 End If
                 'ERROR: Unexpected token in memory expression
@@ -1238,7 +1237,7 @@ AddExpr:    'Look for the `+` following the register name
         Else
             'Is it an expression at all?
             'TODO: ERROR: Not a valid expression
-            If Not Token.IsExpression Then Stop
+            If Not File.TokenIsExpression Then Stop
         
             'Besides registers, memory addresses are allowed
             Let GetZ80Parameter.Token = TOKEN_NUMBER
@@ -1262,8 +1261,8 @@ AddExpr:    'Look for the `+` following the register name
     
 EndScope:
         '..............................................................................
-        If Token.Kind = TOKEN_Z80MEM_CLOSE Then
-            Call Token.Forward
+        If File.TokenKind = TOKEN_Z80MEM_CLOSE Then
+            Call File.Forward
             Exit Function
         End If
         'ERROR: Unexpected token in memory expression
@@ -1271,21 +1270,21 @@ EndScope:
     
     'A Register _
      ----------------------------------------------------------------------------------
-    ElseIf Token.IsRegister Or Token.IsFlag Then
+    ElseIf File.TokenIsRegister Or File.TokenIsFlag Then
         'Copy the register type to the parameter being built
-        Let GetZ80Parameter.Token = Token.Kind
+        Let GetZ80Parameter.Token = File.TokenKind
         
         'Map the register token to the mask bit; token numbers are sequential _
          whilst parameter masks are bit combinations allowing rapid comparisons _
          of parameters with allowed options
-        Let GetZ80Parameter.Mask = TokenRegister(Token.Kind)
+        Let GetZ80Parameter.Mask = TokenRegister(File.TokenKind)
         
         'Now move beyond the register token
-        Call Token.Forward
+        Call File.Forward
     
     'Anything else classes as a calculable expression _
      ----------------------------------------------------------------------------------
-    ElseIf Token.IsExpression Then
+    ElseIf File.TokenIsExpression Then
         'We manually build a number token, since we don't want to use the first _
          token of the expression -- it might be a label for instance and we can _
          only send registers or numbers to be assembled into opcodes
@@ -1325,10 +1324,10 @@ End Function
 Private Sub ProcessZ80()
     'Remember which Z80 instruction is being processed
     Dim Instruction As OZ80_TOKEN
-    Let Instruction = Token.Kind
+    Let Instruction = File.TokenKind
     'Skip over the Z80 instruction token now that we know it. _
      If the file ends it's an error because the chunk has not been closed
-    If Not Token.Forward() Then Call RaiseError(OZ80_ERROR_FILE_END): Exit Sub
+    If Not File.Forward() Then Call RaiseError(OZ80_ERROR_FILE_END): Exit Sub
     
     'TODO: Handle POP / PUSH macros
     
@@ -1337,7 +1336,7 @@ Private Sub ProcessZ80()
     Dim Param1 As oz80Param, Param2 As oz80Param, Param3 As oz80Param
     
     'Is there a first parameter?
-    If Token.IsParameter Then
+    If File.TokenIsParameter Then
         'Parameter expressions might return an unknown value _
          (such as when a label, which has not yet been addressed, is used)
         
@@ -1348,13 +1347,13 @@ Private Sub ProcessZ80()
         If My_Error Then Exit Sub
         
         'Check if a second parameter exists
-        If Token.IsParameter Then
+        If File.TokenIsParameter Then
             'Fetch the second parameter
             Let Param2 = GetZ80Parameter()
             If My_Error Then Exit Sub
             
             'Check if a third parameter exists
-            If Token.IsParameter Then
+            If File.TokenIsParameter Then
                 'Fetch the third parameter (very uncommon)
                 Let Param2 = GetZ80Parameter()
                 If My_Error Then Exit Sub
@@ -1365,7 +1364,7 @@ Private Sub ProcessZ80()
          the token stream pointing at the next Token to process. If there are no _
          parameters, we do not want to leave the token stream pointing at the z80 _
          instruction otherwise it'll get parsed again!
-        'Call Token.Forward
+        'Call File.Forward
     End If
     
     'OPCODE MAP: _
@@ -2578,7 +2577,7 @@ Private Function GetListAsDictionary() As Scripting.Dictionary
     Set GetListAsDictionary = New Scripting.Dictionary
     
     'As long as the list continues, keep fetching Values
-    Do While Token.IsExpression
+    Do While File.TokenIsExpression
         'Parse the Expression; if it's indefinite, _
          leave that up to the caller to handle
         Call GetListAsDictionary.Add(GetListAsDictionary.Count, ParseExpression())
@@ -2602,15 +2601,15 @@ Private Function GetText( _
     If ReturnText Is Nothing Then Set ReturnText = New bluString
     
     'If the current token is not a list item, then the list has come to an end
-    Do While Token.IsList
+    Do While File.TokenIsList
     
         'If the current token is text, append it to what we have
-        If Token.Kind = TOKEN_QUOTE Then
-            Call ReturnText.Append(Token.Text)
+        If File.TokenKind = TOKEN_QUOTE Then
+            Call ReturnText.Append(File.TokenText)
         
         'Otherwise it'll be a calculable Expression, _
          hopefully providing an ASCII value
-        ElseIf Token.IsExpression Then
+        ElseIf File.TokenIsExpression Then
             'Get the Expression Value
             Dim Value As Double
             Let Value = ParseExpression()
@@ -2633,7 +2632,7 @@ Private Function GetText( _
          and this is not an error as far as this function is concerned. If the parent _
          is within a scope and expecting the closing bracket, then it's up to them _
          to raise the error
-        Call Token.Forward
+        Call File.Forward
     Loop
     
     'The resultant string won't be changing any more
@@ -2650,7 +2649,7 @@ Private Function GetListItem( _
     Optional ByRef Length As Long = 0 _
 ) As Boolean
     'If the current token is not an expression, the list has ended; return False
-    If Not Token.IsExpression Then Exit Function
+    If Not File.TokenIsExpression Then Exit Function
     
     'Parse the Expression; if it's indefinite, _
      leave that up to the caller to handle
@@ -2690,19 +2689,19 @@ Private Function ParseExpression( _
     'The file could legitimately end with an expression, so don't error out if the _
      token stream comes to an end since the expression is valid. The parent scopes _
      will handle an unexpected end error
-    If Token.EOF Then Exit Function
+    If File.EOF Then Exit Function
     
     'If next token is not an operator assume the expression has finished, _
       the parent will handle whatever the next token is used for
-    If Not Token.IsOperator Then Exit Function
+    If Not File.TokenIsOperator Then Exit Function
     
 Continue:
     'Remember the operator for after we have operand 2 to work with
-    Let Operator = Token.Kind
+    Let Operator = File.TokenKind
     
     'Get the second operand
     'TODO: Error - unexpected end
-    If Not Token.Forward() Then Stop
+    If Not File.Forward() Then Stop
     Let Operand2 = ParseValue()
     'Cannot have an operator hanging there without an operand following
     If My_Error Then
@@ -2760,7 +2759,7 @@ Continue:
 '    If NextToken() = False Then Exit Function
     
     'Does the expression continue?
-    If Token.IsOperator Then
+    If File.TokenIsOperator Then
         'Set the current result as the first operand and go around again
         Let Operand1 = ParseExpression
         GoTo Continue
@@ -2773,19 +2772,19 @@ Private Function ParseValue( _
 ) As Double
     'Is it a named value?
     'TODO: Handle scope expansion for names
-    If Token.Kind = TOKEN_LABEL _
-    Or Token.Kind = TOKEN_PROPERTY_USE Then '..........................................
+    If File.TokenKind = TOKEN_LABEL _
+    Or File.TokenKind = TOKEN_PROPERTY_USE Then '......................................
         'TODO: get the full label from the property
         
         'If the named value is not yet known, the expression cannot be evaluated _
          until it is defined later on
-        If Not Labels.Exists(Token.Value) Then _
+        If Not Labels.Exists(File.TokenValue) Then _
             Let ParseValue = OZ80_INDEFINITE Else _
-            Let ParseValue = Labels(Token.Value)
+            Let ParseValue = Labels(File.TokenValue)
         
     'This is an easy one
-    ElseIf Token.Kind = TOKEN_NUMBER Then '............................................
-        Let ParseValue = Token.Value
+    ElseIf File.TokenKind = TOKEN_NUMBER Then '........................................
+        Let ParseValue = File.TokenValue
         
     Else '.............................................................................
         'ERROR: Not a valid operand. We won't produce an error message here as the _
@@ -2796,7 +2795,7 @@ Private Function ParseValue( _
     End If
     
     'Move beyond the current token now it's been processed
-    Call Token.Forward
+    Call File.Forward
 End Function
 
 'BeginChunk : Begin a new Chunk to hold assembled Z80 code / data
@@ -2984,11 +2983,11 @@ Private Sub RaiseMessage( _
     
     'Are there any values to format?
     If UBound(FormatValues) < 0 Then
-        'No, don't provide a null Variant, it really will confuse
-        RaiseEvent Message(LogLevel, LogMsg.Text)
+        'No, raise just the text given
+        RaiseEvent Message(LogLevel, LogMsg)
     Else
         'Format the given log message before sending it up
-        RaiseEvent Message(LogLevel, LogMsg.Format(FormatValues).Text)
+        RaiseEvent Message(LogLevel, LogMsg.Format(FormatValues))
     End If
 End Sub
 
@@ -3007,8 +3006,8 @@ Private Function RaiseError( _
     'Set the error number on this class
     Let My_Error = Number
     
-    If Line < 0 Then Let Line = Token.Line
-    If Col < 0 Then Let Col = Token.Col
+    If Line < 0 Then Let Line = File.TokenLine
+    If Col < 0 Then Let Col = File.TokenCol
     
     'Fetch the detailed error text
     Dim Title As String, Description As String

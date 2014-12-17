@@ -41,7 +41,7 @@ Private Declare Sub api_RtlMoveMemory Lib "kernel32" Alias "RtlMoveMemory" ( _
 '/// CLASS STORAGE ////////////////////////////////////////////////////////////////////
 
 'For ease of logging, we'll embed the printable name of the Chunk, _
- (the actual name is stored in the TokenStream, well out of reach of many routines)
+ (the actual name is stored in the File, well out of reach of many routines)
 Public LabelName As String
 
 'Which section the chunk belongs to. This will be the CRC32 of the Section name, _

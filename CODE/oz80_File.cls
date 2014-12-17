@@ -6,7 +6,7 @@ BEGIN
   DataSourceBehavior  = 0  'vbNone
   MTSTransactionMode  = 0  'NotAnMTSObject
 END
-Attribute VB_Name = "oz80_TokenStream"
+Attribute VB_Name = "oz80_File"
 Attribute VB_GlobalNameSpace = False
 Attribute VB_Creatable = True
 Attribute VB_PredeclaredId = False
@@ -17,14 +17,14 @@ Option Explicit
 'Licenced under a Creative Commons 3.0 Attribution Licence
 '--You may use and modify this code how you see fit as long as you give credit
 '======================================================================================
-'CLASS:: oz80_TokenStream
+'CLASS:: oz80_File
 
-'A Token stream is machine-readable representation of the original source code that _
+'A token stream is machine-readable representation of the original source code that _
  does away for the need to refer to the source text files again. This class handles _
  parsing the source code text into tokens; the assembler only works with tokens
  
 'This class only represents one source code file. The assembler handles the specifics _
- of including additional source code files and spawns more TokenStream instances
+ of including additional source code files and spawns more oz80_File instances
 
 '/// CLASS ////////////////////////////////////////////////////////////////////////////
 
@@ -87,7 +87,7 @@ Private Const TAB_WIDTH As Long = 8
 '--------------------------------------------------------------------------------------
 
 'For diaplying a disassembly
-Private Const FORMAT_TOKEN          As String = "<tkn> {$} ({$},{$}) {$} [{$}] {$}"
+Private Const FORMAT_TOKEN          As String = "<tkn> {$} ({$},{$}) {$}-{$} [{$}] {$}"
 Private Const FORMAT_TOKEN_CHUNK    As String = "   CHUNK"
 Private Const FORMAT_TOKEN_KEYWORD  As String = " KEYWORD"
 Private Const FORMAT_TOKEN_LABEL    As String = "   LABEL"
@@ -108,9 +108,13 @@ Private Const FORMAT_QUOTE          As String = """"
 'The error number!
 Private My_Error As OZ80_ERROR
 
+'To save having to create and destroy short strings all the time, _
+ we'll keep this one around for formatting log messages
+Private LogMsg As bluString
+
 'Remember where the original source file is as the assembler will need to change to _
  its directory when handling relative references with includes
-Private My_SourceFile As String
+Private My_Path As String
 
 '--------------------------------------------------------------------------------------
 
@@ -181,9 +185,10 @@ End Type
 '/// EVENTS ///////////////////////////////////////////////////////////////////////////
 
 'Progress messages are passed through an event, the handler can choose to show them _
- or not. I didn't want to spam `Debug.Print` output
+ or not, and in what format. I don't want to spam unwanted `Debug.Print` output. _
+ A bluString is provided to make manipulating the message before displaying very easy
 Event Message( _
-    ByRef LogLevel As OZ80_LOG, ByRef Text As String _
+    ByRef LogLevel As OZ80_LOG, ByRef LogText As bluString _
 )
 
 'A class event is used to communicate error details beyond a simple error number
@@ -195,6 +200,8 @@ Event Error( _
 'CLASS Initialize
 '======================================================================================
 Private Sub Class_Initialize()
+    Set LogMsg = New bluString
+    
     'Initialise the string database. _
      Since it's public, we want to ensure it's instantiated from the off
     Set Strings = New bluArrayStrings
@@ -280,20 +287,22 @@ Private Sub Class_Terminate()
     Erase Tokens
     'Clear the string database
     Set Strings = Nothing
+    
+    Set LogMsg = Nothing
 End Sub
 
 '/// PUBLIC INTERFACE /////////////////////////////////////////////////////////////////
 
-'Col : Column number in the source of the current token
+'TokenCol : Column number in the source of the current token
 '======================================================================================
-Public Property Get Col() As Long: Let Col = My_TokenCol: End Property
+Public Property Get TokenCol() As Long: Let TokenCol = My_TokenCol: End Property
 
-'Count : Number of tokens
+'TokenCount : Number of tokens
 '======================================================================================
-Public Property Get Count() As Long
+Public Property Get TokenCount() As Long
     'Internally the token count is zero-based (easy to manage), _
      but externally it is one-based (expected behaviour)
-    Let Count = My_Count + 1
+    Let TokenCount = My_Count + 1
 End Property
 
 'EOF : End Of File?
@@ -304,10 +313,10 @@ Public Property Get EOF() As Boolean: Let EOF = (My_Index >= My_Count): End Prop
 '======================================================================================
 Public Property Get Error() As OZ80_ERROR: Let Error = My_Error: End Property
 
-'Index : Current location within the tokenStream
+'TokenIndex : Current location within the File's token stream
 '======================================================================================
-Public Property Get Index() As Long: Let Index = My_Index: End Property
-Public Property Let Index( _
+Public Property Get TokenIndex() As Long: Let TokenIndex = My_Index: End Property
+Public Property Let TokenIndex( _
     ByVal Value As Long _
 )
     'Out of bounds?
@@ -319,97 +328,97 @@ Public Property Let Index( _
     End If
 End Property
 
-'IsExpression : Is this token number considered a calculable value?
+'TokenIsExpression : Is the current token considered a calculable value?
 '======================================================================================
-Public Property Get IsExpression() As Boolean
-    Let IsExpression = My_IsExpression(My_TokenKind)
+Public Property Get TokenIsExpression() As Boolean
+    Let TokenIsExpression = My_IsExpression(My_TokenKind)
 End Property
 
-'IsFlag : Is this token number a condition flag?
+'TokenIsFlag : Is the current token a condition flag?
 '======================================================================================
-Public Property Get IsFlag() As Boolean
-    Let IsFlag = My_IsFlag(My_TokenKind)
+Public Property Get TokenIsFlag() As Boolean
+    Let TokenIsFlag = My_IsFlag(My_TokenKind)
 End Property
 
-'IsInstruction : Is this token number a Z80 instruction?
+'TokenIsInstruction : Is the current token a Z80 instruction?
 '======================================================================================
-Public Property Get IsInstruction() As Boolean
-    Let IsInstruction = My_IsInstruction(My_TokenKind)
+Public Property Get TokenIsInstruction() As Boolean
+    Let TokenIsInstruction = My_IsInstruction(My_TokenKind)
 End Property
 
-'IsKeyword : Is this token number a OZ80 Keyword?
+'TokenIsKeyword : Is the current token an OZ80 Keyword?
 '======================================================================================
-Public Property Get IsKeyword() As Boolean
-    Let IsKeyword = My_IsKeyword(My_TokenKind)
+Public Property Get TokenIsKeyword() As Boolean
+    Let TokenIsKeyword = My_IsKeyword(My_TokenKind)
 End Property
 
-'IsList : Is the token considered a list item (an Expression or Text)
+'TokenIsList : Is the current token considered a list item (an Expression or Text)
 '======================================================================================
-Public Property Get IsList() As Boolean
-    Let IsList = My_IsList(My_TokenKind)
+Public Property Get TokenIsList() As Boolean
+    Let TokenIsList = My_IsList(My_TokenKind)
 End Property
 
-'IsOperator : Is this token number an OZ80 operator?
+'TokenIsOperator : Is the current token an OZ80 operator?
 '======================================================================================
-Public Property Get IsOperator() As Boolean
-    Let IsOperator = My_IsOperator(My_TokenKind)
+Public Property Get TokenIsOperator() As Boolean
+    Let TokenIsOperator = My_IsOperator(My_TokenKind)
 End Property
 
-'IsPrameter : Is this token number a Z80 instruction parameter?
+'TokenIsParameter : Is the current token a Z80 instruction parameter?
 '======================================================================================
-Public Property Get IsParameter() As Boolean
-    Let IsParameter = My_IsParameter(My_TokenKind)
+Public Property Get TokenIsParameter() As Boolean
+    Let TokenIsParameter = My_IsParameter(My_TokenKind)
 End Property
 
-'IsRegister : Is this token number a Register (8 or 16-Bit)?
+'TokenIsRegister : Is the current token a Register (8 or 16-Bit)?
 '======================================================================================
-Public Property Get IsRegister() As Boolean
-    Let IsRegister = My_IsRegister(My_TokenKind)
+Public Property Get TokenIsRegister() As Boolean
+    Let TokenIsRegister = My_IsRegister(My_TokenKind)
 End Property
 
-'IsRegister8Bit : Is this token number an 8-bit Register?
+'TokenIsRegister8Bit : Is the current token an 8-bit Register?
 '======================================================================================
-Public Property Get IsRegister8Bit() As Boolean
-    Let IsRegister8Bit = My_IsRegister8Bit(My_TokenKind)
+Public Property Get TokenIsRegister8Bit() As Boolean
+    Let TokenIsRegister8Bit = My_IsRegister8Bit(My_TokenKind)
 End Property
 
-'IsRegister16Bit : Is this token number a 16-bit Register?
+'TokenIsRegister16Bit : Is the current token a 16-bit Register?
 '======================================================================================
-Public Property Get IsRegister16Bit() As Boolean
-    Let IsRegister16Bit = My_IsRegister16Bit(My_TokenKind)
+Public Property Get TokenIsRegister16Bit() As Boolean
+    Let TokenIsRegister16Bit = My_IsRegister16Bit(My_TokenKind)
 End Property
 
-'Kind : Token Kind of current token
+'TokenKind : Token Kind of current token
 '======================================================================================
-Public Property Get Kind() As OZ80_TOKEN: Let Kind = My_TokenKind: End Property
+Public Property Get TokenKind() As OZ80_TOKEN: Let TokenKind = My_TokenKind: End Property
 
-'Line : Line number in the source of the current token
+'TokenLine : Line number in the source of the current token
 '======================================================================================
-Public Property Get Line() As Long: Let Line = My_TokenLine: End Property
+Public Property Get TokenLine() As Long: Let TokenLine = My_TokenLine: End Property
 
-'SourceFile : File path of the file that's been tokenised
+'Path : File path of the file that's been tokenised
 '======================================================================================
-Public Property Get SourceFile() As String: Let SourceFile = My_SourceFile: End Property
+Public Property Get Path() As String: Let Path = My_Path: End Property
 
-'Text : Gets the string associated with a token (e.g. `TOKEN_QUOTE`)
+'TokenText : Gets the string associated with a token (e.g. `TOKEN_QUOTE`)
 '======================================================================================
-Public Property Get Text() As String
+Public Property Get TokenText() As String
     'Only valid for tokens that reference text _
      (null-string will be returned otherwise)
-    If My_TokenKind = TOKEN_QUOTE Then Let Text = Strings.Item(My_TokenValue)
+    If My_TokenKind = TOKEN_QUOTE Then Let TokenText = Strings.Item(My_TokenValue)
 End Property
 
-'Value : Token Value of current token
+'TokenValue : Token Value of current token
 '======================================================================================
-Public Property Get Value() As Double: Let Value = My_TokenValue: End Property
+Public Property Get TokenValue() As Double: Let TokenValue = My_TokenValue: End Property
 
 'Forward : Move onto the next token
 '======================================================================================
-'Returns        | False if the TokenStream hit the end
+'Returns        | False if the token stream hit the end
 '======================================================================================
 Public Function Forward() As Boolean
     'Generate a debug message with the details of the current token
-    RaiseEvent Message(OZ80_LOG_DEBUG, FormatToken().Text)
+    RaiseEvent Message(OZ80_LOG_DEBUG, FormatToken())
     
     Let My_Index = My_Index + 1
     Call CacheToken
@@ -418,7 +427,7 @@ Public Function Forward() As Boolean
     Let Forward = True
 End Function
 
-'Rewind : Go back to the start of the tokenStream
+'Rewind : Go back to the start of the token stream
 '======================================================================================
 Public Sub Rewind()
     Let My_Index = 0
@@ -458,10 +467,10 @@ Public Function Tokenise( _
     'Cache this for speed, we'll be referring to it every loop
     Dim SourceLen As Long: Let SourceLen = Source.Length
     
-    RaiseEvent Message(OZ80_LOG_ACTION, _
-        "Tokenising " & Chr(UCS2.QUOTATION_MARK) & FilePath & Chr(UCS2.QUOTATION_MARK) _
+    Call RaiseMessage(OZ80_LOG_ACTION, _
+        "Tokenising """ & FilePath & """" _
     )
-    RaiseEvent Message(OZ80_LOG_INFO, _
+    Call RaiseMessage(OZ80_LOG_INFO, _
         "Length " & Format$(SourceLen, "#,#") & " Characters" _
     )
     
@@ -1209,7 +1218,7 @@ Finish:
         
         'When the file parses correctly, we can now expose the original file path. _
          This will be used to resolve relative paths with file includes
-        Let My_SourceFile = FilePath
+        Let My_Path = FilePath
     Else
         'clean up!
         'TODO: This leaves the class in a broken state _
@@ -1250,7 +1259,7 @@ Private Sub Add( _
     
     'Generate a debug message
     Call CacheToken
-    RaiseEvent Message(OZ80_LOG_DEBUG, FormatToken().Text)
+    RaiseEvent Message(OZ80_LOG_DEBUG, FormatToken())
     
     'Remember the line number used for this token to check for properties occuring _
      on a new line -- this constitutes a property definition in a chunk
@@ -1315,15 +1324,6 @@ Private Function FileExists( _
     Let FileExists = CBool(Dir$(FilePath) <> vbNullString)
 End Function
 
-'FormatLong : Format a 32-bit hexadecimal number for logging
-'======================================================================================
-Private Function FormatLong( _
-    ByRef Value As Long _
-) As String
-    Let FormatLong = "$" & Right$("0000000" & Hex(Value), 8)
-    Let FormatLong = Left$(FormatLong, 5) & "-" & Right$(FormatLong, 4)
-End Function
-
 'FormatToken : Format the details of the current token for logging
 '======================================================================================
 'Returns        | A new bluString containing the details of the current token
@@ -1340,10 +1340,6 @@ Private Function FormatToken( _
     'Format the Token number
     Dim Format_TokenIndex As New bluString
     Let Format_TokenIndex.Text = Format$(My_Index + 1, "#,#")
-    
-    'TODO: need to check how the 64-bit number gets clipped to 32-bits here?
-    Dim Format_TokenValue As New bluString
-    Let Format_TokenValue.Text = FormatLong(CLng(My_TokenValue))
     
     Dim Format_Msg As New bluString
     Dim Format_TokenType As String
@@ -1428,7 +1424,9 @@ Private Function FormatToken( _
     Set FormatToken = Template.Format( _
         Format_TokenIndex, _
         Right$("    " & My_TokenLine, 5), Left$(My_TokenCol & "  ", 3), _
-        Format_TokenValue, Format_TokenType, _
+        oz80.HexStr16((My_TokenValue And &HFFFF0000) \ &H10000), _
+        oz80.HexStr16(My_TokenValue And &HFFFF&), _
+        Format_TokenType, _
         Format_Msg _
     )
     
@@ -1542,6 +1540,30 @@ Private Function NestOut( _
     'Reduce the nesting level
     Let NestingDepth = NestingDepth - 1
 End Function
+
+'RaiseMessage : Provide a progress message
+'======================================================================================
+'LogLevel       | The type of log message, for filtering out lower-level messages
+'FormatText     | The message to log, which can include "{$}" markers to be replaced
+'               | with the values provided below
+'FormatValues...| A list of Variant values (Strings, Longs &c.) to fill in
+'======================================================================================
+Private Sub RaiseMessage( _
+    ByRef LogLevel As OZ80_LOG, _
+    ByRef FormatText As String, _
+    ParamArray FormatValues() As Variant _
+)
+    Let LogMsg.Text = FormatText
+    
+    'Are there any values to format?
+    If UBound(FormatValues) < 0 Then
+        'No, raise just the text given
+        RaiseEvent Message(LogLevel, LogMsg)
+    Else
+        'Format the given log message before sending it up
+        RaiseEvent Message(LogLevel, LogMsg.Format(FormatValues))
+    End If
+End Sub
 
 'RaiseError : Provide error details through an event
 '======================================================================================

@@ -24,7 +24,7 @@ Public Const OZ80_INDEFINITE As Double = 1.79769313486231E+308 + 5.8876801865573
 Public Profiler As New bluProfiler
 
 Public Enum PROFILER_EVENTS
-    EVENT_TOKENISE                      'TokenStream.Tokenise
+    EVENT_TOKENISE                      'File.Tokenise
     EVENT_TOKENISE_READWORD             '- parse out a single word
     EVENT_TOKENISE_TOKENWORD            '- Tokenise a single word
     EVENT_FORMATTOKEN                   '- Format token data for logging

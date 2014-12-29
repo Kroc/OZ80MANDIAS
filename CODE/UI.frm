@@ -113,11 +113,14 @@ End Sub
 'EVENT <Assembler> Error _
  ======================================================================================
 Private Sub Assembler_Error( _
-    ByVal Number As OZ80_ERROR, ByRef Title As String, ByRef Description As String, _
+    ByRef FilePath As String, _
+    ByVal Number As OZ80_ERROR, _
+    ByRef Title As String, ByRef Description As String, _
     ByVal Line As Long, ByVal Col As Long _
 )
     Call Log
     Call Log("! ERROR: #" & Number & " " & Title, OZ80_LOG_ACTION)
+    Call Log("- File: """ & FilePath & """", OZ80_LOG_INFO)
     If Line > 0 And Col > 0 Then
         Call Log("- Line: " & Format$(Line, "#,#") & " Col: " & Col, OZ80_LOG_INFO)
     End If

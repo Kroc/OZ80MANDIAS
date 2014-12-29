@@ -20,7 +20,7 @@ Option Explicit
 'CLASS :: oz80_Chunk
 
 'Dependencies       oz80.bas _
-                    bluString.bas [bluArrayStrings.bas]
+                    bluString.bas [bluArrayStrings.bas, bluArray.bas]
 
 '--------------------------------------------------------------------------------------
 

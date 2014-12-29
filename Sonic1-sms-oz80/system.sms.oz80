@@ -1,14 +1,13 @@
 `header:
 `--------------------------------------------------------------------------------------
-OBJECT  #SYSTEM.SMS.HEADER
+HASH    #SYSTEM.SMS.HEADER
 [`property name         `value  `size           `default content
 .ID                             BYTE x 8        "TMR SEGA"
 .RESERVED                       BYTE x 2        "  "
 .CHECKSUM                       WORD
-.PRODUCT                        HASH [
-        .LOW                    BYTE
-        .MED                    BYTE
-        .HI                     NYBL ]
+.PRODUCT_LOW                    BYTE
+.PRODUCT_MED                    BYTE
+.PRODUCT_HI                     NYBL
 .VERSION                        NYBL            0
 .REGION                         NYBL            4
 .SIZE                           NYBL            $C
@@ -47,42 +46,42 @@ RAM
 
 RAM
 [    
-.VDP.SCANLINE           $7E     AS BYTE         `read current vertical scanline
-.VDP.DATA               $BE     AS BYTE         `graphics data port
-.VDP.CONTROL            $BF     AS BYTE         `graphics control port
+.VDP.SCANLINE           $7E     BYTE            `read current vertical scanline
+.VDP.DATA               $BE     BYTE            `graphics data port
+.VDP.CONTROL            $BF     BYTE            `graphics control port
 
-.VDP.SCREENNAMETABLE    $3800   AS WORD
+.VDP.SCREENNAMETABLE    $3800   WORD
 ]
 
 `sound:
 `--------------------------------------------------------------------------------------
 RAM
 [
-.SMS.PSG.DATA           $7F     AS BYTE         `write-only data port for sound chip
+.SMS.PSG.DATA           $7F     BYTE            `write-only data port for sound chip
 ]
 
 `input:
 `--------------------------------------------------------------------------------------
 RAM
 [
-.SMS.JOYPADA		$DC     AS HASH [
-        .pad1up                 AS BOOL
-        .pad1down               AS BOOL
-        .pad1left               AS BOOL
-        .pad1right              AS BOOL
-        .pad1button1            AS BOOL
-        .pad1button2            AS BOOL
-        .pad2up                 AS BOOL
-        .pad2down               AS BOOL
+.SMS.JOYPADA		$DC     HASH [
+        .pad1up                 BOOL
+        .pad1down               BOOL
+        .pad1left               BOOL
+        .pad1right              BOOL
+        .pad1button1            BOOL
+        .pad1button2            BOOL
+        .pad2up                 BOOL
+        .pad2down               BOOL
                                 ]
-.SMS.JOYPADB		$DD     AS HASH [
-        .pad2left               AS BOOL
-        .pad2right              AS BOOL
-        .pad2button1            AS BOOL
-        .pad2button2            AS BOOL
-        .reset                  AS BOOL         `reset button
-        .                       AS BOOL         `unused
-        .lightgun1              AS BOOL
-        .lightgun2              AS BOOL
+.SMS.JOYPADB		$DD     HASH [
+        .pad2left               BOOL
+        .pad2right              BOOL
+        .pad2button1            BOOL
+        .pad2button2            BOOL
+        .reset                  BOOL            `reset button
+        .                       BOOL            `unused
+        .lightgun1              BOOL
+        .lightgun2              BOOL
                                 ]
 ]

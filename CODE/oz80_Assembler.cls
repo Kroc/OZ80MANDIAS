@@ -23,15 +23,15 @@ Option Explicit
 '/// DEFINITIONS //////////////////////////////////////////////////////////////////////
 
 'Formatting of output messages
-Private Const LOG_VERSION As String = "OZ80MANDIAS v{$}.{$},{$}"
-Private Const LOG_PHASE1 As String = "Phase 1: Structural Pass"
-Private Const LOG_PHASE2 As String = "Phase 2: Layout ROM"
-Private Const LOG_PHASE3 As String = "Phase 3: Full Assemble"
-Private Const LOG_PHASE4 As String = "Phase 4: Post Processing"
-Private Const LOG_ASM_COMPLETE As String = "Assembly Complete"
-Private Const LOG_TIME As String = "Time: {$}s"
-Private Const LOG_Z80 As String = "{$} | {$}: " & vbTab & "{$}" & vbTab & "{$}" & vbTab & "{$}"
-Private Const LOG_SECTION As String = "SECTION {$}"
+Private Const LOG_VERSION       As String = "OZ80MANDIAS v{$}.{$},{$}"
+Private Const LOG_PHASE1        As String = "Phase 1: Structural Pass"
+Private Const LOG_PHASE2        As String = "Phase 2: Layout ROM"
+Private Const LOG_PHASE3        As String = "Phase 3: Full Assemble"
+Private Const LOG_PHASE4        As String = "Phase 4: Post Processing"
+Private Const LOG_ASM_COMPLETE  As String = "Assembly Complete"
+Private Const LOG_TIME          As String = "Time: {$}s"
+Private Const LOG_Z80           As String = "{$} | {$}: " & vbTab & "{$}" & vbTab & "{$}" & vbTab & "{$}"
+Private Const LOG_SECTION       As String = "SECTION {$}"
 
 'Error number!
 Private My_Error As OZ80_ERROR
@@ -245,21 +245,21 @@ Public Chunk As oz80_Chunk
  their lengths so that we can avoid conflicts and find empty space
 Private Layout As Scripting.Dictionary
 
-'This is where the output ROM image will be stored as we build it
-Private ROM() As Byte
-
 '/// EVENTS ///////////////////////////////////////////////////////////////////////////
 
 'Progress messages are passed through an event, the handler can choose to show them _
  or not, and in what format. I don't want to spam unwanted `Debug.Print` output. _
  A bluString is provided to make manipulating the message before displaying very easy
 Event Message( _
-    ByRef LogLevel As OZ80_LOG, ByRef LogText As bluString _
+    ByRef LogLevel As OZ80_LOG, _
+    ByRef LogText As bluString _
 )
 
 'A class event is used to communicate error details beyond a simple error number
 Event Error( _
-    ByVal Number As OZ80_ERROR, ByRef Title As String, ByRef Description As String, _
+    ByRef FilePath As String, _
+    ByVal Number As OZ80_ERROR, _
+    ByRef Title As String, ByRef Description As String, _
     ByVal Line As Long, ByVal Col As Long _
 )
 
@@ -450,7 +450,7 @@ Public Function Assemble( _
     Call Labels.RemoveAll
     Call SectionNames.RemoveAll
     Call SectionSlots.RemoveAll
-    Erase ROM: Call Layout.RemoveAll
+    Call Layout.RemoveAll
     
     '----------------------------------------------------------------------------------
     'Phase 1: First Pass & Assemble _
@@ -460,6 +460,7 @@ Public Function Assemble( _
     'Start with parsing the given file; the assembler does not work with the original _
      text directly. If there was a problem parsing the file, an error message will _
      already have been raised by an event, we only need to exit
+    
     'Now walk the File that's been created, assembling it as we go. _
      If an `INCLUDE` is occurred, it will be tokenised and assembled there and then
     If AssembleFile(FilePath) Then GoTo Finish
@@ -484,10 +485,10 @@ Public Function Assemble( _
     'TODO
     
     'Finally, write the ROM to disk
-    Dim FileNumber As Integer: Let FileNumber = FreeFile
-    Open App.Path & "\ROM.sms" For Binary Access Write As #FileNumber
-    Put #FileNumber, , ROM
-    Close #FileNumber
+'    Dim FileNumber As Integer: Let FileNumber = FreeFile
+'    Open App.Path & "\ROM.sms" For Binary Access Write As #FileNumber
+'    Put #FileNumber, , ROM
+'    Close #FileNumber
     
     Call RaiseMessage(OZ80_LOG_ACTION, LOG_ASM_COMPLETE)
 '    Call RaiseMessage(OZ80_LOG_INFO, LOG_TIME, Format$(Stopwatch.Elapsed / 1000, "0.000"))
@@ -497,9 +498,7 @@ Finish:
     Set File = Nothing: Erase Files
     Set Chunks = Nothing
     Set Labels = Nothing
-    
-    'Clear the space used for the output ROM
-    Erase ROM: Set Layout = Nothing
+    Set Layout = Nothing
     
     'Return the error code (also available in the `Error` property)
     Let Assemble = My_Error
@@ -595,6 +594,8 @@ Private Function AssembleFile( _
      rather than the end
     Call File.Rewind
     
+    '[4] Assemble the file: _
+     ----------------------------------------------------------------------------------
     'Now begin assembling the file. If an `INCLUDE` statement is encountered, _
      it will also be tokenised and assembled
     Call ScopeRoot
@@ -655,7 +656,7 @@ End Function
 '         |                                               '
 '         | INCLUDE     <text>                            '
 '         |                                               '
-'         | OBJECT      #{name}     <hash>                '
+'         | HASH        #{name}     <hash>                '
 '         |                                               '
 '         | PROC        :{name}    [HELP        <text>]   '
 '         |                        [PARAMS      <params>] '
@@ -673,7 +674,6 @@ End Function
 '<chunk>  | {           <code>      }                     '
 '         |                                               '
 '<code>   | .{name}                                       '
-'         | DATA        <list>                            '
 '         | BYTE        <list>                            '
 '         | WORD        <list>                            '
 '         | TRIP        <list>                            '
@@ -693,9 +693,23 @@ Private Sub ScopeRoot()
     
 Continue:
     '----------------------------------------------------------------------------------
+    'DEF !<name> [<expr>]
+    '----------------------------------------------------------------------------------
+    If File.TokenKind = TOKEN_KEYWORD_DEF Then
+        'Hand off to the function that will process this
+        Stop
+    
+    '----------------------------------------------------------------------------------
+    'HASH #<hash> [ ... ]
+    '----------------------------------------------------------------------------------
+    ElseIf File.TokenKind = TOKEN_KEYWORD_HASH Then
+        'Hand off to the function that will process this
+        Call ProcessHash
+    
+    '----------------------------------------------------------------------------------
     '`INCLUDE <text>`
     '----------------------------------------------------------------------------------
-    If File.TokenKind = TOKEN_KEYWORD_INCLUDE Then
+    ElseIf File.TokenKind = TOKEN_KEYWORD_INCLUDE Then
         'Hand off to the function that will process this
         Call ProcessInclude
         
@@ -705,7 +719,14 @@ Continue:
     ElseIf File.TokenKind = TOKEN_KEYWORD_PROC Then
         'Hand off to the function that will process this
         Call ProcessProc
-        
+    
+    '----------------------------------------------------------------------------------
+    'RAM [<expr>] [ ... ]
+    '----------------------------------------------------------------------------------
+    ElseIf File.TokenKind = TOKEN_KEYWORD_RAM Then
+        'Hand off to the function that will process this
+        Call ProcessRAM
+    
     '----------------------------------------------------------------------------------
     '`SECTION ::<section>`
     '----------------------------------------------------------------------------------
@@ -735,145 +756,20 @@ Continue:
     GoTo Continue
 End Sub
 
-'ProcessSystem : Define the target system (e.g. SEGA Master System)
+'ProcessHash : Process a Hash block
 '======================================================================================
-'SYSTEM     <text>
+'HASH       #<name>     [ ... ]
 '======================================================================================
-Private Sub ProcessSystem()
+Private Sub ProcessHash()
     'ERROR: The file ended before the first parameter
     If Not File.Forward() Then Call RaiseError(OZ80_ERROR_FILE_END): Exit Sub
     
-    'Check that the parameter is a list (or at least the start of one)
-    If Not File.TokenIsList Then Call RaiseError(OZ80_ERROR_EXPECTED_SYSTEM_NAME): Exit Sub
+    Call File.Forward
     
-    'Fetch the System name string from the proceeding list _
-     (if there was any error during that, fold upwards)
-    Dim SystemName As bluString
-    If GetText(SystemName) Then Exit Sub
-    
-    'Check if it's any of the allowed System names
-    If SystemName.Equals("SMS") Then
-        'Configure the assembler for the SEGA Master System
-        Let My_System = SYSTEM_SMS
-    Else
-        'Not a valid system name
-        Call RaiseError(OZ80_ERROR_EXPECTED_SYSTEM_NAME)
+    If File.TokenKind = TOKEN_HASH_OPEN Then
+        Let File.TokenIndex = File.TokenValue
+        Call File.Forward
     End If
-End Sub
-
-'ProcessSection : Define a Section
-'======================================================================================
-'SECTION    ::<section>    [SLOT   <list>]
-'======================================================================================
-Private Sub ProcessSection()
-    'ERROR: The file ended before the first parameter
-    If Not File.Forward() Then Call RaiseError(OZ80_ERROR_FILE_END): Exit Sub
-    
-    'ERROR: Not a section name following the section keyword
-    If File.TokenKind <> TOKEN_SECTION Then Call RaiseError( _
-        OZ80_ERROR_EXPECTED_SECTION_NAME _
-    ): Exit Sub
-    
-    'Keep ahold of the Section identifier
-    Dim SectionKey As Long
-    Let SectionKey = File.TokenValue
-    
-    'Has this Section already been defined?
-    If SectionNames.Exists(SectionKey) Then Call RaiseError( _
-        OZ80_ERROR_DUPLICATE_SECTION _
-    ): Exit Sub
-    
-    'Define the Section name - fetch the string from the File's _
-     string database (identified by the CRC value on the token)
-    Call SectionNames.Add(SectionKey, File.Strings(SectionKey))
-    Call SectionSlots.Add(SectionKey, 0)
-    
-    '----------------------------------------------------------------------------------
-    
-    'If the file ends here it's valid, as the params are optional
-    If Not File.Forward() Then GoTo Finish
-    
-    'The only allowed Slot lists are: 0 / 1 / 2 / 0, 1 / 0, 1, 2 / 1, 2. _
-     These are stored as a bit-pattern allowing packing into one value, _
-     which when zero infers the default "let the assembler choose for me"
-    Dim Slot As OZ80_SLOT
-    
-    'The only parameter is the Slot list
-    If File.TokenKind = TOKEN_KEYWORD_SLOT Then
-        'ERROR: File ending before we have the value
-        If Not File.Forward() Then Call RaiseError(OZ80_ERROR_FILE_END): Exit Sub
-        
-        'ERROR: There needs to be at least one item in the list
-        If Not File.TokenIsExpression Then Call RaiseError( _
-            OZ80_ERROR_EXPECTED _
-        ): Exit Sub
-        
-        'Get the list of Slots assigned to the Section
-        Dim List As Scripting.Dictionary
-        Set List = GetListAsDictionary()
-        
-        'Can't be more than three -- "0, 1, 2"
-        If List.Count > 3 Then Call RaiseError(OZ80_ERROR_INVALID_SLOT): Exit Sub
-        
-        'An indefinite value cannot be used for the Slot
-        If List.Item(0) = OZ80_INDEFINITE Then GoTo ErrIndefinite
-        
-        'Check for one item: 0, 1 or 2
-        If List.Count = 1 Then
-            If List.Item(0) = 0 Then Let Slot = SLOT0: GoTo Finish
-            If List.Item(0) = 1 Then Let Slot = SLOT1: GoTo Finish
-            If List.Item(0) = 2 Then Let Slot = SLOT2: GoTo Finish
-            'An invalid value
-            GoTo ErrInvalid
-        End If
-        
-        'Check for two items: 0, 1 or 1, 2
-        If List.Count = 2 Then
-            'An indefinite value cannot be used for the Slot
-            If List.Item(1) = OZ80_INDEFINITE Then GoTo ErrIndefinite
-            If List.Item(0) = 0 And List.Item(1) = 1 Then Let Slot = SLOT0 Or SLOT1: GoTo Finish
-            If List.Item(0) = 1 And List.Item(1) = 2 Then Let Slot = SLOT1 Or SLOT2: GoTo Finish
-            'An invalid value
-            GoTo ErrInvalid
-        End If
-        
-        'Check for 0, 1, 2
-        If List.Item(0) <> 0 Then GoTo ErrInvalid
-        If List.Item(1) <> 1 Then GoTo ErrInvalid
-        If List.Item(2) <> 2 Then GoTo ErrInvalid
-        Let Slot = SLOT0 Or SLOT1 Or SLOT2
-        
-    End If
-
-Finish:
-    'Record the result:
-    Let SectionSlots(SectionKey) = Slot
-    Call RaiseMessage( _
-        OZ80_LOG_STATUS, LOG_SECTION, _
-        File.Strings(SectionKey) _
-    )
-'    RaiseEvent Message(OZ80_LOG_STATUS, _
-'        "SECTION " & File.Strings(SectionKey) & _
-'        " SLOT " & IIf( _
-'            Slot = 0, "?", _
-'                IIf(Slot And OZ80_SLOT.SLOT0, "0 ", "") & _
-'                IIf(Slot And OZ80_SLOT.SLOT1, "1 ", "") & _
-'                IIf(Slot And OZ80_SLOT.SLOT2, "2 ", "") _
-'            ) _
-'    )
-    Exit Sub
-
-    '----------------------------------------------------------------------------------
-ErrInvalid:
-    'Only a specific Slot pattern can be used
-    Call RaiseError(OZ80_ERROR_INVALID_SLOT)
-    Exit Sub
-
-ErrIndefinite:
-    'An indefinite value cannot be used for a Slot number, we will only be _
-     able to define the indefinite values (i.e. Label locations in ROM) once _
-     the whole code is parsed and we use the Sections to layout the ROM
-    Call RaiseError(OZ80_ERROR_INDEFINITE)
 End Sub
 
 'ProcessInclude : Process an Include statement
@@ -1103,6 +999,161 @@ SkipReturn:
     
     'Enter the procedure chunk to process its innards
     Call ScopeChunk
+End Sub
+
+'ProcessRAM : Process a RAM block
+'======================================================================================
+'RAM       [<expr>]     [ ... ]
+'======================================================================================
+Private Sub ProcessRAM()
+    'ERROR: The file ended before the first parameter
+    If Not File.Forward() Then Call RaiseError(OZ80_ERROR_FILE_END): Exit Sub
+    
+    If File.TokenKind = TOKEN_HASH_OPEN Then
+        Let File.TokenIndex = File.TokenValue
+        Call File.Forward
+    End If
+End Sub
+
+'ProcessSection : Define a Section
+'======================================================================================
+'SECTION    ::<section>    [SLOT   <list>]
+'======================================================================================
+Private Sub ProcessSection()
+    'ERROR: The file ended before the first parameter
+    If Not File.Forward() Then Call RaiseError(OZ80_ERROR_FILE_END): Exit Sub
+    
+    'ERROR: Not a section name following the section keyword
+    If File.TokenKind <> TOKEN_SECTION Then Call RaiseError( _
+        OZ80_ERROR_EXPECTED_SECTION_NAME _
+    ): Exit Sub
+    
+    'Keep ahold of the Section identifier
+    Dim SectionKey As Long
+    Let SectionKey = File.TokenValue
+    
+    'Has this Section already been defined?
+    If SectionNames.Exists(SectionKey) Then Call RaiseError( _
+        OZ80_ERROR_DUPLICATE_SECTION _
+    ): Exit Sub
+    
+    'Define the Section name - fetch the string from the File's _
+     string database (identified by the CRC value on the token)
+    Call SectionNames.Add(SectionKey, File.Strings(SectionKey))
+    Call SectionSlots.Add(SectionKey, 0)
+    
+    '----------------------------------------------------------------------------------
+    
+    'If the file ends here it's valid, as the params are optional
+    If Not File.Forward() Then GoTo Finish
+    
+    'The only allowed Slot lists are: 0 / 1 / 2 / 0, 1 / 0, 1, 2 / 1, 2. _
+     These are stored as a bit-pattern allowing packing into one value, _
+     which when zero infers the default "let the assembler choose for me"
+    Dim Slot As OZ80_SLOT
+    
+    'The only parameter is the Slot list
+    If File.TokenKind = TOKEN_KEYWORD_SLOT Then
+        'ERROR: File ending before we have the value
+        If Not File.Forward() Then Call RaiseError(OZ80_ERROR_FILE_END): Exit Sub
+        
+        'ERROR: There needs to be at least one item in the list
+        If Not File.TokenIsExpression Then Call RaiseError( _
+            OZ80_ERROR_EXPECTED _
+        ): Exit Sub
+        
+        'Get the list of Slots assigned to the Section
+        Dim List As Scripting.Dictionary
+        Set List = GetListAsDictionary()
+        
+        'Can't be more than three -- "0, 1, 2"
+        If List.Count > 3 Then Call RaiseError(OZ80_ERROR_INVALID_SLOT): Exit Sub
+        
+        'An indefinite value cannot be used for the Slot
+        If List.Item(0) = OZ80_INDEFINITE Then GoTo ErrIndefinite
+        
+        'Check for one item: 0, 1 or 2
+        If List.Count = 1 Then
+            If List.Item(0) = 0 Then Let Slot = SLOT0: GoTo Finish
+            If List.Item(0) = 1 Then Let Slot = SLOT1: GoTo Finish
+            If List.Item(0) = 2 Then Let Slot = SLOT2: GoTo Finish
+            'An invalid value
+            GoTo ErrInvalid
+        End If
+        
+        'Check for two items: 0, 1 or 1, 2
+        If List.Count = 2 Then
+            'An indefinite value cannot be used for the Slot
+            If List.Item(1) = OZ80_INDEFINITE Then GoTo ErrIndefinite
+            If List.Item(0) = 0 And List.Item(1) = 1 Then Let Slot = SLOT0 Or SLOT1: GoTo Finish
+            If List.Item(0) = 1 And List.Item(1) = 2 Then Let Slot = SLOT1 Or SLOT2: GoTo Finish
+            'An invalid value
+            GoTo ErrInvalid
+        End If
+        
+        'Check for 0, 1, 2
+        If List.Item(0) <> 0 Then GoTo ErrInvalid
+        If List.Item(1) <> 1 Then GoTo ErrInvalid
+        If List.Item(2) <> 2 Then GoTo ErrInvalid
+        Let Slot = SLOT0 Or SLOT1 Or SLOT2
+        
+    End If
+
+Finish:
+    'Record the result:
+    Let SectionSlots(SectionKey) = Slot
+    Call RaiseMessage( _
+        OZ80_LOG_STATUS, LOG_SECTION, _
+        File.Strings(SectionKey) _
+    )
+'    RaiseEvent Message(OZ80_LOG_STATUS, _
+'        "SECTION " & File.Strings(SectionKey) & _
+'        " SLOT " & IIf( _
+'            Slot = 0, "?", _
+'                IIf(Slot And OZ80_SLOT.SLOT0, "0 ", "") & _
+'                IIf(Slot And OZ80_SLOT.SLOT1, "1 ", "") & _
+'                IIf(Slot And OZ80_SLOT.SLOT2, "2 ", "") _
+'            ) _
+'    )
+    Exit Sub
+
+    '----------------------------------------------------------------------------------
+ErrInvalid:
+    'Only a specific Slot pattern can be used
+    Call RaiseError(OZ80_ERROR_INVALID_SLOT)
+    Exit Sub
+
+ErrIndefinite:
+    'An indefinite value cannot be used for a Slot number, we will only be _
+     able to define the indefinite values (i.e. Label locations in ROM) once _
+     the whole code is parsed and we use the Sections to layout the ROM
+    Call RaiseError(OZ80_ERROR_INDEFINITE)
+End Sub
+
+'ProcessSystem : Define the target system (e.g. SEGA Master System)
+'======================================================================================
+'SYSTEM     <text>
+'======================================================================================
+Private Sub ProcessSystem()
+    'ERROR: The file ended before the first parameter
+    If Not File.Forward() Then Call RaiseError(OZ80_ERROR_FILE_END): Exit Sub
+    
+    'Check that the parameter is a list (or at least the start of one)
+    If Not File.TokenIsList Then Call RaiseError(OZ80_ERROR_EXPECTED_SYSTEM_NAME): Exit Sub
+    
+    'Fetch the System name string from the proceeding list _
+     (if there was any error during that, fold upwards)
+    Dim SystemName As bluString
+    If GetText(SystemName) Then Exit Sub
+    
+    'Check if it's any of the allowed System names
+    If SystemName.Equals("SMS") Then
+        'Configure the assembler for the SEGA Master System
+        Let My_System = SYSTEM_SMS
+    Else
+        'Not a valid system name
+        Call RaiseError(OZ80_ERROR_EXPECTED_SYSTEM_NAME)
+    End If
 End Sub
 
 'ScopeChunk: Within a code/data chunk, i.e. `PROC`, `TABLE`
@@ -2604,7 +2655,7 @@ Private Function GetText( _
     Do While File.TokenIsList
     
         'If the current token is text, append it to what we have
-        If File.TokenKind = TOKEN_QUOTE Then
+        If File.TokenKind = TOKEN_TEXT Then
             Call ReturnText.Append(File.TokenText)
         
         'Otherwise it'll be a calculable Expression, _
@@ -2859,10 +2910,10 @@ Private Function LayoutROM() As OZ80_ERROR
         'Does the Chunk already have an address in ROM? _
          On the first pass this will be the Interrupt Procedures only, _
          on the second pass it should be everything
-        If Chunk.Address >= 0 Then
-            'Copy the Chunk into the ROM
-            If Chunk.Size > 0 Then Call Chunk.CopyInto(ROM)
-        End If
+'        If Chunk.Address >= 0 Then
+'            'Copy the Chunk into the ROM
+'            If Chunk.Size > 0 Then Call Chunk.CopyInto(ROM)
+'        End If
         
 '        Dim LogMsg As String
 '        Let LogMsg = Left$(Chunk.LabelName, 32)
@@ -3014,7 +3065,7 @@ Private Function RaiseError( _
     Call oz80.GetOZ80Error(Number, Title, Description)
     
     'Pass the error up to the controller
-    RaiseEvent Error(Number, Title, Description, Line, Col)
+    RaiseEvent Error(File.Path, Number, Title, Description, Line, Col)
     
     'We return the error number, purely for nicer looking tail-recursion
     Let RaiseError = Number

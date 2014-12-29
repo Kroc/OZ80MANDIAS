@@ -71,6 +71,7 @@ Public Enum OZ80_ERROR
     OZ80_ERROR_INVALID_INTERRUPT        'Invalid Interrupt address
     OZ80_ERROR_INVALID_NAME             'Invalid label/property/variable name
     OZ80_ERROR_INVALID_NAME_RAM         '- Invalid RAM name, i.e. `$.name`
+    OZ80_ERROR_INVALID_NAME_HASH        '- Invalid hash name, i.e. `#hash`
     OZ80_ERROR_INVALID_NUMBER           'Not a valid binary/hex/decimal number
     OZ80_ERROR_INVALID_NUMBER_DEC       '- Invalid decimal number
     OZ80_ERROR_INVALID_NUMBER_HEX       '- Invalid hexadecimal number
@@ -211,16 +212,24 @@ Public Enum OZ80_TOKEN
     
     'Keywords .........................................................................
     [_TOKEN_KEYWORDS_BEGIN]
+    TOKEN_KEYWORD_BOOL                  'Boolean data type (1-bit)
+    TOKEN_KEYWORD_BYTE                  'Byte data type
     TOKEN_KEYWORD_DEF                   'Define constant
+    TOKEN_KEYWORD_HASH                  'Define a hash-array
     TOKEN_KEYWORD_HELP                  'Documentation marker
     TOKEN_KEYWORD_INCLUDE               'Include another file
     TOKEN_KEYWORD_INTERRUPT             'Interrupt `PROC :<label> INTERRUPT <expr>`
+    TOKEN_KEYWORD_LONG                  'Long data type (4-bytes)
+    TOKEN_KEYWORD_NYBL                  'Nybble data type (4-bits)
     TOKEN_KEYWORD_PARAMS                'Parameter list `PROC :<label> PARAMS <list>`
     TOKEN_KEYWORD_PROC                  'Procedure Chunk `PROC :<label> { ... }`
+    TOKEN_KEYWORD_RAM                   'RAM definition
     TOKEN_KEYWORD_RETURN                'Returns list `PROC :<label> RETURN <list>`
     TOKEN_KEYWORD_SECTION               'Section definition `SECTION ::<section>
     TOKEN_KEYWORD_SLOT                  'Section Slot pattern `SLOT 0, 1, 2`
     TOKEN_KEYWORD_SYSTEM                'System identifier `SYSTEM "SMS"`
+    TOKEN_KEYWORD_TRIP                  'Triple data type (3-bytes)
+    TOKEN_KEYWORD_WORD                  'Word data type (2-bytes)
     [_TOKEN_KEYWORDS_END]
     
     TOKEN_NUMBER
@@ -234,15 +243,17 @@ Public Enum OZ80_TOKEN
     TOKEN_Z80MEM_CLOSE                  '")"
     TOKEN_CHUNK_OPEN                    '"{" Code/data Chunk, `PROC :<label> { ... }`
     TOKEN_CHUNK_CLOSE                   '"}" Also, expression nesting
-    TOKEN_HASH_OPEN                     '"[" Hash array / Object
+    TOKEN_HASH_OPEN                     '"[" Hash array
     TOKEN_HASH_CLOSE                    '"]"
     
-    TOKEN_QUOTE                         'e.g. `"..."`
+    TOKEN_CONST                         'e.g. `!CONST`
+    TOKEN_HASH                          'e.g. `#hash`
     TOKEN_LABEL                         'e.g. `:label`
-    TOKEN_SECTION                       'e.g. `::section`
     TOKEN_PROPERTY_USE
     TOKEN_PROPERTY_NEW
     TOKEN_RAM                           'e.g. `$.ram`
+    TOKEN_SECTION                       'e.g. `::section`
+    TOKEN_TEXT                          'e.g. `"..."`
     
     [_TOKEN_LAST]                       'Do not go above 255!
 End Enum
@@ -426,16 +437,24 @@ Public Property Get TokenName( _
         Let My_TokenName(TOKEN_OPERATOR_XOR) = Chr$(SYNTAX_OPERATOR_XOR)
         
         'Keywords .....................................................................
+        Let My_TokenName(TOKEN_KEYWORD_BOOL) = "BOOL"
+        Let My_TokenName(TOKEN_KEYWORD_BYTE) = "BYTE"
         Let My_TokenName(TOKEN_KEYWORD_DEF) = "DEF"
+        Let My_TokenName(TOKEN_KEYWORD_HASH) = "HASH"
         Let My_TokenName(TOKEN_KEYWORD_HELP) = "HELP"
         Let My_TokenName(TOKEN_KEYWORD_INCLUDE) = "INCLUDE"
         Let My_TokenName(TOKEN_KEYWORD_INTERRUPT) = "INTERRUPT"
+        Let My_TokenName(TOKEN_KEYWORD_LONG) = "LONG"
+        Let My_TokenName(TOKEN_KEYWORD_NYBL) = "NYBL"
         Let My_TokenName(TOKEN_KEYWORD_PARAMS) = "PARAMS"
         Let My_TokenName(TOKEN_KEYWORD_PROC) = "PROC"
+        Let My_TokenName(TOKEN_KEYWORD_RAM) = "RAM"
         Let My_TokenName(TOKEN_KEYWORD_RETURN) = "RETURN"
         Let My_TokenName(TOKEN_KEYWORD_SECTION) = "SECTION"
         Let My_TokenName(TOKEN_KEYWORD_SLOT) = "SLOT"
         Let My_TokenName(TOKEN_KEYWORD_SYSTEM) = "SYSTEM"
+        Let My_TokenName(TOKEN_KEYWORD_TRIP) = "TRIP"
+        Let My_TokenName(TOKEN_KEYWORD_WORD) = "WORD"
         
         Let My_TokenName(TOKEN_PREFIX_K) = "K"
         Let My_TokenName(TOKEN_PREFIX_KB) = "KB"
@@ -448,7 +467,7 @@ Public Property Get TokenName( _
         Let My_TokenName(TOKEN_HASH_OPEN) = Chr$(SYNTAX_HASH_OPEN)
         Let My_TokenName(TOKEN_HASH_CLOSE) = Chr$(SYNTAX_HASH_CLOSE)
         
-        Let My_TokenName(TOKEN_QUOTE) = Chr$(SYNTAX_QUOTE)
+        Let My_TokenName(TOKEN_TEXT) = Chr$(SYNTAX_TEXT)
         Let My_TokenName(TOKEN_LABEL) = Chr$(SYNTAX_LABEL)
         Let My_TokenName(TOKEN_PROPERTY_USE) = Chr$(SYNTAX_PROPERTY)
         Let My_TokenName(TOKEN_PROPERTY_NEW) = Chr$(SYNTAX_PROPERTY)

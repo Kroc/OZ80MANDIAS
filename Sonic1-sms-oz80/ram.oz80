@@ -3,64 +3,64 @@
    for MaSS1VE: The Master System Sonic 1 Visual Editor <github.com/Kroc/MaSS1VE>
    ================================================================================= ``
 
-OBJECT  #levelHeader
-{
-        .solidity               AS BYTE         `solidity data index
-        .floorWidth             AS WORD         `width of the floor in blocks
-        .floorHeight            AS WORD         `height of the floor in blocks
-        .levelLeft              AS WORD         `left side of level on the floor px
-        .levelRight             AS WORD         `right side of level on the floor (px)
-        .levelTop               AS WORD         `top of the level on the floor (px)
-        .levelBottom            AS WORD         `bottom of the level on the floor (px)
-        .startX                 AS BYTE         `Sonic's starting X position in blocks
-        .startY                 AS BYTE         `Sonic's starting Y position in blocks
-        .floorLayout            AS WORD         `address of the floor layout data
-        .floorSize              AS WORD         `size in bytes of the compressed data
-        .blockMapping           AS WORD         `address for level's block mappings
-        .levelArt               AS WORD         `address of compressed level art
-        .spriteArt              AS WORD         `address of compressed sprite art
-        .bank                   AS BYTE         `bank number for sprite art (always 9)
-        .initialPalette         AS BYTE         `index of initial level palette
-        .cycleSpeed             AS BYTE         `speed of palette animation
-        .cycleCount             AS BYTE         `number of palettes in cycle
-        .cyclePalette           AS BYTE         `index of cycle palette
-        .objectLayout           AS LONG         `address of Object layout data
-        .scrollRingFlags        AS BYTE         
-        .underwaterFlag         AS BYTE
-        .timeLightningFlags     AS BYTE
-        .zero                   AS BYTE
-        .music                  AS BYTE         `index of music
-}
+HASH    #levelHeader
+[
+        .solidity               BYTE            `solidity data index
+        .floorWidth             WORD            `width of the floor in blocks
+        .floorHeight            WORD            `height of the floor in blocks
+        .levelLeft              WORD            `left side of level on the floor px
+        .levelRight             WORD            `right side of level on the floor (px)
+        .levelTop               WORD            `top of the level on the floor (px)
+        .levelBottom            WORD            `bottom of the level on the floor (px)
+        .startX                 BYTE            `Sonic's starting X position in blocks
+        .startY                 BYTE            `Sonic's starting Y position in blocks
+        .floorLayout            WORD            `address of the floor layout data
+        .floorSize              WORD            `size in bytes of the compressed data
+        .blockMapping           WORD            `address for level's block mappings
+        .levelArt               WORD            `address of compressed level art
+        .spriteArt              WORD            `address of compressed sprite art
+        .bank                   BYTE            `bank number for sprite art (always 9)
+        .initialPalette         BYTE            `index of initial level palette
+        .cycleSpeed             BYTE            `speed of palette animation
+        .cycleCount             BYTE            `number of palettes in cycle
+        .cyclePalette           BYTE            `index of cycle palette
+        .objectLayout           LONG            `address of Object layout data
+        .scrollRingFlags        BYTE            
+        .underwaterFlag         BYTE    
+        .timeLightningFlags     BYTE    
+        .zero                   BYTE    
+        .music                  BYTE            `index of music
+]
 
-OBJECT  #object                 `26 bytes
-{
-	.type			AS BYTE	`IX+$00    - the object type index number
-	.Xsubpixel		AS BYTE	`IX+$01    - sub-pixel accuracy of X position
-	.X			AS WORD	`IX+$02/03 - in px
-	.Ysubpixel		AS BYTE	`IX+$04    - sub-pixel accuracy of Y position
-	.Y			AS WORD	`IX+$05/06 - in px
-	.Xspeed			AS WORD	`IX+$07/08 - in px, signed (i.e. $F??? = left)
-        .Xdirection		AS BYTE	`IX+$09    - $FF for left, else $00
-	.Yspeed			AS WORD	`IX+$0A/0B - in px, signed  (i.e. $F??? = left)
-	.Ydirection		AS BYTE	`IX+$0C    - $FF for left, else $00
-	.width			AS BYTE	`IX+$0D    - in px
-	.height			AS BYTE	`IX+$0E    - in px
-	.spriteLayout		AS WORD	`IX+$0F/10 - address to current sprite layout
-	.unknown11		AS BYTE
-	.unknown12		AS BYTE
-	.unknown13		AS BYTE
-	.unknown14		AS BYTE
-	.unknown15		AS BYTE
-	.unknown16		AS BYTE
-	.unknown17		AS BYTE
-	.unknown18		AS BYTE
-	.unknown19		AS BYTE	`unused?
-}
+HASH    #object                 `26 bytes
+[
+	.type			BYTE    `IX+$00    - the object type index number
+	.Xsubpixel		BYTE    `IX+$01    - sub-pixel accuracy of X position
+	.X			WORD    `IX+$02/03 - in px
+	.Ysubpixel		BYTE    `IX+$04    - sub-pixel accuracy of Y position
+	.Y			WORD    `IX+$05/06 - in px
+	.Xspeed			WORD    `IX+$07/08 - in px, signed (i.e. $F??? = left)
+        .Xdirection		BYTE    `IX+$09    - $FF for left, else $00
+	.Yspeed			WORD    `IX+$0A/0B - in px, signed  (i.e. $F??? = left)
+	.Ydirection		BYTE    `IX+$0C    - $FF for left, else $00
+	.width			BYTE    `IX+$0D    - in px
+	.height			BYTE    `IX+$0E    - in px
+	.spriteLayout		WORD    `IX+$0F/10 - address to current sprite layout
+	.unknown11		BYTE    
+	.unknown12		BYTE    
+	.unknown13		BYTE    
+	.unknown14		BYTE    
+	.unknown15		BYTE    
+	.unknown16		BYTE    
+	.unknown17		BYTE    
+	.unknown18		BYTE    
+	.unknown19		BYTE    `unused?
+]
 
 ``the programmers use the IY register as a shortcut to $D200
   to access commonly used variables and flags``   
-OBJECT  #vars                                   `$D200:
-{	
+HASH    #vars                                   `$D200:
+[	
 	`program flow control / loading flags?
 	.flags0			AS BYTE	        `IY+$00
 	`bit 0 - `waitForInterrupt` will loop until the bit is set
@@ -134,12 +134,12 @@ OBJECT  #vars                                   `$D200:
         
         `currently unknown purpose
         .unknown_0D             AS BYTE         `IY+$0D
-}
+]
 
 `--------------------------------------------------------------------------------------
 
 RAM     `name                   `size                                           `addr
-{       
+[       
         ``the floor layout (i.e. the tiles Sonic runs around on).
           a 'level' is a sub-portion of this floor layout since sometimes multiple
           levels are crammed into one layout (such as the special stages)``
@@ -486,4 +486,4 @@ RAM     `name                   `size                                           
         .OBJECTS                AS BYTE x {#object.size * 31}                   `$D416
         
                                                                                 `$D73C
-}
+]

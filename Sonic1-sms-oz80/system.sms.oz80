@@ -1,6 +1,12 @@
+
+DEF RAM $#SMS           $0000   $FFFF
+DEF RAM $#SMS.SRAM1     $8000   $BFFF
+DEF RAM $#SMS.SRAM2     $8000   $BFFF
+DEF RAM $#SMS.VRAM      $0000   $3FFF
+
 `header:
 `--------------------------------------------------------------------------------------
-HASH    #SYSTEM.SMS.HEADER
+HASH    #SMS.HEADER
 [`property name         `value  `size           `default content
 .ID                             BYTE x 8        "TMR SEGA"
 .RESERVED                       BYTE x 2        "  "
@@ -20,9 +26,9 @@ HASH    #SYSTEM.SMS.HEADER
   mapper and $FFFD/E/F sets the ROM bank number to page into the relevant memory slot.
   for more details, see http://www.smspower.org/Development/Mappers
 ``
-RAM
+RAM     $#SMS
 [
-.SMS.SLOT               $FFFC   HASH [
+.SLOT                   $FFFC   HASH [
         ``bank shifting is documented, but was never used
           <smspower.org/Development/Mappers#ROMBankShifting>``
         .BankShift              BOOL x 2
@@ -33,9 +39,9 @@ RAM
         ``the write-protect bit for the ROM would only be used during
           development and has no function or purpose for releases``
         .WriteProtect           BOOL ]
-.SMS.SLOT0              $FFFD   BYTE            `Slot 0 ROM Bank
-.SMS.SLOT1              $FFFE   BYTE            `Slot 1 ROM Bank
-.SMS.SLOT2              $FFFF   BYTE            `Slot 2 ROM Bank
+.SLOT0                  $FFFD   BYTE            `Slot 0 ROM Bank
+.SLOT1                  $FFFE   BYTE            `Slot 1 ROM Bank
+.SLOT2                  $FFFF   BYTE            `Slot 2 ROM Bank
 ]
 
 `VDP:
@@ -44,25 +50,28 @@ RAM
   stored in video RAM ("VRAM"), composites the display and outputs it to the display
 ``
 
-RAM
+RAM     $#SMS
 [    
 .VDP.SCANLINE           $7E     BYTE            `read current vertical scanline
 .VDP.DATA               $BE     BYTE            `graphics data port
 .VDP.CONTROL            $BF     BYTE            `graphics control port
+]
 
-.VDP.SCREENNAMETABLE    $3800   WORD
+RAM     $#SMS.VRAM
+[
+.SCREENNAMETABLE        $3800   WORD
 ]
 
 `sound:
 `--------------------------------------------------------------------------------------
-RAM
+RAM     $#SMS
 [
 .SMS.PSG.DATA           $7F     BYTE            `write-only data port for sound chip
 ]
 
 `input:
 `--------------------------------------------------------------------------------------
-RAM
+RAM     $#SMS
 [
 .SMS.JOYPADA		$DC     HASH [
         .pad1up                 BOOL

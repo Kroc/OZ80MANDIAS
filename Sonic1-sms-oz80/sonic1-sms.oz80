@@ -61,8 +61,8 @@
 ``
 
 
-SYSTEM  "sms"
-INCLUDE "system.sms.oz80"
+DEF SYSTEM      "sms"
+INCLUDE         "system.sms.oz80"
 
 
 
@@ -92,10 +92,10 @@ DEF !SCREENHEIGHT_BLOCKS        !SCREENHEIGHT_PX / 32
 
 `======================================================================================
 
-SECTION ::interrupts    SLOT 0
-SECTION ::main          SLOT 0
-SECTION ::objects       SLOT 1, 2
-SECTION ::sound         SLOT 2
+DEF SECTION     ::interrupts    SLOT 0
+DEF SECTION     ::main          SLOT 0
+DEF SECTION     ::objects       SLOT 1, 2
+DEF SECTION     ::sound         SLOT 2
 
 `======================================================================================
 

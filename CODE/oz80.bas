@@ -82,7 +82,9 @@ Public Enum OZ80_ERROR
     OZ80_ERROR_INVALID_Z80PARAMS        'Not the right parameters for a Z80 instruction
     OZ80_ERROR_TEXT_CHAR                'Character code out of range
     OZ80_ERROR_OVERFLOW                 'A number overflowed the maximum
-    OZ80_ERROR_OVERFLOW_Z80             '16-bit number used with an 8-bit instruction
+    OZ80_ERROR_OVERFLOW_LINE            '- Line too long
+    OZ80_ERROR_OVERFLOW_FILE            '- File too long / large
+    OZ80_ERROR_OVERFLOW_Z80             '- 16-bit number used with an 8-bit instruction
 End Enum
 
 '--------------------------------------------------------------------------------------
@@ -239,12 +241,12 @@ Public Enum OZ80_TOKEN
     TOKEN_PREFIX_KBIT                   'x128 (1024 bits)
     
     'Grouping: (i.e. parenthesis, braces)
-    TOKEN_Z80MEM_OPEN                   '"(" Memory reference `ld a, (hl)`
-    TOKEN_Z80MEM_CLOSE                  '")"
     TOKEN_CHUNK_OPEN                    '"{" Code/data Chunk, `PROC :<label> { ... }`
     TOKEN_CHUNK_CLOSE                   '"}" Also, expression nesting
     TOKEN_HASH_OPEN                     '"[" Hash array
     TOKEN_HASH_CLOSE                    '"]"
+    TOKEN_Z80MEM_OPEN                   '"(" Memory reference `ld a, (hl)`
+    TOKEN_Z80MEM_CLOSE                  '")"
     
     TOKEN_CONST                         'e.g. `!CONST`
     TOKEN_HASH                          'e.g. `#hash`

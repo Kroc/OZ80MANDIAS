@@ -49,7 +49,9 @@ Public Enum OZ80_SYNTAX
     ASC_0 = UCS2.DIGIT_ZERO
 :   ASC_1:      ASC_2:      ASC_3:      ASC_4:      ASC_5:      ASC_6:      ASC_7
 :   ASC_8:      ASC_9
-
+    
+    ASC_NEG = UCS2.HYPHEN_MINUS
+    
     SYNTAX_COMMENT = UCS2.GRAVE_ACCENT              ' ` - Comment marker
     SYNTAX_HINT1 = UCS2.SEMICOLON                   ' ; - Register hint, `a;index`
     SYNTAX_HINT2 = UCS2.APOSTROPHE                  ' ' - Shadow register, `ex af 'af`
@@ -86,7 +88,7 @@ Private Const TAB_WIDTH As Long = 8
 
 '--------------------------------------------------------------------------------------
 
-'String constants at class level so that these texts do not have to temporarily _
+'String constants at class level so that these texts do not have to be temporarily _
  created and thrown away every time we use them. _
  This is a list of the token words recognised
  
@@ -94,8 +96,8 @@ Private Const STR_ADC               As String = "adc"
 Private Const STR_ADD               As String = "add"
 Private Const STR_AND               As String = "and"
 Private Const STR_BIT               As String = "bit"
-Private Const STR_BOOL              As String = "bool"
-Private Const STR_BYTE              As String = "byte"
+Private Const STR_BOOL              As String = "BOOL"
+Private Const STR_BYTE              As String = "BYTE"
 Private Const STR_CALL              As String = "call"
 Private Const STR_CCF               As String = "ccf"
 Private Const STR_CP                As String = "cp"
@@ -108,14 +110,14 @@ Private Const STR_DAA               As String = "daa"
 Private Const STR_DEC               As String = "dec"
 Private Const STR_DI                As String = "di"
 Private Const STR_DJNZ              As String = "djnz"
-Private Const STR_DEF               As String = "def"
+Private Const STR_DEF               As String = "DEF"
 Private Const STR_EI                As String = "ei"
 Private Const STR_EX                As String = "ex"
 Private Const STR_EXX               As String = "exx"
 Private Const STR_HLT               As String = "hlt"
 Private Const STR_HALT              As String = "halt"
-Private Const STR_HASH              As String = "hash"
-Private Const STR_HELP              As String = "help"
+Private Const STR_HASH              As String = "HASH"
+Private Const STR_HELP              As String = "HELP"
 Private Const STR_IM                As String = "im"
 Private Const STR_IN                As String = "in"
 Private Const STR_INC               As String = "inc"
@@ -123,8 +125,8 @@ Private Const STR_IND               As String = "ind"
 Private Const STR_INDR              As String = "indr"
 Private Const STR_INI               As String = "ini"
 Private Const STR_INIR              As String = "inir"
-Private Const STR_INCLUDE           As String = "include"
-Private Const STR_INTERRUPT         As String = "interrupt"
+Private Const STR_INCLUDE           As String = "INCLUDE"
+Private Const STR_INTERRUPT         As String = "INTERRUPT"
 Private Const STR_JP                As String = "jp"
 Private Const STR_JR                As String = "jr"
 Private Const STR_LD                As String = "ld"
@@ -132,10 +134,10 @@ Private Const STR_LDD               As String = "ldd"
 Private Const STR_LDDR              As String = "lddr"
 Private Const STR_LDI               As String = "ldi"
 Private Const STR_LDIR              As String = "ldir"
-Private Const STR_LONG              As String = "long"
+Private Const STR_LONG              As String = "LONG"
 Private Const STR_NEG               As String = "neg"
 Private Const STR_NOP               As String = "nop"
-Private Const STR_NYBL              As String = "nybl"
+Private Const STR_NYBL              As String = "NYBL"
 Private Const STR_OR                As String = "or"
 Private Const STR_OUT               As String = "out"
 Private Const STR_OUTD              As String = "outd"
@@ -144,9 +146,9 @@ Private Const STR_OUTI              As String = "outi"
 Private Const STR_OTIR              As String = "otir"
 Private Const STR_POP               As String = "pop"
 Private Const STR_PUSH              As String = "push"
-Private Const STR_PARAMS            As String = "params"
-Private Const STR_PROC              As String = "proc"
-Private Const STR_RAM               As String = "ram"
+Private Const STR_PARAMS            As String = "PARAMS"
+Private Const STR_PROC              As String = "PROC"
+Private Const STR_RAM               As String = "RAM"
 Private Const STR_RES               As String = "res"
 Private Const STR_RET               As String = "ret"
 Private Const STR_RETI              As String = "reti"
@@ -162,7 +164,7 @@ Private Const STR_RRC               As String = "rrc"
 Private Const STR_RRCA              As String = "rrca"
 Private Const STR_RRD               As String = "rrd"
 Private Const STR_RST               As String = "rst"
-Private Const STR_RETURN            As String = "return"
+Private Const STR_RETURN            As String = "RETURN"
 Private Const STR_SBC               As String = "sbc"
 Private Const STR_SCF               As String = "scf"
 Private Const STR_SET               As String = "set"
@@ -171,11 +173,11 @@ Private Const STR_SLL               As String = "sll"
 Private Const STR_SRA               As String = "sra"
 Private Const STR_SRL               As String = "srl"
 Private Const STR_SUB               As String = "sub"
-Private Const STR_SECTION           As String = "section"
-Private Const STR_SLOT              As String = "slot"
-Private Const STR_SYSTEM            As String = "system"
-Private Const STR_TRIP              As String = "trip"
-Private Const STR_WORD              As String = "word"
+Private Const STR_SECTION           As String = "SECTION"
+Private Const STR_SLOT              As String = "SLOT"
+Private Const STR_SYSTEM            As String = "SYSTEM"
+Private Const STR_TRIP              As String = "TRIP"
+Private Const STR_WORD              As String = "WORD"
 Private Const STR_XOR               As String = "xor"
 
 '--------------------------------------------------------------------------------------
@@ -198,6 +200,9 @@ Private Const FORMAT_TOKEN_REGISTER As String = "REGISTER"
 Private Const FORMAT_TOKEN_SECTION  As String = " SECTION"
 Private Const FORMAT_TOKEN_TEXT     As String = "    TEXT"
 Private Const FORMAT_TOKEN_Z80      As String = "     Z80"
+
+Private Const FORMAT_FILE_LENGTH    As String = "Length: {$} Characters"
+Private Const FORMAT_FILE_TOKENS    As String = "Tokens: {$}"
 
 '/// CLASS STORAGE ////////////////////////////////////////////////////////////////////
 
@@ -296,80 +301,12 @@ Event Error( _
 'CLASS Initialize
 '======================================================================================
 Private Sub Class_Initialize()
+    'Any kind of logging message will be built using this
     Set LogMsg = New bluString
     
     'Initialise the string database. _
      Since it's public, we want to ensure it's instantiated from the off
     Set Strings = New bluArrayStrings
-    
-    Dim ii As OZ80_TOKEN
-    For ii = 0 To [_TOKEN_LAST]
-        'Check what token category it belongs to
-        Let My_IsInstruction(ii) = (ii > [_TOKEN_INSTRUCTIONS_BEGIN]) And _
-                                   (ii < [_TOKEN_INSTRUCTIONS_END])
-        Let My_IsOperator(ii) = (ii > [_TOKEN_OPERATORS_BEGIN]) And _
-                                (ii < [_TOKEN_OPERATORS_END])
-        Let My_IsKeyword(ii) = (ii > [_TOKEN_KEYWORDS_BEGIN]) And _
-                               (ii < [_TOKEN_KEYWORDS_END])
-        
-        'Registers and flags are more complex as there's some overlap
-        If (ii = TOKEN_Z80_C) Then
-            'At the token level, we can't differentiate Register C and Flag C; _
-             we need context for that and we can't gaurantee the TokenStream is _
-             valid until we begin assembling, therefore we treat Register C and _
-             Flag C as the same and the assembler will sort out the difference
-            Let My_IsRegister8Bit(ii) = True
-            Let My_IsParameter(ii) = True
-            Let My_IsRegister(ii) = True
-            Let My_IsFlag(ii) = True
-        
-        '8-Bit registers:
-        ElseIf (ii = TOKEN_Z80_A) Or (ii = TOKEN_Z80_B) Or (ii = TOKEN_Z80_C) Or _
-               (ii = TOKEN_Z80_D) Or (ii = TOKEN_Z80_E) Or (ii = TOKEN_Z80_H) Or _
-               (ii = TOKEN_Z80_L) Or (ii = TOKEN_Z80_I) Or (ii = TOKEN_Z80_R) Or _
-               (ii = TOKEN_Z80_IXL) Or (ii = TOKEN_Z80_IXH) Or _
-               (ii = TOKEN_Z80_IYL) Or (ii = TOKEN_Z80_IYH) _
-        Then
-            Let My_IsRegister8Bit(ii) = True
-            Let My_IsParameter(ii) = True
-            Let My_IsRegister(ii) = True
-        
-        '16-Bit registers:
-        ElseIf (ii = TOKEN_Z80_AF) Or (ii = TOKEN_Z80_BC) Or (ii = TOKEN_Z80_DE) Or _
-               (ii = TOKEN_Z80_HL) Or (ii = TOKEN_Z80_IX) Or (ii = TOKEN_Z80_IY) Or _
-               (ii = TOKEN_Z80_SP) Or (ii = TOKEN_Z80_PC) _
-        Then
-            Let My_IsRegister16Bit(ii) = True
-            Let My_IsParameter(ii) = True
-            Let My_IsRegister(ii) = True
-        
-        'Condition flags:
-        ElseIf (ii = TOKEN_Z80_NC) Or (ii = TOKEN_Z80_M) Or (ii = TOKEN_Z80_P) Or _
-               (ii = TOKEN_Z80_PE) Or (ii = TOKEN_Z80_PO) Or (ii = TOKEN_Z80_Z) Or _
-               (ii = TOKEN_Z80_NZ) _
-        Then
-            Let My_IsParameter(ii) = True
-            Let My_IsFlag(ii) = True
-        
-        'If the token consititutes an expression (a calculable value)
-        ElseIf (ii = TOKEN_LABEL) Or (ii = TOKEN_NUMBER) Or _
-               (ii = TOKEN_PROPERTY_USE) _
-        Then
-            Let My_IsExpression(ii) = True
-            Let My_IsParameter(ii) = True
-            Let My_IsList(ii) = True
-        
-        'Text classes as a self-contained list; _
-         all other List items are Expressions
-        ElseIf (ii = TOKEN_TEXT) Then
-            Let My_IsList(ii) = True
-        
-        'Z80 parameters are expressions, with the addition of Z80 register / memory _
-         references, e.g. `(ix+$FF)`
-        ElseIf (ii = TOKEN_Z80MEM_OPEN) Then
-            Let My_IsParameter(ii) = True
-        End If
-    Next ii
 End Sub
 
 'CLASS Terminate
@@ -413,14 +350,13 @@ Public Property Get Error() As OZ80_ERROR: Let Error = My_Error: End Property
 '======================================================================================
 Public Property Get TokenIndex() As Long: Let TokenIndex = My_Index: End Property
 Public Property Let TokenIndex( _
-    ByVal Value As Long _
-)
-    'Out of bounds?
-    If (Value < 0) Or (Value > My_Count) Then
+    ByVal Index As Long _
+)   'Out of bounds?
+    If (Index < 0) Or (Index > My_Count) Then
         'Raise a standard VB error for 'array out of bounds'
         Call Err.Raise(9)
     Else
-        Let My_Index = Value
+        Let My_Index = Index
     End If
 End Property
 
@@ -508,11 +444,11 @@ End Property
 '======================================================================================
 Public Property Get TokenValue() As Double: Let TokenValue = My_TokenValue: End Property
 
-'Forward : Move onto the next token
+'NextToken : Move onto the next token
 '======================================================================================
 'Returns        | False if the token stream hit the end
 '======================================================================================
-Public Function Forward() As Boolean
+Public Function NextToken() As Boolean
     'Generate a debug message with the details of the current token
     RaiseEvent Message(OZ80_LOG_DEBUG, FormatToken())
     
@@ -520,7 +456,7 @@ Public Function Forward() As Boolean
     Call CacheToken
     
     If My_Index >= My_Count Then Exit Function
-    Let Forward = True
+    Let NextToken = True
 End Function
 
 'Rewind : Go back to the start of the token stream
@@ -543,8 +479,86 @@ Public Function Tokenise( _
      or even structured code; GOTOs are fast, deal with it
     Let My_Error = OZ80_ERROR_NONE
     
-    'Just a loop counter
-    Dim i As Long
+    '----------------------------------------------------------------------------------
+    'Build the lookup tables
+    '----------------------------------------------------------------------------------
+    'This eats up a chunk of memory so we won't do this at class initialisation
+    Dim t As OZ80_TOKEN
+    For t = 0 To [_TOKEN_LAST]
+        'Check what token category it belongs to
+        '..............................................................................
+        Let My_IsInstruction(t) = (t > [_TOKEN_INSTRUCTIONS_BEGIN]) And _
+                                  (t < [_TOKEN_INSTRUCTIONS_END])
+        Let My_IsOperator(t) = (t > [_TOKEN_OPERATORS_BEGIN]) And _
+                               (t < [_TOKEN_OPERATORS_END])
+        Let My_IsKeyword(t) = (t > [_TOKEN_KEYWORDS_BEGIN]) And _
+                              (t < [_TOKEN_KEYWORDS_END])
+        
+        'Registers and flags are more complex as there's some overlap
+        '..............................................................................
+        If (t = TOKEN_Z80_C) Then
+            'At the token level, we can't differentiate Register C and Flag C; _
+             we need context for that and we can't gaurantee the TokenStream is _
+             valid until we begin assembling, therefore we treat Register C and _
+             Flag C as the same and the assembler will sort out the difference
+            Let My_IsRegister8Bit(t) = True
+            Let My_IsParameter(t) = True
+            Let My_IsRegister(t) = True
+            Let My_IsFlag(t) = True
+        
+        '8-Bit registers:
+        '..............................................................................
+        ElseIf (t = TOKEN_Z80_A) Or (t = TOKEN_Z80_B) Or (t = TOKEN_Z80_C) Or _
+               (t = TOKEN_Z80_D) Or (t = TOKEN_Z80_E) Or (t = TOKEN_Z80_H) Or _
+               (t = TOKEN_Z80_L) Or (t = TOKEN_Z80_I) Or (t = TOKEN_Z80_R) Or _
+               (t = TOKEN_Z80_IXL) Or (t = TOKEN_Z80_IXH) Or _
+               (t = TOKEN_Z80_IYL) Or (t = TOKEN_Z80_IYH) _
+        Then
+            Let My_IsRegister8Bit(t) = True
+            Let My_IsParameter(t) = True
+            Let My_IsRegister(t) = True
+        
+        '16-Bit registers:
+        '..............................................................................
+        ElseIf (t = TOKEN_Z80_AF) Or (t = TOKEN_Z80_BC) Or (t = TOKEN_Z80_DE) Or _
+               (t = TOKEN_Z80_HL) Or (t = TOKEN_Z80_IX) Or (t = TOKEN_Z80_IY) Or _
+               (t = TOKEN_Z80_SP) Or (t = TOKEN_Z80_PC) _
+        Then
+            Let My_IsRegister16Bit(t) = True
+            Let My_IsParameter(t) = True
+            Let My_IsRegister(t) = True
+        
+        'Condition flags:
+        '..............................................................................
+        ElseIf (t = TOKEN_Z80_NC) Or (t = TOKEN_Z80_M) Or (t = TOKEN_Z80_P) Or _
+               (t = TOKEN_Z80_PE) Or (t = TOKEN_Z80_PO) Or (t = TOKEN_Z80_Z) Or _
+               (t = TOKEN_Z80_NZ) _
+        Then
+            Let My_IsParameter(t) = True
+            Let My_IsFlag(t) = True
+        
+        'If the token consititutes an Expression (a calculable Value)
+        '..............................................................................
+        ElseIf (t = TOKEN_LABEL) Or (t = TOKEN_NUMBER) Or _
+               (t = TOKEN_PROPERTY_USE) Or (t = TOKEN_OPERATOR_SUB) _
+        Then
+            Let My_IsExpression(t) = True
+            Let My_IsParameter(t) = True
+            Let My_IsList(t) = True
+        
+        'Text classes as a self-contained List; _
+         all other List items are Expressions
+        '..............................................................................
+        ElseIf (t = TOKEN_TEXT) Then
+            Let My_IsList(t) = True
+        
+        'Z80 parameters are Expressions, with the addition of Z80 register / memory _
+         references, e.g. `(ix+$FF)`
+        '..............................................................................
+        ElseIf (t = TOKEN_Z80MEM_OPEN) Then
+            Let My_IsParameter(t) = True
+        End If
+    Next t
     
     '----------------------------------------------------------------------------------
     'Read the whole file into a single string
@@ -562,6 +576,7 @@ Public Function Tokenise( _
     Dim Source As bluString: Set Source = New bluString
     'Note the string will not be increasing in size, so we can trim the buffer _
      down to the same length as the content
+    'TODO: Handle file reading errors
     Call Source.ReadFile(My_Path).ReduceBuffer
     
     'Cache this for speed, we'll be referring to it every loop
@@ -592,8 +607,7 @@ Public Function Tokenise( _
     
     'These will track the "mode" of the text as we go
     Dim IsQuote As Long
-    Dim IsComment As Long
-    Dim IsCommentMulti As Long
+    Dim IsComment As Long, IsCommentMulti As Long
     
     'These are used whilst converting words into real numbers
     Dim Number As Double, Multiplier As Long
@@ -635,6 +649,7 @@ ReadChar:
     
     'Keep track of line and column position in the source file _
      (for helpful error messages, even at the tokenising stage)
+    '..................................................................................
     
     'New line:
     If Char = C0_LF Then
@@ -645,15 +660,17 @@ ReadChar:
     ElseIf Char = C0_CR Then
         GoTo SkipChar
     
+    'Tab:
     ElseIf Char = C0_HT Then
         'Tab goes to the next tab stop boundary:
         Let Col = Col + TAB_WIDTH - (Col Mod TAB_WIDTH)
     
-    'Non-printable characters are skipped and do not add to the column number
-    ElseIf Not Source.CharIsVisible(SourcePos) Then
-        GoTo SkipChar
-    Else
+    ElseIf Source.CharIsVisible(SourcePos) Then
         Let Col = Col + 1
+        
+    Else
+        'Non-printable characters are skipped and do not add to the column number
+        GoTo SkipChar
     End If
     
     'Comments: ........................................................................
@@ -680,25 +697,25 @@ ReadChar:
         End If
         'Skip to the next character in the comment
         GoTo SkipChar
-    
+        
     'Parsable Text: ...................................................................
     '(NOTE: Falsey checks are slightly faster)
-    ElseIf Not IsQuote Then
+    ElseIf IsQuote = 0 Then
         'Special handling for the beginning of a word
         If Word.IsNull Then
             'Skip whitespace before the word begins
-            If Char = ASC_TAB Then GoTo SkipChar
-            If Char = ASC_SPC Then GoTo SkipChar
-            If Char = ASC_LF Then GoTo SkipChar
+            If Source.CharIsSpace(SourcePos) Then GoTo SkipChar
             
             'Punctuation characters that are only one letter long: _
              When we hit one of these we need to end the word immediately, but parsing _
              normally ends a word on the letter after, so we deal with the edge case
             If Char = SYNTAX_NEXT Then GoTo Punctuation
-            If Char = SYNTAX_Z80MEM_OPEN Then GoTo Punctuation
-            If Char = SYNTAX_Z80MEM_CLOSE Then GoTo Punctuation
             If Char = SYNTAX_CHUNK_OPEN Then GoTo Punctuation
             If Char = SYNTAX_CHUNK_CLOSE Then GoTo Punctuation
+            If Char = SYNTAX_HASH_OPEN Then GoTo Punctuation
+            If Char = SYNTAX_HASH_CLOSE Then GoTo Punctuation
+            If Char = SYNTAX_Z80MEM_OPEN Then GoTo Punctuation
+            If Char = SYNTAX_Z80MEM_CLOSE Then GoTo Punctuation
             
             If Char = SYNTAX_OPERATOR_ADD Then GoTo Punctuation
             If Char = SYNTAX_OPERATOR_SUB Then GoTo Punctuation
@@ -721,8 +738,7 @@ ReadChar:
             End If
             
             'End the word on a space
-            If Char = ASC_SPC Then GoTo TokenWord
-            If Char = ASC_TAB Then GoTo TokenWord
+            If Source.CharIsSpace(SourcePos) Then GoTo TokenWord
             
             'Symbols that can break a word in the middle without spaces to separate
             If Char = SYNTAX_NEXT Then GoTo WordBreak
@@ -791,18 +807,20 @@ TokenWord:
     '*** TIMER BEGIN ***
     Call oz80.Profiler.EventBegin(EVENT_TOKENISE_TOKENWORD)
     
-    'Create an upper-case copy of the word for case-insensitive character comparisons
+    'Create an upper-case copy of the word for easy ASCII-code comparisons
     Dim WordUCase As bluString: Set WordUCase = Nothing
     Set WordUCase = Word.Clone.UCase
     'Extract the 1st, 2nd, 3rd & 4th letters of the word as these make up most _
-     comparisons and can be done quickly without resorting to strings
-    Dim Asc1 As OZ80_SYNTAX, Asc2 As OZ80_SYNTAX, Asc3 As OZ80_SYNTAX, Asc4 As OZ80_SYNTAX
+     comparisons and can be done quickly without resorting to Strings
+    Dim Asc1 As OZ80_SYNTAX, Asc2 As OZ80_SYNTAX, _
+        Asc3 As OZ80_SYNTAX, Asc4 As OZ80_SYNTAX
     Let Asc1 = WordUCase.Char(0)
     If Word.Length > 3 Then Let Asc4 = WordUCase.Char(3) Else Let Asc4 = ASC_NUL
     If Word.Length > 2 Then Let Asc3 = WordUCase.Char(2) Else Let Asc3 = ASC_NUL
     If Word.Length > 1 Then Let Asc2 = WordUCase.Char(1) Else Let Asc2 = ASC_NUL
     
-    'Check the first letter of the word to find the right kind of token:
+    'Just a loop counter
+    Dim i As Long
     
     'Comma (very common!) _
      .......................................................................... `,` ...
@@ -886,10 +904,10 @@ TokenWord:
         Call AddString(TOKEN_HASH)
         GoTo NextWord
     
-    'RAM name, e.g. `$.gamevar` _
+    'RAM name, e.g. `$.gamevar`, `$#RAM_BANK.gamevar` _
      ......................................................................... `$.` ...
-    ElseIf Asc1 = SYNTAX_NUMBER_HEX _
-       And Asc2 = SYNTAX_PROPERTY Then
+    ElseIf Asc1 = SYNTAX_RAM _
+    And (Asc2 = SYNTAX_PROPERTY Or Asc2 = SYNTAX_HASH) Then
         'ERROR: Invalid RAM name?
         If Not IsValidName() Then
             Call RaiseError(OZ80_ERROR_INVALID_NAME_RAM)
@@ -1347,7 +1365,10 @@ Finish:
         Call Me.Rewind
         
         Call RaiseMessage(OZ80_LOG_INFO, _
-            "Length {$} Characters", Format$(SourceLen, "#,#") _
+            FORMAT_FILE_LENGTH, Format$(SourceLen, "#,0") _
+        )
+        Call RaiseMessage(OZ80_LOG_INFO, _
+            FORMAT_FILE_TOKENS, Format$(My_Count, "#,0") _
         )
     Else
         'clean up!
@@ -1447,10 +1468,14 @@ End Sub
 
 'FileExists : See if a file exists or not
 '======================================================================================
-'<cuinl.tripod.com/Tips/fileexist.htm>
+'FilePath       | Path to the file to check for
+'---------------+----------------------------------------------------------------------
+'Returns        | True if the file exists, false if not
+'======================================================================================
 Private Function FileExists( _
     ByRef FilePath As String _
 ) As Boolean
+    '<cuinl.tripod.com/Tips/fileexist.htm>
     Let FileExists = CBool(Dir$(FilePath) <> vbNullString)
 End Function
 
@@ -1600,7 +1625,7 @@ Private Function IsValidName( _
     Let WordChar0 = Word.Char(0)
     
     'The first letter must be the type identifier; _
-     `!CONST`, `:label`, `.property`, `#hash`, `$.ram`, `?function`, `@macro`
+     `!CONST`, `:label`, `.property`, `#hash`, `$.RAM`, `?function`, `@macro`
     If WordChar0 <> SYNTAX_CONSTANT And _
        WordChar0 <> SYNTAX_LABEL And _
        WordChar0 <> SYNTAX_PROPERTY And _
@@ -1613,11 +1638,14 @@ Private Function IsValidName( _
     End If
     
     'Check for special names with two character prefixes, _
-     e.g. "::section" and "$.RAMconstant"
+     e.g. "::section", "$.RAM" and "$#RAM"
     Dim Begin As Long
     'TODO: Watch out for word-length! Could be a 1-letter label
+    'TODO: Could change this function to use bluString's CharPull
     If (WordChar0 = SYNTAX_LABEL And Word.Char(1) = SYNTAX_LABEL) _
-    Or (WordChar0 = SYNTAX_NUMBER_HEX And Word.Char(1) = SYNTAX_PROPERTY) Then
+    Or (WordChar0 = SYNTAX_RAM And Word.Char(1) = SYNTAX_PROPERTY) _
+    Or (WordChar0 = SYNTAX_RAM And Word.Char(1) = SYNTAX_HASH) _
+    Then
         Let Begin = 2
     Else
         Let Begin = 1
@@ -1674,7 +1702,7 @@ End Function
 'NestOut : Finish a level of bracket nesting, folding up to the previous level
 '======================================================================================
 'BracketOpen    | Token number for the opening bracket "{", "(" or "["
-'BracketClose   | Token number for the closing bracket
+'BracketClose   | Token number for the closing bracket "}", ")" or "]"
 '---------------+----------------------------------------------------------------------
 'Returns        | An error number, should the nesting be invalid
 '======================================================================================

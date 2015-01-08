@@ -17,11 +17,11 @@ PARAMS	hl	        `relative address from the beginning of the intended bank (A)
 	`is the HL parameter address below the $40xx range?
 	 `--that is, does the relative address extend into the second page?
 	ld	a;addr, h;addr
-	cp	$40
+	cp	HI $4000
 	jr	c, ._2
 	
 	`remove #$40xx (e.g. so $562B becomes $162B)
-	sub	$40
+	sub	HI $4000
 	ld	h;addr, a;addr
 	
 	`restore the A parameter (the starting bank number) and increase it so that
@@ -284,14 +284,14 @@ PARAMS	hl	        `relative address from the beginning of the intended bank (A)
 	ret
 
 .rowIndexTable
-        DATA %00000001
-        DATA %00000010
-        DATA %00000100
-        DATA %00001000
-        DATA %00010000
-        DATA %00100000
-        DATA %01000000
-        DATA %10000000
+        BYTE    %00000001
+                %00000010
+                %00000100
+                %00001000
+                %00010000
+                %00100000
+                %01000000
+                %10000000
 }
 
 PROC    :decompressScreen                       SECTION ::main
@@ -593,7 +593,7 @@ PARAMS	hl	        `input number, e.g. RAM_LIVES
 	c	        `base? i.e. 10
 {        
 	xor	a;zero			        `set A to 0
-	ld	b, 7			        `we will be looping 7 times
+	ld	b;loop, 7			`we will be looping 7 times
 	ex	de, hl			        `transfer the HL parameter to DE
 	ld	l;zero, a;zero			`set HL as $0000
 	ld	h;zero, a;zero
@@ -1175,7 +1175,7 @@ PROC    :fillScrollTiles                        SECTION ::main
 
 PROC    :getFloorLayoutRAMPosition              SECTION ::main
         `====================================================================[$07D5]===
-        `convert block X & Y coords into a location in the Floor Layout in RAM
+        `convert block X & Y co-ords into a location in the Floor Layout in RAM
         
 PARAMS  bc	        `a flag, $0000 or $0001 depending on callee
 {        

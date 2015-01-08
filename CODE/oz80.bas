@@ -1,7 +1,7 @@
 Attribute VB_Name = "oz80"
 Option Explicit
 '======================================================================================
-'OZ80MANDIAS: a Z80 assembler; Copyright (C) Kroc Camen, 2013-14
+'OZ80MANDIAS: a Z80 assembler; Copyright (C) Kroc Camen, 2013-15
 'Licenced under a Creative Commons 3.0 Attribution Licence
 '--You may use and modify this code how you see fit as long as you give credit
 '======================================================================================

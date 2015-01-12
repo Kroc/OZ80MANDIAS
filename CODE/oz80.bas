@@ -19,6 +19,13 @@ Option Explicit
  <stackoverflow.com/questions/929069/how-do-i-declare-max-double-in-vb6/933490#933490>
 Public Const OZ80_INDEFINITE As Double = 1.79769313486231E+308 + 5.88768018655736E+293
 
+'The min/max numbers that can be multiplied/divided by 1'000 or 1'024 without overflow
+Public Const OZ80_MIN_K As Double = -9.22337203685478E+15
+Public Const OZ80_MIN_KB As Double = -9.00719925474099E+15
+Public Const OZ80_MAX_K As Double = 9.22337203685478E+15
+Public Const OZ80_MAX_KB As Double = 9.00719925474099E+15
+
+
 '/// DEBUG ////////////////////////////////////////////////////////////////////////////
 
 Public Profiler As New bluProfiler
@@ -49,6 +56,7 @@ End Enum
 Public Enum OZ80_ERROR
     OZ80_ERROR_NONE                     'Assembly completed successfully
     OZ80_ERROR_DUPLICATE                'A name has been defined twice
+    OZ80_ERROR_DUPLICATE_CONSTANT       '- Constant already defined
     OZ80_ERROR_DUPLICATE_PROC_INTERRUPT '- Duplicate `INTERRUPT` parameter
     OZ80_ERROR_DUPLICATE_PROC_PARAMS    '- Duplicate `PARAMS` parameter
     OZ80_ERROR_DUPLICATE_PROC_RETURN    '- Duplicate `RETURN` parameter
@@ -56,6 +64,7 @@ Public Enum OZ80_ERROR
     OZ80_ERROR_DUPLICATE_SECTION        '- Can't define a section twice
     OZ80_ERROR_EXPECTED                 'Incorrect content at the current scope
     OZ80_ERROR_EXPECTED_BRACKET         '- Close bracket ("}","]",")") without open
+    OZ80_ERROR_EXPECTED_EXPRESSION      '- Expression required here
     OZ80_ERROR_EXPECTED_PROC_NAME       '- A label name must follow `PROC`
     OZ80_ERROR_EXPECTED_PROC_PARAMS     '- Invalid stuff in the `PARAMS` list
     OZ80_ERROR_EXPECTED_PROC_RETURN     '- Invalid stuff in the `RETURN` list
@@ -72,7 +81,7 @@ Public Enum OZ80_ERROR
     OZ80_ERROR_INVALID_NAME             'Invalid label/property/variable name
     OZ80_ERROR_INVALID_NAME_RAM         '- Invalid RAM name, i.e. `$.name`
     OZ80_ERROR_INVALID_NAME_HASH        '- Invalid hash name, i.e. `#hash`
-    OZ80_ERROR_INVALID_NUMBER           'Not a valid binary/hex/decimal number
+    OZ80_ERROR_INVALID_NUMBER           'Not a valid number
     OZ80_ERROR_INVALID_NUMBER_DEC       '- Invalid decimal number
     OZ80_ERROR_INVALID_NUMBER_HEX       '- Invalid hexadecimal number
     OZ80_ERROR_INVALID_NUMBER_BIN       '- Invalid binary number
@@ -80,11 +89,13 @@ Public Enum OZ80_ERROR
     OZ80_ERROR_INVALID_SLOT             'Incorrect use of the Slot parameter
     OZ80_ERROR_INVALID_WORD             'Couldn't parse a word
     OZ80_ERROR_INVALID_Z80PARAMS        'Not the right parameters for a Z80 instruction
-    OZ80_ERROR_TEXT_CHAR                'Character code out of range
     OZ80_ERROR_OVERFLOW                 'A number overflowed the maximum
     OZ80_ERROR_OVERFLOW_LINE            '- Line too long
     OZ80_ERROR_OVERFLOW_FILE            '- File too long / large
     OZ80_ERROR_OVERFLOW_Z80             '- 16-bit number used with an 8-bit instruction
+    OZ80_ERROR_TEXT_CHAR                'Character code out of range
+    OZ80_ERROR_UNDEFINED                'Named item is used, but undefined
+    OZ80_ERROR_UNDEFINED_CONST          '- A Constant has been used before definition
 End Enum
 
 '--------------------------------------------------------------------------------------
@@ -235,10 +246,9 @@ Public Enum OZ80_TOKEN
     [_TOKEN_KEYWORDS_END]
     
     TOKEN_NUMBER
-    'Number prefixes ("K", "KB" & "Kbit")
+    'Number prefixes ("K" & "KB")
     TOKEN_PREFIX_K                      'x1000
     TOKEN_PREFIX_KB                     'x1024
-    TOKEN_PREFIX_KBIT                   'x128 (1024 bits)
     
     'Grouping: (i.e. parenthesis, braces)
     TOKEN_CHUNK_OPEN                    '"{" Code/data Chunk, `PROC :<label> { ... }`
@@ -460,7 +470,6 @@ Public Property Get TokenName( _
         
         Let My_TokenName(TOKEN_PREFIX_K) = "K"
         Let My_TokenName(TOKEN_PREFIX_KB) = "KB"
-        Let My_TokenName(TOKEN_PREFIX_KBIT) = "KBIT"
         
         Let My_TokenName(TOKEN_Z80MEM_OPEN) = Chr$(SYNTAX_Z80MEM_OPEN)
         Let My_TokenName(TOKEN_Z80MEM_CLOSE) = Chr$(SYNTAX_Z80MEM_CLOSE)
@@ -647,6 +656,13 @@ Public Sub GetOZ80Error( _
         'TODO
         Let ReturnDescription = ""
         
+    Case OZ80_ERROR_UNDEFINED_CONST
+        '..............................................................................
+        Let ReturnTitle = "Undefined Constant Used"
+        Let ReturnDescription = _
+            "You've used a Constant name which has not been defined yet. " & _
+            "Ensure that early on in your source code you define the Constant " & _
+            "Value: " & vbCrLf & vbCrLf & "DEF !CONSTANT 123"
     Case Else
         Stop
     End Select

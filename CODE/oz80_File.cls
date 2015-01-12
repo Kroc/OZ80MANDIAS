@@ -437,7 +437,8 @@ Public Property Get Path() As String: Let Path = My_Path: End Property
 Public Property Get TokenText() As String
     'Only valid for tokens that reference text _
      (null-string will be returned otherwise)
-    If My_TokenKind = TOKEN_TEXT Then Let TokenText = Strings.Item(My_TokenValue)
+    'TODO: Check for existance here
+    Let TokenText = Strings.Item(My_TokenValue)
 End Property
 
 'TokenValue : Token Value of current token
@@ -539,8 +540,14 @@ Public Function Tokenise( _
         
         'If the token consititutes an Expression (a calculable Value)
         '..............................................................................
-        ElseIf (t = TOKEN_LABEL) Or (t = TOKEN_NUMBER) Or _
-               (t = TOKEN_PROPERTY_USE) Or (t = TOKEN_OPERATOR_SUB) _
+        ElseIf (t = TOKEN_CONST) Or _
+               (t = TOKEN_HASH) Or _
+               (t = TOKEN_LABEL) Or _
+               (t = TOKEN_NUMBER) Or _
+               (t = TOKEN_OPERATOR_SUB) Or _
+               (t = TOKEN_PROPERTY_USE) Or _
+               (t = TOKEN_RAM) Or _
+               (t = TOKEN_SECTION) _
         Then
             Let My_IsExpression(t) = True
             Let My_IsParameter(t) = True
@@ -1071,17 +1078,15 @@ TokenWord:
         GoTo WordError
         
     ElseIf Asc1 = ASC_K Then '................................................. `k` ...
-        'Number suffixes K, KB & Kbit
+        'Number suffixes K & KB
         If Asc2 = ASC_NUL Then
             'Just `K`
             Call Add(TOKEN_PREFIX_K): GoTo NextWord
         
-        'B must be next for `KB` and `Kbit`
-        ElseIf Asc2 = ASC_B Then
-            'If only two letters, then it's `KB`
-            If Asc3 = ASC_NUL Then Call Add(TOKEN_PREFIX_KB): GoTo NextWord
-            'verify ...`Kbit`, we don't have Asc5 so avoid things like `Kbitty`
-            If Word.Equals("kbit") Then Call Add(TOKEN_PREFIX_KBIT): GoTo NextWord
+        'B must be next for `KB`
+        ElseIf Asc2 = ASC_B And Asc3 = ASC_NUL Then
+            Call Add(TOKEN_PREFIX_KB): GoTo NextWord
+            
         End If
         'There are no `k` registers
         GoTo WordError
@@ -1494,7 +1499,7 @@ Private Function FormatToken( _
     
     'Format the Token number
     Dim Format_TokenIndex As New bluString
-    Let Format_TokenIndex.Text = Format$(My_Index + 1, "#,#")
+    Let Format_TokenIndex.Text = Format$(Format$(My_Index + 1, "#,#"), "@@@@@@@")
     
     Dim Format_Msg As New bluString
     Dim Format_TokenType As String
@@ -1554,8 +1559,7 @@ Private Function FormatToken( _
         Let Format_TokenType = FORMAT_TOKEN_OPERATOR
         
     ElseIf My_TokenKind = TOKEN_PREFIX_K _
-        Or My_TokenKind = TOKEN_PREFIX_KB _
-        Or My_TokenKind = TOKEN_PREFIX_KBIT Then
+        Or My_TokenKind = TOKEN_PREFIX_KB Then
         '..............................................................................
         Let Format_Msg.Text = oz80.TokenName(My_TokenKind)
         Let Format_TokenType = FORMAT_TOKEN_PREFIX

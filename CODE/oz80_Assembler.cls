@@ -33,6 +33,9 @@ Private Const LOG_TIME          As String = "Time: {$}s"
 Private Const LOG_Z80           As String = "{$} | {$}: " & vbTab & "{$}" & vbTab & "{$}" & vbTab & "{$}"
 Private Const LOG_SECTION       As String = "SECTION {$}"
 
+'String constants to save these being temporarily created and destroyed multiple times
+Private Const STR_SMS           As String = "SMS"
+
 'Error number!
 Private My_Error As OZ80_ERROR
 
@@ -56,11 +59,14 @@ Attribute File.VB_VarHelpID = -1
 'Which target system is selected, e.g. SEGA Master System
 Private My_System As OZ80_SYSTEM
 
+'The database of Constant definitions
+Private Consts As Scripting.Dictionary
+
 'Sections need to be defined first before they can be used
 Private SectionNames As Scripting.Dictionary
 Private SectionSlots As Scripting.Dictionary
 
-'The database of Label locations (in ROM) and properties
+'The database of Label locations (in ROM) and their properties
 Public Labels As Scripting.Dictionary
 
 'Z80 Parameters: _
@@ -269,11 +275,13 @@ Private Sub Class_Initialize()
     'If too many possible tokens are created, things will screw up
     Debug.Assert OZ80_TOKEN.[_TOKEN_LAST] < 256
     
+    'This is a re-usable temporary String for logging
     Set LogMsg = New bluString
     
     Set SectionNames = New Scripting.Dictionary
     Set SectionSlots = New Scripting.Dictionary
     
+    Set Consts = New Scripting.Dictionary
     Set Labels = New Scripting.Dictionary
     Set Chunks = New Scripting.Dictionary
     Set Layout = New Scripting.Dictionary
@@ -444,6 +452,7 @@ Public Function Assemble( _
     'Clean up stuff from any previous assemble
     Set File = Nothing: Erase Files
     Set Chunk = Nothing: Call Chunks.RemoveAll
+    Call Consts.RemoveAll
     Call Labels.RemoveAll
     Call SectionNames.RemoveAll
     Call SectionSlots.RemoveAll
@@ -493,6 +502,7 @@ Public Function Assemble( _
 Finish:
     'Clean up:
     Set File = Nothing: Erase Files
+    Set Consts = Nothing
     Set Chunks = Nothing
     Set Labels = Nothing
     Set Layout = Nothing
@@ -645,7 +655,7 @@ End Function
 '         |                                               '
 '.........|...............................................'............................
 '         |                                               '
-'<root>   | DEF         !{name}    [<expr>]               ' Define Constant
+'<root>   | DEF         <def>                             ' Define ...
 '         |                                               '
 '         | ENUM        !{name}    [<expr>]     <hash>    ' Enumerate Constants
 '         |                                               '
@@ -661,12 +671,13 @@ End Function
 '         |                        [INTERRUPT   <expr>]   '
 '         |                         <chunk>               '
 '         |                                               '
-'         | SECTION     ::{name}   [SLOT        <list>]   '
-'         |                                               '
-'         | SYSTEM      <text>                            '
-'         |                                               '
 '         | TABLE       :{name}    [HELP        <text>]   '
 '         |                         <chunk>               '
+'         |                                               '
+'<def>    | !{name}     [<expr>]                          ' Define Constant
+'         | SECTION     ::{name}   [SLOT        <list>]   ' Define Section
+'         | SYSTEM      <text>                            ' Define System
+'         | RAM         $#{name}    <expr>      <expr>    ' Define RAM Bank
 '         |                                               '
 '<chunk>  | {           <code>      }                     '
 '         |                                               '
@@ -689,13 +700,38 @@ Private Sub ScopeRoot()
     Call RaiseMessage(OZ80_LOG_ACTION, "Assembling ""{$}""", File.Path)
     
 Continue:
-    'Define a Constant:
-    '----------------------------------------------------------------------------------
-    '`DEF !<name> [<expr>]`
+    'Define Constant / RAM Bank / Section / System:
     '----------------------------------------------------------------------------------
     If File.TokenKind = TOKEN_KEYWORD_DEF Then
-        'Hand off to the function that will process this
-        Call ProcessDef
+        'Pass over the `DEF` keyword
+        'ERROR: The file ended before the first parameter
+        If Not File.NextToken() Then Call RaiseError(OZ80_ERROR_FILE_END): Exit Sub
+        
+        'What kind of definition is this?
+        If File.TokenKind = TOKEN_CONST Then
+            'Defining a constant
+            Call DefineConst
+        
+        'Defining a RAM Bank
+        ElseIf File.TokenKind = TOKEN_KEYWORD_RAM Then
+            'Hand off to the function that will process this
+            Call DefineRAMBank
+            
+        'Defining the target System
+        ElseIf File.TokenKind = TOKEN_KEYWORD_SYSTEM Then
+            'Hand off to the function that will process this
+            Call DefineSystem
+        
+        'Defining a code Section
+        ElseIf File.TokenKind = TOKEN_KEYWORD_SECTION Then
+            'Hand off to the function that will process this
+            Call DefineSection
+            
+        Else
+            'ERROR: Unexpected definition
+            'TODO: More specific error number/description
+            Call RaiseError(OZ80_ERROR_EXPECTED_ROOT)
+        End If
     
     'Define a Hash:
     '----------------------------------------------------------------------------------
@@ -721,35 +757,18 @@ Continue:
         'Hand off to the function that will process this
         Call ProcessProc
     
-    'Define a RAM block:
+    'Create some RAM variables:
     '----------------------------------------------------------------------------------
     '`RAM [<expr>] [ ... ]`
     '----------------------------------------------------------------------------------
     ElseIf File.TokenKind = TOKEN_KEYWORD_RAM Then
         'Hand off to the function that will process this
-        Call ProcessRAM
-    
-    'Define Section names and Slot patterns:
-    '----------------------------------------------------------------------------------
-    '`SECTION ::<section>`
-    '----------------------------------------------------------------------------------
-    ElseIf File.TokenKind = TOKEN_KEYWORD_SECTION Then
-        'Hand off to the function that will process this
-        Call ProcessSection
-    
-    'Define the target System:
-    '----------------------------------------------------------------------------------
-    '`SYSTEM <text>`
-    '----------------------------------------------------------------------------------
-    ElseIf File.TokenKind = TOKEN_KEYWORD_SYSTEM Then
-        'Hand off to the function that will process this
-        Call ProcessSystem
+        Call ProcessRAMHash
     
     'ERROR: Not a valid keyword at this scope! _
      ----------------------------------------------------------------------------------
     Else
         Call RaiseError(OZ80_ERROR_EXPECTED_ROOT)
-        Exit Sub
     End If
     
     If My_Error Then Exit Sub
@@ -760,13 +779,46 @@ Continue:
     GoTo Continue
 End Sub
 
-'ProcessDef : Process a constant definition
+'DefineConst : Define a Constant value
 '======================================================================================
 'DEF        !<name>     [<expr>]
 '======================================================================================
-Private Sub ProcessDef()
-    'ERROR: The file ended before the first parameter
-    If Not File.NextToken() Then Call RaiseError(OZ80_ERROR_FILE_END): Exit Sub
+Private Sub DefineConst()
+    '`ScopeRoot` has already verified that the current token is a Constant name; _
+     check if the Constant has already been defined
+    If Consts.Exists(File.TokenText) Then
+        'ERROR: You can't redefine Constants
+        Call RaiseError(OZ80_ERROR_DUPLICATE_CONSTANT)
+        Exit Sub
+    End If
+    
+    'Remember the Constant's name before moving past it
+    Dim ConstName As String
+    Let ConstName = File.TokenText
+    
+    'The constant value is optional (it will default to 0), so the file can end here _
+     (it's up to the parent to check if there's a unclosed scope problem)
+    If Not File.NextToken Then
+        'Define the Constant as zero
+        Call Consts.Add(ConstName, 0)
+        Exit Sub
+    End If
+    
+    'Check that this is an Expression
+    If Not File.TokenIsExpression Then
+        'ERROR: Expected an Expression to define the Constant
+        Call RaiseError(OZ80_ERROR_EXPECTED_EXPRESSION)
+        Exit Sub
+    End If
+    
+    'Calculate the Expression's Value:
+    '(If there was an error in the Expression, the error event _
+      will already have been raised, we only need to fold upwards)
+    Dim Value As Double
+    If ParseExpression(Value) Then Exit Sub
+    
+    'Define the Constant:
+    Call Consts.Add(ConstName, Value)
 End Sub
 
 'ProcessHash : Process a Hash block
@@ -960,7 +1012,7 @@ SkipReturn:
         If Not File.TokenIsExpression Then Call RaiseError(OZ80_ERROR_EXPECTED): Exit Sub
         
         'Calculate the Expression:
-        '(If there was an error in the expression, the error event _
+        '(If there was an error in the Expression, the error event _
           will already have been raised, we only need to fold upwards)
         If ParseExpression(Interrupt) Then Exit Sub
         
@@ -1012,13 +1064,28 @@ SkipReturn:
     Call ScopeChunk
 End Sub
 
-'ProcessRAM : Process a RAM block
+'DefineRAMBank : Define a RAM Block
+'======================================================================================
+'DEF RAM    $#{name}    <expr>      <expr>
+'======================================================================================
+Private Sub DefineRAMBank()
+    'ERROR: The file ended before the first parameter
+    If Not File.NextToken() Then Call RaiseError(OZ80_ERROR_FILE_END): Exit Sub
+    
+    Call File.NextToken
+    Call File.NextToken
+    Call File.NextToken
+End Sub
+
+'ProcessRAMHash : Process a RAM block
 '======================================================================================
 'RAM       [<expr>]     [ ... ]
 '======================================================================================
-Private Sub ProcessRAM()
+Private Sub ProcessRAMHash()
     'ERROR: The file ended before the first parameter
     If Not File.NextToken() Then Call RaiseError(OZ80_ERROR_FILE_END): Exit Sub
+    
+    Call File.NextToken
     
     If File.TokenKind = TOKEN_HASH_OPEN Then
         Let File.TokenIndex = File.TokenValue
@@ -1026,11 +1093,11 @@ Private Sub ProcessRAM()
     End If
 End Sub
 
-'ProcessSection : Define a Section
+'DefineSection : Define a Section
 '======================================================================================
-'SECTION    ::<section>    [SLOT   <list>]
+'DEF SECTION    ::<section>    [SLOT   <list>]
 '======================================================================================
-Private Sub ProcessSection()
+Private Sub DefineSection()
     'ERROR: The file ended before the first parameter
     If Not File.NextToken() Then Call RaiseError(OZ80_ERROR_FILE_END): Exit Sub
     
@@ -1050,7 +1117,7 @@ Private Sub ProcessSection()
     
     'Define the Section name - fetch the string from the File's _
      string database (identified by the CRC value on the token)
-    Call SectionNames.Add(SectionKey, File.Strings(SectionKey))
+    Call SectionNames.Add(SectionKey, File.TokenText)
     Call SectionSlots.Add(SectionKey, 0)
     
     '----------------------------------------------------------------------------------
@@ -1115,7 +1182,7 @@ Finish:
     Let SectionSlots(SectionKey) = Slot
     Call RaiseMessage( _
         OZ80_LOG_STATUS, LOG_SECTION, _
-        File.Strings(SectionKey) _
+        SectionNames.Item(SectionKey) _
     )
 '    RaiseEvent Message(OZ80_LOG_STATUS, _
 '        "SECTION " & File.Strings(SectionKey) & _
@@ -1141,11 +1208,11 @@ ErrIndefinite:
     Call RaiseError(OZ80_ERROR_INDEFINITE)
 End Sub
 
-'ProcessSystem : Define the target system (e.g. SEGA Master System)
+'DefineSystem : Define the target system (e.g. SEGA Master System)
 '======================================================================================
 'SYSTEM     <text>
 '======================================================================================
-Private Sub ProcessSystem()
+Private Sub DefineSystem()
     'ERROR: The file ended before the first parameter
     If Not File.NextToken() Then Call RaiseError(OZ80_ERROR_FILE_END): Exit Sub
     
@@ -1158,7 +1225,7 @@ Private Sub ProcessSystem()
     If GetText(SystemName) Then Exit Sub
     
     'Check if it's any of the allowed System names
-    If SystemName.Equals("SMS") Then
+    If SystemName.Equals(STR_SMS) Then
         'Configure the assembler for the SEGA Master System
         Let My_System = SYSTEM_SMS
     Else
@@ -2733,7 +2800,6 @@ End Function
 Private Function ParseExpression( _
     ByRef ReturnValue As Double _
 ) As OZ80_ERROR
-    'TODO: Handle prefixing, e.g. `-1-!-3`
     'TODO: Handle functions like LO, HI, NOT8/16
     
     Dim Operand1 As Double              'Left-hand value in a calculation
@@ -2742,7 +2808,7 @@ Private Function ParseExpression( _
     
     'Begin with fetching the first operand
     If ParseValue(Operand1) Then Stop
-    Let ParseExpression = Operand1
+    Let ReturnValue = Operand1
     
     'The file could legitimately end with an expression, so don't error out if the _
      token stream comes to an end since the expression is valid. The parent scopes _
@@ -2769,39 +2835,39 @@ Continue:
     If Operand1 = OZ80_INDEFINITE _
     Or Operand2 = OZ80_INDEFINITE Then
         'Mark expression result as indefinite and skip applying the operator
-        Let ParseExpression = OZ80_INDEFINITE
+        Let ReturnValue = OZ80_INDEFINITE
     
     ElseIf Operator = TOKEN_OPERATOR_ADD Then
         'TODO: Check for overflow beforehand
-        Let ParseExpression = Operand1 + Operand2
+        Let ReturnValue = Operand1 + Operand2
         
     ElseIf Operator = TOKEN_OPERATOR_SUB Then
         'TODO: Check for overflow beforehand
-        Let ParseExpression = Operand1 - Operand2
+        Let ReturnValue = Operand1 - Operand2
     
     ElseIf Operator = TOKEN_OPERATOR_MUL Then
         'TODO: Check for overflow beforehand
-        Let ParseExpression = Operand1 * Operand2
+        Let ReturnValue = Operand1 * Operand2
     
     ElseIf Operator = TOKEN_OPERATOR_DIV Then
         'TODO: Check for divide by 0
-        Let ParseExpression = Operand1 / Operand2
+        Let ReturnValue = Operand1 / Operand2
     
     ElseIf Operator = TOKEN_OPERATOR_POW Then
         'TODO: Check for overflow
-        Let ParseExpression = Operand1 ^ Operand2
+        Let ReturnValue = Operand1 ^ Operand2
     
     ElseIf Operator = TOKEN_OPERATOR_MOD Then
-        Let ParseExpression = Operand1 Mod Operand2
+        Let ReturnValue = Operand1 Mod Operand2
     
     ElseIf Operator = TOKEN_OPERATOR_AND Then
-        Let ParseExpression = Operand1 And Operand2
+        Let ReturnValue = Operand1 And Operand2
     
     ElseIf Operator = TOKEN_OPERATOR_OR Then
-        Let ParseExpression = Operand1 Or Operand2
+        Let ReturnValue = Operand1 Or Operand2
         
     ElseIf Operator = TOKEN_OPERATOR_XOR Then
-        Let ParseExpression = Operand1 Xor Operand2
+        Let ReturnValue = Operand1 Xor Operand2
         
     Else
         Stop
@@ -2815,7 +2881,7 @@ Continue:
     'Does the expression continue?
     If File.TokenIsOperator Then
         'Set the current result as the first operand and go around again
-        Let Operand1 = ParseExpression
+        Let Operand1 = ReturnValue
         GoTo Continue
     End If
 End Function
@@ -2831,44 +2897,77 @@ End Function
 Private Function ParseValue( _
     ByRef ReturnValue As Double _
 ) As OZ80_ERROR
-    'If the negative sign preceeds, remember this until the full number _
-     has been fetched and calculated
+    'If the negative sign preceeds, remember this until the full number has been _
+     fetched and calculated. ONLY decimal numbers can be negative, you cannot negate _
+     hexadecimal/binary numbers or named-items (Constants, RAM names, Labels etc.)
     If File.TokenKind = TOKEN_OPERATOR_SUB Then
+        '..............................................................................
         Dim IsNegative As Boolean
         Let IsNegative = True
         'Move forward past the negative sign. If the file ends here, it's an error
-        If File.NextToken() = False Then Call RaiseError(OZ80_ERROR_FILE_END)
-    End If
-    
-    'Is it a named value?
-    'TODO: Handle scope expansion for names
-    If File.TokenKind = TOKEN_LABEL _
-    Or File.TokenKind = TOKEN_PROPERTY_USE Then '......................................
-        'TODO: get the full label from the property
+        If Not File.NextToken() Then Call RaiseError(OZ80_ERROR_FILE_END): GoTo ErrOut
+        'Continue parsing the number...
+        GoTo GetNumber
         
-        'If the named value is not yet known, the expression cannot be evaluated _
-         until it is defined later on
-        If Not Labels.Exists(File.TokenValue) _
-            Then Let ReturnValue = OZ80_INDEFINITE _
-            Else Let ReturnValue = Labels(File.TokenValue)
-            
-    'This is an easy one
-    ElseIf File.TokenKind = TOKEN_NUMBER Then '........................................
-        'TODO: Check for number prefix
+    'A decimal number:
+    ElseIf File.TokenKind = TOKEN_NUMBER Then
+        '..............................................................................
+GetNumber:
+        'Begin with getting the given value
         Let ReturnValue = File.TokenValue
+        'Was there a negative sign preceeding this number?
+        If IsNegative Then Let ReturnValue = -ReturnValue
         
-    Else '.............................................................................
-        'ERROR: Not a valid operand. We won't produce an error message here as the _
-         error might be exepected (i.e. an optional parameter). We fold upwards and _
-         whomever knows best will deal with the error
-        Let ReturnValue = OZ80_INDEFINITE
-        Let ParseValue = OZ80_ERROR_EXPRESSION
+        'Move over the number. If the file ends here, the Value is still valid, _
+         so no error. The parent can check if any scope has been left open. We skip _
+         checking for a number prefix, but we do need to apply any negative sign
+        If File.NextToken Then
+            'Check for a number prefix, e.g. `KB`
+            If File.TokenKind = TOKEN_PREFIX_K Then
+                'Check for min/max number you can multiply by 1'000 without overflowing
+                If (ReturnValue < OZ80_MIN_K) Or (ReturnValue > OZ80_MAX_K) Then
+                    Call RaiseError(OZ80_ERROR_OVERFLOW)
+                    GoTo ErrOut
+                End If
+                'Multiply by 1'000
+                Let ReturnValue = ReturnValue * 1000
+                'Move over the prefix
+                Call File.NextToken
+                
+            ElseIf File.TokenKind = TOKEN_PREFIX_KB Then
+                'Check for min/max number you can multiply by 1'024 without overflowing
+                If (ReturnValue < OZ80_MIN_KB) Or (ReturnValue > OZ80_MAX_KB) Then
+                    Call RaiseError(OZ80_ERROR_OVERFLOW)
+                    GoTo ErrOut
+                End If
+                'Multiply by 1'024
+                Let ReturnValue = ReturnValue * 1024
+            Else
+                'If the token is not a prefix, exit this function without moving the _
+                 token pointer forward (as we've already done that)
+                GoTo ErrOut
+            End If
+        End If
+    
+    'A Constant:
+    ElseIf File.TokenKind = TOKEN_CONST Then
+        '..............................................................................
+        'Has the constant been defined?
+        If Not Consts.Exists(File.TokenText) Then
+            Call RaiseError(OZ80_ERROR_UNDEFINED_CONST)
+            GoTo ErrOut
+        End If
+        'Retrieve the Constant value
+        Let ReturnValue = Consts.Item(File.TokenText)
+        
+    Else
+        Stop
     End If
     
-    'TODO: Apply negative sign, check bounds
-    
-    'Move beyond the current token now it's been processed
+    'Move over the processed token, the parent expects the token pointer to be on _
+     the next unread token
     Call File.NextToken
+ErrOut:
     'Return the error number
     Let ParseValue = My_Error
 End Function

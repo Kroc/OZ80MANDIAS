@@ -49,7 +49,7 @@ PROC    :IRQ                                    INTERRUPT $38
         
         `this short copyright message is wedged between the IRQ
          `and NMI routines in the original ROM
-        DATA "Developed By (C) 1991 Ancient - S", $A5, "Hayashi.", $00
+        BYTE    "Developed By (C) 1991 Ancient - S", $A5, "Hayashi.", $00
 }
 
 PROC    :pause                                  INTERRUPT $66
@@ -118,14 +118,14 @@ PROC    :interruptHandler                       SECTION ::interrupts
 	  we will then set another interrupt to fire where we want the split to occur``
 	ld	a, 10
 	out	($.VDP.CONTROL), a
-	ld	a, _VDP_REGISTER_10
+	ld	a, $.VDP_REGISTER_10
 	out	($.VDP.CONTROL), a
 	
 	`enable line interrupt IRQs (bit 5 of VDP register 0)
 	ld	a, ($.VDPREGISTER_0)
 	or	%00010000
 	out	($.VDP.CONTROL), a
-	ld	a, _VDP_REGISTER_0
+	ld	a, $.VDP_REGISTER_0
 	out	($.VDP.CONTROL), a
 	
 	`initialise the step counter for the water line raster split
@@ -195,20 +195,20 @@ PROC    :_LABEL_F7_25                           SECTION ::interrupts
 	ld	a, ($.VDPREGISTER_1)	        `get our cache value from RAM
 	and	%10111111		        `remove bit 6
 	out	($.VDP.CONTROL), a	        `write the value,
-	ld	a, _VDP_REGISTER_1	        `followed by the register number
+	ld	a, $.VDP_REGISTER_1	        `followed by the register number
 	out	($.VDP.CONTROL), a
 	
 	`horizontal scroll
 	ld	a, ($.VDPSCROLL_HORZ)
 	neg				        `I don't understand the reason for this
 	out	($.VDP.CONTROL), a
-	ld	a, _VDP_REGISTER_8
+	ld	a, $.VDP_REGISTER_8
 	out	($.VDP.CONTROL), a
 	
 	`vertical scroll
 	ld	a, ($.VDPSCROLL_VERT)
 	out	($.VDP.CONTROL), a
-	ld	a, _VDP_REGISTER_9
+	ld	a, $.VDP_REGISTER_9
 	out	($.VDP.CONTROL), a
 	
 	bit	5, (iy+#vars.flags0)			
@@ -221,7 +221,7 @@ PROC    :_LABEL_F7_25                           SECTION ::interrupts
 	 `(or if it was already blank before this function, leave it blank)
 	ld	a, ($.VDPREGISTER_1)
 	out	($.VDP.CONTROL), a
-	ld	a, _VDP_REGISTER_1
+	ld	a, $.VDP_REGISTER_1
 	out	($.VDP.CONTROL), a
 	
 	ld	a;bank, 8                       `Sonic sprites?
@@ -391,7 +391,7 @@ PARAMS 	a;step	                `the raster split step number (counts down from 3
 	`set VDP register 10 with the scanline number to interrupt at next
 	 `(that is, set the next interrupt to occur at the water line)
 	out	($.VDP.CONTROL), a;scanline
-	ld	a;register, _VDP_REGISTER_10
+	ld	a;register, $.VDP_REGISTER_10
 	out	($.VDP.CONTROL), a;register
 	
 	jp	._3
@@ -433,7 +433,7 @@ PARAMS 	a;step	                `the raster split step number (counts down from 3
 	ld	a, ($.VDPREGISTER_0)
 	and	%11101111		        `remove bit 4: disable line interrupts
 	out	($.VDP.CONTROL), a
-	ld	a, _VDP_REGISTER_0
+	ld	a, $.VDP_REGISTER_0
 	out	($.VDP.CONTROL), a
 
 ._3	pop	bc, de, hl, af

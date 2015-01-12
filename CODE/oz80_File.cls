@@ -108,9 +108,9 @@ Private Const STR_CPIR              As String = "cpir"
 Private Const STR_CPL               As String = "cpl"
 Private Const STR_DAA               As String = "daa"
 Private Const STR_DEC               As String = "dec"
+Private Const STR_DEF               As String = "DEF"
 Private Const STR_DI                As String = "di"
 Private Const STR_DJNZ              As String = "djnz"
-Private Const STR_DEF               As String = "DEF"
 Private Const STR_EI                As String = "ei"
 Private Const STR_EX                As String = "ex"
 Private Const STR_EXX               As String = "exx"
@@ -144,15 +144,16 @@ Private Const STR_OUTD              As String = "outd"
 Private Const STR_OTDR              As String = "otdr"
 Private Const STR_OUTI              As String = "outi"
 Private Const STR_OTIR              As String = "otir"
-Private Const STR_POP               As String = "pop"
-Private Const STR_PUSH              As String = "push"
 Private Const STR_PARAMS            As String = "PARAMS"
+Private Const STR_POP               As String = "pop"
 Private Const STR_PROC              As String = "PROC"
+Private Const STR_PUSH              As String = "push"
 Private Const STR_RAM               As String = "RAM"
 Private Const STR_RES               As String = "res"
 Private Const STR_RET               As String = "ret"
 Private Const STR_RETI              As String = "reti"
 Private Const STR_RETN              As String = "retn"
+Private Const STR_RETURN            As String = "RETURN"
 Private Const STR_RL                As String = "rl"
 Private Const STR_RLA               As String = "rla"
 Private Const STR_RLC               As String = "rlc"
@@ -164,17 +165,17 @@ Private Const STR_RRC               As String = "rrc"
 Private Const STR_RRCA              As String = "rrca"
 Private Const STR_RRD               As String = "rrd"
 Private Const STR_RST               As String = "rst"
-Private Const STR_RETURN            As String = "RETURN"
 Private Const STR_SBC               As String = "sbc"
+Private Const STR_SECTION           As String = "SECTION"
 Private Const STR_SCF               As String = "scf"
 Private Const STR_SET               As String = "set"
 Private Const STR_SLA               As String = "sla"
 Private Const STR_SLL               As String = "sll"
+Private Const STR_SLOT              As String = "SLOT"
 Private Const STR_SRA               As String = "sra"
 Private Const STR_SRL               As String = "srl"
+Private Const STR_START             As String = "START"
 Private Const STR_SUB               As String = "sub"
-Private Const STR_SECTION           As String = "SECTION"
-Private Const STR_SLOT              As String = "SLOT"
 Private Const STR_SYSTEM            As String = "SYSTEM"
 Private Const STR_TRIP              As String = "TRIP"
 Private Const STR_WORD              As String = "WORD"
@@ -187,6 +188,7 @@ Private Const FORMAT_QUOTE          As String = """"
 Private Const FORMAT_TOKEN          As String = "<tkn> {$} ({$},{$}) [{$}] {$}"
 Private Const FORMAT_TOKEN_CHUNK    As String = "   CHUNK"
 Private Const FORMAT_TOKEN_CONST    As String = "   CONST"
+Private Const FORMAT_TOKEN_FLAG     As String = "    FLAG"
 Private Const FORMAT_TOKEN_HASH     As String = "    HASH"
 Private Const FORMAT_TOKEN_KEYWORD  As String = " KEYWORD"
 Private Const FORMAT_TOKEN_LABEL    As String = "   LABEL"
@@ -1184,6 +1186,7 @@ TokenWord:
         'Keywords
         If Word.Equals(STR_SECTION) Then Call Add(TOKEN_KEYWORD_SECTION): GoTo NextWord
         If Word.Equals(STR_SLOT) Then Call Add(TOKEN_KEYWORD_SLOT): GoTo NextWord
+        If Word.Equals(STR_START) Then Call Add(TOKEN_KEYWORD_START): GoTo NextWord
         If Word.Equals(STR_SYSTEM) Then Call Add(TOKEN_KEYWORD_SYSTEM): GoTo NextWord
         
     ElseIf Asc1 = ASC_T Then '................................................. `t` ...
@@ -1516,6 +1519,11 @@ Private Function FormatToken( _
         Call Format_Msg.Wrap(FORMAT_QUOTE)
         Let Format_TokenType = FORMAT_TOKEN_CONST
         
+    ElseIf My_IsFlag(My_TokenKind) Then
+        '.............................................................................
+        Let Format_Msg.Text = oz80.TokenName(My_TokenKind)
+        Let Format_TokenType = FORMAT_TOKEN_FLAG
+        
     ElseIf My_TokenKind = TOKEN_HASH Then
         '..............................................................................
         Let Format_Msg.Text = Strings.Item(My_TokenValue)
@@ -1698,7 +1706,7 @@ Private Function NestIn( _
     Let NestingDepth = NestingDepth + 1
     Let Nesting(NestingDepth).Token = BracketType
     Let Nesting(NestingDepth).Index = My_Index
-    Call Add(BracketType, 0)
+    Call Add(BracketType, -1)
 End Function
 
 'NestOut : Finish a level of bracket nesting, folding up to the previous level

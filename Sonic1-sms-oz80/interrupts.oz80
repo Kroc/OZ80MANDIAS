@@ -444,13 +444,13 @@ PARAMS 	a;step	                `the raster split step number (counts down from 3
 
 TABLE   :S1_UnderwaterPalette                   SECTION ::interrupts        `[$024B]
 {
-.tile   DATA $10 $14 $14 $18 $35 $34 $2C $39 $21 $20 $1E $09 $04 $1E $10 $3F
-.sprite DATA $00 $20 $35 $2E $29 $3A $00 $3F $14 $29 $3A $14 $3E $3A $19 $25
+.tile   BYTE    $10 $14 $14 $18 $35 $34 $2C $39 $21 $20 $1E $09 $04 $1E $10 $3F
+.sprite BYTE    $00 $20 $35 $2E $29 $3A $00 $3F $14 $29 $3A $14 $3E $3A $19 $25
 }
 TABLE   :S1_UnderwaterPalette_Boss              SECTION ::interrupts        `[$026B]
 {
-.tile   DATA $10 $14 $14 $18 $35 $34 $2C $39 $21 $20 $1E $09 $04 $1E $10 $3F
-.sprite DATA $10 $20 $35 $2E $29 $3A $00 $3F $24 $3D $1F $17 $14 $3A $19 $00
+.tile   BYTE    $10 $14 $14 $18 $35 $34 $2C $39 $21 $20 $1E $09 $04 $1E $10 $3F
+.sprite BYTE    $10 $20 $35 $2E $29 $3A $00 $3F $24 $3D $1F $17 $14 $3A $19 $00
 }
 
 PROC	:init                                   SECTION ::interrupts
@@ -520,7 +520,7 @@ PARAMS	a;songIndex	``index number of song to play
 	push	af;songIndex
 	
 	`switch page 1 (Z80:$4000-$7FFF) to bank 3 ($C000-$FFFF)
-	ld	a;bank, :sound_playMusic#bank
+	ld	a;bank, :sound_playMusic.bank
 	ld	($.SMS.SLOT1), a;bank
 	
 	pop	af;songIndex
@@ -559,7 +559,7 @@ PARAMS	a;SFXIndex
 	di	
 	push	af;SFXIndex
 	
-	ld	a;bank,:sound_playSFX#bank
+	ld	a;bank,:sound_playSFX.bank
 	ld	($.SMS.SLOT1),a;bank
 	
         pop	af;SFXIndex
@@ -574,26 +574,26 @@ PARAMS	a;SFXIndex
 TABLE   :initVDPRegisterValues                  SECTION ::interrupts
         `====================================================================[$031B]===
 {		                                                        `	cache:
-        DATA %00100110   `VDP Reg#0:	        				$D218
+        BYTE %00100110   `VDP Reg#0:	        				$D218
             `......x.    stretch screen (33 columns)
             `.....x..    unknown
             `..x.....    hide left column (for scrolling)
 
-        DATA %10100010	`VDP Reg#1: (original ROM)				$D219
+        BYTE %10100010	`VDP Reg#1: (original ROM)				$D219
             `......x.    enable 8x16 sprites
             `..x.....    enable vsync interrupt
             `.x......	 disable screen (no display)                    
             `x.......    unknown                                        `these caches
                                                                         `are not used
-        DATA $FF	`VDP Reg#2: place screen at VRAM:$3800		        $D21A
-        DATA $FF	`VDP Reg#3: unused					$D21B
-        DATA $FF	`VDP Reg#4: unused					$D21C
-        DATA $FF	`VDP Reg#5: set sprites at VRAM:$3F00		        $D21D
-        DATA $FF	`VDP Reg#6: set sprites to use tiles from VRAM:$2000	$D21E
-        DATA $00	`VDP Reg#7: set border colour from the sprite palette	$D21F
-        DATA $00	`VDP Reg#8: horizontal scroll offset			$D220
-        DATA $00	`VDP Reg#9: vertical scroll offset			$D221
-        DATA $FF	`VDP Reg#10: disable line interrupts			$D222
+        BYTE $FF	`VDP Reg#2: place screen at VRAM:$3800		        $D21A
+        BYTE $FF	`VDP Reg#3: unused					$D21B
+        BYTE $FF	`VDP Reg#4: unused					$D21C
+        BYTE $FF	`VDP Reg#5: set sprites at VRAM:$3F00		        $D21D
+        BYTE $FF	`VDP Reg#6: set sprites to use tiles from VRAM:$2000	$D21E
+        BYTE $00	`VDP Reg#7: set border colour from the sprite palette	$D21F
+        BYTE $00	`VDP Reg#8: horizontal scroll offset			$D220
+        BYTE $00	`VDP Reg#9: vertical scroll offset			$D221
+        BYTE $FF	`VDP Reg#10: disable line interrupts			$D222
 }
 
 PROC	:waitForInterrupt                       SECTION ::interrupts

@@ -177,6 +177,7 @@ Private Const STR_SRL               As String = "srl"
 Private Const STR_START             As String = "START"
 Private Const STR_SUB               As String = "sub"
 Private Const STR_SYSTEM            As String = "SYSTEM"
+Private Const STR_TABLE             As String = "TABLE"
 Private Const STR_TRIP              As String = "TRIP"
 Private Const STR_WORD              As String = "WORD"
 Private Const STR_XOR               As String = "xor"
@@ -954,8 +955,7 @@ TokenWord:
     ElseIf Asc1 = SYNTAX_LABEL Then
         'A label can be `:` only, without a name (when used within a PROC)
         If Asc2 = ASC_NUL Then
-            'This is tokenised as having a label index of 0
-            Call Add(TOKEN_LABEL)
+            Call AddString(TOKEN_LABEL)
         
         'A label cannot begin with a number but must otherwise be A-Z, 0-9 and "_"
         ElseIf Not IsValidName() Then
@@ -1191,6 +1191,7 @@ TokenWord:
         
     ElseIf Asc1 = ASC_T Then '................................................. `t` ...
         'Keywords
+        If Word.Equals(STR_TABLE) Then Call Add(TOKEN_KEYWORD_TABLE): GoTo NextWord
         If Word.Equals(STR_TRIP) Then Call Add(TOKEN_KEYWORD_TRIP): GoTo NextWord
         'There is no `t` register
         GoTo WordError

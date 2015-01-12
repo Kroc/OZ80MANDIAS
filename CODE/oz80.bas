@@ -225,6 +225,7 @@ Public Enum OZ80_TOKEN
     TOKEN_KEYWORD_SLOT                  'Section Slot pattern `SLOT 0, 1, 2`
     TOKEN_KEYWORD_START                 'The starting vector for the System
     TOKEN_KEYWORD_SYSTEM                'System identifier `SYSTEM "SMS"`
+    TOKEN_KEYWORD_TABLE                 'Data table
     TOKEN_KEYWORD_TRIP                  'Triple data type (3-bytes)
     TOKEN_KEYWORD_WORD                  'Word data type (2-bytes)
     [_TOKEN_KEYWORDS_END]
@@ -450,6 +451,7 @@ Public Property Get TokenName( _
         Let My_TokenName(TOKEN_KEYWORD_SLOT) = "SLOT"
         Let My_TokenName(TOKEN_KEYWORD_START) = "START"
         Let My_TokenName(TOKEN_KEYWORD_SYSTEM) = "SYSTEM"
+        Let My_TokenName(TOKEN_KEYWORD_TABLE) = "TABLE"
         Let My_TokenName(TOKEN_KEYWORD_TRIP) = "TRIP"
         Let My_TokenName(TOKEN_KEYWORD_WORD) = "WORD"
         

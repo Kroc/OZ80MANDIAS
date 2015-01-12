@@ -9,23 +9,6 @@ Option Explicit
 
 'Public, shared stuff
 
-'Some expressions cannot be calculated until the Z80 code has been assembled. _
- For example, Label addresses are chosen after all code has been parsed and the sizes _
- of the chunks are known. A special Value is used that lies outside of the allowable _
- range of numbers in OZ80 (32-bit) to mark an Expression with a yet-unknown Value
-
-'VB does not allow implicit Double (64-bit) values greater than 32-bits, _
- a trick is used here to build the largest possible 64-bit number: _
- <stackoverflow.com/questions/929069/how-do-i-declare-max-double-in-vb6/933490#933490>
-Public Const OZ80_INDEFINITE As Double = 1.79769313486231E+308 + 5.88768018655736E+293
-
-'The min/max numbers that can be multiplied/divided by 1'000 or 1'024 without overflow
-Public Const OZ80_MIN_K As Double = -9.22337203685478E+15
-Public Const OZ80_MIN_KB As Double = -9.00719925474099E+15
-Public Const OZ80_MAX_K As Double = 9.22337203685478E+15
-Public Const OZ80_MAX_KB As Double = 9.00719925474099E+15
-
-
 '/// DEBUG ////////////////////////////////////////////////////////////////////////////
 
 Public Profiler As New bluProfiler

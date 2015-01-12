@@ -142,7 +142,7 @@ HASH    #vars                           `$D200:
 
 `--------------------------------------------------------------------------------------
 
-RAM
+RAM     $
 `name                           `size                                           `addr
 [       
 ``the floor layout (i.e. the tiles Sonic runs around on).

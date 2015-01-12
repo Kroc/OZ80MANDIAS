@@ -912,9 +912,9 @@ TokenWord:
         GoTo NextWord
     
     'RAM name, e.g. `$.gamevar`, `$#RAM_BANK.gamevar` _
-     ......................................................................... `$.` ...
+     .......................................................................... `$` ...
     ElseIf Asc1 = SYNTAX_RAM _
-    And (Asc2 = SYNTAX_PROPERTY Or Asc2 = SYNTAX_HASH) Then
+    And (Asc2 = ASC_NUL Or Asc2 = SYNTAX_PROPERTY Or Asc2 = SYNTAX_HASH) Then
         'ERROR: Invalid RAM name?
         If Not IsValidName() Then
             Call RaiseError(OZ80_ERROR_INVALID_NAME_RAM)
@@ -1547,10 +1547,8 @@ Private Function FormatToken( _
         
     ElseIf My_TokenKind = TOKEN_NUMBER Then
         '..............................................................................
-        'Don't try and display an indefinite value
-        If My_TokenValue = OZ80_INDEFINITE _
-            Then Let Format_Msg.Text = "?" _
-            Else Let Format_Msg.Text = Format$(My_TokenValue, "#,0")
+        'TODO: Don't try and display an indefinite value
+        Let Format_Msg.Text = Format$(My_TokenValue, "#,0")
         Let Format_TokenType = FORMAT_TOKEN_NUMBER
         
     ElseIf My_IsOperator(My_TokenKind) Then
@@ -1700,7 +1698,7 @@ Private Function NestIn( _
     Let NestingDepth = NestingDepth + 1
     Let Nesting(NestingDepth).Token = BracketType
     Let Nesting(NestingDepth).Index = My_Index
-    Call Add(BracketType, OZ80_INDEFINITE)
+    Call Add(BracketType, 0)
 End Function
 
 'NestOut : Finish a level of bracket nesting, folding up to the previous level

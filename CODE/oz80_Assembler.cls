@@ -19,6 +19,22 @@ Option Explicit
 '======================================================================================
 'CLASS :: oz80_Assembler
 
+'/// API //////////////////////////////////////////////////////////////////////////////
+
+'Undocumented VB6 APIs to write a number of bytes to memory. _
+ We'll be using this to manually create some Double values
+Private Declare Sub api_PutMem1 Lib "msvbvm60" Alias "PutMem1" ( _
+    ByVal DestinationPointer As Long, _
+    ByVal Value As Byte _
+)
+Private Declare Sub api_PutMem2 Lib "msvbvm60" Alias "PutMem2" ( _
+    ByVal DestinationPointer As Long, _
+    ByVal Value As Integer _
+)
+Private Declare Sub api_PutMem4 Lib "msvbvm60" Alias "PutMem2" ( _
+    ByVal DestinationPointer As Long, _
+    ByVal Value As Long _
+)
 
 '/// DEFINITIONS //////////////////////////////////////////////////////////////////////
 
@@ -35,6 +51,17 @@ Private Const LOG_SECTION       As String = "SECTION {$}"
 
 'String constants to save these being temporarily created and destroyed multiple times
 Private Const STR_SMS           As String = "SMS"
+
+'During class initialisation we manually create special 64-bit numbers _
+ in these values, which cannot be written out natively in VB6
+Private INDEFINITE As Double
+Private NUMBER_MAX As Double
+Private NUMBER_MIN As Double
+'The min/max numbers that can be multiplied/divided by 1'000 or 1'024 without overflow
+Private NUMBER_MIN_K As Double
+Private NUMBER_MAX_K As Double
+Private NUMBER_MIN_KB As Double
+Private NUMBER_MAX_KB As Double
 
 'Error number!
 Private My_Error As OZ80_ERROR
@@ -274,6 +301,28 @@ Event Error( _
 Private Sub Class_Initialize()
     'If too many possible tokens are created, things will screw up
     Debug.Assert OZ80_TOKEN.[_TOKEN_LAST] < 256
+    
+    'Manually create a 64-bit Double "Infinite" number, which cannot be written _
+     implicitly in VB6. This method is based upon <stackoverflow.com/a/896292>. _
+     We use this to mark numbers as "not yet defined" whilst still allowing full _
+     64-Bit floating-point calculations
+    Call api_PutMem1(VarPtr(INDEFINITE) + 6, 240)
+    Call api_PutMem1(VarPtr(INDEFINITE) + 7, 127)
+    'Manually create the largest possible 64-bit number
+    Call api_PutMem2(VarPtr(NUMBER_MAX), &HFFFFFFFF)
+    Call api_PutMem2(VarPtr(NUMBER_MAX) + 4, -1)
+    Call api_PutMem1(VarPtr(NUMBER_MAX) + 6, 239)
+    Call api_PutMem1(VarPtr(NUMBER_MAX) + 7, 127)
+    'Manually create the largest negative 64-bit number
+    Call api_PutMem2(VarPtr(NUMBER_MIN), &HFFFFFFFF)
+    Call api_PutMem2(VarPtr(NUMBER_MIN) + 4, -1)
+    Call api_PutMem1(VarPtr(NUMBER_MIN) + 6, 239)
+    Call api_PutMem1(VarPtr(NUMBER_MIN) + 7, 255)
+    'Define min/max numbers that can be multiplied by 1000/1024 without overflow
+    Let NUMBER_MAX_K = NUMBER_MAX / 1000
+    Let NUMBER_MIN_K = -NUMBER_MAX_K
+    Let NUMBER_MAX_KB = NUMBER_MAX / 1024
+    Let NUMBER_MIN_KB = -NUMBER_MAX_KB
     
     'This is a re-usable temporary String for logging
     Set LogMsg = New bluString
@@ -892,7 +941,7 @@ Private Sub ProcessProc()
     
     'The `INTERRUPT` parameter is optional, but can be zero, so use 'undefined'
     Dim Interrupt As Double
-    Let Interrupt = OZ80_INDEFINITE
+    Let Interrupt = INDEFINITE
     
 ReadParams:
     '----------------------------------------------------------------------------------
@@ -1019,7 +1068,7 @@ SkipReturn:
         'An indefinite value cannot be used for an Interrupt address, we will only be _
          able to define the indefinite values (i.e. Label locations in ROM) once _
          the whole code is parsed and we use the Sections to layout the ROM
-        If Interrupt = OZ80_INDEFINITE Then Call RaiseError(OZ80_ERROR_INDEFINITE): Exit Sub
+        If Interrupt = INDEFINITE Then Call RaiseError(OZ80_ERROR_INDEFINITE): Exit Sub
         
         'Validate the Value, only certain Interrupt addresses are allowed
         If Not ((Interrupt = &H0) Or (Interrupt = &H8) Or (Interrupt = &H10) _
@@ -1056,7 +1105,7 @@ SkipReturn:
     
 '    Dim LogMsg As String
 '    Let LogMsg = "PROC " & LabelName
-'    If Interrupt <> OZ80_INDEFINITE _
+'    If Interrupt <> INDEFINITE _
 '        Then Let LogMsg = LogMsg & " INTERRUPT $" & oz80.HexStr8(CLng(Interrupt))
 '    RaiseEvent Message(OZ80_LOG_STATUS, LogMsg)
     
@@ -1148,7 +1197,7 @@ Private Sub DefineSection()
         If List.Count > 3 Then Call RaiseError(OZ80_ERROR_INVALID_SLOT): Exit Sub
         
         'An indefinite value cannot be used for the Slot
-        If List.Item(0) = OZ80_INDEFINITE Then GoTo ErrIndefinite
+        If List.Item(0) = INDEFINITE Then GoTo ErrIndefinite
         
         'Check for one item: 0, 1 or 2
         If List.Count = 1 Then
@@ -1162,7 +1211,7 @@ Private Sub DefineSection()
         'Check for two items: 0, 1 or 1, 2
         If List.Count = 2 Then
             'An indefinite value cannot be used for the Slot
-            If List.Item(1) = OZ80_INDEFINITE Then GoTo ErrIndefinite
+            If List.Item(1) = INDEFINITE Then GoTo ErrIndefinite
             If List.Item(0) = 0 And List.Item(1) = 1 Then Let Slot = SLOT0 Or SLOT1: GoTo Finish
             If List.Item(0) = 1 And List.Item(1) = 2 Then Let Slot = SLOT1 Or SLOT2: GoTo Finish
             'An invalid value
@@ -2031,7 +2080,7 @@ iIM:
         'An indefinite value is assumed to be zero. _
          The assembler will ensure that there are no indefinite values remaining _
          on the second parsing of the source code
-        If Param1.Value = OZ80_INDEFINITE Then
+        If Param1.Value = INDEFINITE Then
             Set LogAsm = Chunk.AddOpcodeED(X1 Or Z6)
         ElseIf Param1.Value = 0 Then
             Set LogAsm = Chunk.AddOpcode(X1 Or Z6)
@@ -2791,7 +2840,7 @@ End Function
 
 'ParseExpression : Evaluate a calculation into a Value
 '======================================================================================
-'ReturnValue    | Gets set to the calculated Value, or `OZ80_INDEFINITE`.
+'ReturnValue    | Gets set to the calculated Value, or `INDEFINITE`.
 '               | Note that this is a 64-bit floating-pointer number, so it's up to
 '               | the caller to validate the number according to their needs
 '---------------+----------------------------------------------------------------------
@@ -2832,10 +2881,10 @@ Continue:
     'If either operand were a yet-unknowable value (such as a label or property), _
      then don't bother applying the operator, but do continue the expression so that _
      we may reach the end and continue processing the tokens that follow
-    If Operand1 = OZ80_INDEFINITE _
-    Or Operand2 = OZ80_INDEFINITE Then
+    If (Operand1 = INDEFINITE) _
+    Or (Operand2 = INDEFINITE) Then
         'Mark expression result as indefinite and skip applying the operator
-        Let ReturnValue = OZ80_INDEFINITE
+        Let ReturnValue = INDEFINITE
     
     ElseIf Operator = TOKEN_OPERATOR_ADD Then
         'TODO: Check for overflow beforehand
@@ -2888,7 +2937,7 @@ End Function
 
 'ParseValue : Get a single Value as part of an Expression
 '======================================================================================
-'ReturnValue    | Gets set to the calculated Value, or `OZ80_INDEFINITE`.
+'ReturnValue    | Gets set to the calculated Value, or `INDEFINITE`.
 '               | Note that this is a 64-bit floating-pointer number, so it's up to
 '               | the caller to validate the number according to their needs
 '---------------+----------------------------------------------------------------------
@@ -2925,7 +2974,7 @@ GetNumber:
             'Check for a number prefix, e.g. `KB`
             If File.TokenKind = TOKEN_PREFIX_K Then
                 'Check for min/max number you can multiply by 1'000 without overflowing
-                If (ReturnValue < OZ80_MIN_K) Or (ReturnValue > OZ80_MAX_K) Then
+                If (ReturnValue < NUMBER_MIN_K) Or (ReturnValue > NUMBER_MAX_K) Then
                     Call RaiseError(OZ80_ERROR_OVERFLOW)
                     GoTo ErrOut
                 End If
@@ -2936,7 +2985,7 @@ GetNumber:
                 
             ElseIf File.TokenKind = TOKEN_PREFIX_KB Then
                 'Check for min/max number you can multiply by 1'024 without overflowing
-                If (ReturnValue < OZ80_MIN_KB) Or (ReturnValue > OZ80_MAX_KB) Then
+                If (ReturnValue < NUMBER_MIN_KB) Or (ReturnValue > NUMBER_MAX_KB) Then
                     Call RaiseError(OZ80_ERROR_OVERFLOW)
                     GoTo ErrOut
                 End If

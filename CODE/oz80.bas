@@ -40,11 +40,13 @@ Public Enum OZ80_ERROR
     OZ80_ERROR_NONE                     'Assembly completed successfully
     OZ80_ERROR_DUPLICATE                'A name has been defined twice
     OZ80_ERROR_DUPLICATE_CONSTANT       '- Constant already defined
+    OZ80_ERROR_DUPLICATE_LABEL          '- Duplicate Label
     OZ80_ERROR_DUPLICATE_PROC_INTERRUPT '- Duplicate `INTERRUPT` parameter
     OZ80_ERROR_DUPLICATE_PROC_PARAMS    '- Duplicate `PARAMS` parameter
     OZ80_ERROR_DUPLICATE_PROC_RETURN    '- Duplicate `RETURN` parameter
     OZ80_ERROR_DUPLICATE_PROC_SECTION   '- Duplicate `SECTION` parameter
-    OZ80_ERROR_DUPLICATE_SECTION        '- Can't define a section twice
+    OZ80_ERROR_DUPLICATE_SECTION        '- Can't define a Section twice
+    OZ80_ERROR_DUPLICATE_START          '- Duplicate `START` Procedure
     OZ80_ERROR_EXPECTED                 'Incorrect content at the current scope
     OZ80_ERROR_EXPECTED_BRACKET         '- Close bracket ("}","]",")") without open
     OZ80_ERROR_EXPECTED_EXPRESSION      '- Expression required here
@@ -68,6 +70,7 @@ Public Enum OZ80_ERROR
     OZ80_ERROR_INVALID_NUMBER_DEC       '- Invalid decimal number
     OZ80_ERROR_INVALID_NUMBER_HEX       '- Invalid hexadecimal number
     OZ80_ERROR_INVALID_NUMBER_BIN       '- Invalid binary number
+    OZ80_ERROR_INVALID_PROC_INTERRUPT   'SECTION & INTERRUPT params cannot co-exist
     OZ80_ERROR_INVALID_SECTION          'Section used, but not defined
     OZ80_ERROR_INVALID_SLOT             'Incorrect use of the Slot parameter
     OZ80_ERROR_INVALID_WORD             'Couldn't parse a word
@@ -86,10 +89,12 @@ End Enum
 Public Enum OZ80_TOKEN
     TOKEN_NONE                          'Skip "0"
     
+    [_TOKEN_FIRST]
+    [_TOKEN_Z80_BEGIN] = [_TOKEN_FIRST]
+    
     'These are just the mnemonic tokens -- the assembler checks the
      'parameters and determines which opcode should be used
-    [_TOKEN_INSTRUCTIONS_BEGIN]
-    TOKEN_Z80_ADC                       'Add with Carry
+    TOKEN_Z80_ADC = [_TOKEN_FIRST]      'Add with Carry
     TOKEN_Z80_ADD                       'Add
     TOKEN_Z80_AND                       'Bitwise AND
     TOKEN_Z80_BIT                       'Bit test
@@ -157,11 +162,11 @@ Public Enum OZ80_TOKEN
     TOKEN_Z80_SRL                       'Shift Right Logical
     TOKEN_Z80_SUB                       'Subtract
     TOKEN_Z80_XOR                       'Bitwise XOR
-    [_TOKEN_INSTRUCTIONS_END]
+    [_TOKEN_Z80_END] = TOKEN_Z80_XOR
     
     'Z80 Registers & Flags ............................................................
-    [_TOKEN_REGISTERS_BEGIN]
-    TOKEN_Z80_A                         'Accumulator
+    [_TOKEN_REGS_BEGIN]
+    TOKEN_Z80_A = [_TOKEN_REGS_BEGIN]   'Accumulator
     TOKEN_Z80_AF                        'Accumulator and Flags
     TOKEN_Z80_B                         'Register B
     TOKEN_Z80_C                         'Register C or Carry flag
@@ -189,7 +194,7 @@ Public Enum OZ80_TOKEN
     TOKEN_Z80_SP                        'Stack Pointer
     TOKEN_Z80_Z                         'Zero set flag
     TOKEN_Z80_NZ                        'Zero not set flag
-    [_TOKEN_REGISTERS_END]
+    [_TOKEN_REGS_END] = TOKEN_Z80_NZ
     
     'Operators ........................................................................
     [_TOKEN_OPERATORS_BEGIN]
@@ -258,7 +263,7 @@ End Enum
 '--------------------------------------------------------------------------------------
 
 'A list of system targets. Only the SEGA Master System is supported at the moment, _
- but I will consider supporting other Z80 systems in the future.
+ but I will consider supporting other Z80 systems in the future
 Public Enum OZ80_SYSTEM
     SYSTEM_NONE                         'System not yet defined
     SYSTEM_SMS                          'SEGA Master System

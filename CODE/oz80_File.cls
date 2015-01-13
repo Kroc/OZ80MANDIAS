@@ -89,9 +89,8 @@ Private Const TAB_WIDTH As Long = 8
 '--------------------------------------------------------------------------------------
 
 'String constants at class level so that these texts do not have to be temporarily _
- created and thrown away every time we use them. _
- This is a list of the token words recognised
- 
+ created and thrown away every time we use them _
+
 Private Const STR_ADC               As String = "adc"
 Private Const STR_ADD               As String = "add"
 Private Const STR_AND               As String = "and"
@@ -184,6 +183,10 @@ Private Const STR_XOR               As String = "xor"
 
 '--------------------------------------------------------------------------------------
 
+'To save having to create and destroy short strings all the time, _
+ we'll keep this one around for formatting log messages
+Private LogMsg As bluString
+
 'For diaplying a disassembly
 Private Const FORMAT_QUOTE          As String = """"
 Private Const FORMAT_TOKEN          As String = "<tkn> {$} ({$},{$}) [{$}] {$}"
@@ -211,10 +214,6 @@ Private Const FORMAT_FILE_TOKENS    As String = "Tokens: {$}"
 
 'The error number!
 Private My_Error As OZ80_ERROR
-
-'To save having to create and destroy short strings all the time, _
- we'll keep this one around for formatting log messages
-Private LogMsg As bluString
 
 'Remember where the original source file is as the assembler will need to change to _
  its directory when handling relative references with includes
@@ -259,7 +258,8 @@ Private My_IsRegister16Bit(0 To [_TOKEN_LAST]) As Boolean
 
 'We could just unfold Text into a series of number tokens, but for quick access we _
  store them in their own database, referenced by the Token's Value
-Public Strings As bluArrayStrings
+Private Strings As bluArrayStrings
+
 '--------------------------------------------------------------------------------------
 
 'When parsing source text, we can save having to pass these through function calls _
@@ -491,8 +491,8 @@ Public Function Tokenise( _
     For t = 0 To [_TOKEN_LAST]
         'Check what token category it belongs to
         '..............................................................................
-        Let My_IsInstruction(t) = (t > [_TOKEN_INSTRUCTIONS_BEGIN]) And _
-                                  (t < [_TOKEN_INSTRUCTIONS_END])
+        Let My_IsInstruction(t) = (t >= [_TOKEN_Z80_BEGIN]) And _
+                                  (t <= [_TOKEN_Z80_END])
         Let My_IsOperator(t) = (t > [_TOKEN_OPERATORS_BEGIN]) And _
                                (t < [_TOKEN_OPERATORS_END])
         Let My_IsKeyword(t) = (t > [_TOKEN_KEYWORDS_BEGIN]) And _
@@ -567,6 +567,13 @@ Public Function Tokenise( _
         '..............................................................................
         ElseIf (t = TOKEN_Z80MEM_OPEN) Then
             Let My_IsParameter(t) = True
+            
+        'The `START` keyword acts as a Label for the System's boot vector
+        '..............................................................................
+        ElseIf (t = TOKEN_KEYWORD_START) Then
+            Let My_IsExpression(t) = True
+            Let My_IsParameter(t) = True
+            Let My_IsList(t) = True
         End If
     Next t
     

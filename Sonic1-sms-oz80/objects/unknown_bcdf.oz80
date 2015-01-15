@@ -102,17 +102,17 @@ PROC    :_bcdf                                  SECTION ::objects
 	res	5,(iy+#vars.unknown0)
 	ret
         
-._bdc7  DATA $00, $01, $01, $01, $02, $01, $FF
+._bdc7  BYTE $00, $01, $01, $01, $02, $01, $FF
 
         `sprite layout
-._bdce  DATA $44, $46, $FF, $FF, $FF, $FF
-        DATA $FF, $FF, $FF, $FF, $FF, $FF
-        DATA $FF, $FF, $FF, $FF, $FF, $FF
+._bdce  BYTE $44, $46, $FF, $FF, $FF, $FF
+        BYTE $FF, $FF, $FF, $FF, $FF, $FF
+        BYTE $FF, $FF, $FF, $FF, $FF, $FF
 
-        DATA $48, $08, $FF, $FF, $FF, $FF
-        DATA $FF, $FF, $FF, $FF, $FF, $FF
-        DATA $FF, $FF, $FF, $FF, $FF, $FF
+        BYTE $48, $08, $FF, $FF, $FF, $FF
+        BYTE $FF, $FF, $FF, $FF, $FF, $FF
+        BYTE $FF, $FF, $FF, $FF, $FF, $FF
 
-        DATA $60, $62, $FF, $FF, $FF, $FF
-        DATA $FF
+        BYTE $60, $62, $FF, $FF, $FF, $FF
+        BYTE $FF
 }

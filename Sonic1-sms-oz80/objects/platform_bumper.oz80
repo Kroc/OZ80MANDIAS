@@ -56,6 +56,6 @@ PROC    :doObjectCode_platform_bumper           SECTION ::objects
 	ret
         
         `sprite layout
-._9b6e  DATA $08, $0A, $28, $2A, $FF, $FF
-        DATA $FF
+._9b6e  BYTE $08, $0A, $28, $2A, $FF, $FF
+        BYTE $FF
 }

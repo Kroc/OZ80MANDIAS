@@ -60,33 +60,33 @@ PROC    :doObjectCode_boss_freeBird             SECTION ::objects {
 	ld	(ix+#object.type),$FF	`remove object?
 	ret
 
-._7629  DATA $00, $02, $01, $02, $ff
-._762e  DATA $02, $04, $03, $04, $ff
-._7633  DATA $04, $03, $05, $03, $ff
+._7629  BYTE $00, $02, $01, $02, $ff
+._762e  BYTE $02, $04, $03, $04, $ff
+._7633  BYTE $04, $03, $05, $03, $ff
 
         `sprite layout
-._7638  DATA $10, $12, $FF, $FF, $FF, $FF
-        DATA $FF, $FF, $FF, $FF, $FF, $FF
-        DATA $FF, $FF, $FF, $FF, $FF, $FF
+._7638  BYTE $10, $12, $FF, $FF, $FF, $FF
+        BYTE $FF, $FF, $FF, $FF, $FF, $FF
+        BYTE $FF, $FF, $FF, $FF, $FF, $FF
         
-        DATA $6E, $0E, $FF, $FF, $FF, $FF
-        DATA $FF, $FF, $FF, $FF, $FF, $FF
-        DATA $FF, $FF, $FF, $FF, $FF, $FF
+        BYTE $6E, $0E, $FF, $FF, $FF, $FF
+        BYTE $FF, $FF, $FF, $FF, $FF, $FF
+        BYTE $FF, $FF, $FF, $FF, $FF, $FF
         
-        DATA $28, $2A, $FF, $FF, $FF, $FF
-        DATA $FF, $FF, $FF, $FF, $FF, $FF
-        DATA $FF, $FF, $FF, $FF, $FF, $FF
+        BYTE $28, $2A, $FF, $FF, $FF, $FF
+        BYTE $FF, $FF, $FF, $FF, $FF, $FF
+        BYTE $FF, $FF, $FF, $FF, $FF, $FF
         
-        DATA $2C, $2E, $FF, $FF, $FF, $FF
-        DATA $FF, $FF, $FF, $FF, $FF, $FF
-        DATA $FF, $FF, $FF, $FF, $FF, $FF
+        BYTE $2C, $2E, $FF, $FF, $FF, $FF
+        BYTE $FF, $FF, $FF, $FF, $FF, $FF
+        BYTE $FF, $FF, $FF, $FF, $FF, $FF
         
-        DATA $30, $32, $FF, $FF, $FF, $FF
-        DATA $FF, $FF, $FF, $FF, $FF, $FF
-        DATA $FF, $FF, $FF, $FF, $FF, $FF
+        BYTE $30, $32, $FF, $FF, $FF, $FF
+        BYTE $FF, $FF, $FF, $FF, $FF, $FF
+        BYTE $FF, $FF, $FF, $FF, $FF, $FF
         
-        DATA $50, $52, $FF, $FF, $FF, $FF
-        DATA $FF
+        BYTE $50, $52, $FF, $FF, $FF, $FF
+        BYTE $FF
 }
 
 `____________________________________________________________________________[$7699]___
@@ -167,30 +167,30 @@ PROC    :doObjectCode_boss_freeRabbit           SECTION ::objects {
 	ld	(ix+#object.Xdirection),$ff
 	ld	(ix+#object.unknown11),$00
 	jp	:doObjectCode_boss_freeBird._7612
-    
+        
         `sprite layout
-:_7752  DATA $70, $72, $FF, $FF, $FF, $FF
-        DATA $54, $56, $FF, $FF, $FF, $FF
-        DATA $FF, $FF
-:_7760  DATA $5C, $5E, $FF, $FF, $FF, $FF
-        DATA $58, $5A, $FF, $FF, $FF, $FF
-        DATA $FF
-:_776d  DATA $FE, $FF, $FF, $FF, $FF, $FF
-        DATA $34, $36, $FF, $FF, $FF, $FF
-        DATA $FF, $FF
-:_777b  DATA $FE, $FF, $FF, $FF, $FF, $FF
-        DATA $38, $3A, $FF, $FF, $FF, $FF
-        DATA $FF
-:_7788  DATA $FE, $FF, $FF, $FF, $FF, $FF
-        DATA $3C, $3E, $FF, $FF, $FF, $FF
-        DATA $FF, $FF
-:_7796  DATA $FE, $FF, $FF, $FF, $FF, $FF
-        DATA $1C, $1E, $FF, $FF, $FF, $FF
-        DATA $FF
-:_77a3  DATA $FE, $FF, $FF, $FF, $FF, $FF
-        DATA $14, $16, $FF, $FF, $FF, $FF
-        DATA $FF, $FF
-:_77b1  DATA $FE, $FF, $FF, $FF, $FF, $FF
-        DATA $18, $1A, $FF, $FF, $FF, $FF
-        DATA $FF
+._7752  BYTE $70, $72, $FF, $FF, $FF, $FF
+        BYTE $54, $56, $FF, $FF, $FF, $FF
+        BYTE $FF, $FF
+._7760  BYTE $5C, $5E, $FF, $FF, $FF, $FF
+        BYTE $58, $5A, $FF, $FF, $FF, $FF
+        BYTE $FF
+._776d  BYTE $FE, $FF, $FF, $FF, $FF, $FF
+        BYTE $34, $36, $FF, $FF, $FF, $FF
+        BYTE $FF, $FF
+._777b  BYTE $FE, $FF, $FF, $FF, $FF, $FF
+        BYTE $38, $3A, $FF, $FF, $FF, $FF
+        BYTE $FF
+._7788  BYTE $FE, $FF, $FF, $FF, $FF, $FF
+        BYTE $3C, $3E, $FF, $FF, $FF, $FF
+        BYTE $FF, $FF
+._7796  BYTE $FE, $FF, $FF, $FF, $FF, $FF
+        BYTE $1C, $1E, $FF, $FF, $FF, $FF
+        BYTE $FF
+._77a3  BYTE $FE, $FF, $FF, $FF, $FF, $FF
+        BYTE $14, $16, $FF, $FF, $FF, $FF
+        BYTE $FF, $FF
+._77b1  BYTE $FE, $FF, $FF, $FF, $FF, $FF
+        BYTE $18, $1A, $FF, $FF, $FF, $FF
+        BYTE $FF
 }

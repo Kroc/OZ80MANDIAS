@@ -132,7 +132,7 @@ PROC    :doObjectCode_platform_float            SECTION ::objects
         `------------------------------------------------------------------------------
 
         `sprite layout
-._91de  DATA $FE, $FF, $FF, $FF, $FF, $FF
-        DATA $16, $18, $1A, $1C, $FF, $FF
-        DATA $FF
+._91de  BYTE $FE, $FF, $FF, $FF, $FF, $FF
+        BYTE $16, $18, $1A, $1C, $FF, $FF
+        BYTE $FF
 }

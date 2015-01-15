@@ -114,6 +114,6 @@ INCLUDE "objects\objects.oz80"
 `======================================================================================
 `music code and song data
 
-INCLUDE "SOUND\sound_driver.asm"
-INCLUDE "SOUND\music.asm"
+`INCLUDE "SOUND\sound_driver.asm"
+`INCLUDE "SOUND\music.asm"
 

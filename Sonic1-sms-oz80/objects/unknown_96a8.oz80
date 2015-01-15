@@ -35,6 +35,6 @@ PROC    :_96a8                                  SECTION ::objects
 	ld	(ix+#object.type),$FF	        `remove object?
 	ret
 
-._96f5  DATA $1C, $1E, $5E
+._96f5  BYTE $1C, $1E, $5E
 
 }

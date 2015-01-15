@@ -60,16 +60,16 @@ PROC :doObjectCode_explosion                    SECTION ::objects {
 	ld	(ix+#object.type),$FF	        `remove object?
 	ret
         
-._69b7  DATA $00, $08, $01, $08, $02, $08, $ff
+._69b7  BYTE $00, $08, $01, $08, $02, $08, $ff
 ._69be  `sprite layout
-        DATA $74, $76, $FF, $FF, $FF, $FF
-        DATA $FF, $FF, $FF, $FF, $FF, $FF
-        DATA $FF, $FF, $FF, $FF, $FF, $FF
+        BYTE $74, $76, $FF, $FF, $FF, $FF
+        BYTE $FF, $FF, $FF, $FF, $FF, $FF
+        BYTE $FF, $FF, $FF, $FF, $FF, $FF
 
-        DATA $78, $7A, $FF, $FF, $FF, $FF
-        DATA $FF, $FF, $FF, $FF, $FF, $FF
-        DATA $FF, $FF, $FF, $FF, $FF, $FF
+        BYTE $78, $7A, $FF, $FF, $FF, $FF
+        BYTE $FF, $FF, $FF, $FF, $FF, $FF
+        BYTE $FF, $FF, $FF, $FF, $FF, $FF
 
-        DATA $7C, $7E, $FF, $FF, $FF, $FF
-        DATA $FF
+        BYTE $7C, $7E, $FF, $FF, $FF, $FF
+        BYTE $FF
 }

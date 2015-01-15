@@ -210,7 +210,7 @@ PROC    :doObjectCode_platform_balance          SECTION ::objects
         
         `------------------------------------------------------------------------------
 
-._8830  DATA $36, $38, $3A, $FF
-._8834  DATA $3C, $3E, $FF
+._8830  BYTE $36, $38, $3A, $FF
+._8834  BYTE $3C, $3E, $FF
 
 }

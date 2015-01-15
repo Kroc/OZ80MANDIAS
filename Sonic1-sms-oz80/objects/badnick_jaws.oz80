@@ -46,22 +46,22 @@ PROC    :doObjectCode_badnick_jaws              SECTION ::objects
 	call	z,:_91eb
 	ret
         
-._88b4  DATA $00, $04, $01, $04, $FF
-._88b9  DATA $02, $04, $03, $04, $FF
+._88b4  BYTE $00, $04, $01, $04, $FF
+._88b9  BYTE $02, $04, $03, $04, $FF
 
         `sprite layout
-._88be  DATA $04, $2A, $2C, $FF, $FF, $FF
-        DATA $FF, $FF, $FF, $FF, $FF, $FF
-        DATA $FF, $FF, $FF, $FF, $FF, $FF
+._88be  BYTE $04, $2A, $2C, $FF, $FF, $FF
+        BYTE $FF, $FF, $FF, $FF, $FF, $FF
+        BYTE $FF, $FF, $FF, $FF, $FF, $FF
         
-        DATA $0C, $2A, $2C, $FF, $FF, $FF
-        DATA $FF, $FF, $FF, $FF, $FF, $FF
-        DATA $FF, $FF, $FF, $FF, $FF, $FF
+        BYTE $0C, $2A, $2C, $FF, $FF, $FF
+        BYTE $FF, $FF, $FF, $FF, $FF, $FF
+        BYTE $FF, $FF, $FF, $FF, $FF, $FF
         
-        DATA $0E, $10, $0A, $FF, $FF, $FF
-        DATA $FF, $FF, $FF, $FF, $FF, $FF
-        DATA $FF, $FF, $FF, $FF, $FF, $FF
+        BYTE $0E, $10, $0A, $FF, $FF, $FF
+        BYTE $FF, $FF, $FF, $FF, $FF, $FF
+        BYTE $FF, $FF, $FF, $FF, $FF, $FF
         
-        DATA $0E, $10, $0C, $FF, $FF, $FF
-        DATA $FF
+        BYTE $0E, $10, $0C, $FF, $FF, $FF
+        BYTE $FF
 }

@@ -53,23 +53,23 @@ PROC    :doObjectCode_badnick_yadrin            SECTION ::objects
 	ld	(ix+#object.unknown11),$00
 	ret
         
-._8374  DATA $00, $06, $01, $06, $FF
-._8379  DATA $02, $06, $03, $06, $FF
+._8374  BYTE $00, $06, $01, $06, $FF
+._8379  BYTE $02, $06, $03, $06, $FF
 
         `sprite layout
-._837e  DATA $FE, $00, $02, $FF, $FF, $FF
-        DATA $20, $22, $24, $FF, $FF, $FF
-        DATA $FF, $FF, $FF, $FF, $FF, $FF
+._837e  BYTE $FE, $00, $02, $FF, $FF, $FF
+        BYTE $20, $22, $24, $FF, $FF, $FF
+        BYTE $FF, $FF, $FF, $FF, $FF, $FF
 
-        DATA $FE, $00, $02, $FF, $FF, $FF
-        DATA $26, $28, $2A, $FF, $FF, $FF
-        DATA $FF, $FF, $FF, $FF, $FF, $FF
+        BYTE $FE, $00, $02, $FF, $FF, $FF
+        BYTE $26, $28, $2A, $FF, $FF, $FF
+        BYTE $FF, $FF, $FF, $FF, $FF, $FF
 
-        DATA $40, $42, $FF, $FF, $FF, $FF
-        DATA $4A, $4C, $4E, $FF, $FF, $FF
-        DATA $FF, $FF, $FF, $FF, $FF, $FF
+        BYTE $40, $42, $FF, $FF, $FF, $FF
+        BYTE $4A, $4C, $4E, $FF, $FF, $FF
+        BYTE $FF, $FF, $FF, $FF, $FF, $FF
 
-        DATA $40, $42, $FF, $FF, $FF, $FF
-        DATA $44, $46, $48, $FF, $FF, $FF
-        DATA $FF
+        BYTE $40, $42, $FF, $FF, $FF, $FF
+        BYTE $44, $46, $48, $FF, $FF, $FF
+        BYTE $FF
 }

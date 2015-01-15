@@ -156,37 +156,37 @@ PROC    :doObjectCode_badnick_buzzBomber        SECTION ::objects {
 	ret
         
         `no reference to this?
-._6cd7  DATA $01, $01, $01, $01, $00, $02, $02, $03, $01, $01, $00
+._6cd7  BYTE $01, $01, $01, $01, $00, $02, $02, $03, $01, $01, $00
         
         `animation frame order
-._6ce2  DATA ._6cea, ._6cea, ._6cef, ._6cf4
-._6cea  DATA $00, $02, $01, $02, $FF
-._6cef  DATA $02, $02, $03, $02, $FF
-._6cf4  DATA $04, $02, $05, $02, $FF
+._6ce2  WORD ._6cea, ._6cea, ._6cef, ._6cf4
+._6cea  BYTE $00, $02, $01, $02, $FF
+._6cef  BYTE $02, $02, $03, $02, $FF
+._6cf4  BYTE $04, $02, $05, $02, $FF
 
 `sprite layout
-._6cf9  DATA $FE, $0A, $FF, $FF, $FF, $FF
-        DATA $0C, $0E, $10, $FF, $FF, $FF
-        DATA $FF, $FF, $FF, $FF, $FF, $FF
+._6cf9  BYTE $FE, $0A, $FF, $FF, $FF, $FF
+        BYTE $0C, $0E, $10, $FF, $FF, $FF
+        BYTE $FF, $FF, $FF, $FF, $FF, $FF
         
-        DATA $FE, $FF, $FF, $FF, $FF, $FF
-        DATA $0C, $0E, $2C, $FF, $FF, $FF
-        DATA $FF, $FF, $FF, $FF, $FF, $FF
+        BYTE $FE, $FF, $FF, $FF, $FF, $FF
+        BYTE $0C, $0E, $2C, $FF, $FF, $FF
+        BYTE $FF, $FF, $FF, $FF, $FF, $FF
         
-        DATA $FE, $0A, $FF, $FF, $FF, $FF
-        DATA $12, $14, $16, $FF, $FF, $FF
-        DATA $32, $34, $FF, $FF, $FF, $FF
+        BYTE $FE, $0A, $FF, $FF, $FF, $FF
+        BYTE $12, $14, $16, $FF, $FF, $FF
+        BYTE $32, $34, $FF, $FF, $FF, $FF
         
-        DATA $FE, $FF, $FF, $FF, $FF, $FF
-        DATA $12, $14, $16, $FF, $FF, $FF
-        DATA $32, $34, $FF, $FF, $FF, $FF
+        BYTE $FE, $FF, $FF, $FF, $FF, $FF
+        BYTE $12, $14, $16, $FF, $FF, $FF
+        BYTE $32, $34, $FF, $FF, $FF, $FF
         
-        DATA $FE, $0A, $FF, $FF, $FF, $FF
-        DATA $12, $14, $16, $FF, $FF, $FF
-        DATA $30, $34, $FF, $FF, $FF, $FF
+        BYTE $FE, $0A, $FF, $FF, $FF, $FF
+        BYTE $12, $14, $16, $FF, $FF, $FF
+        BYTE $30, $34, $FF, $FF, $FF, $FF
         
-        DATA $FE, $FF, $FF, $FF, $FF, $FF
-        DATA $12, $14, $16, $FF, $FF, $FF
-        DATA $30, $34, $FF, $FF, $FF, $FF
+        BYTE $FE, $FF, $FF, $FF, $FF, $FF
+        BYTE $12, $14, $16, $FF, $FF, $FF
+        BYTE $30, $34, $FF, $FF, $FF, $FF
 
 }

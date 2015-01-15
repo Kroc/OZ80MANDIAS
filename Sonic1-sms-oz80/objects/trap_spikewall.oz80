@@ -80,7 +80,7 @@ PROC    :_b398                                  SECTION ::objects
 	ret
         
         `sprite layout
-._b45b  DATA $16, $18, $FF, $FF, $FF, $FF
-        DATA $16, $18, $FF, $FF, $FF, $FF
-        DATA $16, $18, $FF, $FF, $FF, $FF
+._b45b  BYTE $16, $18, $FF, $FF, $FF, $FF
+        BYTE $16, $18, $FF, $FF, $FF, $FF
+        BYTE $16, $18, $FF, $FF, $FF, $FF
 }

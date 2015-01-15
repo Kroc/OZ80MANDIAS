@@ -53,6 +53,6 @@ PROC    :_9be8                                  SECTION ::objects
 	ret
 
         `sprite layout
-._9c69  DATA $0C, $0E, $FF, $FF, $FF, $FF
-        DATA $FF
+._9c69  BYTE $0C, $0E, $FF, $FF, $FF, $FF
+        BYTE $FF
 }

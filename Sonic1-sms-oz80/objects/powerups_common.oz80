@@ -87,13 +87,13 @@ PROC	:doObjectCode_powerUp_ring              SECTION ::objects
 	ret
         
 ._5bbf
-	DATA $54, $56, $58, $FF, $FF, $FF
-	DATA $AA, $AC, $AE, $FF, $FF, $FF
-	DATA $FF
+	BYTE $54, $56, $58, $FF, $FF, $FF
+	BYTE $AA, $AC, $AE, $FF, $FF, $FF
+	BYTE $FF
 ._5bcc
-	DATA $54, $FE, $58, $FF, $FF, $FF
-	DATA $AA, $AC, $AE, $FF, $FF, $FF
-	DATA $FF
+	BYTE $54, $FE, $58, $FF, $FF, $FF
+	BYTE $AA, $AC, $AE, $FF, $FF, $FF
+	BYTE $FF
 }
 
 `____________________________________________________________________________[$5BD9]___
@@ -535,7 +535,7 @@ PROC	:doObjectCode_powerUp_emerald           SECTION ::objects {
 	call	:loadPowerUpIcon
 	ret
 
-._5f10	DATA $5C, $5E, $FF, $FF, $FF, $FF
-	DATA $FF
+._5f10	BYTE $5C, $5E, $FF, $FF, $FF, $FF
+	BYTE $FF
 
 }

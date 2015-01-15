@@ -94,13 +94,13 @@ PROC    :doObjectCode_badnick_newtron           SECTION ::objects {
 	ret	
         
 `sprite layout
-._6fed  DATA $1C, $1E, $FF, $FF, $FF, $FF
-        DATA $FE, $3E, $FF, $FF, $FF, $FF
-        DATA $FF, $FF, $FF, $FF, $FF, $FF
-        DATA $40					`odd?
+._6fed  BYTE $1C, $1E, $FF, $FF, $FF, $FF
+        BYTE $FE, $3E, $FF, $FF, $FF, $FF
+        BYTE $FF, $FF, $FF, $FF, $FF, $FF
+        BYTE $40					`odd?
 }
 
 TABLE   :_7000                                  SECTION ::objects {
-        DATA $42, $FF, $FF, $FF, $FF, $FE
-        DATA $62, $FF, $FF, $FF, $FF, $FF
+        BYTE $42, $FF, $FF, $FF, $FF, $FE
+        BYTE $62, $FF, $FF, $FF, $FF, $FF
 }

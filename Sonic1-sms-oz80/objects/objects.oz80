@@ -19,9 +19,9 @@ INCLUDE "platform_falling.oz80"
 INCLUDE "unknown_6ac1.oz80"
 INCLUDE "badnick_buzzbomber.oz80"
 INCLUDE "platform_moving.oz80"
-INCLUDE "bacnick_motobug.oz80"
+INCLUDE "badnick_motobug.oz80"
 INCLUDE "badnick_newtron.oz80"
-INCLUDE "boss_greenHill.oz80"  
+INCLUDE "boss_greenHill.oz80"
 INCLUDE "boss_capsule.oz80"
 INCLUDE "boss_animals.oz80"
 
@@ -197,53 +197,53 @@ PROC    :_77be                                  SECTION ::objects
 	ret
 
 `sprite layout
-._7922  DATA $2A, $2C, $2E, $30, $32, $FF
-        DATA $4A, $4C, $4E, $50, $52, $FF
-        DATA $6A, $6C, $6E, $70, $72, $FF
+._7922  BYTE $2A, $2C, $2E, $30, $32, $FF
+        BYTE $4A, $4C, $4E, $50, $52, $FF
+        BYTE $6A, $6C, $6E, $70, $72, $FF
         
-        DATA $20, $10, $12, $14, $28, $FF
-        DATA $40, $42, $44, $46, $48, $FF
-        DATA $60, $62, $64, $66, $68, $FF
+        BYTE $20, $10, $12, $14, $28, $FF
+        BYTE $40, $42, $44, $46, $48, $FF
+        BYTE $60, $62, $64, $66, $68, $FF
         
-        DATA $2A, $16, $18, $1A, $32, $FF
-        DATA $4A, $4C, $4E, $50, $52, $FF
-        DATA $6A, $6C, $6E, $70, $72, $FF
+        BYTE $2A, $16, $18, $1A, $32, $FF
+        BYTE $4A, $4C, $4E, $50, $52, $FF
+        BYTE $6A, $6C, $6E, $70, $72, $FF
         
-        DATA $20, $3A, $3C, $3E, $28, $FF
-        DATA $40, $42, $44, $46, $48, $FF
-        DATA $60, $62, $64, $66, $68, $FF
+        BYTE $20, $3A, $3C, $3E, $28, $FF
+        BYTE $40, $42, $44, $46, $48, $FF
+        BYTE $60, $62, $64, $66, $68, $FF
         
-        DATA $2A, $34, $36, $38, $32, $FF
-        DATA $4A, $4C, $4E, $50, $52, $FF
-        DATA $6A, $6C, $6E, $70, $72, $FF
+        BYTE $2A, $34, $36, $38, $32, $FF
+        BYTE $4A, $4C, $4E, $50, $52, $FF
+        BYTE $6A, $6C, $6E, $70, $72, $FF
         
-        DATA $20, $10, $12, $14, $28, $FF
-        DATA $40, $42, $44, $46, $48, $FF
-        DATA $60, $54, $56, $66, $68, $FF
+        BYTE $20, $10, $12, $14, $28, $FF
+        BYTE $40, $42, $44, $46, $48, $FF
+        BYTE $60, $54, $56, $66, $68, $FF
         
-        DATA $2A, $16, $18, $1A, $32, $FF
-        DATA $4A, $4C, $4E, $50, $52, $FF
-        DATA $6A, $5A, $5C, $70, $72, $FF
+        BYTE $2A, $16, $18, $1A, $32, $FF
+        BYTE $4A, $4C, $4E, $50, $52, $FF
+        BYTE $6A, $5A, $5C, $70, $72, $FF
         
-        DATA $20, $3A, $3C, $3E, $28, $FF
-        DATA $40, $42, $44, $46, $48, $FF
-        DATA $60, $54, $56, $66, $68, $FF
+        BYTE $20, $3A, $3C, $3E, $28, $FF
+        BYTE $40, $42, $44, $46, $48, $FF
+        BYTE $60, $54, $56, $66, $68, $FF
         
-        DATA $2A, $34, $36, $38, $32, $FF
-        DATA $4A, $4C, $4E, $50, $52, $FF
-        DATA $6A, $5A, $5C, $70, $72, $FF
+        BYTE $2A, $34, $36, $38, $32, $FF
+        BYTE $4A, $4C, $4E, $50, $52, $FF
+        BYTE $6A, $5A, $5C, $70, $72, $FF
         
-        DATA $20, $06, $08, $0A, $28, $FF
-        DATA $40, $42, $44, $46, $48, $FF
-        DATA $60, $62, $64, $66, $68, $FF
+        BYTE $20, $06, $08, $0A, $28, $FF
+        BYTE $40, $42, $44, $46, $48, $FF
+        BYTE $60, $62, $64, $66, $68, $FF
         
-        DATA $20, $06, $08, $0A, $28, $FF
-        DATA $40, $42, $44, $46, $48, $FF
-        DATA $60, $62, $64, $66, $68, $FF
+        BYTE $20, $06, $08, $0A, $28, $FF
+        BYTE $40, $42, $44, $46, $48, $FF
+        BYTE $60, $62, $64, $66, $68, $FF
         
-        DATA $0E, $10, $12, $14, $16, $FF
-        DATA $40, $42, $44, $46, $48, $FF
-        DATA $60, $62, $64, $66, $68, $FF
+        BYTE $0E, $10, $12, $14, $16, $FF
+        BYTE $40, $42, $44, $46, $48, $FF
+        BYTE $60, $62, $64, $66, $68, $FF
 }
 
 `____________________________________________________________________________[$79FA]___
@@ -478,7 +478,7 @@ INCLUDE "badnick_chopper.oz80"
 `____________________________________________________________________________[$7E02]___
 `OBJECT: log - vertical (Jungle)
 
-PROC    :doObjectCode_platform_fallVert         SECTION ::object
+PROC    :doObjectCode_platform_fallVert         SECTION ::objects
 {
 	set	5,(ix+#object.unknown18)
 	ld	hl,$0030
@@ -532,9 +532,9 @@ PROC    :doObjectCode_platform_fallVert         SECTION ::object
 	ret
 
         `sprite layout
-._7e89  DATA $FE, $FF, $FF, $FF, $FF, $FF
-        DATA $18, $1A, $FF, $FF, $FF, $FF
-        DATA $28, $2E, $FF, $FF, $FF, $FF
+._7e89  BYTE $FE, $FF, $FF, $FF, $FF, $FF
+        BYTE $18, $1A, $FF, $FF, $FF, $FF
+        BYTE $28, $2E, $FF, $FF, $FF, $FF
 }
 
 `____________________________________________________________________________[$7E9B]___
@@ -562,9 +562,9 @@ PROC    :doObjectCode_platform_fallHoriz        SECTION ::objects
 	jp	:doObjectCode_platform_fallVert._7e3c
         
         `sprite layout
-.layout DATA $FE, $FF, $FF, $FF, $FF, $FF                                    `$7ED9
-        DATA $6C, $6E, $6E, $48, $FF, $FF
-        DATA $FF
+.layout BYTE $FE, $FF, $FF, $FF, $FF, $FF                                    `$7ED9
+        BYTE $6C, $6E, $6E, $48, $FF, $FF
+        BYTE $FF
 }
 
 `____________________________________________________________________________[$7EE6]___
@@ -684,19 +684,19 @@ PROC    :doObjectCode_platform_roll             SECTION ::objects
 
 `======================================================================================
 
-        DATA $00 $00 $00 $00 $00 $00 $00 $00 $00 $00 $00 $00 $00 $00 $00 $00
-        DATA $00 $0, $00 $00 $00
+        BYTE $00 $00 $00 $00 $00 $00 $00 $00 $00 $00 $00 $00 $00 $00 $00 $00
+        BYTE $00 $0, $00 $00 $00
         
-        DATA "TMR SEGA"
+        BYTE "TMR SEGA"
         
-        DATA $59, $59
-        DATA $1B, $A5
-        DATA $76, $70, $00
-        DATA $40
+        BYTE $59, $59
+        BYTE $1B, $A5
+        BYTE $76, $70, $00
+        BYTE $40
 
 `======================================================================================
         
-        DATA $00, $00, $00
+        BYTE $00, $00, $00
 
         `jumped to by `doObjectCode_platform_roll`, OBJECT: log - floating (Jungle)
 ._8003  ld	(ix+#object.spriteLayout.lo),._8022.lo
@@ -708,20 +708,20 @@ PROC    :doObjectCode_platform_roll             SECTION ::objects
 	ld	(ix+#object.unknown11),$00
 	ret
 
-._8019  DATA $00, $00, $00, $12, $12, $12, $24, $24, $24
+._8019  BYTE $00, $00, $00, $12, $12, $12, $24, $24, $24
 
         `sprite layout
-._8022  DATA $FE, $FF, $FF, $FF, $FF, $FF
-        DATA $3A, $3C, $FF, $FF, $FF, $FF
-        DATA $FF, $FF, $FF, $FF, $FF, $FF
+._8022  BYTE $FE, $FF, $FF, $FF, $FF, $FF
+        BYTE $3A, $3C, $FF, $FF, $FF, $FF
+        BYTE $FF, $FF, $FF, $FF, $FF, $FF
 
-        DATA $FE, $FF, $FF, $FF, $FF, $FF
-        DATA $36, $38, $FF, $FF, $FF, $FF
-        DATA $FF, $FF, $FF, $FF, $FF, $FF
+        BYTE $FE, $FF, $FF, $FF, $FF, $FF
+        BYTE $36, $38, $FF, $FF, $FF, $FF
+        BYTE $FF, $FF, $FF, $FF, $FF, $FF
 
-        DATA $FE, $FF, $FF, $FF, $FF, $FF
-        DATA $4C, $4E, $FF, $FF, $FF, $FF
-        DATA $FF
+        BYTE $FE, $FF, $FF, $FF, $FF, $FF
+        BYTE $4C, $4E, $FF, $FF, $FF, $FF
+        BYTE $FF
 }
 
 INCLUDE "boss_jungle.oz80"
@@ -935,18 +935,26 @@ PROC    :_85d1                                  SECTION ::objects
 	ret
 }
 
-:_8632
-DATA $D4, $03, $C0, $03, $44, $04, $C0, $03
-:_863a
-DATA $00, $00, $F6, $FF, $C0, $FE, $00, $FC, $60, $FE, $80, $FD, $C0, $FD, $00, $FF
-:_864a
-DATA $20, $00, $F6, $FF, $40, $01, $00, $FC, $A0, $01, $80, $FD, $40, $02, $00, $FF
+TABLE   :_8632
+{
+        BYTE $D4, $03, $C0, $03, $44, $04, $C0, $03
+}
+TABLE   :_863a
+{
+        BYTE $00, $00, $F6, $FF, $C0, $FE, $00, $FC, $60, $FE, $80, $FD, $C0, $FD, $00, $FF
+}
+TABLE   :_864a
+{
+        BYTE $20, $00, $F6, $FF, $40, $01, $00, $FC, $A0, $01, $80, $FD, $40, $02, $00, $FF
+}
 
 `sprite layout
-:_865a
-DATA $20, $22, $24, $26, $28, $FF
-DATA $40, $42, $44, $46, $48, $FF
-DATA $60, $62, $64, $66, $68, $FF
+TABLE   :_865a
+{
+        BYTE $20, $22, $24, $26, $28, $FF
+        BYTE $40, $42, $44, $46, $48, $FF
+        BYTE $60, $62, $64, $66, $68, $FF
+}
 
 INCLUDE "platform_balance.oz80"
 INCLUDE "badnick_jaws.oz80"
@@ -1091,7 +1099,7 @@ PROC    :_91eb                                  SECTION ::objects
 	pop	ix
 	ret
 
-._9257  DATA $42 $20 $20 $20 $42 $20 $20 $20 $42 $20 $20 $20 $42 $20 $20 $20
+._9257  BYTE $42 $20 $20 $20 $42 $20 $20 $20 $42 $20 $20 $20 $42 $20 $20 $20
 
 }
 
@@ -1324,14 +1332,14 @@ PROC    :doObjectCode_boss_labyrinth            SECTION ::objects
 	rst	:rst_playSFX
 	jp	._
         
-._947b  DATA $3C, $03, $60, $03, $EC, $02, $60, $02, $8C, $03, $60, $02
-._9487  DATA $28, $03, $B0, $02, $B0
-._948c  DATA $02, $60, $03, $60, $02, $60, $02
+._947b  BYTE $3C, $03, $60, $03, $EC, $02, $60, $02, $8C, $03, $60, $02
+._9487  BYTE $28, $03, $B0, $02, $B0
+._948c  BYTE $02, $60, $03, $60, $02, $60, $02
 
         `sprite layout
-._9493  DATA $20, $22, $24, $26, $28, $FF
-        DATA $40, $42, $44, $46, $48, $FF
-        DATA $60, $62, $64, $66, $68, $FF
+._9493  BYTE $20, $22, $24, $26, $28, $FF
+        BYTE $40, $42, $44, $46, $48, $FF
+        BYTE $60, $62, $64, $66, $68, $FF
 }
 
 INCLUDE "unknown_94a5.oz80"
@@ -1355,8 +1363,8 @@ PROC    :_9c70                                  SECTION ::objects
 	jp	:_9be8._9bfc
 
         `sprite layout
-._9c87  DATA $2C, $2E, $FF, $FF, $FF, $FF
-        DATA $FF
+._9c87  BYTE $2C, $2E, $FF, $FF, $FF, $FF
+        BYTE $FF
 }
 
 `____________________________________________________________________________[$9C8E]___
@@ -1454,19 +1462,24 @@ PROC :doObjectCode_trap_flameThrower {
 	ret
 }
 
-:_9d4a
-DATA $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $9A, $9D
-DATA $BA, $9D, $DA, $9D, $7A, $9D, $7A, $9D, $7A, $9D, $DA, $9D, $BA, $9D, $9A, $9D
-:_9d6a
-DATA $00, $00, $00, $00, $00, $00, $00, $1B, $1F, $22, $25, $25, $25, $22, $1F, $1B
-DATA $00, $15, $1E, $0E, $1E, $07, $1E, $00, $00, $17, $1E, $10, $1E, $09, $1E, $02
-DATA $00, $19, $1E, $12, $1E, $0B, $1E, $04, $00, $1B, $1E, $14, $1E, $0D, $1E, $06
-DATA $00, $0C, $1E, $08, $1E, $04, $1E, $00, $00, $0E, $1E, $0A, $1E, $06, $1E, $02
-DATA $00, $10, $1E, $0C, $1E, $08, $1E, $04, $00, $11, $1E, $0E, $1E, $0A, $1E, $06
-DATA $00, $0F, $1E, $0A, $1E, $05, $1E, $00, $00, $11, $1E, $0C, $1E, $07, $1E, $02
-DATA $00, $13, $1E, $0E, $1E, $09, $1E, $04, $00, $15, $1E, $10, $1E, $0B, $1E, $06
-DATA $00, $12, $1E, $0C, $1E, $06, $1E, $00, $00, $14, $1E, $0E, $1E, $08, $1E, $02
-DATA $00, $16, $1E, $10, $1E, $0A, $1E, $04, $00, $18, $1E, $12, $1E, $0C, $1E, $06
+TABLE   :_9d4a
+{
+        BYTE $00 $00 $00 $00 $00 $00 $00 $00 $00 $00 $00 $00 $00 $00 $9A $9D
+        BYTE $BA $9D $DA $9D $7A $9D $7A $9D $7A $9D $DA $9D $BA $9D $9A $9D
+}
+
+TABLE   :_9d6a
+{
+        BYTE $00 $00 $00 $00 $00 $00 $00 $1B $1F $22 $25 $25 $25 $22 $1F $1B
+        BYTE $00 $15 $1E $0E $1E $07 $1E $00 $00 $17 $1E $10 $1E $09 $1E $02
+        BYTE $00 $19 $1E $12 $1E $0B $1E $04 $00 $1B $1E $14 $1E $0D $1E $06
+        BYTE $00 $0C $1E $08 $1E $04 $1E $00 $00 $0E $1E $0A $1E $06 $1E $02
+        BYTE $00 $10 $1E $0C $1E $08 $1E $04 $00 $11 $1E $0E $1E $0A $1E $06
+        BYTE $00 $0F $1E $0A $1E $05 $1E $00 $00 $11 $1E $0C $1E $07 $1E $02
+        BYTE $00 $13 $1E $0E $1E $09 $1E $04 $00 $15 $1E $10 $1E $0B $1E $06
+        BYTE $00 $12 $1E $0C $1E $06 $1E $00 $00 $14 $1E $0E $1E $08 $1E $02
+        BYTE $00 $16 $1E $10 $1E $0A $1E $04 $00 $18 $1E $12 $1E $0C $1E $06
+}
 
 `____________________________________________________________________________[$9DFA]___
 `OBJECT: door - one way left (Scrap Brain)
@@ -1632,19 +1645,21 @@ PROC :_9ed4 {
 }
 
 `sprite layout
-:_9f2b
-DATA $0A, $FF, $FF, $FF, $FF, $FF
-DATA $3E, $FF, $FF, $FF, $FF, $FF
-DATA $0A, $FF, $FF, $FF, $FF, $FF
+TABLE   :_9f2b
+{
+        BYTE $0A, $FF, $FF, $FF, $FF, $FF
+        BYTE $3E, $FF, $FF, $FF, $FF, $FF
+        BYTE $0A, $FF, $FF, $FF, $FF, $FF
 
-DATA $3E, $FF, $FF, $FF, $FF, $FF
-DATA $0A, $FF, $FF, $FF, $FF, $FF
-DATA $FF, $FF, $FF, $FF, $FF, $FF
+        BYTE $3E, $FF, $FF, $FF, $FF, $FF
+        BYTE $0A, $FF, $FF, $FF, $FF, $FF
+        BYTE $FF, $FF, $FF, $FF, $FF, $FF
 
-DATA $0A, $FF, $FF, $FF, $FF, $FF
-DATA $FF, $FF, $FF, $FF, $FF, $FF
-DATA $FF, $FF, $FF, $FF, $FF, $FF
-DATA $FF
+        BYTE $0A, $FF, $FF, $FF, $FF, $FF
+        BYTE $FF, $FF, $FF, $FF, $FF, $FF
+        BYTE $FF, $FF, $FF, $FF, $FF, $FF
+        BYTE $FF
+}
 
 `____________________________________________________________________________[$9F62]___
 `OBJECT: door - one way right (Scrap Brain)
@@ -1712,19 +1727,21 @@ PROC :doObjectCode_door_right {
 }
 
 `sprite layout
-:_9fee
-DATA $36, $FF, $FF, $FF, $FF, $FF
-DATA $3E, $FF, $FF, $FF, $FF, $FF
-DATA $36, $FF, $FF, $FF, $FF, $FF
+TABLE   :_9fee
+{
+        BYTE $36, $FF, $FF, $FF, $FF, $FF
+        BYTE $3E, $FF, $FF, $FF, $FF, $FF
+        BYTE $36, $FF, $FF, $FF, $FF, $FF
 
-DATA $3E, $FF, $FF, $FF, $FF, $FF
-DATA $36, $FF, $FF, $FF, $FF, $FF
-DATA $FF, $FF, $FF, $FF, $FF, $FF
+        BYTE $3E, $FF, $FF, $FF, $FF, $FF
+        BYTE $36, $FF, $FF, $FF, $FF, $FF
+        BYTE $FF, $FF, $FF, $FF, $FF, $FF
 
-DATA $36, $FF, $FF, $FF, $FF, $FF
-DATA $FF, $FF, $FF, $FF, $FF, $FF
-DATA $FF, $FF, $FF, $FF, $FF, $FF
-DATA $FF
+        BYTE $36, $FF, $FF, $FF, $FF, $FF
+        BYTE $FF, $FF, $FF, $FF, $FF, $FF
+        BYTE $FF, $FF, $FF, $FF, $FF, $FF
+        BYTE $FF
+}
 
 `____________________________________________________________________________[$A025]___
 `OBJECT: door (Scrap Brain)
@@ -1793,19 +1810,21 @@ PROC :doObjectCode_door {
 }
 
 `sprite layout
-:_a0b1
-DATA $38, $FF, $FF, $FF, $FF, $FF
-DATA $3E, $FF, $FF, $FF, $FF, $FF
-DATA $38, $FF, $FF, $FF, $FF, $FF
+TABLE   :_a0b1
+{
+        BYTE $38, $FF, $FF, $FF, $FF, $FF
+        BYTE $3E, $FF, $FF, $FF, $FF, $FF
+        BYTE $38, $FF, $FF, $FF, $FF, $FF
 
-DATA $3E, $FF, $FF, $FF, $FF, $FF
-DATA $38, $FF, $FF, $FF, $FF, $FF
-DATA $FF, $FF, $FF, $FF, $FF, $FF
-DATA $38, $FF, $FF, $FF, $FF, $FF
+        BYTE $3E, $FF, $FF, $FF, $FF, $FF
+        BYTE $38, $FF, $FF, $FF, $FF, $FF
+        BYTE $FF, $FF, $FF, $FF, $FF, $FF
+        BYTE $38, $FF, $FF, $FF, $FF, $FF
 
-DATA $FF, $FF, $FF, $FF, $FF, $FF
-DATA $FF, $FF, $FF, $FF, $FF, $FF
-DATA $FF
+        BYTE $FF, $FF, $FF, $FF, $FF, $FF
+        BYTE $FF, $FF, $FF, $FF, $FF, $FF
+        BYTE $FF
+}
 
 `____________________________________________________________________________[$A0E8]___
 `OBJECT: electric sphere (Scrap Brain)
@@ -1862,25 +1881,31 @@ PROC :doObjectCode_trap_electric {
 	ret
 }
 
-:_a167
-DATA $00, $01, $01, $01, $02, $01, $FF
-:_a16e
-DATA $02, $01, $03, $01, $FF
+TABLE   :_a167
+{
+        BYTE $00, $01, $01, $01, $02, $01, $FF
+}
+TABLE   :_a16e
+{
+        BYTE $02, $01, $03, $01, $FF
+}
 
 `sprite layout
-:_a173
-DATA $02, $04, $FF, $FF, $FF, $FF
-DATA $FF, $FF, $FF, $FF, $FF, $FF
-DATA $FF, $FF, $FF, $FF, $FF, $FF
+TABLE   :_a173
+{
+        BYTE $02, $04, $FF, $FF, $FF, $FF
+        BYTE $FF, $FF, $FF, $FF, $FF, $FF
+        BYTE $FF, $FF, $FF, $FF, $FF, $FF
 
-DATA $FE, $FE, $FE, $FE, $02, $04
-DATA $FF, $FF, $FF, $FF, $FF, $FF
-DATA $FF, $FF, $FF, $FF, $FF, $FF
+        BYTE $FE, $FE, $FE, $FE, $02, $04
+        BYTE $FF, $FF, $FF, $FF, $FF, $FF
+        BYTE $FF, $FF, $FF, $FF, $FF, $FF
 
-DATA $FE, $FE, $16, $18, $FF, $FF
-DATA $FF, $FF, $FF, $FF, $FF, $FF
-DATA $FF, $FF, $FF, $FF, $FF, $FF
-DATA $FF
+        BYTE $FE, $FE, $16, $18, $FF, $FF
+        BYTE $FF, $FF, $FF, $FF, $FF, $FF
+        BYTE $FF, $FF, $FF, $FF, $FF, $FF
+        BYTE $FF
+}
 
 `____________________________________________________________________________[$A1AA]___
 `OBJECT: badnick - Ball Hog (Scrap Brain)
@@ -1996,37 +2021,45 @@ PROC :doObjectCode_badnick_ballHog {
 	ret
 }
 
-:_a2d2
-DATA $00, $1C, $01, $06, $FF
-:_a2d7
-DATA $02, $18, $FF
+TABLE   :_a2d2
+{
+        BYTE $00, $1C, $01, $06, $FF
+}
+TABLE   :_a2d7
+{
+        BYTE $02, $18, $FF
+}
 
 `sprite layout
-:_a2da
-DATA $40, $42, $FF, $FF, $FF, $FF
-DATA $60, $62, $FF, $FF, $FF, $FF
-DATA $FF, $FF, $FF, $FF, $FF, $FF
+TABLE   :_a2da
+{
+        BYTE $40, $42, $FF, $FF, $FF, $FF
+        BYTE $60, $62, $FF, $FF, $FF, $FF
+        BYTE $FF, $FF, $FF, $FF, $FF, $FF
 
-DATA $44, $46, $FF, $FF, $FF, $FF
-DATA $64, $66, $FF, $FF, $FF, $FF
-DATA $FF, $FF, $FF, $FF, $FF, $FF
+        BYTE $44, $46, $FF, $FF, $FF, $FF
+        BYTE $64, $66, $FF, $FF, $FF, $FF
+        BYTE $FF, $FF, $FF, $FF, $FF, $FF
 
-DATA $40, $42, $FF, $FF, $FF, $FF
-DATA $68, $6A, $FF, $FF, $FF, $FF
-DATA $FF
+        BYTE $40, $42, $FF, $FF, $FF, $FF
+        BYTE $68, $6A, $FF, $FF, $FF, $FF
+        BYTE $FF
+}
 
-:_a30b
-DATA $50, $52, $FF, $FF, $FF, $FF
-DATA $70, $72, $FF, $FF, $FF, $FF
-DATA $FF, $FF, $FF, $FF, $FF, $FF
+TABLE   :_a30b
+{
+        BYTE $50, $52, $FF, $FF, $FF, $FF
+        BYTE $70, $72, $FF, $FF, $FF, $FF
+        BYTE $FF, $FF, $FF, $FF, $FF, $FF
 
-DATA $4C, $4E, $FF, $FF, $FF, $FF
-DATA $6C, $6E, $FF, $FF, $FF, $FF
-DATA $FF, $FF, $FF, $FF, $FF, $FF
+        BYTE $4C, $4E, $FF, $FF, $FF, $FF
+        BYTE $6C, $6E, $FF, $FF, $FF, $FF
+        BYTE $FF, $FF, $FF, $FF, $FF, $FF
 
-DATA $50, $52, $FF, $FF, $FF, $FF
-DATA $48, $4A, $FF, $FF, $FF, $FF
-DATA $FF
+        BYTE $50, $52, $FF, $FF, $FF, $FF
+        BYTE $48, $4A, $FF, $FF, $FF, $FF
+        BYTE $FF
+}
 
 `____________________________________________________________________________[$A33C]___
 `OBJECT: UNKNOWN (ball from Ball Hog?)
@@ -2076,27 +2109,33 @@ PROC :_a33c {
 	ret
 }
 
-:_a3b1
-DATA $00, $08, $FF
-:_a3b4
-DATA $01, $0C, $02, $0C, $03, $0C, $FF
+TABLE   :_a3b1
+{
+        BYTE $00, $08, $FF
+}
+TABLE   :_a3b4
+{
+        BYTE $01, $0C, $02, $0C, $03, $0C, $FF
+}
 
 `sprite layout
-:_a3bb
-DATA $20, $22, $FF, $FF, $FF, $FF
-DATA $FF, $FF, $FF, $FF, $FF, $FF
-DATA $FF, $FF, $FF, $FF, $FF, $FF
+TABLE   :_a3bb
+{
+        BYTE $20, $22, $FF, $FF, $FF, $FF
+        BYTE $FF, $FF, $FF, $FF, $FF, $FF
+        BYTE $FF, $FF, $FF, $FF, $FF, $FF
 
-DATA $74, $76, $FF, $FF, $FF, $FF
-DATA $FF, $FF, $FF, $FF, $FF, $FF
-DATA $FF, $FF, $FF, $FF, $FF, $FF
+        BYTE $74, $76, $FF, $FF, $FF, $FF
+        BYTE $FF, $FF, $FF, $FF, $FF, $FF
+        BYTE $FF, $FF, $FF, $FF, $FF, $FF
 
-DATA $78, $7A, $FF, $FF, $FF, $FF
-DATA $FF, $FF, $FF, $FF, $FF, $FF
-DATA $FF, $FF, $FF, $FF, $FF, $FF
+        BYTE $78, $7A, $FF, $FF, $FF, $FF
+        BYTE $FF, $FF, $FF, $FF, $FF, $FF
+        BYTE $FF, $FF, $FF, $FF, $FF, $FF
 
-DATA $7C, $7E, $FF, $FF, $FF, $FF
-DATA $FF
+        BYTE $7C, $7E, $FF, $FF, $FF, $FF
+        BYTE $FF
+}
 
 `____________________________________________________________________________[$A3F8]___
 `OBJECT: switch
@@ -2160,16 +2199,22 @@ PROC :doObjectCode_switch {
 }
 
 `sprite layout
-:_a48b
-DATA $1A, $1C, $FF, $FF, $FF, $FF
-DATA $FF, $FF
-:_a493
-DATA $3A, $3C, $FF, $FF, $FF, $FF
-DATA $FF, $FF
-:_a49b
-DATA $38, $3A, $FF, $FF, $FF, $FF
-DATA $FF, $FF, $34, $36, $FF, $FF
-DATA $FF, $FF, $FF, $FF
+TABLE   :_a48b
+{
+        BYTE $1A, $1C, $FF, $FF, $FF, $FF
+        BYTE $FF, $FF
+}
+TABLE   :_a493
+{
+        BYTE $3A, $3C, $FF, $FF, $FF, $FF
+        BYTE $FF, $FF
+}
+TABLE   :_a49b
+{
+        BYTE $38, $3A, $FF, $FF, $FF, $FF
+        BYTE $FF, $FF, $34, $36, $FF, $FF
+        BYTE $FF, $FF, $FF, $FF
+}
 
 `____________________________________________________________________________[$A4AB]___
 `OBJECT: switch door
@@ -2230,19 +2275,21 @@ PROC :doObjectCode_door_switchActivated {
 }
 
 `sprite layout
-:_a51a
-DATA $3E, $FF, $FF, $FF, $FF, $FF
-DATA $38, $FF, $FF, $FF, $FF, $FF
-DATA $3E, $FF, $FF, $FF, $FF, $FF
+TABLE   :_a51a
+{
+        BYTE $3E, $FF, $FF, $FF, $FF, $FF
+        BYTE $38, $FF, $FF, $FF, $FF, $FF
+        BYTE $3E, $FF, $FF, $FF, $FF, $FF
 
-DATA $38, $FF, $FF, $FF, $FF, $FF
-DATA $3E, $FF, $FF, $FF, $FF, $FF
-DATA $FF, $FF, $FF, $FF, $FF, $FF
+        BYTE $38, $FF, $FF, $FF, $FF, $FF
+        BYTE $3E, $FF, $FF, $FF, $FF, $FF
+        BYTE $FF, $FF, $FF, $FF, $FF, $FF
 
-DATA $3E, $FF, $FF, $FF, $FF, $FF
-DATA $FF, $FF, $FF, $FF, $FF, $FF
-DATA $FF, $FF, $FF, $FF, $FF, $FF
-DATA $FF
+        BYTE $3E, $FF, $FF, $FF, $FF, $FF
+        BYTE $FF, $FF, $FF, $FF, $FF, $FF
+        BYTE $FF, $FF, $FF, $FF, $FF, $FF
+        BYTE $FF
+}
 
 `____________________________________________________________________________[$A551]___
 `OBJECT: badnick - Caterkiller
@@ -2409,33 +2456,42 @@ PROC :_a6a2 {
 	ret
 }
 
-:_a6b9
-DATA $00 $00 $00 $00 $00 $00 $00 $00 $00 $00 $00 $00 $00 $00 $00 $00
-DATA $00 $00 $00 $00 $00 $00 $E0 $FF $E0 $FF $E0 $FF $E0 $FF $C0 $FF
-DATA $C0 $FF $80 $FF $80 $FF $00 $FF $00 $FF $00 $FE
-:_a6e5
-DATA $00 $FF $80 $FF $80 $FF $C0 $FF $C0 $FF $E0 $FF $E0 $FF $F0 $FF
-DATA $F0 $FF $F0 $FF $F0 $FF $10 $00 $10 $00 $10 $00 $10 $00 $20 $00
-DATA $20 $00 $40 $00 $40 $00 $80 $00 $80 $00 $00 $01
-:_a711
-DATA $00 $01 $02 $02 $03 $03 $03 $03 $03 $03 $03 $03 $03 $03 $03 $03
-DATA $03 $03 $02 $02 $01 $00 $07 $07 $07 $07 $07 $07 $07 $07 $07 $07
-DATA $07 $07 $07 $07 $07 $07 $07 $07 $07 $07 $07 $07 $0E $0D $0C $0C
-DATA $0B $0B $0B $0B $0B $0B $0B $0B $0B $0B $0B $0B $0B $0B $0C $0C
-DATA $0D $0E $15 $13 $12 $11 $10 $10 $0F $0F $0F $0F $0F $0F $0F $0F
-DATA $0F $0F $10 $10 $11 $12 $13 $15
-:_a769
-DATA $00 $00 $00 $00 $00 $00 $00 $00 $00 $00 $00 $00 $00 $00 $00 $00
-DATA $00 $00 $00 $00 $00 $00 $20 $00 $20 $00 $20 $00 $20 $00 $40 $00
-DATA $40 $00 $80 $00 $80 $00 $00 $01 $00 $01 $00 $02
-:_a795
-DATA $15 $14 $13 $13 $12 $12 $12 $12 $12 $12 $12 $12 $12 $12 $12 $12
-DATA $12 $12 $13 $13 $14 $15 $0E $0E $0E $0E $0E $0E $0E $0E $0E $0E
-DATA $0E $0E $0E $0E $0E $0E $0E $0E $0E $0E $0E $0E $07 $08 $09 $09
-DATA $0A $0A $0A $0A $0A $0A $0A $0A $0A $0A $0A $0A $0A $0A $09 $09
-DATA $08 $07 $00 $02 $03 $04 $05 $05 $06 $06 $06 $06 $06 $06 $06 $06
-DATA $06 $06 $05 $05 $04 $03 $02 $00
-
+TABLE   :_a6b9
+{
+        BYTE $00 $00 $00 $00 $00 $00 $00 $00 $00 $00 $00 $00 $00 $00 $00 $00
+        BYTE $00 $00 $00 $00 $00 $00 $E0 $FF $E0 $FF $E0 $FF $E0 $FF $C0 $FF
+        BYTE $C0 $FF $80 $FF $80 $FF $00 $FF $00 $FF $00 $FE
+}
+TABLE   :_a6e5
+{
+        BYTE $00 $FF $80 $FF $80 $FF $C0 $FF $C0 $FF $E0 $FF $E0 $FF $F0 $FF
+        BYTE $F0 $FF $F0 $FF $F0 $FF $10 $00 $10 $00 $10 $00 $10 $00 $20 $00
+        BYTE $20 $00 $40 $00 $40 $00 $80 $00 $80 $00 $00 $01
+}
+TABLE   :_a711
+{
+        BYTE $00 $01 $02 $02 $03 $03 $03 $03 $03 $03 $03 $03 $03 $03 $03 $03
+        BYTE $03 $03 $02 $02 $01 $00 $07 $07 $07 $07 $07 $07 $07 $07 $07 $07
+        BYTE $07 $07 $07 $07 $07 $07 $07 $07 $07 $07 $07 $07 $0E $0D $0C $0C
+        BYTE $0B $0B $0B $0B $0B $0B $0B $0B $0B $0B $0B $0B $0B $0B $0C $0C
+        BYTE $0D $0E $15 $13 $12 $11 $10 $10 $0F $0F $0F $0F $0F $0F $0F $0F
+        BYTE $0F $0F $10 $10 $11 $12 $13 $15
+}
+TABLE   :_a769
+{
+        BYTE $00 $00 $00 $00 $00 $00 $00 $00 $00 $00 $00 $00 $00 $00 $00 $00
+        BYTE $00 $00 $00 $00 $00 $00 $20 $00 $20 $00 $20 $00 $20 $00 $40 $00
+        BYTE $40 $00 $80 $00 $80 $00 $00 $01 $00 $01 $00 $02
+}
+TABLE   :_a795
+{
+        BYTE $15 $14 $13 $13 $12 $12 $12 $12 $12 $12 $12 $12 $12 $12 $12 $12
+        BYTE $12 $12 $13 $13 $14 $15 $0E $0E $0E $0E $0E $0E $0E $0E $0E $0E
+        BYTE $0E $0E $0E $0E $0E $0E $0E $0E $0E $0E $0E $0E $07 $08 $09 $09
+        BYTE $0A $0A $0A $0A $0A $0A $0A $0A $0A $0A $0A $0A $0A $0A $09 $09
+        BYTE $08 $07 $00 $02 $03 $04 $05 $05 $06 $06 $06 $06 $06 $06 $06 $06
+        BYTE $06 $06 $05 $05 $04 $03 $02 $00
+}
 `____________________________________________________________________________[$A7ED]___
 `OBJECT: boss (Scrap Brain)
 
@@ -2634,13 +2690,17 @@ PROC :doObjectCode_boss_scrapBrain {
 	ret
 }
 
-:_a9b7
-DATA $03, $08, $04, $07, $05, $08, $04, $07, $FF
+TABLE   :_a9b7
+{
+        BYTE $03, $08, $04, $07, $05, $08, $04, $07, $FF
+}
 
 `sprite layout
-:_a9c0
-DATA $74, $76, $76, $78, $FF, $FF
-DATA $FF
+TABLE   :_a9c0
+{
+        BYTE $74, $76, $76, $78, $FF, $FF
+        BYTE $FF
+}
 
 `____________________________________________________________________________[$A9C7]___
 `OBJECT: meta - clouds (Sky Base)
@@ -2716,9 +2776,11 @@ PROC :doObjectCode_meta_clouds {
 }
 
 `sprite layout
-:_aa63
-DATA $40, $42, $44, $46, $FF, $FF
-DATA $FF
+TABLE   :_aa63
+{
+        BYTE $40, $42, $44, $46, $FF, $FF
+        BYTE $FF
+}
 
 `____________________________________________________________________________[$AA6A]___
 `OBJECT: propeller (Sky Base)
@@ -2793,9 +2855,11 @@ PROC :doObjectCode_trap_propeller {
 	ret
 }
 
-:_ab01
-DATA $09, $AB, $0F, $AB, $15, $AB, $1B, $AB, $00, $00, $1C, $00, $18, $3C, $00, $00
-DATA $1E, $00, $18, $3E, $00, $00, $38, $00, $18, $3A, $00, $08, $1A, $00, $00, $FF
+TABLE   :_ab01
+{
+        BYTE $09, $AB, $0F, $AB, $15, $AB, $1B, $AB, $00, $00, $1C, $00, $18, $3C, $00, $00
+        BYTE $1E, $00, $18, $3E, $00, $00, $38, $00, $18, $3A, $00, $08, $1A, $00, $00, $FF
+}
 
 `____________________________________________________________________________[$AB21]___
 `OBJECT: badnick - bomb (Sky Base)
@@ -2982,41 +3046,55 @@ PROC :_ac96 {
 	ret
 }
 
-:_acf1
-DATA $00, $20, $01, $20, $FF
-:_acf6
-DATA $01, $20, $FF
-:_acf9
-DATA $02, $20, $03, $20, $FF
-:_acfe
-DATA $03, $20, $FF
-:_ad01
-DATA $01, $02, $04, $02, $FF, $03, $02, $05, $02, $FF
+TABLE   :_acf1
+{
+        BYTE $00, $20, $01, $20, $FF
+}
+TABLE   :_acf6
+{       
+        BYTE $01, $20, $FF
+}
+TABLE   :_acf9
+{
+        BYTE $02, $20, $03, $20, $FF
+}
+TABLE   :_acfe
+{
+        BYTE $03, $20, $FF
+}
+TABLE   :_ad01
+{
+        BYTE $01, $02, $04, $02, $FF, $03, $02, $05, $02, $FF
+}
 
 `sprite layout
-:_ad0b
-DATA $0A, $0C, $FF, $FF, $FF, $FF
-DATA $FF, $FF, $FF, $FF, $FF, $FF
-DATA $FF, $FF, $FF, $FF, $FF, $FF
+TABLE   :_ad0b
+{
+        BYTE $0A, $0C, $FF, $FF, $FF, $FF
+        BYTE $FF, $FF, $FF, $FF, $FF, $FF
+        BYTE $FF, $FF, $FF, $FF, $FF, $FF
 
-DATA $0E, $10, $FF, $FF, $FF, $FF
-DATA $FF, $FF, $FF, $FF, $FF, $FF
-DATA $FF, $FF, $FF, $FF, $FF, $FF
+        BYTE $0E, $10, $FF, $FF, $FF, $FF
+        BYTE $FF, $FF, $FF, $FF, $FF, $FF
+        BYTE $FF, $FF, $FF, $FF, $FF, $FF
 
-DATA $2A, $2C, $FF, $FF, $FF, $FF
-DATA $FF, $FF, $FF, $FF, $FF, $FF
-DATA $FF, $FF, $FF, $FF, $FF, $FF
+        BYTE $2A, $2C, $FF, $FF, $FF, $FF
+        BYTE $FF, $FF, $FF, $FF, $FF, $FF
+        BYTE $FF, $FF, $FF, $FF, $FF, $FF
 
-DATA $2E, $30, $FF, $FF, $FF, $FF
-DATA $FF, $FF, $FF, $FF, $FF, $FF
-DATA $FF, $FF, $FF, $FF, $FF, $FF
+        BYTE $2E, $30, $FF, $FF, $FF, $FF
+        BYTE $FF, $FF, $FF, $FF, $FF, $FF
+        BYTE $FF, $FF, $FF, $FF, $FF, $FF
+}
 
-:_ad53
-DATA $12, $14, $FF, $FF, $FF, $FF
-DATA $FF, $FF, $FF, $FF, $FF, $FF
-DATA $FF, $FF, $FF, $FF, $FF, $FF
-DATA $32, $34, $FF, $FF, $FF, $FF
-DATA $FF
+TABLE   :_ad53
+{
+        BYTE $12, $14, $FF, $FF, $FF, $FF
+        BYTE $FF, $FF, $FF, $FF, $FF, $FF
+        BYTE $FF, $FF, $FF, $FF, $FF, $FF
+        BYTE $32, $34, $FF, $FF, $FF, $FF
+        BYTE $FF
+}
 
 `____________________________________________________________________________[$AD6C]___
 `OBJECT: canon (Sky Base)
@@ -3080,27 +3158,32 @@ PROC :doObjectCode_trap_cannon{
 	ret
 }
 
-:_adfd
-DATA $00, $08, $01, $08, $02, $08, $FF
+TABLE   :_adfd
+{
+        BYTE $00, $08, $01, $08, $02, $08, $FF
+}
 
 `sprite layout
-:_ae04
-DATA $FE, $FF, $FF, $FF, $FF, $FF
-DATA $74, $76, $FF, $FF, $FF, $FF
-DATA $FF, $FF, $FF, $FF, $FF, $FF
+TABLE   :_ae04
+{
+        BYTE $FE, $FF, $FF, $FF, $FF, $FF
+        BYTE $74, $76, $FF, $FF, $FF, $FF
+        BYTE $FF, $FF, $FF, $FF, $FF, $FF
 
-DATA $FE, $FF, $FF, $FF, $FF, $FF
-DATA $78, $7A, $FF, $FF, $FF, $FF
-DATA $FF, $FF, $FF, $FF, $FF, $FF
+        BYTE $FE, $FF, $FF, $FF, $FF, $FF
+        BYTE $78, $7A, $FF, $FF, $FF, $FF
+        BYTE $FF, $FF, $FF, $FF, $FF, $FF
 
-DATA $FE, $FF, $FF, $FF, $FF, $FF
-DATA $7C, $7E, $FF, $FF, $FF, $FF
-DATA $FF
+        BYTE $FE, $FF, $FF, $FF, $FF, $FF
+        BYTE $7C, $7E, $FF, $FF, $FF, $FF
+        BYTE $FF
+}
 
 `____________________________________________________________________________[$AE35]___
 `OBJECT: cannon ball (Sky Base)
 
-PROC :doObjectCode_trap_cannonBall {
+PROC    :doObjectCode_trap_cannonBall
+{
 	set	5,(ix+#object.unknown18)
 	ld	(ix+#object.width),$0c
 	ld	(ix+#object.height),$0c
@@ -3130,9 +3213,11 @@ PROC :doObjectCode_trap_cannonBall {
 }
 
 `sprite layout
-:_ae81
-DATA $02, $04, $FF, $FF, $FF, $FF
-DATA $FF
+TABLE   :_ae81
+{
+        BYTE $02, $04, $FF, $FF, $FF, $FF
+        BYTE $FF
+}
 
 `____________________________________________________________________________[$AE88]___
 `OBJECT: badnick - Unidos (Sky Base)
@@ -3338,29 +3423,37 @@ PROC :_afdb {
 	ret
 }
 
-:_b031
-DATA $0C, $03, $0D, $03, $0E, $03, $0E, $04, $0F, $04, $10, $04, $10, $05, $11, $05
-DATA $11, $06, $12, $06, $12, $07, $13, $07, $13, $08, $13, $09, $14, $09, $14, $0A
-DATA $14, $0B, $15, $0B, $15, $0C, $15, $0D, $15, $0E, $15, $0F, $15, $10, $15, $11
-DATA $14, $11, $14, $12, $14, $13, $13, $13, $13, $14, $13, $15, $12, $15, $12, $16
-DATA $11, $16, $11, $17, $10, $17, $10, $18, $0F, $18, $0E, $18, $0E, $19, $0D, $19
-DATA $0C, $19, $0B, $19, $0A, $19, $09, $19, $09, $18, $08, $18, $07, $18, $07, $17
-DATA $06, $17, $06, $16, $05, $16, $05, $15, $04, $15, $04, $14, $04, $13, $03, $13
-DATA $03, $12, $03, $11, $02, $11, $02, $10, $02, $0F, $02
-:_b0ac
-DATA $0E, $02, $0D, $02, $0C, $02, $0B, $03, $0B, $03, $0A, $03, $09, $04, $09, $04
-DATA $08, $04, $07, $05, $07, $05, $06, $06, $06, $06, $05, $07, $05, $07, $04, $08
-DATA $04, $09, $04, $09, $03, $0A, $03, $0B, $03
+TABLE   :_b031
+{
+        BYTE $0C, $03, $0D, $03, $0E, $03, $0E, $04, $0F, $04, $10, $04, $10, $05, $11, $05
+        BYTE $11, $06, $12, $06, $12, $07, $13, $07, $13, $08, $13, $09, $14, $09, $14, $0A
+        BYTE $14, $0B, $15, $0B, $15, $0C, $15, $0D, $15, $0E, $15, $0F, $15, $10, $15, $11
+        BYTE $14, $11, $14, $12, $14, $13, $13, $13, $13, $14, $13, $15, $12, $15, $12, $16
+        BYTE $11, $16, $11, $17, $10, $17, $10, $18, $0F, $18, $0E, $18, $0E, $19, $0D, $19
+        BYTE $0C, $19, $0B, $19, $0A, $19, $09, $19, $09, $18, $08, $18, $07, $18, $07, $17
+        BYTE $06, $17, $06, $16, $05, $16, $05, $15, $04, $15, $04, $14, $04, $13, $03, $13
+        BYTE $03, $12, $03, $11, $02, $11, $02, $10, $02, $0F, $02
+}
+TABLE   :_b0ac
+{
+        BYTE $0E, $02, $0D, $02, $0C, $02, $0B, $03, $0B, $03, $0A, $03, $09, $04, $09, $04
+        BYTE $08, $04, $07, $05, $07, $05, $06, $06, $06, $06, $05, $07, $05, $07, $04, $08
+        BYTE $04, $09, $04, $09, $03, $0A, $03, $0B, $03
+}
 
 `sprite layout
-:_b0d5
-DATA $FE, $FF, $FF, $FF, $FF, $FF
-DATA $FE, $26, $28, $FF, $FF, $FF
-DATA $FF, $FF, $FF, $FF, $FF, $FF
-:_b0e7
-DATA $FE, $FF, $FF, $FF, $FF, $FF
-DATA $FE, $20, $22, $FF, $FF, $FF
-DATA $FF
+TABLE   :_b0d5
+{
+        BYTE $FE, $FF, $FF, $FF, $FF, $FF
+        BYTE $FE, $26, $28, $FF, $FF, $FF
+        BYTE $FF, $FF, $FF, $FF, $FF, $FF
+}
+TABLE   :_b0e7
+{
+        BYTE $FE, $FF, $FF, $FF, $FF, $FF
+        BYTE $FE, $20, $22, $FF, $FF, $FF
+        BYTE $FF
+}
 
 `____________________________________________________________________________[$B0F4]___
 `OBJECT: UNKNOWN
@@ -3519,15 +3612,19 @@ PROC :doObjectCode_trap_turretRotating {
 	ret
 }
 
-:_b227
-DATA $08, $F8, $66, $00, $00, $00, $FF, $00, $0C, $FA, $70, $00, $14, $FA, $72, $00
-DATA $0F, $07, $4C, $00, $17, $07, $4E, $00, $0D, $0C, $6C, $00, $15, $0C, $6E, $00
-DATA $08, $0F, $64, $00, $00, $00, $FF, $00, $FC, $0C, $68, $00, $04, $0C, $6A, $00
-DATA $F9, $07, $48, $00, $01, $07, $4A, $00, $FB, $F9, $50, $00, $03, $F9, $52, $00   
-:_b267
-DATA $00, $00, $00, $FE, $08, $F0, $00, $01, $00, $FF, $18, $F8, $00, $02, $00, $00
-DATA $1E, $07, $00, $01, $00, $01, $16, $16, $00, $00, $00, $02, $08, $20, $00, $FF
-DATA $00, $01, $F8, $18, $00, $FE, $00, $00, $F2, $07, $00, $FF, $00, $FF, $F7, $F6
+TABLE   :_b227
+{
+        BYTE $08, $F8, $66, $00, $00, $00, $FF, $00, $0C, $FA, $70, $00, $14, $FA, $72, $00
+        BYTE $0F, $07, $4C, $00, $17, $07, $4E, $00, $0D, $0C, $6C, $00, $15, $0C, $6E, $00
+        BYTE $08, $0F, $64, $00, $00, $00, $FF, $00, $FC, $0C, $68, $00, $04, $0C, $6A, $00
+        BYTE $F9, $07, $48, $00, $01, $07, $4A, $00, $FB, $F9, $50, $00, $03, $F9, $52, $00   
+}
+TABLE   :_b267
+{
+        BYTE $00, $00, $00, $FE, $08, $F0, $00, $01, $00, $FF, $18, $F8, $00, $02, $00, $00
+        BYTE $1E, $07, $00, $01, $00, $01, $16, $16, $00, $00, $00, $02, $08, $20, $00, $FF
+        BYTE $00, $01, $F8, $18, $00, $FE, $00, $00, $F2, $07, $00, $FF, $00, $FF, $F7, $F6
+}
 
 `____________________________________________________________________________[$B297]___
 `OBJECT: flying platform (Sky Base)
@@ -3634,13 +3731,16 @@ PROC :doObjectCode_platform_flyingRight {
 }
 
 `sprite layout
-:_b37b
-DATA $FE, $FF, $FF, $FF, $FF, $FF
-DATA $36, $36, $36, $36, $FF, $FF
-DATA $FF
-
-:_b388
-DATA $08, $1C, $18, $3C, $08, $1E, $18, $3E, $08, $38, $18, $3A, $0C, $1A, $00, $FF
+TABLE   :_b37b
+{
+        BYTE $FE, $FF, $FF, $FF, $FF, $FF
+        BYTE $36, $36, $36, $36, $FF, $FF
+        BYTE $FF
+}
+TABLE   :_b388
+{
+        BYTE $08, $1C, $18, $3C, $08, $1E, $18, $3E, $08, $38, $18, $3A, $0C, $1A, $00, $FF
+}
 
 INCLUDE "trap_spikewall.oz80"
 
@@ -3720,9 +3820,9 @@ PROC    :doObjectCode_trap_turretFixed          SECTION ::objects
 	call	:_b5c2
 	ret
 
-._b4e6  DATA $80 $FE $80 $FE $00 $00 $F8 $FF $FF $FF $80 $01 $80 $FE $18 $00
-        DATA $F8 $FF $00 $FF $80 $FE $80 $01 $00 $00 $10 $00 $FF $00 $80 $01
-        DATA $80 $01 $18 $00 $10 $00 $00 $00   
+._b4e6  BYTE $80 $FE $80 $FE $00 $00 $F8 $FF $FF $FF $80 $01 $80 $FE $18 $00
+        BYTE $F8 $FF $00 $FF $80 $FE $80 $01 $00 $00 $10 $00 $FF $00 $80 $01
+        BYTE $80 $01 $18 $00 $10 $00 $00 $00   
 }
 
 `____________________________________________________________________________[$B50E]___
@@ -3808,9 +3908,9 @@ PROC    :doObjectCode_platform_flyingUpDown     SECTION ::objects
 	ret
         
         `sprite layout
-._b5b5  DATA $FE, $FF, $FF, $FF, $FF, $FF
-        DATA $6C, $6E, $6C, $6E, $FF, $FF
-        DATA $FF
+._b5b5  BYTE $FE, $FF, $FF, $FF, $FF, $FF
+        BYTE $6C, $6E, $6C, $6E, $FF, $FF
+        BYTE $FF
 }
 
 `____________________________________________________________________________[$B5C2]___
@@ -4315,22 +4415,22 @@ PROC    :doObjectCode_boss_skyBase              SECTION ::objects
 	pop	ix
 	ret
 
-._ba1b  DATA $C9		                `unused?
-._ba1c  DATA $00 $00 $F9 $BA $00 $02 $0B $BB $00 $07 $0B $BB
-._ba28  DATA $03 $08 $04 $07 $05 $08 $04 $07 $FF $30 $04 $A0 $01 $00 $00
-._ba37  DATA $00 $00 $20 $22                    `unused, or part of above?
-._ba3b  DATA $30 $04 $A0 $01 $00 $00 $00 $00 $24 $26 $20 $04 $60 $01 $37 $10
-        DATA $38 $10 $4A $10 $4B $10 $30 $04 $60 $01 $28 $10 $19 $10 $4C $10
-        DATA $4D $10 $40 $04 $60 $01 $00 $10 $2D $10 $4E $10 $4F $10 $20 $04
-        DATA $70 $01 $00 $00 $00 $00 $00 $00 $00 $00 $30 $04 $70 $01 $00 $00
-        DATA $00 $00 $00 $00 $00 $00 $40 $04 $70 $01 $00 $00 $00 $00 $00 $00
-        DATA $00 $00 $20 $04 $80 $01 $00 $00 $00 $00 $00 $00 $00 $00 $30 $04
-        DATA $80 $01 $00 $00 $00 $00 $00 $00 $00 $00 $40 $04 $80 $01 $00 $00
-        DATA $00 $00 $00 $00 $00 $00 $20 $04 $90 $01 $00 $00 $00 $00 $00 $00
-        DATA $00 $00 $30 $04 $90 $01 $00 $00 $00 $00 $00 $00 $00 $00 $40 $04
-        DATA $90 $01 $00 $00 $00 $00 $00 $00 $00 $00 $20 $04 $A0 $01 $5A $10
-        DATA $5B $10 $37 $10 $3B $10 $30 $04 $A0 $01 $5C $10 $5D $10 $3C $10
-        DATA $00 $10 $40 $04 $A0 $01 $5E $10 $5F $10 $00 $10 $2D $10
+._ba1b  BYTE $C9		                `unused?
+._ba1c  BYTE $00 $00 $F9 $BA $00 $02 $0B $BB $00 $07 $0B $BB
+._ba28  BYTE $03 $08 $04 $07 $05 $08 $04 $07 $FF $30 $04 $A0 $01 $00 $00
+._ba37  BYTE $00 $00 $20 $22                    `unused, or part of above?
+._ba3b  BYTE $30 $04 $A0 $01 $00 $00 $00 $00 $24 $26 $20 $04 $60 $01 $37 $10
+        BYTE $38 $10 $4A $10 $4B $10 $30 $04 $60 $01 $28 $10 $19 $10 $4C $10
+        BYTE $4D $10 $40 $04 $60 $01 $00 $10 $2D $10 $4E $10 $4F $10 $20 $04
+        BYTE $70 $01 $00 $00 $00 $00 $00 $00 $00 $00 $30 $04 $70 $01 $00 $00
+        BYTE $00 $00 $00 $00 $00 $00 $40 $04 $70 $01 $00 $00 $00 $00 $00 $00
+        BYTE $00 $00 $20 $04 $80 $01 $00 $00 $00 $00 $00 $00 $00 $00 $30 $04
+        BYTE $80 $01 $00 $00 $00 $00 $00 $00 $00 $00 $40 $04 $80 $01 $00 $00
+        BYTE $00 $00 $00 $00 $00 $00 $20 $04 $90 $01 $00 $00 $00 $00 $00 $00
+        BYTE $00 $00 $30 $04 $90 $01 $00 $00 $00 $00 $00 $00 $00 $00 $40 $04
+        BYTE $90 $01 $00 $00 $00 $00 $00 $00 $00 $00 $20 $04 $A0 $01 $5A $10
+        BYTE $5B $10 $37 $10 $3B $10 $30 $04 $A0 $01 $5C $10 $5D $10 $3C $10
+        BYTE $00 $10 $40 $04 $A0 $01 $5E $10 $5F $10 $00 $10 $2D $10
 }
 
 INCLUDE "boss_running.oz80"
@@ -4338,33 +4438,33 @@ INCLUDE "boss_running.oz80"
 `part of sky boss only
 TABLE   :_bb1d                                  SECTION ::objects
 {
-        DATA $10 $12 $14 $16 $FF $FF
-        DATA $30 $32 $34 $FE $FF $FF
-        DATA $50 $52 $54 $FE $FF $FF
+        BYTE $10 $12 $14 $16 $FF $FF
+        BYTE $30 $32 $34 $FE $FF $FF
+        BYTE $50 $52 $54 $FE $FF $FF
 
-        DATA $18 $1A $1C $1E $FF $FF
-        DATA $FE $3A $3C $3E $FF $FF
-        DATA $FE $64 $66 $68 $FF $FF
+        BYTE $18 $1A $1C $1E $FF $FF
+        BYTE $FE $3A $3C $3E $FF $FF
+        BYTE $FE $64 $66 $68 $FF $FF
 
-        DATA $18 $1A $1C $1E $FF $FF
-        DATA $FE $3A $3C $3E $FF $FF
-        DATA $FE $6A $6C $6E $FF $FF
+        BYTE $18 $1A $1C $1E $FF $FF
+        BYTE $FE $3A $3C $3E $FF $FF
+        BYTE $FE $6A $6C $6E $FF $FF
 
-        DATA $18 $1A $1C $1E $FF $FF
-        DATA $FE $3A $3C $3E $FF $FF
-        DATA $70 $72 $5A $5C $5E $FF
+        BYTE $18 $1A $1C $1E $FF $FF
+        BYTE $FE $3A $3C $3E $FF $FF
+        BYTE $70 $72 $5A $5C $5E $FF
 
-        DATA $00 $0A $0C $0E $FF $FF
-        DATA $28 $2A $2C $2E $FF $FF
-        DATA $00 $4A $4C $4E $FF $FF
+        BYTE $00 $0A $0C $0E $FF $FF
+        BYTE $28 $2A $2C $2E $FF $FF
+        BYTE $00 $4A $4C $4E $FF $FF
 }
 
 `also part of sky base boss only
 TABLE   :_bb77                                  SECTION ::objects
 {
-        DATA $FE $FF $FF $FF $FF $FF
-        DATA $FE $44 $46 $FF $FF $FF
-        DATA $FF
+        BYTE $FE $FF $FF $FF $FF $FF
+        BYTE $FE $44 $46 $FF $FF $FF
+        BYTE $FF
 }
 
 `____________________________________________________________________________[$BB84]___
@@ -4533,9 +4633,9 @@ PROC    :doObjectCode_boss_electricBeam         SECTION ::objects
         
         `------------------------------------------------------------------------------
 
-._bcc7  DATA $36 $38 $56 $58 $36 $38 $56 $58 $36 $38 $56 $58 $36 $38 $56 $58
-        DATA $36 $38 $56 $58 $36 $38
-._bcdd  DATA $40 $42        
+._bcc7  BYTE $36 $38 $56 $58 $36 $38 $56 $58 $36 $38 $56 $58 $36 $38 $56 $58
+        BYTE $36 $38 $56 $58 $36 $38
+._bcdd  BYTE $40 $42        
         
 }
 

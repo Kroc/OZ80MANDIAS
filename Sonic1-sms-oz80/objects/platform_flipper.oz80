@@ -136,31 +136,31 @@ PROC    :doObjectCode_platform_flipper          SECTION ::objects
 	ld	($.SONIC.Xdirection),a
 	ret
 
-._999e  DATA $FF $FF $FE $FE $FE $FD $FD $FD $FC $FC $FC $FC $FB $FB $FB $FB
-        DATA $FA $FA $FA $FA $FA $F9 $F9 $F9 $F9 $F9 $F9 $FA $FA $FB $FC $FE
-._99be  DATA $EA $EA $EA $F6 $F7 $F8 $F8 $F8 $F9 $F9 $F9 $FA $FA $FA $FB $FB
-        DATA $FB $FB $FC $FC $FC $FC $FD $FD $FD $FD $FE $FE $FF $00 $02 $04
-._99de  DATA $EA $EA $EA $EA $EA $EA $EA $EA $EA $EA $EA $EA $EE $ED $EC $EC
-        DATA $EC $ED $EE $EF $F0 $F2 $F3 $F4 $F5 $F7 $F8 $F9 $FA $FB $FD $FF
-._99fe  DATA $00 $F8 $00 $F8 $00 $F9 $00 $FA $00 $FB $00 $FC $E0 $FC $80 $FD
-        DATA $C0 $FD $00 $FE $40 $FE $80 $FE $C0 $FE $00 $FF $20 $FF $40 $FF
-        DATA $60 $FF $80 $FF $A0 $FF $C0 $FF $E0 $FF $E8 $FF $EA $FF $EC $FF
-        DATA $EE $FF $F0 $FF $F2 $FF $F4 $FF $F6 $FF $F8 $FF $FC $FF $FE $FF
-._9a3e  DATA $00 $FC $00 $FC $00 $FC $00 $FB $00 $FA $00 $F9 $00 $F8 $00 $F7
-        DATA $00 $F6 $80 $F5 $00 $F5 $C0 $F4 $80 $F4 $40 $F4 $00 $F4 $00 $F4
-        DATA $00 $F4 $00 $F4 $40 $F4 $80 $F4 $C0 $F4 $00 $F5 $00 $F6 $00 $F7
-        DATA $00 $F9 $00 $FA $00 $FC $80 $FC $00 $FD $C0 $FD $00 $FF $00 $FF
+._999e  BYTE $FF $FF $FE $FE $FE $FD $FD $FD $FC $FC $FC $FC $FB $FB $FB $FB
+        BYTE $FA $FA $FA $FA $FA $F9 $F9 $F9 $F9 $F9 $F9 $FA $FA $FB $FC $FE
+._99be  BYTE $EA $EA $EA $F6 $F7 $F8 $F8 $F8 $F9 $F9 $F9 $FA $FA $FA $FB $FB
+        BYTE $FB $FB $FC $FC $FC $FC $FD $FD $FD $FD $FE $FE $FF $00 $02 $04
+._99de  BYTE $EA $EA $EA $EA $EA $EA $EA $EA $EA $EA $EA $EA $EE $ED $EC $EC
+        BYTE $EC $ED $EE $EF $F0 $F2 $F3 $F4 $F5 $F7 $F8 $F9 $FA $FB $FD $FF
+._99fe  BYTE $00 $F8 $00 $F8 $00 $F9 $00 $FA $00 $FB $00 $FC $E0 $FC $80 $FD
+        BYTE $C0 $FD $00 $FE $40 $FE $80 $FE $C0 $FE $00 $FF $20 $FF $40 $FF
+        BYTE $60 $FF $80 $FF $A0 $FF $C0 $FF $E0 $FF $E8 $FF $EA $FF $EC $FF
+        BYTE $EE $FF $F0 $FF $F2 $FF $F4 $FF $F6 $FF $F8 $FF $FC $FF $FE $FF
+._9a3e  BYTE $00 $FC $00 $FC $00 $FC $00 $FB $00 $FA $00 $F9 $00 $F8 $00 $F7
+        BYTE $00 $F6 $80 $F5 $00 $F5 $C0 $F4 $80 $F4 $40 $F4 $00 $F4 $00 $F4
+        BYTE $00 $F4 $00 $F4 $40 $F4 $80 $F4 $C0 $F4 $00 $F5 $00 $F6 $00 $F7
+        BYTE $00 $F9 $00 $FA $00 $FC $80 $FC $00 $FD $C0 $FD $00 $FF $00 $FF
 
         `sprite layout
-._9a7e  DATA $FE $FF $FF $FF $FF $FF
-        DATA $38 $3A $3C $3E $FF $FF
-        DATA $FF $FF $FF $FF $FF $FF
-._9a90  DATA $48 $4A $4C $4E $FF $FF
-        DATA $68 $6A $6C $6E $FF $FF
-        DATA $FF $FF $FF $FF $FF $FF
-._9aa2  DATA $FE $12 $14 $16 $FF $FF
-        DATA $FE $32 $34 $36 $FF $FF
-        DATA $FF
+._9a7e  BYTE $FE $FF $FF $FF $FF $FF
+        BYTE $38 $3A $3C $3E $FF $FF
+        BYTE $FF $FF $FF $FF $FF $FF
+._9a90  BYTE $48 $4A $4C $4E $FF $FF
+        BYTE $68 $6A $6C $6E $FF $FF
+        BYTE $FF $FF $FF $FF $FF $FF
+._9aa2  BYTE $FE $12 $14 $16 $FF $FF
+        BYTE $FE $32 $34 $36 $FF $FF
+        BYTE $FF
 
         `--------------------------------------------------------------------[$9AAF]---
 

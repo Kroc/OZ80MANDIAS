@@ -167,10 +167,10 @@ PROC    :doObjectCode_boss_jungle               SECTION ::objects {
 	ret
 
         `sprite layout
-._81f4  DATA $20, $22, $24, $26, $28, $FF
-        DATA $40, $42, $44, $46, $48, $FF
-        DATA $60, $54, $56, $58, $68, $FF
-._8206  DATA $2A, $2C, $2E, $30, $32, $FF
-        DATA $4A, $4C, $4E, $50, $52, $FF
-        DATA $6A, $5A, $5C, $5E, $72, $FF
+._81f4  BYTE $20, $22, $24, $26, $28, $FF
+        BYTE $40, $42, $44, $46, $48, $FF
+        BYTE $60, $54, $56, $58, $68, $FF
+._8206  BYTE $2A, $2C, $2E, $30, $32, $FF
+        BYTE $4A, $4C, $4E, $50, $52, $FF
+        BYTE $6A, $5A, $5C, $5E, $72, $FF
 }

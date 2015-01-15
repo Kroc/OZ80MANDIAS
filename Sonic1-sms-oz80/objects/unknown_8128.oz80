@@ -75,14 +75,14 @@ PROC    :_8218                                  SECTION ::objects {
         ld	(ix+#object.type),$FF	        `remove object?
 	ret
 
-._82c1  DATA $00, $04, $01, $04, $FF
-._82c6  DATA $01, $0C, $02, $0C, $03, $0C, $FF
+._82c1  BYTE $00, $04, $01, $04, $FF
+._82c6  BYTE $01, $0C, $02, $0C, $03, $0C, $FF
 
         `sprite layout
-._82cd  DATA $08, $0A, $FF, $FF, $FF, $FF
-        DATA $FF, $FF, $FF, $FF, $FF, $FF
-        DATA $FF, $FF, $FF, $FF, $FF, $FF
+._82cd  BYTE $08, $0A, $FF, $FF, $FF, $FF
+        BYTE $FF, $FF, $FF, $FF, $FF, $FF
+        BYTE $FF, $FF, $FF, $FF, $FF, $FF
         
-        DATA $0C, $0E, $FF, $FF, $FF, $FF
-        DATA $FF
+        BYTE $0C, $0E, $FF, $FF, $FF, $FF
+        BYTE $FF
 }

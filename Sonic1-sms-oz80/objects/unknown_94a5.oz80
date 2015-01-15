@@ -220,10 +220,10 @@ PROC    :_94a5                                  SECTION ::objects
 	ret
 
         `sprite layout
-._9688  DATA $3C, $3E, $FF, $FF, $FF, $FF
-        DATA $FF, $FF, $38, $3A, $FF, $FF
-        DATA $FF, $FF, $FF, $FF
-._9698  DATA $56, $58, $FF, $FF, $FF, $FF
-        DATA $FF, $FF, $5A, $5C, $FF, $FF
-        DATA $FF, $FF, $FF, $FF
+._9688  BYTE $3C, $3E, $FF, $FF, $FF, $FF
+        BYTE $FF, $FF, $38, $3A, $FF, $FF
+        BYTE $FF, $FF, $FF, $FF
+._9698  BYTE $56, $58, $FF, $FF, $FF, $FF
+        BYTE $FF, $FF, $5A, $5C, $FF, $FF
+        BYTE $FF, $FF, $FF, $FF
 }

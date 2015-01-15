@@ -117,6 +117,7 @@ Private Const STR_HLT               As String = "hlt"
 Private Const STR_HALT              As String = "halt"
 Private Const STR_HASH              As String = "HASH"
 Private Const STR_HELP              As String = "HELP"
+Private Const STR_HI                As String = "HI"
 Private Const STR_IM                As String = "im"
 Private Const STR_IN                As String = "in"
 Private Const STR_INC               As String = "inc"
@@ -133,6 +134,7 @@ Private Const STR_LDD               As String = "ldd"
 Private Const STR_LDDR              As String = "lddr"
 Private Const STR_LDI               As String = "ldi"
 Private Const STR_LDIR              As String = "ldir"
+Private Const STR_LO                As String = "LO"
 Private Const STR_LONG              As String = "LONG"
 Private Const STR_NEG               As String = "neg"
 Private Const STR_NOP               As String = "nop"
@@ -1065,6 +1067,7 @@ TokenWord:
         'Keywords
         If Word.Equals(STR_HASH) Then Call Add(TOKEN_KEYWORD_HASH): GoTo NextWord
         If Word.Equals(STR_HELP) Then Call Add(TOKEN_KEYWORD_HELP): GoTo NextWord
+        If Word.Equals(STR_HI) Then Call Add(TOKEN_KEYWORD_HI): GoTo NextWord
         
     ElseIf Asc1 = ASC_I Then '................................................. `i` ...
         'Z80 instructions
@@ -1108,6 +1111,7 @@ TokenWord:
         If Word.Equals(STR_LDI) Then Call Add(TOKEN_Z80_LDI): GoTo NextWord
         If Word.Equals(STR_LDIR) Then Call Add(TOKEN_Z80_LDIR): GoTo NextWord
         'Keywords
+        If Word.Equals(STR_LO) Then Call Add(TOKEN_KEYWORD_LO): GoTo NextWord
         If Word.Equals(STR_LONG) Then Call Add(TOKEN_KEYWORD_LONG): GoTo NextWord
     
     ElseIf Asc1 = ASC_M Then '................................................. `m` ...

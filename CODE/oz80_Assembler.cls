@@ -217,7 +217,7 @@ Public Enum OZ80_MASK
     MASK_ANY_VAL = MASK_VAL Or MASK_MEM_VAL
 End Enum
 
-Public Type oz80Param
+Private Type oz80Param
     Mask As OZ80_MASK
     Token As OZ80_TOKEN
     Value As Long
@@ -501,6 +501,9 @@ Public Property Get Error() As OZ80_ERROR: Let Error = My_Error: End Property
 Public Function Assemble( _
     ByVal FilePath As String _
 ) As OZ80_ERROR
+    Dim Begin As Single
+    Let Begin = Timer
+    
     'Reset the error number
     Let My_Error = OZ80_ERROR_NONE
     
@@ -567,7 +570,7 @@ Public Function Assemble( _
 '    Close #FileNumber
     
     Call RaiseMessage(OZ80_LOG_ACTION, LOG_ASM_COMPLETE)
-'    Call RaiseMessage(OZ80_LOG_INFO, LOG_TIME, Format$(Stopwatch.Elapsed / 1000, "0.000"))
+    Call RaiseMessage(OZ80_LOG_INFO, LOG_TIME, Format$(Timer - Begin, "0.000"))
     
 Finish:
     'Clean up:
@@ -629,9 +632,10 @@ Private Function AssembleFile( _
     '[2] Check file exists: _
      ----------------------------------------------------------------------------------
     'ERROR: File Not Found
-    If Not FSO.FileExists(TestPath.Text) Then Call RaiseError( _
-        OZ80_ERROR_FILE_NOTFOUND _
-    ): GoTo Finish
+    If Not FSO.FileExists(TestPath.Text) Then
+        Call RaiseError(OZ80_ERROR_FILE_NOTFOUND)
+        GoTo Finish
+    End If
     
     '[3] Tokenise the file: _
      ----------------------------------------------------------------------------------

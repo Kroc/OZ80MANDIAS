@@ -67,7 +67,7 @@ PROC :doObjectCode_anim_final {
 	ld	hl,$1008
 	ld	($.TEMP6),hl
 	call	:_LABEL_3956_11
-	jr	c,+
+	jr	c,._4
 	ld	de,$0001
 	ld	hl,($.SONIC.Yspeed)
 	ld	a,l
@@ -118,13 +118,13 @@ PROC :doObjectCode_anim_final {
 	set	2,(iy+#vars.unknown_0D)
 	ret
 
-._bf21  DATA $2A $2C $2E $30 $32 $FF $4A $4C $4E $50 $52 $FF $6A $6C $6E $70
-        DATA $72 $FF
+._bf21  BYTE $2A $2C $2E $30 $32 $FF $4A $4C $4E $50 $52 $FF $6A $6C $6E $70
+        BYTE $72 $FF
 
         `sprite layout
-._bf33  DATA $2A, $34, $36, $38, $32, $FF
-        DATA $4A, $4C, $4E, $50, $52, $FF
-        DATA $6A, $6C, $6E, $70, $72, $FF
-        DATA $5C, $5E, $FF, $FF, $FF, $FF
-        DATA $FF
+._bf33  BYTE $2A, $34, $36, $38, $32, $FF
+        BYTE $4A, $4C, $4E, $50, $52, $FF
+        BYTE $6A, $6C, $6E, $70, $72, $FF
+        BYTE $5C, $5E, $FF, $FF, $FF, $FF
+        BYTE $FF
 }

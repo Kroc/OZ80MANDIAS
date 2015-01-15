@@ -485,7 +485,7 @@ PARAMS	hl;addr 	`VRAM address
 
 PROC    :readJoypad                             SECTION ::main
         `====================================================================[$05A7]===
-RETURN	iy+#vars.joypad
+RETURN	$.VARS.joypad
 {       
 	in	a, ($.SMS.JOYPADA)	        `read the joypad port
 	or	%11000000		        `mask out bits 7 & 6 -

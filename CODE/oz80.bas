@@ -220,8 +220,10 @@ Public Enum OZ80_TOKEN
     TOKEN_KEYWORD_DEF                   'Define constant
     TOKEN_KEYWORD_HASH                  'Define a hash-array
     TOKEN_KEYWORD_HELP                  'Documentation marker
+    TOKEN_KEYWORD_HI                    '`HI` function -- high byte of 16-bit Value
     TOKEN_KEYWORD_INCLUDE               'Include another file
     TOKEN_KEYWORD_INTERRUPT             'Interrupt `PROC :<label> INTERRUPT <expr>`
+    TOKEN_KEYWORD_LO                    '`LO` function -- low byte of a 16-bit Value
     TOKEN_KEYWORD_LONG                  'Long data type (4-bytes)
     TOKEN_KEYWORD_NYBL                  'Nybble data type (4-bits)
     TOKEN_KEYWORD_PARAMS                'Parameter list `PROC :<label> PARAMS <list>`
@@ -447,8 +449,10 @@ Public Property Get TokenName( _
         Let My_TokenName(TOKEN_KEYWORD_DEF) = "DEF"
         Let My_TokenName(TOKEN_KEYWORD_HASH) = "HASH"
         Let My_TokenName(TOKEN_KEYWORD_HELP) = "HELP"
+        Let My_TokenName(TOKEN_KEYWORD_HI) = "HI"
         Let My_TokenName(TOKEN_KEYWORD_INCLUDE) = "INCLUDE"
         Let My_TokenName(TOKEN_KEYWORD_INTERRUPT) = "INTERRUPT"
+        Let My_TokenName(TOKEN_KEYWORD_LO) = "LO"
         Let My_TokenName(TOKEN_KEYWORD_LONG) = "LONG"
         Let My_TokenName(TOKEN_KEYWORD_NYBL) = "NYBL"
         Let My_TokenName(TOKEN_KEYWORD_PARAMS) = "PARAMS"

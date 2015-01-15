@@ -57,6 +57,6 @@ PROC    :_9b75                                  SECTION ::objects
 	ld	(ix+#object.spriteLayout.hi),a;zero
 	ret
 
-._9bd9  DATA $7D, $1A, $15, $7D, $01, $14, $01, $3C, $18, $01, $02
-        DATA $19, $14, $0F, $1A
+._9bd9  BYTE $7D, $1A, $15, $7D, $01, $14, $01, $3C, $18, $01, $02
+        BYTE $19, $14, $0F, $1A
 }

@@ -6,8 +6,8 @@
 `____________________________________________________________________________[$5F17]___
 `OBJECT: end sign
 
-SECTION ::doObjectCode_boss_endSign             SECTION ::objects {
-	
+PROC    :doObjectCode_boss_endSign              SECTION ::objects
+{	
 	ld	(ix+#object.width), 24
 	ld	(ix+#object.height),48
         
@@ -274,52 +274,52 @@ SECTION ::doObjectCode_boss_endSign             SECTION ::objects {
 	ret
 
 	`UNKNOWN
-._6157	DATA $00 $00 $00 $00 $00 $00 $03 $03 $03 $03 $03 $03 $02 $02 $02 $02
-	DATA $02 $02 $04 $04 $04 $04 $04 $04 $FF $00 $00 $FF $00 $00 $00 $00
-	DATA $00 $00 $00 $03 $03 $03 $03 $03 $03 $02 $02 $02 $02 $02 $02 $01
-	DATA $01 $01 $01 $01 $01 $FF $12 $00 $00 $00 $00 $00 $00 $03 $03 $03
-	DATA $03 $03 $03 $02 $02 $02 $02 $02 $02 $05 $05 $05 $05 $05 $05 $FF
-	DATA $12 $00 $00 $00 $00 $00 $00 $03 $03 $03 $03 $03 $03 $02 $02 $02
-	DATA $02 $02 $02 $06 $06 $06 $06 $06 $06 $FF $12 $00 $00 $00 $00 $00
-	DATA $00 $03 $03 $03 $03 $03 $03 $02 $02 $02 $02 $02 $02 $07 $07 $07
-	DATA $07 $07 $07 $FF $12
+._6157	BYTE $00 $00 $00 $00 $00 $00 $03 $03 $03 $03 $03 $03 $02 $02 $02 $02
+	BYTE $02 $02 $04 $04 $04 $04 $04 $04 $FF $00 $00 $FF $00 $00 $00 $00
+	BYTE $00 $00 $00 $03 $03 $03 $03 $03 $03 $02 $02 $02 $02 $02 $02 $01
+	BYTE $01 $01 $01 $01 $01 $FF $12 $00 $00 $00 $00 $00 $00 $03 $03 $03
+	BYTE $03 $03 $03 $02 $02 $02 $02 $02 $02 $05 $05 $05 $05 $05 $05 $FF
+	BYTE $12 $00 $00 $00 $00 $00 $00 $03 $03 $03 $03 $03 $03 $02 $02 $02
+	BYTE $02 $02 $02 $06 $06 $06 $06 $06 $06 $FF $12 $00 $00 $00 $00 $00
+	BYTE $00 $03 $03 $03 $03 $03 $03 $02 $02 $02 $02 $02 $02 $07 $07 $07
+	BYTE $07 $07 $07 $FF $12
 	
 	`these are sprite layouts
-._61dc	DATA $4E, $50, $52, $54, $FF, $FF
-	DATA $6E, $70, $72, $74, $FF, $FF
-	DATA $FE, $42, $44, $FF, $FF, $FF
+._61dc	BYTE $4E, $50, $52, $54, $FF, $FF
+	BYTE $6E, $70, $72, $74, $FF, $FF
+	BYTE $FE, $42, $44, $FF, $FF, $FF
 
-	DATA $08, $0A, $0C, $0E, $FF, $FF
-	DATA $28, $2A, $2C, $2E, $FF, $FF
-	DATA $FE, $42, $44, $FF, $FF, $FF
+	BYTE $08, $0A, $0C, $0E, $FF, $FF
+	BYTE $28, $2A, $2C, $2E, $FF, $FF
+	BYTE $FE, $42, $44, $FF, $FF, $FF
 
-	DATA $FE, $12, $14, $FF, $FF, $FF
-	DATA $FE, $32, $34, $FF, $FF, $FF
-	DATA $FE, $42, $44, $FF, $FF, $FF
+	BYTE $FE, $12, $14, $FF, $FF, $FF
+	BYTE $FE, $32, $34, $FF, $FF, $FF
+	BYTE $FE, $42, $44, $FF, $FF, $FF
 
-	DATA $16, $18, $1A, $1C, $FF, $FF
-	DATA $36, $38, $3A, $3C, $FF, $FF
-	DATA $FE, $42, $44, $FF, $FF, $FF
+	BYTE $16, $18, $1A, $1C, $FF, $FF
+	BYTE $36, $38, $3A, $3C, $FF, $FF
+	BYTE $FE, $42, $44, $FF, $FF, $FF
 
-	DATA $56, $58, $5A, $5C, $FF, $FF
-	DATA $76, $78, $7A, $7C, $FF, $FF
-	DATA $FE, $42, $44, $FF, $FF, $FF
+	BYTE $56, $58, $5A, $5C, $FF, $FF
+	BYTE $76, $78, $7A, $7C, $FF, $FF
+	BYTE $FE, $42, $44, $FF, $FF, $FF
 
-	DATA $00, $02, $04, $06, $FF, $FF
-	DATA $20, $22, $24, $26, $FF, $FF
-	DATA $FE, $42, $44, $FF, $FF, $FF
+	BYTE $00, $02, $04, $06, $FF, $FF
+	BYTE $20, $22, $24, $26, $FF, $FF
+	BYTE $FE, $42, $44, $FF, $FF, $FF
 
-	DATA $4E, $4A, $4C, $54, $FF, $FF
-	DATA $6E, $6A, $6C, $74, $FF, $FF
-	DATA $FE, $42, $44, $FF, $FF, $FF
+	BYTE $4E, $4A, $4C, $54, $FF, $FF
+	BYTE $6E, $6A, $6C, $74, $FF, $FF
+	BYTE $FE, $42, $44, $FF, $FF, $FF
 
-	DATA $4E, $46, $48, $54, $FF, $FF
-	DATA $6E, $66, $68, $74, $FF, $FF
-	DATA $FE, $42, $44, $FF, $FF, $FF
+	BYTE $4E, $46, $48, $54, $FF, $FF
+	BYTE $6E, $66, $68, $74, $FF, $FF
+	BYTE $FE, $42, $44, $FF, $FF, $FF
 	
 	`--------------------------------------------------------------------[$626C]---
 	
 .S1_EndSign_Palette
-	DATA $38 $20 $35 $1B $16 $2A $00 $3F $03 $0F $01 $00 $00 $00 $00 $00
+	BYTE $38 $20 $35 $1B $16 $2A $00 $3F $03 $0F $01 $00 $00 $00 $00 $00
 
 }

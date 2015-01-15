@@ -110,119 +110,119 @@ PROC    :doObjectCode_platform_swinging         SECTION ::objects {
 	ret
         
 ._682f  `this is swinging position data
-        DATA $B3, $00
-        DATA $B3, $01
-        DATA $B3, $02
-        DATA $B3, $02
-        DATA $B3, $03
-        DATA $B3, $04
-        DATA $B3, $05
-        DATA $B3, $06
-        DATA $B4, $07
-        DATA $B4, $08
-        DATA $B4, $09
-        DATA $B4, $0B
-        DATA $B4, $0C
-        DATA $B4, $0D
-        DATA $B5, $0E
-        DATA $B5, $0F
-        DATA $B5, $11
-        DATA $B5, $12
-        DATA $B6, $13
-        DATA $B6, $15
-        DATA $B7, $16
-        DATA $B7, $18
-        DATA $B8, $19
-        DATA $B8, $1B
-        DATA $B9, $1D
-        DATA $B9, $1E
-        DATA $BA, $20
-        DATA $BB, $22
-        DATA $BC, $23
-        DATA $BD, $25
-        DATA $BE, $27
-        DATA $BF, $29
-        DATA $C0, $2B
-        DATA $C2, $2D
-        DATA $C3, $2F
-        DATA $C4, $31
-        DATA $C6, $32
-        DATA $C8, $34
-        DATA $CA, $36
-        DATA $CC, $38
-        DATA $CE, $3A
-        DATA $D0, $3C
-        DATA $D2, $3E
-        DATA $D4, $3F
-        DATA $D7, $41
-        DATA $DA, $43
-        DATA $DC, $44
-        DATA $DF, $45
-        DATA $E2, $47
-        DATA $E5, $48
-        DATA $E8, $49
-        DATA $EC, $4A
-        DATA $EF, $4B
-        DATA $F2, $4C
-        DATA $F6, $4C
-        DATA $F9, $4C
-        DATA $FC, $4D
-        DATA $00, $4D
-        DATA $03, $4D
-        DATA $07, $4C
-        DATA $0A, $4C
-        DATA $0E, $4C
-        DATA $11, $4B
-        DATA $14, $4A
-        DATA $18, $49
-        DATA $1B, $48
-        DATA $1E, $47
-        DATA $21, $45
-        DATA $24, $44
-        DATA $27, $42
-        DATA $29, $41
-        DATA $2C, $3F
-        DATA $2E, $3D
-        DATA $31, $3B
-        DATA $33, $3A
-        DATA $35, $38
-        DATA $37, $36
-        DATA $39, $34
-        DATA $3A, $32
-        DATA $3C, $30
-        DATA $3E, $2E
-        DATA $3F, $2C
-        DATA $40, $2A
-        DATA $41, $28
-        DATA $43, $26
-        DATA $44, $24
-        DATA $45, $23
-        DATA $45, $21
-        DATA $46, $1F
-        DATA $47, $1D
-        DATA $48, $1C
-        DATA $48, $1A
-        DATA $49, $18
-        DATA $49, $17
-        DATA $4A, $15
-        DATA $4A, $14
-        DATA $4B, $12
-        DATA $4B, $11
-        DATA $4B, $0F
-        DATA $4B, $0E
-        DATA $4C, $0D
-        DATA $4C, $0C
-        DATA $4C, $0A
-        DATA $4C, $09
-        DATA $4C, $08
-        DATA $4C, $07
-        DATA $4D, $06
-        DATA $4D, $05
-        DATA $4D, $04
-        DATA $4D, $03
-        DATA $4D, $02
-        DATA $4D, $01
-        DATA $4D, $00
+        BYTE $B3, $00
+        BYTE $B3, $01
+        BYTE $B3, $02
+        BYTE $B3, $02
+        BYTE $B3, $03
+        BYTE $B3, $04
+        BYTE $B3, $05
+        BYTE $B3, $06
+        BYTE $B4, $07
+        BYTE $B4, $08
+        BYTE $B4, $09
+        BYTE $B4, $0B
+        BYTE $B4, $0C
+        BYTE $B4, $0D
+        BYTE $B5, $0E
+        BYTE $B5, $0F
+        BYTE $B5, $11
+        BYTE $B5, $12
+        BYTE $B6, $13
+        BYTE $B6, $15
+        BYTE $B7, $16
+        BYTE $B7, $18
+        BYTE $B8, $19
+        BYTE $B8, $1B
+        BYTE $B9, $1D
+        BYTE $B9, $1E
+        BYTE $BA, $20
+        BYTE $BB, $22
+        BYTE $BC, $23
+        BYTE $BD, $25
+        BYTE $BE, $27
+        BYTE $BF, $29
+        BYTE $C0, $2B
+        BYTE $C2, $2D
+        BYTE $C3, $2F
+        BYTE $C4, $31
+        BYTE $C6, $32
+        BYTE $C8, $34
+        BYTE $CA, $36
+        BYTE $CC, $38
+        BYTE $CE, $3A
+        BYTE $D0, $3C
+        BYTE $D2, $3E
+        BYTE $D4, $3F
+        BYTE $D7, $41
+        BYTE $DA, $43
+        BYTE $DC, $44
+        BYTE $DF, $45
+        BYTE $E2, $47
+        BYTE $E5, $48
+        BYTE $E8, $49
+        BYTE $EC, $4A
+        BYTE $EF, $4B
+        BYTE $F2, $4C
+        BYTE $F6, $4C
+        BYTE $F9, $4C
+        BYTE $FC, $4D
+        BYTE $00, $4D
+        BYTE $03, $4D
+        BYTE $07, $4C
+        BYTE $0A, $4C
+        BYTE $0E, $4C
+        BYTE $11, $4B
+        BYTE $14, $4A
+        BYTE $18, $49
+        BYTE $1B, $48
+        BYTE $1E, $47
+        BYTE $21, $45
+        BYTE $24, $44
+        BYTE $27, $42
+        BYTE $29, $41
+        BYTE $2C, $3F
+        BYTE $2E, $3D
+        BYTE $31, $3B
+        BYTE $33, $3A
+        BYTE $35, $38
+        BYTE $37, $36
+        BYTE $39, $34
+        BYTE $3A, $32
+        BYTE $3C, $30
+        BYTE $3E, $2E
+        BYTE $3F, $2C
+        BYTE $40, $2A
+        BYTE $41, $28
+        BYTE $43, $26
+        BYTE $44, $24
+        BYTE $45, $23
+        BYTE $45, $21
+        BYTE $46, $1F
+        BYTE $47, $1D
+        BYTE $48, $1C
+        BYTE $48, $1A
+        BYTE $49, $18
+        BYTE $49, $17
+        BYTE $4A, $15
+        BYTE $4A, $14
+        BYTE $4B, $12
+        BYTE $4B, $11
+        BYTE $4B, $0F
+        BYTE $4B, $0E
+        BYTE $4C, $0D
+        BYTE $4C, $0C
+        BYTE $4C, $0A
+        BYTE $4C, $09
+        BYTE $4C, $08
+        BYTE $4C, $07
+        BYTE $4D, $06
+        BYTE $4D, $05
+        BYTE $4D, $04
+        BYTE $4D, $03
+        BYTE $4D, $02
+        BYTE $4D, $01
+        BYTE $4D, $00
 }
 
 `--------------------------------------------------------------------------------------
@@ -230,16 +230,16 @@ PROC    :doObjectCode_platform_swinging         SECTION ::objects {
 
 TABLE   :object_platform_spriteLayouts          SECTION ::objects {
 
-._6911  DATA $FE, $FF, $FF, $FF, $FF, $FF
-        DATA $18, $1A, $18, $1A, $FF, $FF
-        DATA $FF, $FF, $FF, $FF, $FF, $FF
-._6923  DATA $FE, $FF, $FF, $FF, $FF, $FF
-        DATA $6C, $6E, $6E, $48, $FF, $FF
-        DATA $FF, $FF
+._6911  BYTE $FE, $FF, $FF, $FF, $FF, $FF
+        BYTE $18, $1A, $18, $1A, $FF, $FF
+        BYTE $FF, $FF, $FF, $FF, $FF, $FF
+._6923  BYTE $FE, $FF, $FF, $FF, $FF, $FF
+        BYTE $6C, $6E, $6E, $48, $FF, $FF
+        BYTE $FF, $FF
 
-._6931  DATA $FE, $FF, $FF, $FF
-        DATA $FF, $FF
+._6931  BYTE $FE, $FF, $FF, $FF
+        BYTE $FF, $FF
         
-        DATA $6C, $6E, $6C, $6E, $FF, $FF
-        DATA $FF, $FF
+        BYTE $6C, $6E, $6C, $6E, $FF, $FF
+        BYTE $FF, $FF
 }

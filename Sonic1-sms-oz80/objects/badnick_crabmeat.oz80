@@ -106,30 +106,30 @@ PROC	:doObjectCode_badnick_crabMeat  SECTION ::objects
 	call	nc,:_35e5
 	ret
 
-._66c5	DATA $01 $01 $01 $01 $01 $01 $01 $01 $01 $01 $03 $03 $04 $02 $02 $02
-	DATA $02 $02 $02 $02 $02 $02 $02 $03 $03 $04 $00
+._66c5	BYTE $01 $01 $01 $01 $01 $01 $01 $01 $01 $01 $03 $03 $04 $02 $02 $02
+	BYTE $02 $02 $02 $02 $02 $02 $02 $03 $03 $04 $00
 
-._66e0	DATA ._66ea ._66ea ._66ea ._66f3 ._66f6
+._66e0	BYTE ._66ea ._66ea ._66ea ._66f3 ._66f6
 
-._66ea	DATA $00 $0C $01 $0C $02 $0C $01 $0C $FF
-._66f3	DATA $01 $01 $FF
-._66f6	DATA $03 $01 $FF	
+._66ea	BYTE $00 $0C $01 $0C $02 $0C $01 $0C $FF
+._66f3	BYTE $01 $01 $FF
+._66f6	BYTE $03 $01 $FF	
 	
 	`sprite layouts			`[$66F9]
-.layout DATA $00 $02 $04 $FF $FF $FF
-        DATA $20 $22 $24 $FF $FF $FF
-        DATA $FF $FF $FF $FF $FF $FF
+.layout BYTE $00 $02 $04 $FF $FF $FF
+        BYTE $20 $22 $24 $FF $FF $FF
+        BYTE $FF $FF $FF $FF $FF $FF
 
-        DATA $00 $02 $44 $FF $FF $FF
-        DATA $46 $22 $4A $FF $FF $FF
-        DATA $FF $FF $FF $FF $FF $FF
+        BYTE $00 $02 $44 $FF $FF $FF
+        BYTE $46 $22 $4A $FF $FF $FF
+        BYTE $FF $FF $FF $FF $FF $FF
 
-        DATA $40 $02 $44 $FF $FF $FF
-        DATA $26 $22 $2A $FF $FF $FF
-        DATA $FF $FF $FF $FF $FF $FF
+        BYTE $40 $02 $44 $FF $FF $FF
+        BYTE $26 $22 $2A $FF $FF $FF
+        BYTE $FF $FF $FF $FF $FF $FF
 
-        DATA $40 $02 $04 $FF $FF $FF
-        DATA $46 $22 $4A $FF $FF $FF
-        DATA $FF
+        BYTE $40 $02 $04 $FF $FF $FF
+        BYTE $46 $22 $4A $FF $FF $FF
+        BYTE $FF
         
 }

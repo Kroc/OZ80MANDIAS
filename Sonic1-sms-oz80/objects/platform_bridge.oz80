@@ -85,9 +85,9 @@ PROC    :doObjectCode_platform_bridge           SECTION ::objects
 	ret
 
         `sprite layout
-._8481  DATA $FE, $FF, $FF, $FF, $FF, $FF
-        DATA $70, $72, $FF, $FF, $FF, $FF
-        DATA $FF
-._848e  DATA $00, $00, $00, $00, $00, $00, $00, $00
+._8481  BYTE $FE, $FF, $FF, $FF, $FF, $FF
+        BYTE $70, $72, $FF, $FF, $FF, $FF
+        BYTE $FF
+._848e  BYTE $00, $00, $00, $00, $00, $00, $00, $00
 
 }

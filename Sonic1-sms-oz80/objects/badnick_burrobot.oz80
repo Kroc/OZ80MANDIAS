@@ -84,33 +84,33 @@ PROC    :doObjectCode_badnick_burrobot          SECTION ::objects
 	ret
         
         `------------------------------------------------------------------------------
-._9045  DATA $00, $04, $01, $04, $FF
-._904a  DATA $02, $04, $03, $04, $FF
-._904f  DATA $04, $04, $04, $04, $FF
-._9054  DATA $05, $04, $05, $04, $FF
+._9045  BYTE $00, $04, $01, $04, $FF
+._904a  BYTE $02, $04, $03, $04, $FF
+._904f  BYTE $04, $04, $04, $04, $FF
+._9054  BYTE $05, $04, $05, $04, $FF
 
         `sprite layout
-._9059  DATA $44, $46, $FF, $FF, $FF, $FF
-        DATA $64, $66, $FF, $FF, $FF, $FF
-        DATA $FF, $FF, $FF, $FF, $FF, $FF
+._9059  BYTE $44, $46, $FF, $FF, $FF, $FF
+        BYTE $64, $66, $FF, $FF, $FF, $FF
+        BYTE $FF, $FF, $FF, $FF, $FF, $FF
 
-        DATA $44, $46, $FF, $FF, $FF, $FF
-        DATA $48, $4A, $FF, $FF, $FF, $FF
-        DATA $FF, $FF, $FF, $FF, $FF, $FF
+        BYTE $44, $46, $FF, $FF, $FF, $FF
+        BYTE $48, $4A, $FF, $FF, $FF, $FF
+        BYTE $FF, $FF, $FF, $FF, $FF, $FF
 
-        DATA $50, $52, $FF, $FF, $FF, $FF
-        DATA $70, $72, $FF, $FF, $FF, $FF
-        DATA $FF, $FF, $FF, $FF, $FF, $FF
+        BYTE $50, $52, $FF, $FF, $FF, $FF
+        BYTE $70, $72, $FF, $FF, $FF, $FF
+        BYTE $FF, $FF, $FF, $FF, $FF, $FF
 
-        DATA $50, $52, $FF, $FF, $FF, $FF
-        DATA $4C, $4E, $FF, $FF, $FF, $FF
-        DATA $FF, $FF, $FF, $FF, $FF, $FF
+        BYTE $50, $52, $FF, $FF, $FF, $FF
+        BYTE $4C, $4E, $FF, $FF, $FF, $FF
+        BYTE $FF, $FF, $FF, $FF, $FF, $FF
 
-        DATA $44, $46, $FF, $FF, $FF, $FF
-        DATA $68, $6A, $FF, $FF, $FF, $FF
-        DATA $FF, $FF, $FF, $FF, $FF, $FF
+        BYTE $44, $46, $FF, $FF, $FF, $FF
+        BYTE $68, $6A, $FF, $FF, $FF, $FF
+        BYTE $FF, $FF, $FF, $FF, $FF, $FF
 
-        DATA $50, $52, $FF, $FF, $FF, $FF
-        DATA $6C, $6E, $FF, $FF, $FF, $FF
-        DATA $FF
+        BYTE $50, $52, $FF, $FF, $FF, $FF
+        BYTE $6C, $6E, $FF, $FF, $FF, $FF
+        BYTE $FF
 }

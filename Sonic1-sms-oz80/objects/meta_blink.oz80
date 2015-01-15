@@ -60,18 +60,18 @@ PROC    :_7b95                                  SECTION ::objects {
 	ld	(ix+$12),$00
 	ret
 
-._7c17  DATA ._7c29, $1C
-        DATA ._7c31, $1C
-        DATA ._7c39, $1C
-        DATA ._7c29, $1D
-        DATA ._7c31, $1D
-        DATA ._7c39, $1D
+._7c17  WORD ._7c29 BYTE $1C
+        WORD ._7c31 BYTE $1C
+        WORD ._7c39 BYTE $1C
+        WORD ._7c29 BYTE $1D
+        WORD ._7c31 BYTE $1D
+        WORD ._7c39 BYTE $1D
         
         `sprite layout
-._7c29  DATA $B4, $B6, $FF, $FF, $FF, $FF
-        DATA $FF, $FF
-._7c31  DATA $B8, $BA, $FF, $FF, $FF, $FF
-        DATA $FF, $FF
-._7c39  DATA $BC, $BE, $FF, $FF, $FF, $FF
-        DATA $FF, $FF
+._7c29  BYTE $B4, $B6, $FF, $FF, $FF, $FF
+        BYTE $FF, $FF
+._7c31  BYTE $B8, $BA, $FF, $FF, $FF, $FF
+        BYTE $FF, $FF
+._7c39  BYTE $BC, $BE, $FF, $FF, $FF, $FF
+        BYTE $FF, $FF
 }

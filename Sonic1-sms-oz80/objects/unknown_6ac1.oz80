@@ -76,6 +76,6 @@ PROC    :_6ac1                                  SECTION ::objects {
 ._2	ld	(ix+#object.type),$FF	        `remove object?
 	ret	
 
-._6b70  DATA $06, $08
-._6b72  DATA $34, $36
+._6b70  BYTE $06, $08
+._6b72  BYTE $34, $36
 }

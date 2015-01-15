@@ -47,6 +47,7 @@ Public Enum OZ80_ERROR
     OZ80_ERROR_DUPLICATE_PROC_SECTION   '- Duplicate `SECTION` parameter
     OZ80_ERROR_DUPLICATE_SECTION        '- Can't define a Section twice
     OZ80_ERROR_DUPLICATE_START          '- Duplicate `START` Procedure
+    OZ80_ERROR_DUPLICATE_TABLE_SECTION  '- Duplicate `SECTION` parameter
     OZ80_ERROR_EXPECTED                 'Incorrect content at the current scope
     OZ80_ERROR_EXPECTED_BRACKET         '- Close bracket ("}","]",")") without open
     OZ80_ERROR_EXPECTED_EXPRESSION      '- Expression required here
@@ -56,6 +57,7 @@ Public Enum OZ80_ERROR
     OZ80_ERROR_EXPECTED_ROOT            '- Only certain keywords allowed at root
     OZ80_ERROR_EXPECTED_SECTION_NAME    '- A section name must follow `SECTION`
     OZ80_ERROR_EXPECTED_SYSTEM_NAME     '- A system name must follow `SYSTEM`
+    OZ80_ERROR_EXPECTED_TABLE_NAME      '- A label name must follow `TABLE`
     OZ80_ERROR_EXPRESSION               'Not a valid expression
     OZ80_ERROR_EXPRESSION_Z80           '- Not a valid Z80 instruction parameter
     OZ80_ERROR_FILE_END                 'Unexpected end of file

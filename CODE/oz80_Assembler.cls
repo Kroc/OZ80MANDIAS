@@ -70,6 +70,7 @@ Private Const LOG_SECTION       As String = "SECTION {$}"
 'String constants to save these being temporarily created and destroyed multiple times
 Private Const STR_SMS           As String = "SMS"
 Private Const STR_START         As String = "START"
+Private Const STR_SECTIONSYNATX As String = "::"
 
 'To save having to create and destroy short strings all the time, _
  we'll keep this one around for formatting log messages
@@ -836,6 +837,14 @@ Continue:
         'Hand off to the function that will process this
         Call DefineStart
         
+    'Defing a data table:
+    '----------------------------------------------------------------------------------
+    '`TABLE :<name> {...}`
+    '----------------------------------------------------------------------------------
+    ElseIf File.TokenKind = TOKEN_KEYWORD_TABLE Then
+        'Hand off to the function that will process this
+        Call DefineTable
+    
     'ERROR: Not a valid keyword at this scope! _
      ----------------------------------------------------------------------------------
     Else
@@ -935,7 +944,7 @@ Private Sub ProcessInclude()
     Let File.TokenIndex = ReturnToken
 End Sub
 
-'ProcessProc : Process a Procedure Chunk
+'DefineProc : Process a Procedure Chunk
 '======================================================================================
 'PROC   :<label>
 '       [HELP       <text>]
@@ -1355,6 +1364,107 @@ Private Sub DefineSystem()
         'Not a valid system name
         Call RaiseError(OZ80_ERROR_EXPECTED_SYSTEM_NAME)
     End If
+End Sub
+
+'DefineTable : Process a data table Chunk
+'======================================================================================
+'TABLE  :<label>
+'       [HELP       <text>]
+'       [SECTION    ::<section>]
+'{ [...] }
+'======================================================================================
+Private Sub DefineTable()
+    'ERROR: The file ended before the first parameter
+    If Not File.NextToken() Then Call RaiseError(OZ80_ERROR_FILE_END): GoTo ErrOut
+    
+    'ERROR: No Label name for Table
+    If File.TokenKind <> TOKEN_LABEL Then Call RaiseError( _
+        OZ80_ERROR_EXPECTED_TABLE_NAME _
+    ): GoTo ErrOut
+    
+    'Remember the String of the Label name, _
+     we can't create the Label until the parameters are read
+    Dim LabelName As String
+    Let LabelName = File.TokenText
+    
+    'ERROR: The file cannot end until the Chunk has been opened and closed
+    If Not File.NextToken() Then Call RaiseError(OZ80_ERROR_FILE_END): GoTo ErrOut
+    
+ReadParams:
+    'Keep track of which params have been included or not
+    Dim IsSectionDefined As Boolean
+    
+    '----------------------------------------------------------------------------------
+    '`SECTION` Parameter : Set which Section the Table belongs to _
+     ----------------------------------------------------------------------------------
+    If File.TokenKind = TOKEN_KEYWORD_SECTION Then
+        'ERROR: The Section parameter has already been specified
+        If IsSectionDefined Then Call RaiseError( _
+            OZ80_ERROR_DUPLICATE_TABLE_SECTION _
+        ): GoTo ErrOut
+        
+        'ERROR: File ended before the Section name?
+        If Not File.NextToken() Then Call RaiseError(OZ80_ERROR_FILE_END): GoTo ErrOut
+        
+        'ERROR: Not a Section name following the Section keyword
+        If File.TokenKind <> TOKEN_SECTION Then Call RaiseError( _
+            OZ80_ERROR_EXPECTED_SECTION_NAME _
+        ): GoTo ErrOut
+        
+        'ERROR: Section has not been defined
+        If Not Labels.Exists(File.TokenText) Then Call RaiseError( _
+            OZ80_ERROR_INVALID_SECTION _
+        ): GoTo ErrOut
+        
+        'Record the Section name
+        Dim SectionName As String
+        Let SectionName = File.TokenText
+        Let IsSectionDefined = True
+        
+        'Pass over the Section name
+        If Not File.NextToken() Then Call RaiseError(OZ80_ERROR_FILE_END): GoTo ErrOut
+        
+        GoTo ReadParams
+    End If
+    
+    '----------------------------------------------------------------------------------
+    
+    'With the parameters read, the only allowed token is the opening of the Chunk
+    If File.TokenKind <> TOKEN_CHUNK_OPEN Then Call RaiseError( _
+        OZ80_ERROR_EXPECTED _
+    ): GoTo ErrOut
+    
+    'The chunk cannot be left open
+    If Not File.NextToken() Then Call RaiseError(OZ80_ERROR_FILE_END): GoTo ErrOut
+    
+    'When we assemble the Table, we need to be able to normalise _
+     the Property names to their Section+Label
+    Let CurrentSection = SectionName
+    Let CurrentLabel = LabelName
+    
+    'Now define the Label name; if a Section was given, it needs to be prepended
+    Dim FullLabelName As String
+    Let FullLabelName = CurrentSection & CurrentLabel
+    
+    'You can't name two Chunks the same thing
+    If Chunks.Exists(FullLabelName) Then Call RaiseError(OZ80_ERROR_DUPLICATE_LABEL): GoTo ErrOut
+    
+    'Create the Chunk
+    Call BeginChunk(FullLabelName)
+    
+'    Dim LogMsg As String
+'    Let LogMsg = "PROC " & LabelName
+'    If Interrupt <> INDEFINITE _
+'        Then Let LogMsg = LogMsg & " INTERRUPT $" & oz80.HexStr8(CLng(Interrupt))
+'    RaiseEvent Message(OZ80_LOG_STATUS, LogMsg)
+    
+    'Enter the Procedure Chunk to process its innards
+    Call ScopeChunk
+    
+ErrOut:
+    'Leave this scope
+    Let CurrentSection = vbNullString
+    Let CurrentLabel = vbNullString
 End Sub
 
 'ScopeChunk: Within a code/data chunk, i.e. `PROC`, `TABLE`
@@ -3085,11 +3195,6 @@ Continue:
         Stop
     End If
     
-'    'The file could legitimately end with an expression, so don't error out if the _
-'     token stream comes to an end since the expression is valid. The parent scopes _
-'     will handle an unexpected end error
-'    If NextToken() = False Then Exit Function
-    
     'Does the expression continue?
     If File.TokenIsOperator Then
         'Set the current result as the first operand and go around again
@@ -3109,10 +3214,17 @@ End Function
 Private Function ParseValue( _
     ByRef ReturnValue As Double _
 ) As OZ80_ERROR
+    'A nested Expression?
+    If File.TokenKind = TOKEN_CHUNK_OPEN Then
+        '..............................................................................
+        'Parse the Expression
+        If ParseExpression(ReturnValue) Then GoTo ErrOut
+        GoTo ErrOut
+        
     'If the negative sign preceeds, remember this until the full number has been _
      fetched and calculated. ONLY decimal numbers can be negative, you cannot negate _
      hexadecimal/binary numbers or named-items (Constants, RAM names, Labels etc.)
-    If File.TokenKind = TOKEN_OPERATOR_SUB Then
+    ElseIf File.TokenKind = TOKEN_OPERATOR_SUB Then
         '..............................................................................
         Dim IsNegative As Boolean
         Let IsNegative = True

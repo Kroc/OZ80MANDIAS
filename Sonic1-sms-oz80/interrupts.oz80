@@ -461,7 +461,7 @@ PROC	:init                                   SECTION ::interrupts
 	ld	($.SMS.SLOT_CONTROL), a
 	`load banks 0, 1 & 2 of the ROM into the address space
 	 `($0000-$BFFF of the address space will be mapped to $0000-$BFFF of this ROM)
-	ld	a;bank, ::interrupts.bank
+	ld	a;bank, 0
 	ld	($.SMS.SLOT0), a;bank
 	ld	a;bank, 1
 	ld	($.SMS.SLOT1), a;bank

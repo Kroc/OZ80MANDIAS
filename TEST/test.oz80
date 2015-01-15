@@ -1,12 +1,12 @@
 `OZ80MANDIAS test code
 
-SECTION ::default
-SECTION ::slot_0        SLOT 0
-SECTION ::slot_1        SLOT 1
-SECTION ::slot_2        SLOT 2
-SECTION ::slot_0_1      SLOT 0, 1
-SECTION ::slot_1_2      SLOT 1, 2
-SECTION ::slot_0_1_2    SLOT 0, 1, 2
+DEF SECTION ::default
+DEF SECTION ::slot_0        SLOT 0
+DEF SECTION ::slot_1        SLOT 1
+DEF SECTION ::slot_2        SLOT 2
+DEF SECTION ::slot_0_1      SLOT 0, 1
+DEF SECTION ::slot_1_2      SLOT 1, 2
+DEF SECTION ::slot_0_1_2    SLOT 0, 1, 2
 
 PROC    :start          INTERRUPT $00
 {}

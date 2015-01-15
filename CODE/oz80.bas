@@ -279,7 +279,7 @@ Private My_TokenNameInit As Boolean
 
 'Lookup table of hexadecimal prettyprint, _
  saves repetitive text manipulation when logging
-Private My_HexStr8(0 To &HFF) As String * 2
+Private My_HexStr8(-1 To &HFF) As String * 2
 Private My_HexStr8Init As Boolean
 Private My_HexStr16(0 To &HFFFF&) As String * 4
 Private My_HexStr16Init As Boolean
@@ -294,10 +294,11 @@ Public Property Get HexStr8( _
         Dim i As Long
         For i = 0 To &HF&:          Let My_HexStr8(i) = "0" & Hex$(i):  Next i
         For i = &H10& To &HFF&:     Let My_HexStr8(i) = Hex$(i):        Next i
+        Let My_HexStr8(-1) = "··"
         Let My_HexStr8Init = True
     End If
     
-    Let HexStr8 = My_HexStr8(Index And &HFF&)
+    Let HexStr8 = My_HexStr8(Index)
 End Property
 
 'HexStr16 : Get a text-representation of a 16-bit (0-65535) number in hexadecimal

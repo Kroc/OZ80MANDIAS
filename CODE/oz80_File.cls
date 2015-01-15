@@ -454,7 +454,7 @@ Public Property Get TokenValue() As Double: Let TokenValue = My_TokenValue: End 
 '======================================================================================
 Public Function NextToken() As Boolean
     'Generate a debug message with the details of the current token
-    RaiseEvent Message(OZ80_LOG_DEBUG, FormatToken())
+'    RaiseEvent Message(OZ80_LOG_DEBUG, FormatToken())
     
     Let My_Index = My_Index + 1
     Call CacheToken
@@ -1426,7 +1426,7 @@ Private Sub Add( _
     
     'Generate a debug message
     Call CacheToken
-    RaiseEvent Message(OZ80_LOG_DEBUG, FormatToken())
+'    RaiseEvent Message(OZ80_LOG_DEBUG, FormatToken())
     
     'Remember the line number used for this token to check for properties occuring _
      on a new line -- this constitutes a property definition in a chunk

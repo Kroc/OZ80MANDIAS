@@ -64,24 +64,24 @@ Private Sub Form_Load()
     Let StartTime = Timer
 
 '    Dim i As Long
-    Dim Test As New bluString
-    Let Test.Text = "ABCDÉF"
+'    Dim Test As New bluString
+'    Let Test.Text = "ABCDÉF"
     
-    Debug.Print Test.Join(Test.Clone.LCase).Text
-    Debug.Print Test.Append("!").Text
-    Debug.Print Test.Insert("_1_2_3_", 2).Text
-    Debug.Print Test.Prepend("é").Text
-    Debug.Print Test.Insert("G", -1).Text
-    Call Test.CharPush(65535)
-    Debug.Print Test.CharPull()
-    Debug.Print Test.CharRemove(2), Test.Text
-    Debug.Print Test.CharInsert(2, 66).Text
-    Debug.Print Test.Remove(14, 6).Text
-    Debug.Print Test.Replace("_1_2_3_", "{$}").Text
-    Debug.Print Test.Wrap("""").Text
-    Debug.Print Test.Format(3.141).Text
-    Debug.Print Test.Overwrite(2, "***").Text
-    Debug.Print Hex(Test.CRC())
+'    Debug.Print Test.Join(Test.Clone.LCase).Text
+'    Debug.Print Test.Append("!").Text
+'    Debug.Print Test.Insert("_1_2_3_", 2).Text
+'    Debug.Print Test.Prepend("é").Text
+'    Debug.Print Test.Insert("G", -1).Text
+'    Call Test.CharPush(65535)
+'    Debug.Print Test.CharPull()
+'    Debug.Print Test.CharRemove(2), Test.Text
+'    Debug.Print Test.CharInsert(2, 66).Text
+'    Debug.Print Test.Remove(14, 6).Text
+'    Debug.Print Test.Replace("_1_2_3_", "{$}").Text
+'    Debug.Print Test.Wrap("""").Text
+'    Debug.Print Test.Format(3.141).Text
+'    Debug.Print Test.Overwrite(2, "***").Text
+'    Debug.Print Hex(Test.CRC())
     
 '    For i = 0 To 999999
 '        Call Test.Replace("_1_2_3_", "_!_").Replace("_!_", "_1_2_3_")
@@ -94,6 +94,7 @@ Private Sub Form_Load()
 
     'TODO: This will obviously be converted to use the command arguments
     Call Assembler.Assemble(App.Path & "\Sonic1-sms-oz80\sonic1-sms.oz80")
+'    Call Assembler.Assemble(App.Path & "\TEST\test.oz80")
     
     'Do something that only faults in the IDE
     On Error GoTo Err_True

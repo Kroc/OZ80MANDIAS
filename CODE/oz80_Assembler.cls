@@ -946,12 +946,12 @@ End Sub
 '======================================================================================
 Private Sub DefineProc()
     'ERROR: The file ended before the first parameter
-    If Not File.NextToken() Then Call RaiseError(OZ80_ERROR_FILE_END): Exit Sub
+    If Not File.NextToken() Then Call RaiseError(OZ80_ERROR_FILE_END): GoTo ErrOut
     
     'ERROR: No Label name for Procedure
     If File.TokenKind <> TOKEN_LABEL Then Call RaiseError( _
         OZ80_ERROR_EXPECTED_PROC_NAME _
-    ): Exit Sub
+    ): GoTo ErrOut
     
     'Remember the String of the Label name, _
      we can't create the Label until the parameters are read
@@ -959,7 +959,7 @@ Private Sub DefineProc()
     Let LabelName = File.TokenText
     
     'ERROR: The file cannot end until the Chunk has been opened and closed
-    If Not File.NextToken() Then Call RaiseError(OZ80_ERROR_FILE_END): Exit Sub
+    If Not File.NextToken() Then Call RaiseError(OZ80_ERROR_FILE_END): GoTo ErrOut
     
     'The `INTERRUPT` parameter is optional, but can be zero, so use 'undefined'
     Dim Interrupt As Double
@@ -979,23 +979,23 @@ ReadParams:
         'ERROR: The Section parameter has already been specified
         If IsSectionDefined Then Call RaiseError( _
             OZ80_ERROR_DUPLICATE_PROC_SECTION _
-        ): Exit Sub
+        ): GoTo ErrOut
         
         'ERROR: Cannot co-exist with the `INTERRUPT` parameter
-        If IsInterruptDefined Then Call RaiseError(OZ80_ERROR_INVALID_PROC_INTERRUPT): Exit Sub
+        If IsInterruptDefined Then Call RaiseError(OZ80_ERROR_INVALID_PROC_INTERRUPT): GoTo ErrOut
         
         'ERROR: File ended before the Section name?
-        If Not File.NextToken() Then Call RaiseError(OZ80_ERROR_FILE_END): Exit Sub
+        If Not File.NextToken() Then Call RaiseError(OZ80_ERROR_FILE_END): GoTo ErrOut
         
         'ERROR: Not a Section name following the Section keyword
         If File.TokenKind <> TOKEN_SECTION Then Call RaiseError( _
             OZ80_ERROR_EXPECTED_SECTION_NAME _
-        ): Exit Sub
+        ): GoTo ErrOut
         
         'ERROR: Section has not been defined
         If Not Labels.Exists(File.TokenText) Then Call RaiseError( _
             OZ80_ERROR_INVALID_SECTION _
-        ): Exit Sub
+        ): GoTo ErrOut
         
         'Record the Section name
         Dim SectionName As String
@@ -1003,8 +1003,10 @@ ReadParams:
         Let IsSectionDefined = True
         
         'Pass over the Section name
-        If Not File.NextToken() Then Call RaiseError(OZ80_ERROR_FILE_END): Exit Sub
-     
+        If Not File.NextToken() Then Call RaiseError(OZ80_ERROR_FILE_END): GoTo ErrOut
+        
+        GoTo ReadParams
+        
     '----------------------------------------------------------------------------------
     '`PARAMS` Parameter : Document which Z80 parameters the Procedure uses _
      ----------------------------------------------------------------------------------
@@ -1015,11 +1017,11 @@ ReadParams:
         'ERROR: The `PARAMS` parameter has already been specified
         If IsParamsDefined Then Call RaiseError( _
             OZ80_ERROR_DUPLICATE_PROC_PARAMS _
-        ): Exit Sub
+        ): GoTo ErrOut
          
         Do
             'ERROR: File cannot end in the midst of the List
-            If Not File.NextToken() Then Call RaiseError(OZ80_ERROR_FILE_END): Exit Sub
+            If Not File.NextToken() Then Call RaiseError(OZ80_ERROR_FILE_END): GoTo ErrOut
             
             'The List ends when we hit a Keyword or open bracket
             If (File.TokenKind = TOKEN_CHUNK_OPEN) _
@@ -1033,7 +1035,7 @@ ReadParams:
                 (File.TokenKind <> TOKEN_RAM) _
             Then
                 Call RaiseError(OZ80_ERROR_EXPECTED_PROC_PARAMS)
-                Exit Sub
+                GoTo ErrOut
             End If
         Loop
         
@@ -1047,11 +1049,11 @@ ReadParams:
         'ERROR: The `RETURN` parameter has already been specified
         If IsReturnDefined Then Call RaiseError( _
             OZ80_ERROR_DUPLICATE_PROC_RETURN _
-        ): Exit Sub
+        ): GoTo ErrOut
          
         Do
             'ERROR: File cannot end in the midst of the List
-            If Not File.NextToken() Then Call RaiseError(OZ80_ERROR_FILE_END): Exit Sub
+            If Not File.NextToken() Then Call RaiseError(OZ80_ERROR_FILE_END): GoTo ErrOut
             
             'The List ends when we hit a Keyword or open bracket
             If (File.TokenKind = TOKEN_CHUNK_OPEN) _
@@ -1065,7 +1067,7 @@ ReadParams:
                 (File.TokenKind <> TOKEN_RAM) _
             Then
                 Call RaiseError(OZ80_ERROR_EXPECTED_PROC_RETURN)
-                Exit Sub
+                GoTo ErrOut
             End If
         Loop
         
@@ -1080,32 +1082,32 @@ ReadParams:
         'ERROR: The `INTERRUPT` parameter has already been specified
         If IsInterruptDefined Then Call RaiseError( _
             OZ80_ERROR_DUPLICATE_PROC_INTERRUPT _
-        ): Exit Sub
+        ): GoTo ErrOut
         
         'ERROR: Cannot co-exist with the `SECTION` parameter
-        If IsSectionDefined Then Call RaiseError(OZ80_ERROR_INVALID_PROC_INTERRUPT): Exit Sub
+        If IsSectionDefined Then Call RaiseError(OZ80_ERROR_INVALID_PROC_INTERRUPT): GoTo ErrOut
         
         'ERROR: File cannot end before the parameter Expression!
-        If Not File.NextToken() Then Call RaiseError(OZ80_ERROR_FILE_END): Exit Sub
+        If Not File.NextToken() Then Call RaiseError(OZ80_ERROR_FILE_END): GoTo ErrOut
         
         'Is this an Expression at all?
-        If Not File.TokenIsExpression Then Call RaiseError(OZ80_ERROR_EXPECTED): Exit Sub
+        If Not File.TokenIsExpression Then Call RaiseError(OZ80_ERROR_EXPECTED): GoTo ErrOut
         
         'Calculate the Expression:
         '(If there was an error in the Expression, the error event _
           will already have been raised, we only need to fold upwards)
-        If ParseExpression(Interrupt) Then Exit Sub
+        If ParseExpression(Interrupt) Then GoTo ErrOut
         
         'An indefinite Value cannot be used for an Interrupt address, we will only be _
          able to define the indefinite Values (i.e. Label locations in ROM) once _
          the whole code is parsed and we use the Sections to layout the ROM
-        If Interrupt = INDEFINITE Then Call RaiseError(OZ80_ERROR_INDEFINITE): Exit Sub
+        If Interrupt = INDEFINITE Then Call RaiseError(OZ80_ERROR_INDEFINITE): GoTo ErrOut
         
         'Validate the Value, only certain Interrupt addresses are allowed
         If Not ((Interrupt = &H0) Or (Interrupt = &H8) Or (Interrupt = &H10) _
             Or (Interrupt = &H18) Or (Interrupt = &H20) Or (Interrupt = &H28) _
             Or (Interrupt = &H30) Or (Interrupt = &H38) Or (Interrupt = &H66)) _
-        Then Call RaiseError(OZ80_ERROR_INVALID_INTERRUPT): Exit Sub
+        Then Call RaiseError(OZ80_ERROR_INVALID_INTERRUPT): GoTo ErrOut
         
         Let IsInterruptDefined = True
         GoTo ReadParams
@@ -1116,10 +1118,10 @@ ReadParams:
     'With the parameters read, the only allowed token is the opening of the Chunk
     If File.TokenKind <> TOKEN_CHUNK_OPEN Then Call RaiseError( _
         OZ80_ERROR_EXPECTED _
-    ): Exit Sub
+    ): GoTo ErrOut
     
     'The chunk cannot be left open
-    If Not File.NextToken() Then Call RaiseError(OZ80_ERROR_FILE_END): Exit Sub
+    If Not File.NextToken() Then Call RaiseError(OZ80_ERROR_FILE_END): GoTo ErrOut
     
     'When we assemble the Procedure, we need to be able to normalise _
      the Property names to their Section+Label

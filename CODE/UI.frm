@@ -55,6 +55,8 @@ Private Declare Function LockWindowUpdate Lib "user32" (ByVal hWnd As Long) As L
 Private WithEvents Assembler As oz80_Assembler
 Attribute Assembler.VB_VarHelpID = -1
 
+Private StrLog As String
+
 'FORM Load _
  ======================================================================================
 Private Sub Form_Load()
@@ -103,6 +105,20 @@ Private Sub Form_Load()
 Err_True:
 
     Set Assembler = Nothing
+    
+    Call SendMessage( _
+        Me.txtLog.hWnd, EM_SETSEL, _
+        Len(Me.txtLog.Text), Len(Me.txtLog.Text) _
+    )
+    
+    Call SendMessageString( _
+        Me.txtLog.hWnd, EM_REPLACESEL, _
+        ByVal 0, StrLog _
+    )
+    
+    Call SendMessage( _
+        Me.txtLog.hWnd, WM_VSCROLL, 7, ByVal 0 _
+    )
 End Sub
 
 'FORM Resize _
@@ -158,7 +174,7 @@ Private Sub Log( _
 '    Debug.Print Text
     
 '    If LogLevel >= OZ80_LOG_DEBUG Then Exit Sub
-    Let Text = Text & vbCrLf
+    Let StrLog = StrLog & (Text & vbCrLf)
     
 '    'http://weblogs.asp.net/jdanforth/88458
 '    Call SendMessage( _
@@ -176,19 +192,19 @@ Private Sub Log( _
     
 '    Call LockWindowUpdate(Me.txtLog.hWnd)
     
-    Call SendMessage( _
-        Me.txtLog.hWnd, EM_SETSEL, _
-        Len(Me.txtLog.Text), Len(Me.txtLog.Text) _
-    )
-    
-    Call SendMessageString( _
-        Me.txtLog.hWnd, EM_REPLACESEL, _
-        ByVal 0, Text _
-    )
-    
-    Call SendMessage( _
-        Me.txtLog.hWnd, WM_VSCROLL, 7, ByVal 0 _
-    )
+'    Call SendMessage( _
+'        Me.txtLog.hWnd, EM_SETSEL, _
+'        Len(Me.txtLog.Text), Len(Me.txtLog.Text) _
+'    )
+'
+'    Call SendMessageString( _
+'        Me.txtLog.hWnd, EM_REPLACESEL, _
+'        ByVal 0, Text _
+'    )
+'
+'    Call SendMessage( _
+'        Me.txtLog.hWnd, WM_VSCROLL, 7, ByVal 0 _
+'    )
     
 '    Call LockWindowUpdate(0)
     
@@ -198,5 +214,5 @@ Private Sub Log( _
 '    Call SendMessage( _
 '        Me.txtLog.hWnd, WM_SETREDRAW, 1, ByVal 0 _
 '    )
-    DoEvents
+'    DoEvents
 End Sub

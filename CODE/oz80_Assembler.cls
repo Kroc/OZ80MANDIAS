@@ -65,12 +65,13 @@ Private Const LOG_ASM_COMPLETE  As String = "Assembly Complete"
 Private Const LOG_TIME          As String = "Time: {$}s"
 Private Const LOG_Z80           As String = "{$} | {$} {$} {$} {$} {$} {$} | {$} " & vbTab & "{$}" & vbTab & "{$}" & vbTab & "{$}"
 Private Const LOG_Z80_CB        As String = "{$} | {$} CB {$} {$} ·· ·· | {$} " & vbTab & "{$}" & vbTab & "{$}" & vbTab & "{$}"
+Private Const LOG_Z80_VAL8      As String = "{$} | {$} {$} {$} ·· {$} ·· | {$} " & vbTab & "{$}" & vbTab & "{$}" & vbTab & "{$}"
+Private Const LOG_Z80_VAL16     As String = "{$} | {$} {$} ·· ·· {$} {$} | {$} " & vbTab & "{$}" & vbTab & "{$}" & vbTab & "{$}"
 Private Const LOG_SECTION       As String = "SECTION {$}"
 
 'String constants to save these being temporarily created and destroyed multiple times
 Private Const STR_SMS           As String = "SMS"
 Private Const STR_START         As String = "START"
-Private Const STR_SECTIONSYNATX As String = "::"
 
 'To save having to create and destroy short strings all the time, _
  we'll keep this one around for formatting log messages
@@ -113,7 +114,7 @@ Private CurrentLabel As String
  we assign each parameter type a single bit. We can thus check very quickly if a given _
  parameter falls within an allowed list of accepted types
 
-Private Enum OZ80_MASK
+Public Enum OZ80_MASK
     
     [_MASK_REGS_BEGIN] = 1
     MASK_REG_B = 2 ^ 0
@@ -181,6 +182,8 @@ Private Enum OZ80_MASK
     'The LD instruction can take most 16-bit registers
     MASK_REGS_BC_DE_HL_SP_IXY = MASK_REGS_BC_DE_HL_SP Or MASK_REG_IX Or MASK_REG_IY
     
+    'Any immediate 8/16-bit Value,
+     'e.g. `LD A, $FF`
     MASK_VAL = 2 ^ 23
     
     '..................................................................................
@@ -209,30 +212,16 @@ Private Enum OZ80_MASK
     MASK_ANY_IX = MASK_REG_IX Or MASK_REG_IXH Or MASK_REG_IXL Or MASK_MEM_IX
     MASK_ANY_IY = MASK_REG_IY Or MASK_REG_IYH Or MASK_REG_IYL Or MASK_MEM_IY
     MASK_ANY_IXY = MASK_ANY_IX Or MASK_ANY_IY
+    
+    'This is shorthand to check for any 8/16-bit parameter Value
+    MASK_ANY_VAL = MASK_VAL Or MASK_MEM_VAL
 End Enum
 
-Private Type oz80Param
+Public Type oz80Param
     Mask As OZ80_MASK
     Token As OZ80_TOKEN
     Value As Long
 End Type
-
-'Our routine for comparing parameters is going to be used hundreds of times, _
- so for clarity, we'll use some class-level references to share the input _
- parameters with the comparison routine
-Private Z80Param1 As oz80Param
-Private Z80Param2 As oz80Param
-Private Z80Param3 As oz80Param
-'For quick emptying of the params
-Private Z80ParamEmpty As oz80Param
-
-'Whilst in the syntax `SLOT` uses a list (i.e. `SLOT 0, 1, 2`), we convert that into _
- a bit pattern to make it quick and easy to work with instead of iterating an array
-Private Enum OZ80_SLOT
-    SLOT0 = 2 ^ 0
-    SLOT1 = 2 ^ 1
-    SLOT2 = 2 ^ 2
-End Enum
 
 'Z80 Opcodes: _
  --------------------------------------------------------------------------------------
@@ -276,6 +265,23 @@ Private OpcodeY_Bit(0 To 7) As Long
  bit-powers to linear numbers for many instructions being assembled
 Private OpcodeY_Register([_MASK_REGS_BEGIN] To [_MASK_REGS_END]) As Long
 Private OpcodeZ_Register([_MASK_REGS_BEGIN] To [_MASK_REGS_END]) As Long
+
+'Our routine for comparing parameters is going to be used hundreds of times, _
+ so for clarity, we'll use some class-level references to share the input _
+ parameters with the comparison routine
+Private Z80Param1 As oz80Param
+Private Z80Param2 As oz80Param
+Private Z80Param3 As oz80Param
+'For quick emptying of the params
+Private Z80ParamEmpty As oz80Param
+
+'Whilst in the syntax `SLOT` uses a list (i.e. `SLOT 0, 1, 2`), we convert that into _
+ a bit pattern to make it quick and easy to work with instead of iterating an array
+Private Enum OZ80_SLOT
+    SLOT0 = 2 ^ 0
+    SLOT1 = 2 ^ 1
+    SLOT2 = 2 ^ 2
+End Enum
 
 'Output: _
  --------------------------------------------------------------------------------------
@@ -1739,22 +1745,9 @@ Private Sub ProcessZ80()
             
         'Look for the next register in the list
         Loop While File.TokenIsRegister = True
-    End If
     
     '----------------------------------------------------------------------------------
-    
-    
-    
-    'Use of IX / IY requires a prefix byte ($DD/$FD) before the opcode. _
-     We need to record which parameter is the IX/IY reference, along with its value
-    Dim ParamIXY As oz80Param
-    
-    'Initialse variables to hold each piece of the assembly
-    Dim Prefix As Long, Opcode As Long, Offset As Long, Val8 As Long, Val16 As Long
-    Let Prefix = -1: Let Opcode = -1: Let Offset = -1: Let Val8 = -1: Let Val16 = -1
-    
-    'Is there a first parameter?
-    If File.TokenIsParameter Then
+    ElseIf File.TokenIsParameter Then
         'Parameter Expressions might return an unknown Value _
          (such as when a Label, which has not yet been addressed, is used)
         
@@ -1763,16 +1756,10 @@ Private Sub ProcessZ80()
           we only need to fold upwards to end the assembling
         If GetZ80Parameter(Z80Param1) Then Exit Sub
         
-        'Is this an IX/IY parameter?
-        If (Z80Param1.Mask And MASK_ANY_IXY) <> 0 Then Let ParamIXY = Z80Param1
-        
         'Check if a second parameter exists
         If File.TokenIsParameter Then
             'Fetch the second parameter
             If GetZ80Parameter(Z80Param2) Then Exit Sub
-            
-            'Is this an IX/IY parameter?
-            If (Z80Param2.Mask And MASK_ANY_IXY) <> 0 Then Let ParamIXY = Z80Param2
             
             'Check if a third parameter exists
             If File.TokenIsParameter Then
@@ -1783,18 +1770,8 @@ Private Sub ProcessZ80()
             End If
         End If
         
-        'If there is any IX/Y parameter, setup the opcode prefix
-        If ParamIXY.Mask <> 0 Then
-            'Is it IX or IY?
-            If (ParamIXY.Mask And MASK_ANY_IX) <> 0 _
-                Then Let Prefix = &HDD& _
-                Else Let Prefix = &HFD&
-            'Does it include an offset byte? i.e. "(IX+$8)"
-            If (ParamIXY.Mask And MASK_MEM_IXY) <> 0 Then Let Offset = ParamIXY.Value
-        End If
+        Call AssembleZ80(Instruction)
     End If
-    
-    Call AssembleZ80(Instruction, Prefix, Offset)
 End Sub
 
 'AssembleZ80 : Assemble bytes from a Z80 instruction and parameters
@@ -1802,16 +1779,45 @@ End Sub
 'Instruction    | Token number of the Z80 instruction
 '[Prefix]       | Pre-calculated opcode prefix ($DD/$FD) for IX/IY params
 '[Offset]       | Pre-calculated offset-byte for opcode, e.g. "(IX+$FF)"
+'[Value]        | 8/16-bit parameter Value
 '---------------+----------------------------------------------------------------------
 'Returns        | The error number
 '======================================================================================
 Private Function AssembleZ80( _
-    ByRef Instruction As OZ80_TOKEN, _
-    Optional ByRef Prefix As Long = -1, _
-    Optional ByRef Offset As Long = -1 _
+    ByRef Instruction As OZ80_TOKEN _
 ) As OZ80_ERROR
-    Dim Opcode As Long, Val8 As Long, Val16 As Long
-    Let Offset = -1: Let Val8 = -1: Let Val16 = -1
+    'Initialse variables to hold each piece of the assembly
+    Dim Opcode As Long
+    Dim Prefix As Long, Offset As Long, Value As Long
+    Let Prefix = -1: Let Offset = -1: Let Value = -1
+    
+    'Use of IX / IY requires a prefix byte ($DD/$FD) before the opcode. _
+     We need to record which parameter is the IX/IY reference, along with its value
+    Dim ParamIXY As oz80Param
+    
+    'Is Param 1 an IX/IY parameter?
+    If (Z80Param1.Mask And MASK_ANY_IXY) <> 0 Then
+        Let ParamIXY = Z80Param1
+    'Is Param 1 an 8/16-bit parameter Value?
+    ElseIf (Z80Param1.Mask And MASK_ANY_VAL) <> 0 Then
+        Let Value = Z80Param1.Value
+    'Is Param 2 an IX/IY parameter?
+    ElseIf (Z80Param2.Mask And MASK_ANY_IXY) <> 0 Then
+        Let ParamIXY = Z80Param2
+    'Is Param 2 an 8/16-bit parameter Value?
+    ElseIf (Z80Param1.Mask And MASK_ANY_VAL) <> 0 Then
+        Let Value = Z80Param2.Value
+    End If
+        
+    'If there is any IX/Y parameter, setup the opcode prefix
+    If ParamIXY.Mask <> 0 Then
+        'Is it IX or IY?
+        If (ParamIXY.Mask And MASK_ANY_IX) <> 0 _
+            Then Let Prefix = &HDD& _
+            Else Let Prefix = &HFD&
+        'Does it include an offset byte? i.e. "(IX+$8)"
+        If (ParamIXY.Mask And MASK_MEM_IXY) <> 0 Then Let Offset = ParamIXY.Value
+    End If
     
     'OPCODE MAP: _
      Here's a complete list of the Z80 instruction set and the opcodes used for each _
@@ -2103,7 +2109,6 @@ iADC:
     '`ADC A, $8`
     ElseIf TestParams(MASK_REG_A, MASK_VAL) Then
         Let Opcode = X3 Or Y1 Or Z6
-        Let Val8 = Z80Param2.Value
     '`ADC HL, BC|DE|HL|SP`
     ElseIf TestParams(MASK_REG_HL, MASK_REGS_BC_DE_HL_SP) Then
         Let Prefix = &HED&
@@ -2134,7 +2139,6 @@ iADD:
     '`ADD A, $8`
     ElseIf TestParams(MASK_REG_A, MASK_VAL) Then
         Let Opcode = X3 Or Z6
-        Let Val8 = Z80Param2.Value
     'ERROR: Wrong parameters for Z80 instruction
     Else: GoTo InvalidParams: End If
     GoTo Output
@@ -2148,7 +2152,6 @@ iAND:
     '`AND $8`
     ElseIf TestParams(MASK_VAL) Then
         Let Opcode = X3 Or Y4 Or Z6
-        Let Val8 = Z80Param1.Value
     'ERROR: Wrong parameters for Z80 instruction
     Else: GoTo InvalidParams: End If
     GoTo Output
@@ -2172,12 +2175,10 @@ iCALL:
      ..................................................................................
     '`CALL NZ|Z|NC|C|PO|PE|P|M, $16` - conditional call
     If TestParams(MASK_FLAGS, MASK_VAL) Then
-        Let Opcode = X3 Or OpcodeY_Condition(Z80Param1.Token) Or Z4
-        Let Val16 = Z80Param2.Value
+        Let Opcode = X3 Or OpcodeY_Condition(Z80Param1.Token) Or Z4: GoTo Output16
     '`CALL $16` - absolute call
     ElseIf TestParams(MASK_VAL) Then
-        Let Opcode = X3 Or Q1 Or Z5
-        Let Val16 = Z80Param1.Value
+        Let Opcode = X3 Or Q1 Or Z5: GoTo Output16
     'ERROR: Wrong parameters for Z80 instruction
     Else: GoTo InvalidParams: End If
     GoTo Output
@@ -2196,7 +2197,6 @@ iCP:
     '`CP $8`
     ElseIf TestParams(MASK_VAL) Then
         Let Opcode = X3 Or Y7 Or Z6
-        Let Val8 = Z80Param1.Value
     'ERROR: Wrong parameters for Z80 instruction
     Else: GoTo InvalidParams: End If
     GoTo Output
@@ -2262,7 +2262,7 @@ iDI:
 iDJNZ:
     'Decrement, Jump if Not Zero: _
      ..................................................................................
-    If TestParams(MASK_VAL) Then: Let Opcode = Y2: Let Val8 = Z80Param1.Value: GoTo Output
+    If TestParams(MASK_VAL) Then: Let Opcode = Y2: GoTo Output
     'ERROR: Wrong parameters for Z80 instruction
     GoTo InvalidParams
      
@@ -2328,7 +2328,6 @@ iIN:
     '`IN A, ($8)`
     If TestParams(MASK_REG_A, MASK_MEM_VAL) Then
         Let Opcode = X3 Or Y3 Or Z3
-        Let Val8 = Z80Param2.Value
     '`IN A|B|C|D|E|H|L, (C)`
     ElseIf TestParams(MASK_REGS_ABCDEHL, MASK_MEM_BC) Then
         Let Prefix = &HED&
@@ -2386,12 +2385,10 @@ iJP:
         Let Opcode = X3 Or P2 Or Q1 Or Z1
     '`JP NZ|Z|NC|C|PO|PE|P|M, $16` - conditional absolute jump
     ElseIf TestParams(MASK_FLAGS, MASK_VAL) Then
-        Let Opcode = X3 Or OpcodeY_Condition(Z80Param1.Token) Or Z2
-        Let Val16 = Z80Param2.Value
+        Let Opcode = X3 Or OpcodeY_Condition(Z80Param1.Token) Or Z2: GoTo Output16
     '`JP $16` - absolute jump
     ElseIf TestParams(MASK_VAL) Then
-        Let Opcode = X3 Or Z3
-        Let Val16 = Z80Param1.Value
+        Let Opcode = X3 Or Z3: GoTo Output16
     'ERROR: Wrong parameters for Z80 instruction
     Else: GoTo InvalidParams: End If
     GoTo Output
@@ -2402,11 +2399,9 @@ iJR:
     '`JR $8` - relative immediate jump
     If TestParams(MASK_VAL) Then
         Let Opcode = Y3
-        Let Val8 = Z80Param1.Value
     '`JR NZ|Z|NC|C, $8` - conditional relative immediate jump
     ElseIf TestParams(MASK_FLAGS_CZ, MASK_VAL) Then
         Let Opcode = OpcodeY_Condition(Z80Param1.Token) + Y4
-        Let Val8 = Z80Param2.Value
     'ERROR: Wrong parameters for Z80 instruction
     Else: GoTo InvalidParams: End If
     GoTo Output
@@ -2416,8 +2411,7 @@ iLD:
      ..................................................................................
     '`LD BC|DE|HL|SP|IX|IY, $16`
     If TestParams(MASK_REGS_BC_DE_HL_SP_IXY, MASK_VAL) Then
-        Let Opcode = OpcodeP_RegisterPair(Z80Param1.Token) Or Z1
-        Let Val16 = Z80Param2.Value
+        Let Opcode = OpcodeP_RegisterPair(Z80Param1.Token) Or Z1: GoTo Output16
     '`LD (BC), A`
     ElseIf TestParams(MASK_MEM_BC, MASK_REG_A) Then
         Let Opcode = Z2
@@ -2432,24 +2426,19 @@ iLD:
         Let Opcode = P1 Or Q1 Or Z2
     '`LD ($16), HL|IX|IY`
     ElseIf TestParams(MASK_MEM_VAL, MASK_REGS_HL_IXY) Then
-        Let Opcode = P2 Or Z2
-        Let Val16 = Z80Param1.Value
+        Let Opcode = P2 Or Z2: GoTo Output16
     '`LD ($16), A`
     ElseIf TestParams(MASK_MEM_VAL, MASK_REG_A) Then
-        Let Opcode = P3 Or Z2
-        Let Val16 = Z80Param1.Value
+        Let Opcode = P3 Or Z2: GoTo Output16
     '`LD HL|IX|IY, ($16)`
     ElseIf TestParams(MASK_REGS_HL_IXY, MASK_MEM_VAL) Then
-        Let Opcode = P2 Or Q1 Or Z2
-        Let Val16 = Z80Param2.Value
+        Let Opcode = P2 Or Q1 Or Z2: GoTo Output16
     '`LD A, ($16)`
     ElseIf TestParams(MASK_REG_A, MASK_MEM_VAL) Then
-        Let Opcode = P3 Or Q1 Or Z2
-        Let Val16 = Z80Param2.Value
+        Let Opcode = P3 Or Q1 Or Z2: GoTo Output16
     '`LD A|B|C|D|E|H|IXH|IYH|L|IXL|IYL|(HL|IX+$8|IY+$8), $8`
     ElseIf TestParams(MASK_REGS_ABCDEIXYHL_MEM_HLIXY, MASK_VAL) Then
         Let Opcode = OpcodeY_Register(Z80Param1.Mask) Or Z6
-        Let Val8 = Z80Param2.Value
     'You can't combine IX and IY use in the same opcode, there's only one prefix, _
      so these two following checks ensure that IX & IY are not used together
     '`LD A|B|C|D|E|H|IXH|L|IXL(HL|IX+$8), A|B|C|D|E|H|IXH|L|IXL`
@@ -2483,13 +2472,12 @@ iLD:
     '`LD ($16), BC|DE|SP`
     ElseIf TestParams(MASK_MEM_VAL, MASK_REGS_BC_DE_SP) Then
         Let Prefix = &HED&
-        Let Opcode = X1 Or OpcodeP_RegisterPair(Z80Param2.Token) Or Z3
-        Let Val16 = Z80Param1.Value
+        Let Opcode = X1 Or OpcodeP_RegisterPair(Z80Param2.Token) Or Z3: GoTo Output16
     '`LD BC|DE|SP, ($16)`
     ElseIf TestParams(MASK_REGS_BC_DE_SP, MASK_MEM_VAL) Then
         Let Prefix = &HED&
         Let Opcode = X1 Or OpcodeP_RegisterPair(Z80Param1.Token) Or Q1 Or Z3
-        Let Val16 = Z80Param2.Value
+        GoTo Output16
     '`LD I, A`
     ElseIf TestParams(MASK_REG_I, MASK_REG_A) Then
         Let Prefix = &HED&
@@ -2558,7 +2546,6 @@ iOR:
     '`OR $8`
     ElseIf TestParams(MASK_VAL) Then
         Let Opcode = X3 Or Y6 Or Z6
-        Let Val8 = Z80Param1.Value
     'ERROR: Wrong parameters for Z80 instruction
     Else: GoTo InvalidParams: End If
     GoTo Output
@@ -2569,7 +2556,6 @@ iOUT:
     '`OUT ($8), A`
     If TestParams(MASK_MEM_VAL, MASK_REG_A) Then
         Let Opcode = X3 Or Y2 Or Z3
-        Let Val8 = Z80Param1.Value
     '`OUT (C), A|B|C|D|E|H|L`
     ElseIf TestParams(MASK_MEM_BC, MASK_REGS_ABCDEHL) Then
         Let Prefix = &HED&
@@ -2774,7 +2760,6 @@ iSBC:
     '`SBC A, $8`
     ElseIf TestParams(MASK_REG_A, MASK_VAL) Then
         Let Opcode = X3 Or Y3 Or Z6
-        Let Val8 = Z80Param2.Value
     '`SBC HL, BC|DE|HL|SP`
     ElseIf TestParams(MASK_REG_HL, MASK_REGS_BC_DE_HL_SP) Then
         Let Prefix = &HED&
@@ -2864,7 +2849,6 @@ iSUB:
     '`SUB $8`
     ElseIf TestParams(MASK_VAL) Then
         Let Opcode = X3 Or Y2 Or Z6
-        Let Val8 = Z80Param1.Value
     'ERROR: Wrong parameters for Z80 instruction
     Else: GoTo InvalidParams: End If
     GoTo Output
@@ -2878,7 +2862,6 @@ iXOR:
     '`XOR $8`
     ElseIf TestParams(MASK_VAL) Then
         Let Opcode = X3 Or Y5 Or Z6
-        Let Val8 = Z80Param1.Value
     'ERROR: Wrong parameters for Z80 instruction
     Else: GoTo InvalidParams: End If
 
@@ -2886,68 +2869,63 @@ iXOR:
     'Write the assembled bytes to the Chunk
     '----------------------------------------------------------------------------------
 Output:
-    'For instructions with 16-bit values we need to extract the low & high bytes
-    If Val16 >= 0 Then
-        'TODO: Validate 16-bit Value
-        
-        Call Chunk.AddInstruction( _
-            Prefix, Opcode, Offset, _
-            (Val16 And &HFF&), ((Val16 \ &H100&) And &HFF&) _
-        )
-    Else
-        'TODO: Validate 8-bit Value
-        
-        Call Chunk.AddInstruction( _
-            Prefix, Opcode, Offset, Val8 _
-        )
-    End If
+    'TODO: Validate 8-bit Value
+    Call Chunk.AddInstruction( _
+        Prefix, Opcode, Offset, Value _
+    )
     
-    GoTo LogIt
+    '*** TIMER BEGIN ***
+    Call oz80.Profiler.EventBegin(EVENT_PROCESSZ80_LOG)
+    Call RaiseMessage(OZ80_LOG_DEBUG, LOG_Z80_VAL8, _
+        LogAdr, _
+        oz80.HexStr8(Prefix), oz80.HexStr8(Opcode), oz80.HexStr8(Offset), _
+        oz80.HexStr8(Value), _
+        oz80.TokenName(Instruction), _
+        ParamToString(Z80Param1), ParamToString(Z80Param2), ParamToString(Z80Param3) _
+    )
+    Call oz80.Profiler.EventEnd(EVENT_PROCESSZ80_LOG)
+    '*** TIMER END ***
+    
+    GoTo Finish
+    
+Output16:
+    '..................................................................................
+    'TODO: Validate 16-bit Value
+    'TODO: 16-bit Value opcodes never have an offset
+    Call Chunk.AddInstruction( _
+        Prefix, Opcode, Offset, _
+        (Value And &HFF&), ((Value \ &H100&) And &HFF&) _
+    )
+    
+    '*** TIMER BEGIN ***
+    Call oz80.Profiler.EventBegin(EVENT_PROCESSZ80_LOG)
+    Call RaiseMessage(OZ80_LOG_DEBUG, LOG_Z80_VAL16, _
+        LogAdr, _
+        oz80.HexStr8(Prefix), oz80.HexStr8(Opcode), _
+        oz80.HexStr8(Value And &HFF&), _
+        oz80.HexStr8((Value And &HFF00&) \ &H100&), _
+        oz80.TokenName(Instruction), _
+        ParamToString(Z80Param1), ParamToString(Z80Param2), ParamToString(Z80Param3) _
+    )
+    Call oz80.Profiler.EventEnd(EVENT_PROCESSZ80_LOG)
+    '*** TIMER END ***
+    
+    GoTo Finish
     
 OutputCB:
+    '..................................................................................
     'The double-opcodes use $CB as the primary opcode and then a second opcode after _
      the offset byte. It's fastest to handle and log this special case specifically
     Call Chunk.AddInstructionCB(Prefix, Opcode, Offset)
     
     '*** TIMER BEGIN ***
     Call oz80.Profiler.EventBegin(EVENT_PROCESSZ80_LOG)
-    
     Call RaiseMessage(OZ80_LOG_DEBUG, LOG_Z80_CB, _
         LogAdr, _
         oz80.HexStr8(Prefix), oz80.HexStr8(Offset), oz80.HexStr8(Opcode), _
         oz80.TokenName(Instruction), _
         ParamToString(Z80Param1), ParamToString(Z80Param2), ParamToString(Z80Param3) _
     )
-    
-    Call oz80.Profiler.EventEnd(EVENT_PROCESSZ80_LOG)
-    '*** TIMER END ***
-    GoTo Finish
-    
-    '----------------------------------------------------------------------------------
-
-LogIt:
-    '*** TIMER BEGIN ***
-    Call oz80.Profiler.EventBegin(EVENT_PROCESSZ80_LOG)
-    
-    If Val16 >= 0 Then
-        Call RaiseMessage(OZ80_LOG_DEBUG, LOG_Z80, _
-            LogAdr, _
-            oz80.HexStr8(Prefix), oz80.HexStr8(Opcode), oz80.HexStr8(Offset), _
-            "··", _
-            oz80.HexStr8(Val16 And &HFF), oz80.HexStr8((Val16 \ &H100) And &HFF&), _
-            oz80.TokenName(Instruction), _
-            ParamToString(Z80Param1), ParamToString(Z80Param2), ParamToString(Z80Param3) _
-        )
-    Else
-        Call RaiseMessage(OZ80_LOG_DEBUG, LOG_Z80, _
-            LogAdr, _
-            oz80.HexStr8(Prefix), oz80.HexStr8(Opcode), oz80.HexStr8(Offset), _
-            "··", oz80.HexStr8(Val8), "··", _
-            oz80.TokenName(Instruction), _
-            ParamToString(Z80Param1), ParamToString(Z80Param2), ParamToString(Z80Param3) _
-        )
-    End If
-
     Call oz80.Profiler.EventEnd(EVENT_PROCESSZ80_LOG)
     '*** TIMER END ***
     GoTo Finish
@@ -3217,10 +3195,14 @@ Private Function ParseValue( _
     'A nested Expression?
     If File.TokenKind = TOKEN_CHUNK_OPEN Then
         '..............................................................................
-        'Parse the Expression
+        'Parse the nested Expression and return it's Value as our own
         If ParseExpression(ReturnValue) Then GoTo ErrOut
         GoTo ErrOut
         
+    '`HI` function -- return the high-byte of a 16-bit Value
+    
+    '`LO` function -- return the low-byte of a 16-bit Value
+    
     'If the negative sign preceeds, remember this until the full number has been _
      fetched and calculated. ONLY decimal numbers can be negative, you cannot negate _
      hexadecimal/binary numbers or named-items (Constants, RAM names, Labels etc.)

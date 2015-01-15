@@ -38,7 +38,7 @@ Private Declare Sub api_RtlMoveMemory Lib "kernel32" Alias "RtlMoveMemory" ( _
     ByVal Length As Long _
 )
 
-'/// CLASS STORAGE ////////////////////////////////////////////////////////////////////
+'/// DATA /////////////////////////////////////////////////////////////////////////////
 
 'For ease of logging, we'll embed the printable name of the Chunk, _
  (the actual name is stored in the File, well out of reach of many routines)

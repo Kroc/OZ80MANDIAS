@@ -247,12 +247,12 @@ Public Enum OZ80_TOKEN
     TOKEN_PREFIX_KB                     'x1024
     
     'Grouping: (i.e. parenthesis, braces)
-    TOKEN_CHUNK_OPEN                    '"{" Code/data Chunk, `PROC :<label> { ... }`
-    TOKEN_CHUNK_CLOSE                   '"}" Also, expression nesting
-    TOKEN_HASH_OPEN                     '"[" Hash array
-    TOKEN_HASH_CLOSE                    '"]"
-    TOKEN_Z80MEM_OPEN                   '"(" Memory reference `ld a, (hl)`
-    TOKEN_Z80MEM_CLOSE                  '")"
+    TOKEN_BRACES_OPEN                   '"{" Code/data Chunk, `PROC :<label> { ... }`
+    TOKEN_BRACES_CLOSE                  '"}"
+    TOKEN_SQUARE_OPEN                   '"[" Hash array and
+    TOKEN_SQUARE_CLOSE                  '"]" Memory reference `ld a, [hl]`
+    TOKEN_PARENS_OPEN                   '"(" Expression nesting,
+    TOKEN_PARENS_CLOSE                  '")" e.g. `HI ($8000 + $80)`
     
     TOKEN_CONST                         'e.g. `!CONST`
     TOKEN_HASH                          'e.g. `#hash`
@@ -472,12 +472,12 @@ Public Property Get TokenName( _
         Let My_TokenName(TOKEN_PREFIX_K) = "K"
         Let My_TokenName(TOKEN_PREFIX_KB) = "KB"
         
-        Let My_TokenName(TOKEN_Z80MEM_OPEN) = Chr$(SYNTAX_Z80MEM_OPEN)
-        Let My_TokenName(TOKEN_Z80MEM_CLOSE) = Chr$(SYNTAX_Z80MEM_CLOSE)
-        Let My_TokenName(TOKEN_CHUNK_OPEN) = Chr$(SYNTAX_CHUNK_OPEN)
-        Let My_TokenName(TOKEN_CHUNK_CLOSE) = Chr$(SYNTAX_CHUNK_CLOSE)
-        Let My_TokenName(TOKEN_HASH_OPEN) = Chr$(SYNTAX_HASH_OPEN)
-        Let My_TokenName(TOKEN_HASH_CLOSE) = Chr$(SYNTAX_HASH_CLOSE)
+        Let My_TokenName(TOKEN_BRACES_OPEN) = Chr$(SYNTAX_BRACES_OPEN)
+        Let My_TokenName(TOKEN_BRACES_CLOSE) = Chr$(SYNTAX_BRACES_CLOSE)
+        Let My_TokenName(TOKEN_PARENS_OPEN) = Chr$(SYNTAX_PARENS_OPEN)
+        Let My_TokenName(TOKEN_PARENS_CLOSE) = Chr$(SYNTAX_PARENS_CLOSE)
+        Let My_TokenName(TOKEN_SQUARE_OPEN) = Chr$(SYNTAX_SQUARE_OPEN)
+        Let My_TokenName(TOKEN_SQUARE_CLOSE) = Chr$(SYNTAX_SQUARE_CLOSE)
         
         Let My_TokenName(TOKEN_TEXT) = Chr$(SYNTAX_TEXT)
         Let My_TokenName(TOKEN_LABEL) = Chr$(SYNTAX_LABEL)
@@ -568,7 +568,7 @@ Public Sub GetOZ80Error( _
         Let ReturnTitle = "Invalid Z80 Instruction Parameter"
         Let ReturnDescription = _
             "Parameters following a Z80 instruction must be either a Z80 Register " & _
-            "(`a`, `b`, `c` etc.), a Z80 memory expression `(ix+$FF)` or a valid " & _
+            "(`a`, `b`, `c` etc.), a Z80 memory expression `[ix+$FF]` or a valid " & _
             "numerical expression, i.e. a calculation, a label name or RAM name."
             
     Case OZ80_ERROR_FILE_NOTFOUND

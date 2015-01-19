@@ -2,30 +2,30 @@
 `OBJECT: trip zone (Green Hill)
 
 PROC    :doObjectCode_meta_trip                 SECTION ::objects {
-	set	5,(ix+#object.flags)
-	ld	(ix+#object.width), 64
-	ld	(ix+#object.height),64
+	set	5,[ix+#object.flags]
+	ld	[ix+#object.width], 64
+	ld	[ix+#object.height],64
 	ld	hl,$0000
-	ld	($.TEMP6),hl
+	ld	[$.TEMP6],hl
 	call	:detectCollisionWithSonic
 	ret	c
-	bit	6,(iy+#vars.flags6)
+	bit	6,[iy+#vars.flags6]
 	ret	nz
-	ld	a,($.SONIC.flags)
+	ld	a,[$.SONIC.flags]
 	and	$80
 	ret	z
 	ld	hl,$fffb
 	xor	a;zero
-	ld	($.SONIC.Yspeed.lo),a;zero
-	ld	($.SONIC.Yspeed.hi),hl
+	ld	[$.SONIC.Yspeed.lo],a;zero
+	ld	[$.SONIC.Yspeed.hi],hl
 	ld	hl,$0003
 	xor	a;zero
-	ld	($.SONIC.Xspeed.lo),a;zero
-	ld	($.SONIC.Xspeed.hi),hl
+	ld	[$.SONIC.Xspeed.lo],a;zero
+	ld	[$.SONIC.Xspeed.hi],hl
 	ld	hl,$.SONIC.flags
-	res	1,(hl)
-	set	6,(iy+#vars.flags6)
-	ld	(iy+#vars.joypad),$ff
+	res	1,[hl]
+	set	6,[iy+#vars.flags6]
+	ld	[iy+#vars.joypad],$ff
 	ld	a,$11
 	rst	:rst_playSFX
 	ret

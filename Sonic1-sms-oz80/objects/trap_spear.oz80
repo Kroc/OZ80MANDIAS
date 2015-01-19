@@ -3,31 +3,31 @@
 
 PROC    :doObjectCode_trap_spear                SECTION ::objects
 {
-	set	5,(ix+#object.flags)
-	bit	0,(ix+#object.flags)
+	set	5,[ix+#object.flags]
+	bit	0,[ix+#object.flags]
 	jr	nz,._1
-	ld	l,(ix+#object.X.lo)
-	ld	h,(ix+#object.X.hi)
+	ld	l,[ix+#object.X.lo]
+	ld	h,[ix+#object.X.hi]
 	ld	de,$000c
 	add	hl,de
-	ld	(ix+#object.X.lo),l
-	ld	(ix+#object.X.hi),h
-	set	0,(ix+#object.flags)
-._1	ld	l,(ix+#object.X.lo)
-	ld	h,(ix+#object.X.hi)
-	ld	($.TEMP1),hl
-	ld	l,(ix+#object.Y.lo)
-	ld	h,(ix+#object.Y.hi)
-	ld	($.TEMP3),hl
+	ld	[ix+#object.X.lo],l
+	ld	[ix+#object.X.hi],h
+	set	0,[ix+#object.flags]
+._1	ld	l,[ix+#object.X.lo]
+	ld	h,[ix+#object.X.hi]
+	ld	[$.TEMP1],hl
+	ld	l,[ix+#object.Y.lo]
+	ld	h,[ix+#object.Y.hi]
+	ld	[$.TEMP3],hl
 	ld	hl,$0000
-	ld	($.TEMP4),hl
-	ld	a,($.FRAMECOUNT)
+	ld	[$.TEMP4],hl
+	ld	a,[$.FRAMECOUNT]
 	rlca	
 	rlca	
 	and	$03
 	jr	nz,._2
 	ld	hl,._8bbc
-	ld	a,($.FRAMECOUNT)
+	ld	a,[$.FRAMECOUNT]
 	and	$3f
 	ld	e,a
 	cp	$08
@@ -45,7 +45,7 @@ PROC    :doObjectCode_trap_spear                SECTION ::objects
 ._3	cp	$02
 	jr	nz,._4
 	ld	hl,._8bc4
-	ld	a,($.FRAMECOUNT)
+	ld	a,[$.FRAMECOUNT]
 	and	$3f
 	ld	e,a
 	cp	$08
@@ -58,7 +58,7 @@ PROC    :doObjectCode_trap_spear                SECTION ::objects
 	ld	e,$00
 ._5	ld	d,$00
 	add	hl,de
-	ld	a,(hl)
+	ld	a,[hl]
 	ld	hl,._8bce
 	add	a,a
 	add	a,a
@@ -68,32 +68,32 @@ PROC    :doObjectCode_trap_spear                SECTION ::objects
 	ld	b,$03
 	
 .loop	push	bc
-	ld	a,(hl)
+	ld	a,[hl]
 	inc	hl
-	ld	e,(hl)
+	ld	e,[hl]
 	inc	hl
 	and	a
 	jp	m,._6
 	push	hl
 	ld	d,$00
-	ld	($.TEMP6),de
+	ld	[$.TEMP6],de
 	call	:_3581
 	pop	hl
 ._6	pop	bc
 	djnz	.loop
 	
-	ld	(ix+#object.spriteLayout.lo),b
-	ld	(ix+#object.spriteLayout.hi),b
-	ld	d,(hl)
+	ld	[ix+#object.spriteLayout.lo],b
+	ld	[ix+#object.spriteLayout.hi],b
+	ld	d,[hl]
 	ld	e,$04
-	ld	($.TEMP6),de
+	ld	[$.TEMP6],de
 	inc	hl
-	ld	a,(hl)
-	ld	(ix+#object.width),$01
-	ld	(ix+#object.height),a
+	ld	a,[hl]
+	ld	[ix+#object.width],$01
+	ld	[ix+#object.height],a
 	call	:detectCollisionWithSonic
 	call	nc,:_35fd
-	ld	a,($.FRAMECOUNT)
+	ld	a,[$.FRAMECOUNT]
 	cp	$80
 	ret	nz
 	ld	a,$1d

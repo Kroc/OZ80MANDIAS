@@ -134,22 +134,22 @@ Public Enum OZ80_MASK
     MASK_REG_IYH = 2 ^ 10
     MASK_REG_IYL = 2 ^ 11
     
-    'The presence of an IX/IY prefix on the opcode changes a memory reference "(HL)"
-     'to IX/IY, with an offset value e.g. "(IX+$8)"
+    'The presence of an IX/IY prefix on the opcode changes a memory reference "[HL]"
+     'to IX/IY, with an offset value e.g. "[IX+$8]"
     MASK_MEM_IX = 2 ^ 12
     MASK_MEM_IY = 2 ^ 13
     [_MASK_REGS_END] = MASK_MEM_IY
     
     'A couple of undocumented instructions allow for IX/IY memory references,
-     'but not the standard "(HL)" reference
+     'but not the standard "[HL]" reference
     MASK_MEM_IXY = MASK_MEM_IX Or MASK_MEM_IY
-    'And this is the common "(HL|IX+$8|IY+$8)" form that is used often throughout
+    'And this is the common "[HL|IX+$8|IY+$8]" form that is used often throughout
     MASK_MEM_HLIXY = MASK_MEM_HL Or MASK_MEM_IXY
     
     'The main 8-bit registers are a common instruction parameter
     MASK_REGS_ABCDEHL = MASK_REG_A Or MASK_REG_B Or MASK_REG_C Or MASK_REG_D Or MASK_REG_E Or MASK_REG_E Or MASK_REG_H Or MASK_REG_L
     'The Z80 clumps HL/IX & IY memory references together with 8-bit registers when
-     'building opcodes, i.e. "A|B|C|D|E|H|L|(HL|IX+$8|IY+$8)"
+     'building opcodes, i.e. "A|B|C|D|E|H|L|[HL|IX+$8|IY+$8]"
     MASK_REGS_ABCDEHL_MEM_HLIXY = MASK_REGS_ABCDEHL Or MASK_MEM_HLIXY
     'The use of the IX/IY prefix turns H/L into IXH/IXL/IYH/IYL in many instances
     MASK_REGS_IXHL = MASK_REG_IXH Or MASK_REG_IXL
@@ -710,11 +710,11 @@ End Function
 '         | #{name}                                       ' "Object"
 '         | $.{name}                                      ' "RAM Name"
 '         | ::{name}                                      ' "Section"
+'         | HI          <expr>                            ' High-8-bits of <expr>
+'         | LO          <expr>                            ' Low-8-bits of <expr>
 '         |                                               '
 '<expr>   | <value>    [{operator}  <expr>]               '
 '         | {           <expr>      }                     '
-'         | HI          <expr>                            ' High-8-bits of <expr>
-'         | LO          <expr>                            ' Low-8-bits of <expr>
 '         |                                               '
 '<text>   | "           {text}      "                     '
 '         |                                               '
@@ -921,7 +921,7 @@ Private Sub ProcessHash()
     
     Call File.NextToken
     
-    If File.TokenKind = TOKEN_HASH_OPEN Then
+    If File.TokenKind = TOKEN_SQUARE_OPEN Then
         Let File.TokenIndex = File.TokenValue
         Call File.NextToken
     End If
@@ -1100,7 +1100,7 @@ ReadParams:
             ElseIf File.TokenKind = TOKEN_KEYWORD_HELP _
             Or File.TokenKind = TOKEN_KEYWORD_RETURN _
             Or File.TokenKind = TOKEN_KEYWORD_SECTION _
-            Or File.TokenKind = TOKEN_CHUNK_OPEN _
+            Or File.TokenKind = TOKEN_BRACES_OPEN _
             Then
                 'The list has come to the end, _
                  look for more parameters
@@ -1159,7 +1159,7 @@ ReadParams:
             ElseIf File.TokenKind = TOKEN_KEYWORD_HELP _
             Or File.TokenKind = TOKEN_KEYWORD_PARAMS _
             Or File.TokenKind = TOKEN_KEYWORD_SECTION _
-            Or File.TokenKind = TOKEN_CHUNK_OPEN _
+            Or File.TokenKind = TOKEN_BRACES_OPEN _
             Then
                 'The list has come to the end, _
                  look for more parameters
@@ -1217,7 +1217,7 @@ ReadParams:
     '----------------------------------------------------------------------------------
     
     'With the parameters read, the only allowed token is the opening of the Chunk
-    If File.TokenKind <> TOKEN_CHUNK_OPEN Then Call RaiseError( _
+    If File.TokenKind <> TOKEN_BRACES_OPEN Then Call RaiseError( _
         OZ80_ERROR_EXPECTED _
     ): GoTo ErrOut
     
@@ -1280,7 +1280,7 @@ Private Sub DefineRAMHash()
     
     'TODO: Implementation
     Call File.NextToken
-    If File.TokenKind = TOKEN_HASH_OPEN Then
+    If File.TokenKind = TOKEN_SQUARE_OPEN Then
         Let File.TokenIndex = File.TokenValue
         Call File.NextToken
     End If
@@ -1408,7 +1408,7 @@ Private Sub DefineStart()
     If Not File.NextToken() Then Call RaiseError(OZ80_ERROR_FILE_END): Exit Sub
     
     'The only allowed token is the opening of the Chunk
-    If File.TokenKind <> TOKEN_CHUNK_OPEN Then Call RaiseError( _
+    If File.TokenKind <> TOKEN_BRACES_OPEN Then Call RaiseError( _
         OZ80_ERROR_EXPECTED _
     ): Exit Sub
     
@@ -1522,7 +1522,7 @@ ReadParams:
     '----------------------------------------------------------------------------------
     
     'With the parameters read, the only allowed token is the opening of the Chunk
-    If File.TokenKind <> TOKEN_CHUNK_OPEN Then Call RaiseError( _
+    If File.TokenKind <> TOKEN_BRACES_OPEN Then Call RaiseError( _
         OZ80_ERROR_EXPECTED _
     ): GoTo ErrOut
     
@@ -1580,7 +1580,7 @@ Continue:
     End If
     
     'The chunk might be empty `{}`, in which case we don't want to walk it
-    If File.TokenKind = TOKEN_CHUNK_CLOSE Then GoTo Finish
+    If File.TokenKind = TOKEN_BRACES_CLOSE Then GoTo Finish
     
     '----------------------------------------------------------------------------------
     
@@ -1590,7 +1590,7 @@ Continue:
         Call RaiseError(OZ80_ERROR_FILE_END)
     
     'When the closing brace is encountered, we'll drop out of the scope
-    ElseIf File.TokenKind <> TOKEN_CHUNK_CLOSE Then
+    ElseIf File.TokenKind <> TOKEN_BRACES_CLOSE Then
         GoTo Continue
     End If
     
@@ -1615,9 +1615,9 @@ Private Function GetZ80Parameter( _
      building the opcode we can immediately tell when to include the offset byte
     Let ReturnParam.Value = -1
     
-    'A memory reference, such as `(ix+$8)` _
+    'A memory reference, such as `[ix+$8]` _
      ----------------------------------------------------------------------------------
-    If File.TokenKind = TOKEN_Z80MEM_OPEN Then
+    If File.TokenKind = TOKEN_SQUARE_OPEN Then
         'ERROR: File ends just as the memory expression is opened
         If Not File.NextToken() Then Call RaiseError(OZ80_ERROR_FILE_END): GoTo ErrOut
         
@@ -1641,7 +1641,7 @@ Private Function GetZ80Parameter( _
             'HL / IX & IY
             ElseIf File.TokenKind = TOKEN_Z80_HL Then
                 Let ReturnParam.Mask = MASK_MEM_HL
-            'IX/IY can have an additional expression, e.g. `ld a, (ix+$8)`
+            'IX/IY can have an additional expression, e.g. `ld a, [ix+$8]`
             ElseIf File.TokenKind = TOKEN_Z80_IX Then
                 Let ReturnParam.Mask = MASK_MEM_IX
                 GoTo AddExpr
@@ -1685,7 +1685,7 @@ AddExpr:    'Look for the `+` following the register name
                     Then Let ReturnParam.Value = 0 _
                     Else Let ReturnParam.Value = Value
                 
-                If File.TokenKind = TOKEN_Z80MEM_CLOSE Then
+                If File.TokenKind = TOKEN_SQUARE_CLOSE Then
                     Call File.NextToken
                     GoTo ErrOut
                 End If
@@ -1721,7 +1721,7 @@ AddExpr:    'Look for the `+` following the register name
     
 EndScope:
         '..............................................................................
-        If File.TokenKind = TOKEN_Z80MEM_CLOSE Then
+        If File.TokenKind = TOKEN_SQUARE_CLOSE Then
             Call File.NextToken
             GoTo ErrOut
         End If
@@ -1790,7 +1790,7 @@ Private Sub ProcessZ80()
     If Not File.NextToken() Then Call RaiseError(OZ80_ERROR_FILE_END): Exit Sub
     
     'Up to three parameters are supported to allow for the undocumented instructions, _
-     e.g. `SET 0 (IX+$8) A` which sets bit 0 of the address and copies the result to A
+     e.g. `SET 0 [IX+$8] A` which sets bit 0 of the address and copies the result to A
     LSet Z80Param1 = Z80ParamEmpty
     LSet Z80Param2 = Z80ParamEmpty
     LSet Z80Param3 = Z80ParamEmpty
@@ -1858,7 +1858,7 @@ End Sub
 '======================================================================================
 'Instruction    | Token number of the Z80 instruction
 '[Prefix]       | Pre-calculated opcode prefix ($DD/$FD) for IX/IY params
-'[Offset]       | Pre-calculated offset-byte for opcode, e.g. "(IX+$FF)"
+'[Offset]       | Pre-calculated offset-byte for opcode, e.g. "[IX+$FF]"
 '[Value]        | 8/16-bit parameter Value
 '---------------+----------------------------------------------------------------------
 'Returns        | The error number
@@ -1895,7 +1895,7 @@ Private Function AssembleZ80( _
         If (ParamIXY.Mask And MASK_ANY_IX) <> 0 _
             Then Let Prefix = &HDD& _
             Else Let Prefix = &HFD&
-        'Does it include an offset byte? i.e. "(IX+$8)"
+        'Does it include an offset byte? i.e. "[IX+$8]"
         If (ParamIXY.Mask And MASK_MEM_IXY) <> 0 Then Let Offset = ParamIXY.Value
     End If
     
@@ -1947,24 +1947,24 @@ Private Function AssembleZ80( _
     'Z80    Param 1                 Param 2                 Opcode         Cycles _
      ----------------------------------------------------------------------------------
     'ADC    a                       a|b|c|d|e|h|ixyh|l|ixyl rr 88+r             4
-    '                               (hl|ix+$8|iy+$8)        rr 8E ??            7
+    '                               [hl|ix+$8|iy+$8]        rr 8E ??            7
     '                               $8                      CE ??               7
     '       hl                      bc|de|hl|sp             ED 4A+rr            15
                                 
     'ADD    a                       a|b|c|d|e|h|ixyh|l|ixyl rr 80+r             4
-    '                               (hl|ix+$8|iy+$8)        rr 86 ??            7
+    '                               [hl|ix+$8|iy+$8]        rr 86 ??            7
     '                               $8                         C6 ??            7
     '       hl                      bc|de|hl|sp                09+rr            11
     '       ix                      bc|de|ix|sp             rr 09+rr            11
     '       iy                      bc|de|iy|sp             rr 09+rr            11
     
     'AND    a|b|c|d|e|h|ixyh|l|ixyl                         rr A0+r
-    '       (hl|ix+$8|iy+$8)                                rr A6 ??
+    '       [hl|ix+$8|iy+$8]                                rr A6 ??
     '       $8                                                 E6 ??
     
     'BIT    0-7                     a|b|c|d|e|h|l              CB 40+r+b
-    '                               (hl|ix+$8|iy+$8)        rr CB ?? 46+b
-    '       0-7     (ix+$8|iy+$8)   a|b|c|d|e|h|l           rr CB ?? 40+r+b
+    '                               [hl|ix+$8|iy+$8]        rr CB ?? 46+b
+    '       0-7     [ix+$8|iy+$8]   a|b|c|d|e|h|l           rr CB ?? 40+r+b
     
     'CALL   $16                                                CD ?? ??
     '       c|nc|m|p|z|nz|pe|po     $16                        C4+f
@@ -1972,7 +1972,7 @@ Private Function AssembleZ80( _
     'CCF                                                       3F
     
     'CP     a|b|c|d|e|h|ixyh|l|ixyl                         rr B8+r
-    '       (hl|ix+$8|iy+$8)                                rr BE ??
+    '       [hl|ix+$8|iy+$8]                                rr BE ??
     '       $8                                                 FE ??
     
     'CPD                                                    ED A9
@@ -1983,7 +1983,7 @@ Private Function AssembleZ80( _
     'DAA                                                       27
     
     'DEC    a|b|c|d|e|h|ixyh|l|ixyl                         rr 05+r*8
-    '       (hl|ix+$8|iy+$8)                                rr 35 ??
+    '       [hl|ix+$8|iy+$8]                                rr 35 ??
     '       bc|de|hl|sp                                        0B+rr
     '       ix|iy                                           rr 2B
     
@@ -1993,7 +1993,7 @@ Private Function AssembleZ80( _
     
     'EI                                                        FB
     
-    'EX     (sp)                    hl|ix|iy                rr E3
+    'EX     [sp]                    hl|ix|iy                rr E3
     '       af                      af                         08
     '       de                      hl                         EB
     
@@ -2002,13 +2002,13 @@ Private Function AssembleZ80( _
     
     'IM     0-2                                                46+im
     
-    'IN     a                       ($8)                       DB ??
-    '       (c)                                             ED 70
-    '       a|b|c|d|e|h|l           (c)                     ED 40+r
+    'IN     a                       [$8]                       DB ??
+    '       [c]                                             ED 70
+    '       a|b|c|d|e|h|l           [c]                     ED 40+r
     
     'INC    a|b|c|d|e|h|ixyh|l|ixyl                         rr 04+r*8
     '       bc|de|hl|sp|ix|iy                               rr 03+rr
-    '       (hl|ix+$8|iy+$8)                                rr 34 ??
+    '       [hl|ix+$8|iy+$8]                                rr 34 ??
     
     'IND                                                    ED AA
     'INDR                                                   ED BA
@@ -2016,7 +2016,7 @@ Private Function AssembleZ80( _
     'INIR                                                   ED B2
     
     'JP     $16                                                C3 ?? ??
-    '       (hl|ix|iy)                                      rr E9
+    '       [hl|ix|iy]                                      rr E9
     '       c|nc|m|p|z|nz|pe|po     $16                        C2+f ?? ??
     
     'JR     $8                                                 18 ??
@@ -2027,52 +2027,52 @@ Private Function AssembleZ80( _
     '       a                       i                       ED 57
     '                               r                       ED 5F
     '                               a|b|c|d|e|h|ixyh|l|ixyl rr 78+r
-    '                               (hl|ix+$8|iy+$8)        rr 7E ??
+    '                               [hl|ix+$8|iy+$8]        rr 7E ??
     '                               $8                         3E ??
-    '                               (bc|de)                    0A+rr
-    '                               ($16)                      3A ?? ??
+    '                               [bc|de]                    0A+rr
+    '                               [$16]                      3A ?? ??
     '       b                       a|b|c|d|e|h|ixyh|l|ixyl rr 40+r
-    '                               (hl|ix+$8|iy+$8)        rr 46 ??
+    '                               [hl|ix+$8|iy+$8]        rr 46 ??
     '                               $8                         06 ??
     '       c                       a|b|c|d|e|h|ixyh|l|ixyl rr 48+r
-    '                               (hl|ix+$8|iy+$8)        rr 4E ??
+    '                               [hl|ix+$8|iy+$8]        rr 4E ??
     '                               $8                         0E ??
     '       d                       a|b|c|d|e|h|ixyh|l|ixyl rr 50+r
-    '                               (hl|ix+$8|iy+$8)        rr 56 ??
+    '                               [hl|ix+$8|iy+$8]        rr 56 ??
     '                               $8                         16 ??
     '       e                       a|b|c|d|e|h|ixyh|l|ixyl    58+r
-    '                               (hl|ix+$8|iy+$8)        rr 5E ??
+    '                               [hl|ix+$8|iy+$8]        rr 5E ??
     '                               $8                         1E ??
     '       h                       a|b|c|d|e|h|l              60+r
-    '                               (hl|ix+$8|iy+$8)        rr 66 ??
+    '                               [hl|ix+$8|iy+$8]        rr 66 ??
     '                               $8                         26 ??
     '       ixh                     a|b|c|d|e|ixh|ixl       rr 60+r
     '                               $8                      rr 26 ??
     '       iyh                     a|b|c|d|e|iyh|iyl       rr 60+r
     '                               $8                      rr 26 ??
     '       l                       a|b|c|d|e|h|l              68+r
-    '                               (hl|ix+$8|iy+$8)        rr 6E ??
+    '                               [hl|ix+$8|iy+$8]        rr 6E ??
     '                               $8                         2E ??
     '       ixl                     a|b|c|d|e|ixh|ixl       rr 68+r
     '                               $8                      rr 2E ??
     '       iyl                     a|b|c|d|e|iyh|iyl       rr 68+r
     '                               $8                      rr 2E ??
-    '       bc                      ($16)                   ED 4B ?? ??
+    '       bc                      [$16]                   ED 4B ?? ??
     '                               $16                        01+rr ?? ??
-    '       de                      ($16)                   ED 5B ?? ??
+    '       de                      [$16]                   ED 5B ?? ??
     '                               $16                        01+rr ?? ??
-    '       hl                      ($16)                      2A ?? ??
+    '       hl                      [$16]                      2A ?? ??
     '                               $16                        01+rr ?? ??
-    '       sp                      ($16)                   ED 7B ?? ??
+    '       sp                      [$16]                   ED 7B ?? ??
     '                               hl|ix|iy                rr F9
     '                               $16                        01+rr ?? ??
-    '       ix|iy                   ($16)                   rr 2A ?? ??
+    '       ix|iy                   [$16]                   rr 2A ?? ??
     '                               $16                     rr 21 ?? ??
-    '       (hl|ix+$8|iy+$8)        a|b|c|d|e|h|l           rr 70+r
+    '       [hl|ix+$8|iy+$8]        a|b|c|d|e|h|l           rr 70+r
     '                               $8                      rr 36 ??
-    '       (bc)                    a                          02+rr
-    '       (de)                    a                          02+rr
-    '       ($16)                   a                          32 ?? ??
+    '       [bc]                    a                          02+rr
+    '       [de]                    a                          02+rr
+    '       [$16]                   a                          32 ?? ??
     '                               bc                      ED 43 ?? ??
     '                               de                      ED 53 ?? ??
     '                               hl|ix|iy                rr 22 ?? ??
@@ -2086,11 +2086,11 @@ Private Function AssembleZ80( _
     'NOP                                                       00
     
     'OR     a|b|c|d|e|h|ixyh|l|ixyl                         rr B0+r
-    '       (hl|ix+$8|iy+$8)                                rr B6 ??
+    '       [hl|ix+$8|iy+$8]                                rr B6 ??
     '       $8                                                 F6 ??
     
-    'OUT    ($8)                    a                          D3 ??
-    '       (C)                     0                       ED 71
+    'OUT    [$8]                    a                          D3 ??
+    '       [C]                     0                       ED 71
     '                               a|b|c|d|e|h|l           ED 41+r*8
     
     'OUTD                                                   ED AB
@@ -2103,8 +2103,8 @@ Private Function AssembleZ80( _
     'PUSH   af|bc|de|hl|ix|iy                               rr C5+rr
     
     'RES    0-7                     a|b|c|d|e|h|l              CB 80+r+b
-    '                               (hl|ix+$8|iy+$8)        rr CB ?? 86+b
-    '       0-7     (ix+$8|iy+$8)   a|b|c|d|e|h|l           rr CB ?? 80+r+b
+    '                               [hl|ix+$8|iy+$8]        rr CB ?? 86+b
+    '       0-7     [ix+$8|iy+$8]   a|b|c|d|e|h|l           rr CB ?? 80+r+b
     
     'RET                                                       C9
     '       c|nc|m|p|z|nz|pe|po                                C0+f
@@ -2114,65 +2114,65 @@ Private Function AssembleZ80( _
     'RLA                                                       17
     
     'RL     a|b|c|d|e|h|l                                      CB 10+r
-    '       (hl|ix+$8|iy+$8)                                rr CB ?? 16
-    '       (ix+$8|iy+$8)           a|b|c|d|e|h|l           rr CB ?? 10+r
+    '       [hl|ix+$8|iy+$8]                                rr CB ?? 16
+    '       [ix+$8|iy+$8]           a|b|c|d|e|h|l           rr CB ?? 10+r
     
     'RLCA                                                      07
     
     'RLC    a|b|c|d|e|h|l                                      CB 00+r
-    '       (hl|ix+$8|iy+$8)                                rr CB ?? 06
-    '       (ix+$8|iy+$8)           a|b|c|d|e|h|l           rr CB ?? 00+r
+    '       [hl|ix+$8|iy+$8]                                rr CB ?? 06
+    '       [ix+$8|iy+$8]           a|b|c|d|e|h|l           rr CB ?? 00+r
     
     'RLD                                                    ED 6F
     'RRA                                                       1F
     
     'RR     a|b|c|d|e|h|l                                      CB 18+r
-    '       (hl|ix+$8|iy+$8)                                rr CB ?? 1E
-    '       (ix+$8|iy+$8)           a|b|c|d|e|h|l           rr CB ?? 18+r
+    '       [hl|ix+$8|iy+$8]                                rr CB ?? 1E
+    '       [ix+$8|iy+$8]           a|b|c|d|e|h|l           rr CB ?? 18+r
     
     'RRCA                                                      0F
     
     'RRC    a|b|c|d|e|h|l                                      CB 08+r
-    '       (hl|ix+$8|iy+$8)                                rr CB ?? 0E
-    '       (ix+$8|iy+$8)           a|b|c|d|e|h|l           rr CB ?? 08+r
+    '       [hl|ix+$8|iy+$8]                                rr CB ?? 0E
+    '       [ix+$8|iy+$8]           a|b|c|d|e|h|l           rr CB ?? 08+r
     
     'RRD                                                    ED 67
     
     'RST    0|08|10|18|20|28|30|38                             C7+num
     
     'SBC    a|b|c|d|e|h|ixyh|l|ixyl                         rr 98+r
-    '       (hl|ix+$8|iy+S8)                                rr 9E ??
+    '       [hl|ix+$8|iy+S8]                                rr 9E ??
     '       a                       $8                         DE ??
     '       hl                      bc|de|hl|sp             ED+rr
     
     'SCF                                                       37
     
     'SET    0-7                     a|b|c|d|e|h|l              CB C0+b+r
-    '                               (hl|ix+$8|iy+$8)        rr CB ?? C6+b+r
-    '       0-7     (ix+$8|iy+$8)   a|b|c|d|e|h|l           rr CB ?? C0+r+b
+    '                               [hl|ix+$8|iy+$8]        rr CB ?? C6+b+r
+    '       0-7     [ix+$8|iy+$8]   a|b|c|d|e|h|l           rr CB ?? C0+r+b
     
     'SLA    a|b|c|d|e|h|l                                      CB 20+r
-    '       (hl|ix+$8|iy+$8)                                rr CB ?? 26
-    '       (ix+$8|iy+$8)           a|b|c|d|e|h|l           rr CB ?? 20+r
+    '       [hl|ix+$8|iy+$8]                                rr CB ?? 26
+    '       [ix+$8|iy+$8]           a|b|c|d|e|h|l           rr CB ?? 20+r
     
     'SLL    a|b|c|d|e|h|l                                      CB 30+r
-    '       (hl|ix+$8|iy+$8)                                rr CB ?? 36
-    '       (ix+$8|iy+$8)           a|b|c|d|e|h|l           rr CB ?? 30+r
+    '       [hl|ix+$8|iy+$8]                                rr CB ?? 36
+    '       [ix+$8|iy+$8]           a|b|c|d|e|h|l           rr CB ?? 30+r
     
     'SRA    a|b|c|d|e|h|l                                      CB 28+r
-    '       (hl|ix+$8|iy+$8)                                rr CB ?? 2E
-    '       (ix+$8|iy+$8)           a|b|c|d|e|h|l           rr CB 28+r
+    '       [hl|ix+$8|iy+$8]                                rr CB ?? 2E
+    '       [ix+$8|iy+$8]           a|b|c|d|e|h|l           rr CB 28+r
     
     'SRL    a|b|c|d|e|h|l                                      CB 38+r
-    '       (hl|ix+$8|iy+$8)                                rr CB ?? 3E
-    '       (ix+$8|iy+$8)           a|b|c|d|e|h|l           rr CB ?? 38+r
+    '       [hl|ix+$8|iy+$8]                                rr CB ?? 3E
+    '       [ix+$8|iy+$8]           a|b|c|d|e|h|l           rr CB ?? 38+r
     
     'SUB    a|b|c|d|e|h|ixyh|l|ixyl                         rr 90+r
-    '       (hl|ix+$8|iy+$8)                                rr 96 ??
+    '       [hl|ix+$8|iy+$8]                                rr 96 ??
     '       $8                                                 D6 ??
     
     'XOR    a|b|c|d|e|h|ixyh|l|ixyl                         rr A8+r
-    '       (hl|ix+$8|iy+$8)                                rr AE ??
+    '       [hl|ix+$8|iy+$8]                                rr AE ??
     '       $8                                                 EE ??
     
     '----------------------------------------------------------------------------------
@@ -2197,7 +2197,7 @@ Private Function AssembleZ80( _
 iADC:
     'Add with Carry _
      ..................................................................................
-    '`ADC A, A|B|C|D|E|H|IXH|IYH|L|IXL|IYL|(HL|IX+$8|IY+$8)`
+    '`ADC A, A|B|C|D|E|H|IXH|IYH|L|IXL|IYL|[HL|IX+$8|IY+$8]`
     If TestParams(MASK_REG_A, MASK_REGS_ABCDEIXYHL_MEM_HLIXY) Then
         Let Opcode = X2 Or Y1 Or OpcodeZ_Register(Z80Param2.Mask)
     '`ADC A, $8`
@@ -2227,7 +2227,7 @@ iADD:
         'Even though this is the same opcode as above (the prefix denotes "IY"), _
          we still need to validate the params to ensure HL & IY are not mixed
         Let Opcode = OpcodeP_RegisterPair(Z80Param2.Token) Or Q1 Or Z1
-    '`ADD A, A|B|C|D|E|H|IXH|IYH|L|IYH|IYL|(HL|IX+$8|IY+$8)`
+    '`ADD A, A|B|C|D|E|H|IXH|IYH|L|IYH|IYL|[HL|IX+$8|IY+$8]`
     ElseIf TestParams(MASK_REG_A, MASK_REGS_ABCDEIXYHL_MEM_HLIXY) Then
         Let Opcode = X2 Or OpcodeZ_Register(Z80Param2.Mask)
     '`ADD A, $8`
@@ -2240,7 +2240,7 @@ iADD:
 iAND:
     'Bitwise AND: _
      ..................................................................................
-    '`AND A|B|C|D|E|H|IXH|IYH|L|IXL|IYL|(HL|IX+$8|IY+$8)`
+    '`AND A|B|C|D|E|H|IXH|IYH|L|IXL|IYL|[HL|IX+$8|IY+$8]`
     If TestParams(MASK_REGS_ABCDEIXYHL_MEM_HLIXY) Then
         Let Opcode = X2 Or Y4 Or OpcodeZ_Register(Z80Param1.Mask)
     '`AND $8`
@@ -2253,10 +2253,10 @@ iAND:
 iBIT:
     'Test a bit: _
      ..................................................................................
-    '`BIT 0-7, A|B|C|D|E|H|L|(HL|IX+$8|IY+$8)`
+    '`BIT 0-7, A|B|C|D|E|H|L|[HL|IX+$8|IY+$8]`
     If TestParams(MASK_VAL, MASK_REGS_ABCDEHL_MEM_HLIXY) Then
         Let Opcode = X1 Or OpcodeY_Bit(Z80Param1.Value) Or OpcodeZ_Register(Z80Param2.Mask)
-    '`BIT 0-7, (IX+$8|IY+$8), A|B|C|D|E|H|L` - Undocumented set bit & copy to register
+    '`BIT 0-7, [IX+$8|IY+$8], A|B|C|D|E|H|L` - Undocumented set bit & copy to register
     ElseIf TestParams(MASK_VAL, MASK_MEM_IXY, MASK_REGS_ABCDEHL) Then
         Let Opcode = X1 Or OpcodeY_Bit(Z80Param1.Value) Or OpcodeZ_Register(Z80Param3.Mask)
     'ERROR: Wrong parameters for Z80 instruction
@@ -2285,7 +2285,7 @@ iCCF:
     
 iCP:
     '..................................................................................
-    '`CP A|B|C|D|E|H|IXH|IYH|L|IXL|IYL|(HL|IX+$8|IY+$8)`
+    '`CP A|B|C|D|E|H|IXH|IYH|L|IXL|IYL|[HL|IX+$8|IY+$8]`
     If TestParams(MASK_REGS_ABCDEIXYHL_MEM_HLIXY) Then
         Let Opcode = X2 Or Y7 Or OpcodeZ_Register(Z80Param1.Mask)
     '`CP $8`
@@ -2339,7 +2339,7 @@ iDEC:
     '`DEC BC|DE|HL|SP|IX|IY`
     If TestParams(MASK_REGS_BC_DE_HL_SP_IXY) Then
         Let Opcode = OpcodeP_RegisterPair(Z80Param1.Token) Or Q1 Or Z3
-    '`DEC A|B|C|D|E|H|IXH|IYH|L|IXL|IYL|(HL|IX+$8|IY+$8)`
+    '`DEC A|B|C|D|E|H|IXH|IYH|L|IXL|IYL|[HL|IX+$8|IY+$8]`
     ElseIf TestParams(MASK_REGS_ABCDEIXYHL_MEM_HLIXY) Then
         Let Opcode = OpcodeY_Register(Z80Param1.Mask) Or Z5
     'ERROR: Wrong parameters for Z80 instruction
@@ -2422,7 +2422,7 @@ iIN:
     '`IN A, ($8)`
     If TestParams(MASK_REG_A, MASK_MEM_VAL) Then
         Let Opcode = X3 Or Y3 Or Z3
-    '`IN A|B|C|D|E|H|L, (C)`
+    '`IN A|B|C|D|E|H|L, [C]`
     ElseIf TestParams(MASK_REGS_ABCDEHL, MASK_MEM_BC) Then
         Let Prefix = &HED&
         Let Opcode = X1 Or OpcodeY_Register(Z80Param1.Mask)
@@ -2440,7 +2440,7 @@ iINC:
     '`INC BC|DE|HL|SP|IX|IY`
     If TestParams(MASK_REGS_BC_DE_HL_SP_IXY) Then
         Let Opcode = OpcodeP_RegisterPair(Z80Param1.Token) Or Z3
-    '`INC A|B|C|D|E|H|IXH|IYH|L|IXL|IYL|(HL|IX+$8|IY+$8)`
+    '`INC A|B|C|D|E|H|IXH|IYH|L|IXL|IYL|[HL|IX+$8|IY+$8]`
     ElseIf TestParams(MASK_REGS_ABCDEIXYHL_MEM_HLIXY) Then
         Let Opcode = OpcodeY_Register(Z80Param1.Mask) Or Z4
     'ERROR: Wrong parameters for Z80 instruction
@@ -2474,7 +2474,7 @@ iINIR:
 iJP:
     'Jump: _
      ..................................................................................
-    '`JP (HL|IX|IY)` or `JP HL|IX|IY` - indirect absolute jump
+    '`JP [HL|IX|IY]` or `JP HL|IX|IY` - indirect absolute jump
     If TestParams(MASK_MEM_HLIXY Or MASK_REGS_HL_IXY) Then
         Let Opcode = X3 Or P2 Or Q1 Or Z1
     '`JP NZ|Z|NC|C|PO|PE|P|M, $16` - conditional absolute jump
@@ -2506,55 +2506,55 @@ iLD:
     '`LD BC|DE|HL|SP|IX|IY, $16`
     If TestParams(MASK_REGS_BC_DE_HL_SP_IXY, MASK_VAL) Then
         Let Opcode = OpcodeP_RegisterPair(Z80Param1.Token) Or Z1: GoTo Output16
-    '`LD (BC), A`
+    '`LD [BC], A`
     ElseIf TestParams(MASK_MEM_BC, MASK_REG_A) Then
         Let Opcode = Z2
-    '`LD (DE), A`
+    '`LD [DE], A`
     ElseIf TestParams(MASK_MEM_DE, MASK_REG_A) Then
         Let Opcode = P1 Or Z2
-    '`LD A, (BC)`
+    '`LD A, [BC]`
     ElseIf TestParams(MASK_REG_A, MASK_MEM_BC) Then
         Let Opcode = Q1 Or Z2
-    '`LD A, (DE)`
+    '`LD A, [DE]`
     ElseIf TestParams(MASK_REG_A, MASK_MEM_DE) Then
         Let Opcode = P1 Or Q1 Or Z2
-    '`LD ($16), HL|IX|IY`
+    '`LD [$16], HL|IX|IY`
     ElseIf TestParams(MASK_MEM_VAL, MASK_REGS_HL_IXY) Then
         Let Opcode = P2 Or Z2: GoTo Output16
-    '`LD ($16), A`
+    '`LD [$16], A`
     ElseIf TestParams(MASK_MEM_VAL, MASK_REG_A) Then
         Let Opcode = P3 Or Z2: GoTo Output16
-    '`LD HL|IX|IY, ($16)`
+    '`LD HL|IX|IY, [$16]`
     ElseIf TestParams(MASK_REGS_HL_IXY, MASK_MEM_VAL) Then
         Let Opcode = P2 Or Q1 Or Z2: GoTo Output16
-    '`LD A, ($16)`
+    '`LD A, [$16]`
     ElseIf TestParams(MASK_REG_A, MASK_MEM_VAL) Then
         Let Opcode = P3 Or Q1 Or Z2: GoTo Output16
-    '`LD A|B|C|D|E|H|IXH|IYH|L|IXL|IYL|(HL|IX+$8|IY+$8), $8`
+    '`LD A|B|C|D|E|H|IXH|IYH|L|IXL|IYL|[HL|IX+$8|IY+$8], $8`
     ElseIf TestParams(MASK_REGS_ABCDEIXYHL_MEM_HLIXY, MASK_VAL) Then
         Let Opcode = OpcodeY_Register(Z80Param1.Mask) Or Z6
     'You can't combine IX and IY use in the same opcode, there's only one prefix, _
      so these two following checks ensure that IX & IY are not used together
-    '`LD A|B|C|D|E|H|IXH|L|IXL(HL|IX+$8), A|B|C|D|E|H|IXH|L|IXL`
+    '`LD A|B|C|D|E|H|IXH|L|IXL[HL|IX+$8], A|B|C|D|E|H|IXH|L|IXL`
     ElseIf TestParams( _
         MASK_REGS_ABCDEHL Or MASK_REGS_IXHL Or MASK_MEM_HL Or MASK_MEM_IX, _
         MASK_REGS_ABCDEHL Or MASK_REGS_IXHL _
     ) Then
         Let Opcode = X1 Or OpcodeY_Register(Z80Param1.Mask) Or OpcodeZ_Register(Z80Param2.Mask)
-    '`LD A|B|C|D|E|H|IYH|L|IYL(HL|IY+$8), A|B|C|D|E|H|IYH|L|IYL`
+    '`LD A|B|C|D|E|H|IYH|L|IYL[HL|IY+$8], A|B|C|D|E|H|IYH|L|IYL`
     ElseIf TestParams( _
         MASK_REGS_ABCDEHL Or MASK_REGS_IYHL Or MASK_MEM_HL Or MASK_MEM_IY, _
         MASK_REGS_ABCDEHL Or MASK_REGS_IYHL _
     ) Then
         Let Opcode = X1 Or OpcodeY_Register(Z80Param1.Mask) Or OpcodeZ_Register(Z80Param2.Mask)
-    'You can't have `LD (IX+$8), (IX+$8)!
-    '`LD A|B|C|D|E|H|IXH|L|IXL, A|B|C|D|E|H|IXH|L|IXL|(HL|IX+$8)`
+    'You can't have `LD [IX+$8], [IX+$8]!
+    '`LD A|B|C|D|E|H|IXH|L|IXL, A|B|C|D|E|H|IXH|L|IXL|[HL|IX+$8]`
     ElseIf TestParams( _
         MASK_REGS_ABCDEHL Or MASK_REGS_IXHL, _
         MASK_REGS_ABCDEHL Or MASK_REGS_IXHL Or MASK_MEM_HL Or MASK_MEM_IX _
     ) Then
         Let Opcode = X1 Or OpcodeY_Register(Z80Param1.Mask) Or OpcodeZ_Register(Z80Param2.Mask)
-    '`LD A|B|C|D|E|H|IYH|L|IYL, A|B|C|D|E|H|IYH|L|IYL|(HL|IY+$8)`
+    '`LD A|B|C|D|E|H|IYH|L|IYL, A|B|C|D|E|H|IYH|L|IYL|[HL|IY+$8]`
     ElseIf TestParams( _
         MASK_REGS_ABCDEHL Or MASK_REGS_IYHL, _
         MASK_REGS_ABCDEHL Or MASK_REGS_IYHL Or MASK_MEM_HL Or MASK_MEM_IY _
@@ -2563,7 +2563,7 @@ iLD:
     '`LD SP, HL|IX|IY`
     ElseIf TestParams(MASK_REG_SP, MASK_REGS_HL_IXY) Then
         Let Opcode = X3 Or P3 Or Q1 Or Z1
-    '`LD ($16), BC|DE|SP`
+    '`LD [$16], BC|DE|SP`
     ElseIf TestParams(MASK_MEM_VAL, MASK_REGS_BC_DE_SP) Then
         Let Prefix = &HED&
         Let Opcode = X1 Or OpcodeP_RegisterPair(Z80Param2.Token) Or Z3: GoTo Output16
@@ -2634,7 +2634,7 @@ iNOP:
 iOR:
     'Bitwise OR: _
      ..................................................................................
-    '`OR A|B|C|D|E|H|IXH|IYH|L|IXL|IYL|(HL|IX+$8|IY+$8)`
+    '`OR A|B|C|D|E|H|IXH|IYH|L|IXL|IYL|[HL|IX+$8|IY+$8]`
     If TestParams(MASK_REGS_ABCDEIXYHL_MEM_HLIXY) Then
         Let Opcode = X2 Or Y6 Or OpcodeZ_Register(Z80Param1.Mask)
     '`OR $8`
@@ -2647,14 +2647,14 @@ iOR:
 iOUT:
     'Write to port: _
      ..................................................................................
-    '`OUT ($8), A`
+    '`OUT [$8], A`
     If TestParams(MASK_MEM_VAL, MASK_REG_A) Then
         Let Opcode = X3 Or Y2 Or Z3
-    '`OUT (C), A|B|C|D|E|H|L`
+    '`OUT [C], A|B|C|D|E|H|L`
     ElseIf TestParams(MASK_MEM_BC, MASK_REGS_ABCDEHL) Then
         Let Prefix = &HED&
         Let Opcode = X1 Or OpcodeY_Register(Z80Param2.Mask) Or Z1
-    '`OUT (C), 0`
+    '`OUT [C], 0`
     ElseIf TestParams(MASK_MEM_BC, MASK_VAL) Then
         Let Prefix = &HED&
         Let Opcode = X1 Or Y6 Or Z1
@@ -2709,10 +2709,10 @@ iPUSH:
 iRES:
     'Reset a bit: _
      ..................................................................................
-    '`RES 0-7 A|B|C|D|E|H|L|(HL|IX+$8|IY+$8)`
+    '`RES 0-7 A|B|C|D|E|H|L|[HL|IX+$8|IY+$8]`
     If TestParams(MASK_VAL, MASK_REGS_ABCDEHL_MEM_HLIXY) Then
         Let Opcode = X2 Or OpcodeY_Bit(Z80Param1.Value) Or OpcodeZ_Register(Z80Param2.Mask)
-    '`RES 0-7, (IX+$8|IY+$8), A|B|C|D|E|H|L` - undocumented RES memory & register
+    '`RES 0-7, [IX+$8|IY+$8], A|B|C|D|E|H|L` - undocumented RES memory & register
     ElseIf TestParams(MASK_VAL, MASK_MEM_IXY, MASK_REGS_ABCDEHL) Then
         Let Opcode = X2 Or OpcodeY_Bit(Z80Param1.Value) Or OpcodeZ_Register(Z80Param3.Mask)
     'ERROR: Wrong parameters for Z80 instruction
@@ -2755,10 +2755,10 @@ iRLA:
     
 iRL:
     '..................................................................................
-    '`RL A|B|C|D|E|H|L|(HL|IX+$8|IY+$8)`
+    '`RL A|B|C|D|E|H|L|[HL|IX+$8|IY+$8]`
     If TestParams(MASK_REGS_ABCDEHL_MEM_HLIXY) Then
         Let Opcode = Y2 Or OpcodeZ_Register(Z80Param1.Mask)
-    '`RL (IX+$8|IY+$8), A|B|C|D|E|H|L` - undocumented RL memory and copy to register
+    '`RL [IX+$8|IY+$8], A|B|C|D|E|H|L` - undocumented RL memory and copy to register
     ElseIf TestParams(MASK_MEM_IXY, MASK_REGS_ABCDEHL) Then
         Let Opcode = Y2 Or OpcodeZ_Register(Z80Param2.Mask)
     'ERROR: Wrong parameters for Z80 instruction
@@ -2774,10 +2774,10 @@ iRLCA:
     
 iRLC:
     '..................................................................................
-    '`RLC A|B|C|D|E|H|L|(HL|IX+$8|IY+$8)`
+    '`RLC A|B|C|D|E|H|L|[HL|IX+$8|IY+$8]`
     If TestParams(MASK_REGS_ABCDEHL_MEM_HLIXY) Then
         Let Opcode = OpcodeZ_Register(Z80Param1.Mask)
-    '`RLC (IX+$8|IY+$8), A|B|C|D|E|H|L` - undocumented RLC memory and copy to register
+    '`RLC [IX+$8|IY+$8], A|B|C|D|E|H|L` - undocumented RLC memory and copy to register
     ElseIf TestParams(MASK_MEM_IXY, MASK_REGS_ABCDEHL) Then
         Let Opcode = OpcodeZ_Register(Z80Param2.Mask)
     'ERROR: Wrong parameters for Z80 instruction
@@ -2799,10 +2799,10 @@ iRRA:
     
 iRR:
     '..................................................................................
-    '`RR A|B|C|D|E|H|L|(HL|IX+$8|IY+$8)`
+    '`RR A|B|C|D|E|H|L|[HL|IX+$8|IY+$8]`
     If TestParams(MASK_REGS_ABCDEHL_MEM_HLIXY) Then
         Let Opcode = Y3 Or OpcodeZ_Register(Z80Param1.Mask)
-    '`RR (IX+$8|IY+$8), A|B|C|D|E|H|L` - undocumented RR memory and copy to register
+    '`RR [IX+$8|IY+$8], A|B|C|D|E|H|L` - undocumented RR memory and copy to register
     ElseIf TestParams(MASK_MEM_IXY, MASK_REGS_ABCDEHL) Then
         Let Opcode = Y3 Or OpcodeZ_Register(Z80Param2.Mask)
     'ERROR: Wrong parameters for Z80 instruction
@@ -2818,10 +2818,10 @@ iRRCA:
 
 iRRC:
     '..................................................................................
-    '`RRC A|B|C|D|E|H|L|(HL|IX+$8|IY+$8)`
+    '`RRC A|B|C|D|E|H|L|[HL|IX+$8|IY+$8]`
     If TestParams(MASK_REGS_ABCDEHL_MEM_HLIXY) Then
         Let Opcode = Y1 Or OpcodeZ_Register(Z80Param1.Mask)
-    '`RRC (IX+$8|IY+$8), A|B|C|D|E|H|L` - undocumented RRC memory and copy to register
+    '`RRC [IX+$8|IY+$8], A|B|C|D|E|H|L` - undocumented RRC memory and copy to register
     ElseIf TestParams(MASK_MEM_IXY, MASK_REGS_ABCDEHL) Then
         Let Opcode = Y1 Or OpcodeZ_Register(Z80Param2.Mask)
     'ERROR: Wrong parameters for Z80 instruction
@@ -2848,7 +2848,7 @@ iRST:
     
 iSBC:
     '..................................................................................
-    '`SBC A, A|B|C|D|E|H|IXH|IYH|L|IXL|IYL|(HL|IX+$8|IY+$8)`
+    '`SBC A, A|B|C|D|E|H|IXH|IYH|L|IXL|IYL|[HL|IX+$8|IY+$8]`
     If TestParams(MASK_REG_A, MASK_REGS_ABCDEIXYHL_MEM_HLIXY) Then
         Let Opcode = X2 Or Y3 Or OpcodeZ_Register(Z80Param2.Mask)
     '`SBC A, $8`
@@ -2871,10 +2871,10 @@ iSCF:
 iSET:
     'Set a bit: _
      ..................................................................................
-    '`SET 0-7 A|B|C|D|E|H|L|(HL|IX+$8|IY+$8)`
+    '`SET 0-7 A|B|C|D|E|H|L|[HL|IX+$8|IY+$8]`
     If TestParams(MASK_VAL, MASK_REGS_ABCDEHL_MEM_HLIXY) Then
         Let Opcode = X3 Or OpcodeY_Bit(Z80Param1.Value) Or OpcodeZ_Register(Z80Param2.Mask)
-    '`SET 0-7, (IX+$8|IY+$8), A|B|C|D|E|H|L` - undocumented SET memory & register
+    '`SET 0-7, [IX+$8|IY+$8], A|B|C|D|E|H|L` - undocumented SET memory & register
     ElseIf TestParams(MASK_VAL, MASK_MEM_IXY, MASK_REGS_ABCDEHL) Then
         Let Opcode = X3 Or OpcodeY_Bit(Z80Param1.Value) Or OpcodeZ_Register(Z80Param3.Mask)
     'ERROR: Wrong parameters for Z80 instruction
@@ -2884,10 +2884,10 @@ iSET:
     
 iSLA:
     '..................................................................................
-    '`SLA A|B|C|D|E|H|L|(HL|IX+$8|IY+$8)`
+    '`SLA A|B|C|D|E|H|L|[HL|IX+$8|IY+$8]`
     If TestParams(MASK_REGS_ABCDEHL_MEM_HLIXY) Then
         Let Opcode = Y4 Or OpcodeZ_Register(Z80Param1.Mask)
-    '`SLA (IX+$8|IY+$8), A|B|C|D|E|H|L` - undocumented SLA memory and copy to register
+    '`SLA [IX+$8|IY+$8], A|B|C|D|E|H|L` - undocumented SLA memory and copy to register
     ElseIf TestParams(MASK_MEM_IXY, MASK_REGS_ABCDEHL) Then
         Let Opcode = Y4 Or OpcodeZ_Register(Z80Param2.Mask)
     'ERROR: Wrong parameters for Z80 instruction
@@ -2897,10 +2897,10 @@ iSLA:
 
 iSRA:
     '..................................................................................
-    '`SRA A|B|C|D|E|H|L|(HL|IX+$8|IY+$8)`
+    '`SRA A|B|C|D|E|H|L|[HL|IX+$8|IY+$8]`
     If TestParams(MASK_REGS_ABCDEHL_MEM_HLIXY) Then
         Let Opcode = Y5 Or OpcodeZ_Register(Z80Param1.Mask)
-    '`SRA (IX+$8|IY+$8), A|B|C|D|E|H|L` - undocumented SRA memory and copy to register
+    '`SRA [IX+$8|IY+$8], A|B|C|D|E|H|L` - undocumented SRA memory and copy to register
     ElseIf TestParams(MASK_MEM_IXY, MASK_REGS_ABCDEHL) Then
         Let Opcode = Y5 Or OpcodeZ_Register(Z80Param2.Mask)
     'ERROR: Wrong parameters for Z80 instruction
@@ -2910,10 +2910,10 @@ iSRA:
     
 iSLL:
     '..................................................................................
-    '`SLL A|B|C|D|E|H|L|(HL|IX+$8|IY+$8)`
+    '`SLL A|B|C|D|E|H|L|[HL|IX+$8|IY+$8]`
     If TestParams(MASK_REGS_ABCDEHL_MEM_HLIXY) Then
         Let Opcode = Y6 Or OpcodeZ_Register(Z80Param1.Mask)
-    '`SLL (IX+$8|IY+$8), A|B|C|D|E|H|L` - undocumented SLL memory and copy to register
+    '`SLL [IX+$8|IY+$8], A|B|C|D|E|H|L` - undocumented SLL memory and copy to register
     ElseIf TestParams(MASK_MEM_IXY, MASK_REGS_ABCDEHL) Then
         Let Opcode = Y6 Or OpcodeZ_Register(Z80Param2.Mask)
     'ERROR: Wrong parameters for Z80 instruction
@@ -2923,10 +2923,10 @@ iSLL:
     
 iSRL:
     '..................................................................................
-    '`SRL A|B|C|D|E|H|L|(HL|IX+$8|IY+$8)`
+    '`SRL A|B|C|D|E|H|L|[HL|IX+$8|IY+$8]`
     If TestParams(MASK_REGS_ABCDEHL_MEM_HLIXY) Then
         Let Opcode = Y7 Or OpcodeZ_Register(Z80Param1.Mask)
-    '`SRL (IX+$8|IY+$8), A|B|C|D|E|H|L` - undocumented SRL memory and copy to register
+    '`SRL [IX+$8|IY+$8], A|B|C|D|E|H|L` - undocumented SRL memory and copy to register
     ElseIf TestParams(MASK_MEM_IXY, MASK_REGS_ABCDEHL) Then
         Let Opcode = Y7 Or OpcodeZ_Register(Z80Param2.Mask)
     'ERROR: Wrong parameters for Z80 instruction
@@ -2937,7 +2937,7 @@ iSRL:
 iSUB:
     'Subtract: _
      ..................................................................................
-    '`SUB A|B|C|D|E|H|IXH|IYH|L|IXL|IYL|(HL|IX+$8|IY+$8)`
+    '`SUB A|B|C|D|E|H|IXH|IYH|L|IXL|IYL|[HL|IX+$8|IY+$8]`
     If TestParams(MASK_REGS_ABCDEIXYHL_MEM_HLIXY) Then
         Let Opcode = X2 Or Y2 Or OpcodeZ_Register(Z80Param1.Mask)
     '`SUB $8`
@@ -2950,7 +2950,7 @@ iSUB:
 iXOR:
     'Bitwise XOR: _
      ..................................................................................
-    '`XOR A|B|C|D|E|H|IXH|IYH|L|IXL|IYL|(HL|IX+$8|IY+$8)`
+    '`XOR A|B|C|D|E|H|IXH|IYH|L|IXL|IYL|[HL|IX+$8|IY+$8]`
     If TestParams(MASK_REGS_ABCDEIXYHL_MEM_HLIXY) Then
         Let Opcode = X2 Or Y5 Or OpcodeZ_Register(Z80Param1.Mask)
     '`XOR $8`
@@ -3293,15 +3293,15 @@ Private Function ParseValue( _
     '----------------------------------------------------------------------------------
     'A nested Expression?
     '----------------------------------------------------------------------------------
-    If File.TokenKind = TOKEN_CHUNK_OPEN Then
-        'Move over the open brace. If the file ends here, it's an error
+    If File.TokenKind = TOKEN_PARENS_OPEN Then
+        'Move over the open parentheses. If the file ends here, it's an error
         If Not File.NextToken Then Call RaiseError(OZ80_ERROR_FILE_END): GoTo ErrOut
         
         'Parse the nested Expression and return its Value as our own
         If ParseExpression(ReturnValue) Then GoTo ErrOut
         
         'The nested Expression has to be closed
-        If File.TokenKind <> TOKEN_CHUNK_CLOSE Then
+        If File.TokenKind <> TOKEN_PARENS_CLOSE Then
             Call RaiseError(OZ80_ERROR_EXPECTED_BRACKET)
             GoTo ErrOut
         End If
@@ -3656,19 +3656,19 @@ Private Function ParamToString( _
         Let ParamToString = "(HL)"
     ElseIf Param.Mask = MASK_MEM_IX Then
         If Param.Value >= 0 _
-            Then Let ParamToString = "(IX+$" & oz80.HexStr8(Param.Value) & ")" _
-            Else Let ParamToString = "(IX)"
+            Then Let ParamToString = "[IX+$" & oz80.HexStr8(Param.Value) & "]" _
+            Else Let ParamToString = "[IX]"
     ElseIf Param.Mask = MASK_MEM_IY Then
         If Param.Value >= 0 _
-            Then Let ParamToString = "(IY+$" & oz80.HexStr8(Param.Value) & ")" _
-            Else Let ParamToString = "(IY)"
-    ElseIf Param.Mask = MASK_MEM_BC Then Let ParamToString = "(BC)"
-    ElseIf Param.Mask = MASK_MEM_DE Then Let ParamToString = "(DE)"
-    ElseIf Param.Mask = MASK_MEM_SP Then Let ParamToString = "(SP)"
+            Then Let ParamToString = "[IY+$" & oz80.HexStr8(Param.Value) & "]" _
+            Else Let ParamToString = "[IY]"
+    ElseIf Param.Mask = MASK_MEM_BC Then Let ParamToString = "[BC]"
+    ElseIf Param.Mask = MASK_MEM_DE Then Let ParamToString = "[DE]"
+    ElseIf Param.Mask = MASK_MEM_SP Then Let ParamToString = "[SP]"
     ElseIf Param.Mask = MASK_MEM_VAL Then
         If Param.Value > 255 _
-            Then Let ParamToString = "($" & oz80.HexStr16(Param.Value) & ")" _
-            Else Let ParamToString = "($" & oz80.HexStr8(Param.Value) & ")"
+            Then Let ParamToString = "[$" & oz80.HexStr16(Param.Value) & "]" _
+            Else Let ParamToString = "[$" & oz80.HexStr8(Param.Value) & "]"
     Else
         Let ParamToString = oz80.TokenName(Param.Token)
     End If

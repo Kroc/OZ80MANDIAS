@@ -2,16 +2,16 @@
 `OBJECT: UNKNOWN
 
 PROC    :_8218                                  SECTION ::objects {
-	res	5,(ix+#object.flags)
-	ld	(ix+#object.width),$0c
-	ld	(ix+#object.height),$10
+	res	5,[ix+#object.flags]
+	ld	[ix+#object.width],$0c
+	ld	[ix+#object.height],$10
 	ld	hl,$0202
-	ld	($.TEMP6),hl
+	ld	[$.TEMP6],hl
 	call	:detectCollisionWithSonic
 	call	nc,:_35fd
-	ld	l,(ix+#object.Xspeed.lo)
-	ld	h,(ix+#object.Xspeed.hi)
-	ld	a,(ix+#object.Xdirection)
+	ld	l,[ix+#object.Xspeed.lo]
+	ld	h,[ix+#object.Xspeed.hi]
+	ld	a,[ix+#object.Xdirection]
 	ld	de,$0002
 	ld	c,$00
 	and	a
@@ -20,12 +20,12 @@ PROC    :_8218                                  SECTION ::objects {
 	ld	de,$fffe
 ._1	add	hl,de
 	adc	a,c
-	ld	(ix+#object.Xspeed.lo),l
-	ld	(ix+#object.Xspeed.hi),h
-	ld	(ix+#object.Xdirection),a
-	ld	l,(ix+#object.Yspeed.lo)
-	ld	h,(ix+#object.Yspeed.hi)
-	ld	a,(ix+#object.Ydirection)
+	ld	[ix+#object.Xspeed.lo],l
+	ld	[ix+#object.Xspeed.hi],h
+	ld	[ix+#object.Xdirection],a
+	ld	l,[ix+#object.Yspeed.lo]
+	ld	h,[ix+#object.Yspeed.hi]
+	ld	a,[ix+#object.Ydirection]
 	ld	de,$0020
 	add	hl,de
 	adc	a,$00
@@ -35,15 +35,15 @@ PROC    :_8218                                  SECTION ::objects {
 	jr	c,._2
 	ld	hl,$0300
 	ld	c,$00
-._2	ld	(ix+#object.Yspeed.lo),l
-	ld	(ix+#object.Yspeed.hi),h
-	ld	(ix+#object.Ydirection),c
-	ld	a,($.FRAMECOUNT)
+._2	ld	[ix+#object.Yspeed.lo],l
+	ld	[ix+#object.Yspeed.hi],h
+	ld	[ix+#object.Ydirection],c
+	ld	a,[$.FRAMECOUNT]
 	and	$01
-	add	a,(ix+#object.unknown11)
-	ld	(ix+#object.unknown11),a
-	ld	a,(ix+#object.unknown11)
-	cp	(ix+$12)
+	add	a,[ix+#object.unknown11]
+	ld	[ix+#object.unknown11],a
+	ld	a,[ix+#object.unknown11]
+	cp	[ix+$12]
 	jr	nc,._3
 	ld	bc,._82c1
 	ld	de,._82cd
@@ -51,28 +51,28 @@ PROC    :_8218                                  SECTION ::objects {
 	ret
 	
 ._3	jr	nz,._4
-	ld	a,($.FRAMECOUNT)
+	ld	a,[$.FRAMECOUNT]
 	and	$01
 	ret	z
-	ld	(ix+#object.unknown16),$00
+	ld	[ix+#object.unknown16],$00
 	ld	a,$01
 	rst	:rst_playSFX
         
 ._4	xor	a;zero
-	ld	(ix+#object.Xspeed.lo),a;zero
-	ld	(ix+#object.Xspeed.hi),a;zero
-	ld	(ix+#object.Xdirection),a;zero
+	ld	[ix+#object.Xspeed.lo],a;zero
+	ld	[ix+#object.Xspeed.hi],a;zero
+	ld	[ix+#object.Xdirection],a;zero
 	
         ld	bc,._82c6
 	ld	de,:_a3bb
 	call	:_7c41
 	
-        ld	a,(ix+$12)
+        ld	a,[ix+$12]
 	add	a,$12
-	cp	(ix+#object.unknown11)
+	cp	[ix+#object.unknown11]
 	ret	nc
 	
-        ld	(ix+#object.type),$FF	        `remove object?
+        ld	[ix+#object.type],$FF	        `remove object?
 	ret
 
 ._82c1  BYTE $00, $04, $01, $04, $FF

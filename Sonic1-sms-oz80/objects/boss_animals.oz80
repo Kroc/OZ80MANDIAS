@@ -2,22 +2,22 @@
 `OBJECT: free animal - bird
 
 PROC    :doObjectCode_boss_freeBird             SECTION ::objects {
-	res	5,(ix+#object.flags)
-	ld	(ix+#object.width), 12
-	ld	(ix+#object.height),16
-	bit	7,(ix+#object.flags)
+	res	5,[ix+#object.flags]
+	ld	[ix+#object.width], 12
+	ld	[ix+#object.height],16
+	bit	7,[ix+#object.flags]
 	jr	z,._1
-	ld	(ix+#object.Yspeed.lo),$00
-	ld	(ix+#object.Yspeed.hi),$fd
-	ld	(ix+#object.Ydirection),$ff
+	ld	[ix+#object.Yspeed.lo],$00
+	ld	[ix+#object.Yspeed.hi],$fd
+	ld	[ix+#object.Ydirection],$ff
 ._1	ld	de,$0012
-	ld	a,($.LEVEL_SOLIDITY)
+	ld	a,[$.LEVEL_SOLIDITY]
 	cp	$03
 	jr	nz,._2
 	ld	de,$0038
-._2	ld	l,(ix+#object.Yspeed.lo)
-	ld	h,(ix+#object.Yspeed.hi)
-	ld	a,(ix+#object.Ydirection)
+._2	ld	l,[ix+#object.Yspeed.lo]
+	ld	h,[ix+#object.Yspeed.hi]
+	ld	a,[ix+#object.Ydirection]
 	add	hl,de
 	adc	a,$00
 	ld	c,a
@@ -27,19 +27,19 @@ PROC    :doObjectCode_boss_freeBird             SECTION ::objects {
 	jr	c,._3
 	ld	hl,$0200
 	ld	c,$00
-._3	ld	(ix+#object.Yspeed.lo),l
-	ld	(ix+#object.Yspeed.hi),h
-	ld	(ix+#object.Ydirection),c
+._3	ld	[ix+#object.Yspeed.lo],l
+	ld	[ix+#object.Yspeed.hi],h
+	ld	[ix+#object.Ydirection],c
 	ld	hl,$FE00
-	ld	a,($.LEVEL_SOLIDITY)
+	ld	a,[$.LEVEL_SOLIDITY]
 	cp	$03
 	jr	nz,._4
 	ld	hl,$FE80
-._4	ld	(ix+#object.Xspeed.lo),l
-	ld	(ix+#object.Xspeed.hi),h
-	ld	(ix+#object.Xdirection),$ff
+._4	ld	[ix+#object.Xspeed.lo],l
+	ld	[ix+#object.Xspeed.hi],h
+	ld	[ix+#object.Xdirection],$ff
 	ld	bc,._7629
-	ld	a,($.LEVEL_SOLIDITY)
+	ld	a,[$.LEVEL_SOLIDITY]
 	and	a
 	jr	z,._5
 	ld	bc,._762e
@@ -49,15 +49,15 @@ PROC    :doObjectCode_boss_freeBird             SECTION ::objects {
 ._5	ld	de,._7638
 	call	:_7c41
         
-._7612	ld	l,(ix+#object.X.lo)
-	ld	h,(ix+#object.X.hi)
+._7612	ld	l,[ix+#object.X.lo]
+	ld	h,[ix+#object.X.hi]
 	ld	de,$0010
 	add	hl,de
-	ld	de,($.CAMERA_X)
+	ld	de,[$.CAMERA_X]
 	and	a
 	sbc	hl,de
 	ret	nc
-	ld	(ix+#object.type),$FF	`remove object?
+	ld	[ix+#object.type],$FF	`remove object?
 	ret
 
 ._7629  BYTE $00, $02, $01, $02, $ff
@@ -93,11 +93,11 @@ PROC    :doObjectCode_boss_freeBird             SECTION ::objects {
 `OBJECT: free animal - rabbit
 
 PROC    :doObjectCode_boss_freeRabbit           SECTION ::objects {
-	res	5,(ix+#object.flags)
-	ld	(ix+#object.width), 12
-	ld	(ix+#object.height),32
+	res	5,[ix+#object.flags]
+	ld	[ix+#object.width], 12
+	ld	[ix+#object.height],32
 	ld	hl,:_7760
-	ld	a,($.LEVEL_SOLIDITY)
+	ld	a,[$.LEVEL_SOLIDITY]
 	and	a
 	jr	z,._1
 	ld	hl,:_777b
@@ -107,21 +107,21 @@ PROC    :doObjectCode_boss_freeRabbit           SECTION ::objects {
 	dec	a
 	jr	z,._1
 	ld	hl,:_77b1
-._1	ld	(ix+#object.spriteLayout.lo),l
-	ld	(ix+#object.spriteLayout.hi),h
-	bit	7,(ix+#object.flags)
+._1	ld	[ix+#object.spriteLayout.lo],l
+	ld	[ix+#object.spriteLayout.hi],h
+	bit	7,[ix+#object.flags]
 	jr	z,._4
         
 	xor	a;zero
-	ld	(ix+#object.Yspeed.lo),a;zero
-	ld	(ix+#object.Yspeed.hi),$01
-	ld	(ix+#object.Ydirection),a;zero
-	ld	(ix+#object.Xspeed.lo),a;zero
-	ld	(ix+#object.Xspeed.hi),a;zero
-	ld	(ix+#object.Xdirection),a;zero
+	ld	[ix+#object.Yspeed.lo],a;zero
+	ld	[ix+#object.Yspeed.hi],$01
+	ld	[ix+#object.Ydirection],a;zero
+	ld	[ix+#object.Xspeed.lo],a;zero
+	ld	[ix+#object.Xspeed.hi],a;zero
+	ld	[ix+#object.Xdirection],a;zero
         
 	ld	hl,:_7752
-	ld	a,($.LEVEL_SOLIDITY)
+	ld	a,[$.LEVEL_SOLIDITY]
 	ld	c,a
 	and	a
 	jr	z,._2
@@ -132,10 +132,10 @@ PROC    :doObjectCode_boss_freeRabbit           SECTION ::objects {
 	dec	a
 	jr	z,._2
 	ld	hl,:_77a3
-._2	ld	(ix+#object.spriteLayout.lo),l
-	ld	(ix+#object.spriteLayout.hi),h
-	inc	(ix+#object.unknown11)
-	ld	a,(ix+#object.unknown11)
+._2	ld	[ix+#object.spriteLayout.lo],l
+	ld	[ix+#object.spriteLayout.hi],h
+	inc	[ix+#object.unknown11]
+	ld	a,[ix+#object.unknown11]
 	cp	$08
 	ret	c
 	ld	hl,$fffc
@@ -143,12 +143,12 @@ PROC    :doObjectCode_boss_freeRabbit           SECTION ::objects {
 	and	a
 	jr	z,._3
 	ld	hl,$fffe
-._3	ld	(ix+#object.Yspeed.lo),$00
-	ld	(ix+#object.Yspeed.hi),l
-	ld	(ix+#object.Ydirection),h
-._4	ld	l,(ix+#object.Yspeed.lo)
-	ld	h,(ix+#object.Yspeed.hi)
-	ld	a,(ix+#object.Ydirection)
+._3	ld	[ix+#object.Yspeed.lo],$00
+	ld	[ix+#object.Yspeed.hi],l
+	ld	[ix+#object.Ydirection],h
+._4	ld	l,[ix+#object.Yspeed.lo]
+	ld	h,[ix+#object.Yspeed.hi]
+	ld	a,[ix+#object.Ydirection]
 	ld	de,$0028
 	add	hl,de
 	adc	a,$00
@@ -159,13 +159,13 @@ PROC    :doObjectCode_boss_freeRabbit           SECTION ::objects {
 	jr	c,._5
 	ld	hl,$0200
 	ld	c,$00
-._5	ld	(ix+#object.Yspeed.lo),l
-	ld	(ix+#object.Yspeed.hi),h
-	ld	(ix+#object.Ydirection),c
-	ld	(ix+#object.Xspeed.lo),$80
-	ld	(ix+#object.Xspeed.hi),$fe
-	ld	(ix+#object.Xdirection),$ff
-	ld	(ix+#object.unknown11),$00
+._5	ld	[ix+#object.Yspeed.lo],l
+	ld	[ix+#object.Yspeed.hi],h
+	ld	[ix+#object.Ydirection],c
+	ld	[ix+#object.Xspeed.lo],$80
+	ld	[ix+#object.Xspeed.hi],$fe
+	ld	[ix+#object.Xdirection],$ff
+	ld	[ix+#object.unknown11],$00
 	jp	:doObjectCode_boss_freeBird._7612
         
         `sprite layout

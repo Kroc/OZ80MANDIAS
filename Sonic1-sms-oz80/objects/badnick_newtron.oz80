@@ -2,67 +2,67 @@
 `OBJECT: badnick - newtron
 
 PROC    :doObjectCode_badnick_newtron           SECTION ::objects {
-	set	5,(ix+#object.flags)
-	ld	(ix+#object.width), 12
-	ld	(ix+#object.height),20
-	ld	a,(ix+#object.unknown11)
+	set	5,[ix+#object.flags]
+	ld	[ix+#object.width], 12
+	ld	[ix+#object.height],20
+	ld	a,[ix+#object.unknown11]
 	cp	$02
 	jr	z,._1
 	and	a
 	jr	nz,._4
-._1	ld	a,($.FRAMECOUNT)
+._1	ld	a,[$.FRAMECOUNT]
 	and	$01
 	jr	z,._2
 	ld	bc,$0000
 	jr	._3
 ._2	ld	bc,._6fed
-._3	inc	(ix+#object.unknown17)
-	ld	a,(ix+#object.unknown17)
+._3	inc	[ix+#object.unknown17]
+	ld	a,[ix+#object.unknown17]
 	cp	$3c
 	jp	c,._7
-	ld	(ix+#object.unknown17),$00
-	inc	(ix+#object.unknown11)
+	ld	[ix+#object.unknown17],$00
+	inc	[ix+#object.unknown11]
 	jp	._7
 	
 ._4	cp	$01
 	jp	nz,._6
-	inc	(ix+#object.unknown17)
-	ld	a,(ix+#object.unknown17)
+	inc	[ix+#object.unknown17]
+	ld	a,[ix+#object.unknown17]
 	cp	$64
 	jr	nz,._5
 	call	:findEmptyObject
 	jp	c,._5
 	push	bc
-	ld	e,(ix+#object.X.lo)
-	ld	d,(ix+#object.X.hi)
-	ld	c,(ix+#object.Y.lo)
-	ld	b,(ix+#object.Y.hi)
+	ld	e,[ix+#object.X.lo]
+	ld	d,[ix+#object.X.hi]
+	ld	c,[ix+#object.Y.lo]
+	ld	b,[ix+#object.Y.hi]
 	push	ix
 	push	hl
 	pop	ix
         
 	xor	a;zero  			`set A to 0
-	ld	(ix+#object.type),$0D	        `unknown object
-	ld	(ix+#object.Xsubpixel),a;zero
-	ld	(ix+#object.X.lo),e
-	ld	(ix+#object.X.hi),d
-	ld	(ix+#object.Ysubpixel),a;zero
+	ld	[ix+#object.type],$0D	        `unknown object
+	ld	[ix+#object.Xsubpixel],a;zero
+	ld	[ix+#object.X.lo],e
+	ld	[ix+#object.X.hi],d
+	ld	[ix+#object.Ysubpixel],a;zero
 	ld	hl,$0006
 	add	hl,bc
-	ld	(ix+#object.Y.lo),l
-	ld	(ix+#object.Y.hi),h
-	ld	(ix+#object.unknown11),a;zero
-	ld	(ix+#object.unknown13),a;zero
-	ld	(ix+#object.unknown14),a;zero
-	ld	(ix+#object.unknown15),a;zero
-	ld	(ix+#object.unknown16),a;zero
-	ld	(ix+#object.unknown17),a;zero
-	ld	(ix+#object.Xspeed.lo),$00
-	ld	(ix+#object.Xspeed.hi),$fe
-	ld	(ix+#object.Xdirection),$ff
-	ld	(ix+#object.Yspeed.lo),a;zero
-	ld	(ix+#object.Yspeed.hi),a;zero
-	ld	(ix+#object.Ydirection),a;zero
+	ld	[ix+#object.Y.lo],l
+	ld	[ix+#object.Y.hi],h
+	ld	[ix+#object.unknown11],a;zero
+	ld	[ix+#object.unknown13],a;zero
+	ld	[ix+#object.unknown14],a;zero
+	ld	[ix+#object.unknown15],a;zero
+	ld	[ix+#object.unknown16],a;zero
+	ld	[ix+#object.unknown17],a;zero
+	ld	[ix+#object.Xspeed.lo],$00
+	ld	[ix+#object.Xspeed.hi],$fe
+	ld	[ix+#object.Xdirection],$ff
+	ld	[ix+#object.Yspeed.lo],a;zero
+	ld	[ix+#object.Yspeed.hi],a;zero
+	ld	[ix+#object.Ydirection],a;zero
 	
         pop	ix, bc
 	ld	a,$0a
@@ -70,26 +70,26 @@ PROC    :doObjectCode_badnick_newtron           SECTION ::objects {
 ._5	ld	bc,._6fed
 	cp	$78
 	jr	c,._7
-	ld	(ix+#object.unknown17),$00
-	inc	(ix+#object.unknown11)
+	ld	[ix+#object.unknown17],$00
+	inc	[ix+#object.unknown11]
 	jr	._7
 	
 ._6	cp	$03
 	jr	nz,._7
 	ld	bc,$0000
-	inc	(ix+#object.unknown17)
-	ld	a,(ix+#object.unknown17)
+	inc	[ix+#object.unknown17]
+	ld	a,[ix+#object.unknown17]
 	and	a
 	jr	nz,._7
-	ld	(ix+#object.unknown11),c
+	ld	[ix+#object.unknown11],c
 	
-._7	ld	(ix+#object.spriteLayout.lo),c
-	ld	(ix+#object.spriteLayout.hi),b
+._7	ld	[ix+#object.spriteLayout.lo],c
+	ld	[ix+#object.spriteLayout.hi],b
 	ld	hl,$0202
-	ld	($.TEMP6),hl
+	ld	[$.TEMP6],hl
 	call	:detectCollisionWithSonic
 	ld	hl,$0000
-	ld	($.TEMP1),hl
+	ld	[$.TEMP1],hl
 	call	nc,:_35e5
 	ret	
         

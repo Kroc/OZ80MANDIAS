@@ -4,28 +4,28 @@
 `OBJECT: Explosion
 
 PROC :doObjectCode_explosion                    SECTION ::objects {
-	set	5,(ix+#object.flags)
-	ld	a,(ix+#object.unknown15)
+	set	5,[ix+#object.flags]
+	ld	a,[ix+#object.unknown15]
 	cp	$aa
 	jr	z,._1
 	xor	a;zero
-	ld	(ix+#object.unknown11),a;zero
-	ld	(ix+#object.unknown15),$aa
-	ld	(ix+#object.unknown16),a;zero
-	ld	(ix+#object.unknown17),a;zero
-	bit	5,(iy+#vars.flags0)
+	ld	[ix+#object.unknown11],a;zero
+	ld	[ix+#object.unknown15],$aa
+	ld	[ix+#object.unknown16],a;zero
+	ld	[ix+#object.unknown17],a;zero
+	bit	5,[iy+#vars.flags0]
 	jr	z,._1
-	ld	a,($.CURRENT_LEVEL)
+	ld	a,[$.CURRENT_LEVEL]
 	cp	$12
 	jr	z,._1
-	ld	a,($.SONIC.flags)
+	ld	a,[$.SONIC.flags]
 	rlca	
 	jr	c,._1
-	ld	a,($.D2E8)
-	ld	de,($.D2E6)
+	ld	a,[$.D2E8]
+	ld	de,[$.D2E6]
 	inc	de
 	ld	c,a
-	ld	hl,($.SONIC.Yspeed)
+	ld	hl,[$.SONIC.Yspeed]
 	ld	a,l
 	cpl	
 	ld	l,a
@@ -33,31 +33,31 @@ PROC :doObjectCode_explosion                    SECTION ::objects {
 	cpl	
 	ld	h,a
 	
-	ld	a,($.SONIC.Ydirection)
+	ld	a,[$.SONIC.Ydirection]
 	and	a
 	jp	m,._1
 	
 	cpl	
 	add	hl,de
 	adc	a,c
-	ld	($.SONIC.Yspeed),hl
-	ld	($.SONIC.Ydirection),a
+	ld	[$.SONIC.Yspeed],hl
+	ld	[$.SONIC.Ydirection],a
 	
 ._1	xor	a;zero			        `set A to 0
-	ld	(ix+#object.Xspeed.lo),a;zero
-	ld	(ix+#object.Xspeed.hi),a;zero
-	ld	(ix+#object.Xdirection),a;zero
-	ld	(ix+#object.Yspeed.lo),a;zero
-	ld	(ix+#object.Yspeed.hi),a;zerp
-	ld	(ix+#object.Ydirection),a;zero
+	ld	[ix+#object.Xspeed.lo],a;zero
+	ld	[ix+#object.Xspeed.hi],a;zero
+	ld	[ix+#object.Xdirection],a;zero
+	ld	[ix+#object.Yspeed.lo],a;zero
+	ld	[ix+#object.Yspeed.hi],a;zerp
+	ld	[ix+#object.Ydirection],a;zero
 	ld	de,._69be
 	ld	bc,._69b7
 	call	:_7c41
-	inc	(ix+#object.unknown11)
-	ld	a,(ix+#object.unknown11)
+	inc	[ix+#object.unknown11]
+	ld	a,[ix+#object.unknown11]
 	cp	$18
 	ret	c
-	ld	(ix+#object.type),$FF	        `remove object?
+	ld	[ix+#object.type],$FF	        `remove object?
 	ret
         
 ._69b7  BYTE $00, $08, $01, $08, $02, $08, $ff

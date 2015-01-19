@@ -3,37 +3,37 @@
 
 PROC    :doObjectCode_meta_water                SECTION ::objects
 {
-	set	5,(ix+#object.flags)
-	ld	a,(ix+#object.unknown11)
+	set	5,[ix+#object.flags]
+	ld	a,[ix+#object.unknown11]
 	ld	e,a
 	ld	d,$00
 	ld	hl,._8e36
 	add	hl,de
-	ld	e,(hl)
+	ld	e,[hl]
 	ld	a,d
 	bit	7,e
 	jr	z,._1
 	dec	a
 	dec	d
-._1	ld	l,(ix+#object.Ysubpixel)
-	ld	h,(ix+#object.Y.lo)
+._1	ld	l,[ix+#object.Ysubpixel]
+	ld	h,[ix+#object.Y.lo]
 	add	hl,de
-	adc	a,(ix+#object.Y.hi)
-	ld	(ix+#object.Ysubpixel),l
-	ld	(ix+#object.Y.lo),h
-	ld	(ix+#object.Y.hi),a
+	adc	a,[ix+#object.Y.hi]
+	ld	[ix+#object.Ysubpixel],l
+	ld	[ix+#object.Y.lo],h
+	ld	[ix+#object.Y.hi],a
 	ld	l,h
-	ld	h,(ix+#object.Y.hi)
-	ld	a,($.FRAMECOUNT)
+	ld	h,[ix+#object.Y.hi]
+	ld	a,[$.FRAMECOUNT]
 	and	$0f
 	jr	nz,._2
-	inc	(ix+#object.unknown11)
-	ld	a,(ix+#object.unknown11)
+	inc	[ix+#object.unknown11]
+	ld	a,[ix+#object.unknown11]
 	cp	$20
 	jr	c,._2
-	ld	(ix+#object.unknown11),$00
-._2	ld	($.D2DC),hl
-	ld	de,($.CAMERA_Y)
+	ld	[ix+#object.unknown11],$00
+._2	ld	[$.D2DC],hl
+	ld	de,[$.CAMERA_Y]
 	and	a
 	ld	a,$ff
 	sbc	hl,de
@@ -48,7 +48,7 @@ PROC    :doObjectCode_meta_water                SECTION ::objects
 	sbc	hl,de
 	jr	c,._3
 	ld	a,e
-._3	ld	($.WATERLINE),a
+._3	ld	[$.WATERLINE],a
 	and	a
 	ret	z
 	cp	$ff
@@ -56,18 +56,18 @@ PROC    :doObjectCode_meta_water                SECTION ::objects
 	add	a,$09
 	ld	l,a
 	ld	h,$00
-	ld	($.TEMP6),hl
-	ld	hl,($.CAMERA_X)
-	ld	($.TEMP1),hl
-	ld	hl,($.CAMERA_Y)
-	ld	($.TEMP3),hl
-	ld	a,(iy+#vars.spriteUpdateCount)
-	ld	hl,($.SPRITETABLE_ADDR)
+	ld	[$.TEMP6],hl
+	ld	hl,[$.CAMERA_X]
+	ld	[$.TEMP1],hl
+	ld	hl,[$.CAMERA_Y]
+	ld	[$.TEMP3],hl
+	ld	a,[iy+#vars.spriteUpdateCount]
+	ld	hl,[$.SPRITETABLE_ADDR]
 	push	af
 	push	hl
 	ld	hl,$.SPRITETABLE
-	ld	($.SPRITETABLE_ADDR),hl
-	ld	a,($.FRAMECOUNT)
+	ld	[$.SPRITETABLE_ADDR],hl
+	ld	a,[$.FRAMECOUNT]
 	and	$03
 	add	a,a
 	add	a,a
@@ -78,21 +78,21 @@ PROC    :doObjectCode_meta_water                SECTION ::objects
 	ld	b,$04
 	
 .loop	push	bc
-	ld	c,(hl)
+	ld	c,[hl]
 	inc	hl
 	push	hl
-	ld	a,($.FRAMECOUNT)
+	ld	a,[$.FRAMECOUNT]
 	and	$0f
 	add	a,c
 	ld	l,a
 	ld	h,$00
-	ld	($.TEMP4),hl
+	ld	[$.TEMP4],hl
 	ld	a,$00
 	call	:_3581
-	ld	hl,($.TEMP4)
+	ld	hl,[$.TEMP4]
 	ld	de,$0008
 	add	hl,de
-	ld	($.TEMP4),hl
+	ld	[$.TEMP4],hl
 	ld	a,$02
 	call	:_3581
 	pop	hl
@@ -101,8 +101,8 @@ PROC    :doObjectCode_meta_water                SECTION ::objects
 	
 	pop	hl
 	pop	af
-	ld	($.SPRITETABLE_ADDR),hl
-	ld	(iy+#vars.spriteUpdateCount),a
+	ld	[$.SPRITETABLE_ADDR],hl
+	ld	[iy+#vars.spriteUpdateCount],a
 	ret
         
         `------------------------------------------------------------------------------

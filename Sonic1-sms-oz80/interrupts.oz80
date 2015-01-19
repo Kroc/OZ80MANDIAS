@@ -14,7 +14,7 @@ START
                                                  `$0038 will be called at 50/60Hz 
         
 	`wait for the scanline to reach 176 (no idea why)
-.loop	in	a;scanline, ($.VDP.SCANLINE)
+.loop	in	a;scanline, [$.VDP.SCANLINE]
 	cp	176
 	jr	nz, .loop
 	jp	:init
@@ -49,7 +49,7 @@ PROC    :IRQ                                    INTERRUPT $38
         
         `this short copyright message is wedged between the IRQ
          `and NMI routines in the original ROM
-        BYTE    "Developed By (C) 1991 Ancient - S", $A5, "Hayashi.", $00
+        BYTE    "Developed By [c] 1991 Ancient - S", $A5, "Hayashi.", $00
 }
 
 PROC    :pause                                  INTERRUPT $66
@@ -60,10 +60,10 @@ PROC    :pause                                  INTERRUPT $66
 	push	af;stack
 	
 	`level time HUD / lightning flags
-	ld	a;pauseStatus, (iy+#vars.timeLightningFlags)
+	ld	a;pauseStatus, [iy+#vars.timeLightningFlags]
 	xor	%00001000		        `flip bit 3 (the pause bit)
 	`save it back
-	ld	(iy+#vars.timeLightningFlags), a;pauseStatus
+	ld	[iy+#vars.timeLightningFlags], a;pauseStatus
 	
 	pop	af;stack
 	ei				        `enable interrupts
@@ -87,22 +87,22 @@ PROC    :interruptHandler                       SECTION ::interrupts            
 	push	af', hl', de', bc'
 	
 	`get the status of the VDP
-	in	a;vdpStatus, ($.VDP.CONTROL)
+	in	a;vdpStatus, [$.VDP.CONTROL]
 	
-	bit	7, (iy+#vars.flags6)	        `check the underwater flag
+	bit	7, [iy+#vars.flags6]	        `check the underwater flag
 	jr	z, ._1			        `if off, skip ahead
 	
 	``the raster split is controlled across multiple interrupts, a counter is used
           to remember at which step the procedure is at a value of 0 means that it
           needs to be initialised, and then it counts down from 3``
 	
-	ld	a;step, ($.RASTERSPLIT_STEP)
+	ld	a;step, [$.RASTERSPLIT_STEP]
 	and	a;step			        `keep the value, but update the flags
 	jp	nz, :doRasterSplit	        `if not zero, deal with the particulars
 	
 	`--- initialise raster split --------------------------------------------------
 	`check the water line height:
-        ld	a;waterline, ($.WATERLINE)
+        ld	a;waterline, [$.WATERLINE]
 	and	a;waterline
 	jr	z, ._1			        `if it's zero (above the screen), skip
 	
@@ -112,39 +112,39 @@ PROC    :interruptHandler                       SECTION ::interrupts            
 	``copy the water line position into the working space for the raster split.
 	  this is to avoid the water line changing height between the multiple
 	  interrupts needed to produce the split, I think``
-	ld	($.RASTERSPLIT_LINE), a;waterline
+	ld	[$.RASTERSPLIT_LINE], a;waterline
 	
 	``set the line interrupt to fire at line 10 (top of the screen),
 	  we will then set another interrupt to fire where we want the split to occur``
 	ld	a, 10
-	out	($.VDP.CONTROL), a
+	out	[$.VDP.CONTROL], a
 	ld	a, $.VDP_REGISTER_10
-	out	($.VDP.CONTROL), a
+	out	[$.VDP.CONTROL], a
 	
 	`enable line interrupt IRQs (bit 5 of VDP register 0)
-	ld	a, ($.VDPREGISTER_0)
+	ld	a, [$.VDPREGISTER_0]
 	or	%00010000
-	out	($.VDP.CONTROL), a
+	out	[$.VDP.CONTROL], a
 	ld	a, $.VDP_REGISTER_0
-	out	($.VDP.CONTROL), a
+	out	[$.VDP.CONTROL], a
 	
 	`initialise the step counter for the water line raster split
 	ld	a, 3
-	ld	($.RASTERSPLIT_STEP), a
+	ld	[$.RASTERSPLIT_STEP], a
 	
 	`------------------------------------------------------------------------------
 	
 ._1	push	ix, iy
 	
 	`remember the current page 1 & 2 banks
-	ld	hl;banks, ($.SLOT1)
+	ld	hl;banks, [$.SLOT1]
 	push	hl;banks
 	
 	`if the main thread is not held up at the `waitForInterrupt` routine
-	bit	0, (iy+#vars.flags0)
+	bit	0, [iy+#vars.flags0]
 	call	nz, :_LABEL_1A0_18
 	`and if it is...
-	bit	0, (iy+#vars.flags0)
+	bit	0, [iy+#vars.flags0]
 	call	z, :_LABEL_F7_25
 	
 	``I'm  not sure why the interrupts are re-enabled before we've left the
@@ -153,26 +153,26 @@ PROC    :interruptHandler                       SECTION ::interrupts            
 	
 	`switch in the music engine / data
 	ld	a;bank, :sound_update.bank
-	ld	($.SMS.SLOT1), a;bank
-	ld	($.SLOT1), a;bank
+	ld	[$.SMS.SLOT1], a;bank
+	ld	[$.SLOT1], a;bank
 	call	:sound_update
 	
 	call	:readJoypad
-	bit	4, (iy+#vars.joypad)	        `joypad button 1?
+	bit	4, [iy+#vars.joypad]	        `joypad button 1?
 	call	z, :setJoypadButtonB	        `set joypad button 2 too
 	
 	call	:_LABEL_625_57
 	
 	`check for the reset button
-	in	a, ($.SMS.JOYPADB)	        `read 2nd joypad port which has extra
+	in	a, [$.SMS.JOYPADB]	        `read 2nd joypad port which has extra
                                                  `bits for lightgun / reset button
 	and	%00010000		        `check bit 4
 	jp	z, START		        `reset!
 	
 	`return pages 1 & 2 to the banks before we started messing around here
 	pop	hl;banks
-	ld	($.SMS.SLOT1), hl;banks
-	ld	($.SLOT1), hl;banks
+	ld	[$.SMS.SLOT1], hl;banks
+	ld	[$.SLOT1], hl;banks
 	
 	`pull everything off the stack so that the code that was running
 	 `before the interrupt doesn't explode
@@ -184,7 +184,7 @@ PROC    :interruptHandler                       SECTION ::interrupts            
 PROC    :setJoypadButtonB                       SECTION ::interrupts            `$00F2
         `------------------------------------------------------------------------------
 {
-	res	5, (iy+#vars.joypad)	        `set joypad button 2 as on
+	res	5, [iy+#vars.joypad]	        `set joypad button 2 as on
 	ret
 }
 
@@ -192,71 +192,71 @@ PROC    :_LABEL_F7_25                           SECTION ::interrupts            
         `------------------------------------------------------------------------------
 {       
 	`blank the screen (remove bit 6 of VDP register 1)
-	ld	a, ($.VDPREGISTER_1)	        `get our cache value from RAM
+	ld	a, [$.VDPREGISTER_1]	        `get our cache value from RAM
 	and	%10111111		        `remove bit 6
-	out	($.VDP.CONTROL), a	        `write the value,
+	out	[$.VDP.CONTROL], a	        `write the value,
 	ld	a, $.VDP_REGISTER_1	        `followed by the register number
-	out	($.VDP.CONTROL), a
+	out	[$.VDP.CONTROL], a
 	
 	`horizontal scroll
-	ld	a, ($.VDPSCROLL_HORZ)
+	ld	a, [$.VDPSCROLL_HORZ]
 	neg				        `I don't understand the reason for this
-	out	($.VDP.CONTROL), a
+	out	[$.VDP.CONTROL], a
 	ld	a, $.VDP_REGISTER_8
-	out	($.VDP.CONTROL), a
+	out	[$.VDP.CONTROL], a
 	
 	`vertical scroll
-	ld	a, ($.VDPSCROLL_VERT)
-	out	($.VDP.CONTROL), a
+	ld	a, [$.VDPSCROLL_VERT]
+	out	[$.VDP.CONTROL], a
 	ld	a, $.VDP_REGISTER_9
-	out	($.VDP.CONTROL), a
+	out	[$.VDP.CONTROL], a
 	
-	bit	5, (iy+#vars.flags0)			
+	bit	5, [iy+#vars.flags0]			
 	call	nz, :fillScrollTiles
 	
-	bit	5, (iy+#vars.flags0)			
+	bit	5, [iy+#vars.flags0]			
 	call	nz, :loadPaletteFromInterrupt
 	
 	`turn the screen back on 
 	 `(or if it was already blank before this function, leave it blank)
-	ld	a, ($.VDPREGISTER_1)
-	out	($.VDP.CONTROL), a
+	ld	a, [$.VDPREGISTER_1]
+	out	[$.VDP.CONTROL], a
 	ld	a, $.VDP_REGISTER_1
-	out	($.VDP.CONTROL), a
+	out	[$.VDP.CONTROL], a
 	
 	ld	a;bank, 8                       `Sonic sprites?
-	ld	($.SMS.SLOT1), a;bank
-	ld	($.SLOT1), a;bank
+	ld	[$.SMS.SLOT1], a;bank
+	ld	[$.SLOT1], a;bank
 	ld	a;bank, 9
-	ld	($.SMS.SLOT2), a;bank
-	ld	($.SLOT2), a;bank
+	ld	[$.SMS.SLOT2], a;bank
+	ld	[$.SLOT2], a;bank
 	
 	`does the Sonic sprite need updating?
 	 `(the particular frame of animation is copied to the VRAM)
-	bit	7, (iy+#vars.timeLightningFlags)
+	bit	7, [iy+#vars.timeLightningFlags]
 	call	nz, :updateSonicSpriteFrame
 	
 	ld	a;bank, 1
-	ld	($.SMS.SLOT1), a;bank
-	ld	($.SLOT1), a;bank
+	ld	[$.SMS.SLOT1], a;bank
+	ld	[$.SLOT1], a;bank
 	ld	a;bank, 2
-	ld	($.SMS.SLOT2), a;bank
-	ld	($.SLOT2), a;bank
+	ld	[$.SMS.SLOT2], a;bank
+	ld	[$.SLOT2], a;bank
 	
 	`update sprite table?
-	bit	1, (iy+#vars.flags0)
+	bit	1, [iy+#vars.flags0]
 	call	nz, :updateVDPSprites
 	
-	bit	5, (iy+#vars.flags0)
+	bit	5, [iy+#vars.flags0]
 	call	z, :loadPaletteFromInterrupt
 	
-	ld	a, ($.D2AB+1)
+	ld	a, [$.D2AB+1]
 	and	%10000000
 	call	z, :_LABEL_38B0_51
 	ld	a, $FF
-	ld	($.D2AB+1), a
+	ld	[$.D2AB+1], a
 	
-	set	0, (iy+#vars.flags0)
+	set	0, [iy+#vars.flags0]
 	ret
 }
 	
@@ -268,25 +268,25 @@ PARAMS	$.LOADPALETTE_ADDRESS   `address to the palette data
         $.LOADPALETTE_FLAGS     `flags to load tile / sprite palettes or both
 {	
 	ld	a;bank, 1
-	ld	($.SMS.SLOT1), a;bank
-	ld	($.SLOT1), a;bank
+	ld	[$.SMS.SLOT1], a;bank
+	ld	[$.SLOT1], a;bank
 	ld	a;bank, 2
-	ld	($.SMS.SLOT2), a;bank
-	ld	($.SLOT2), a;bank
+	ld	[$.SMS.SLOT2], a;bank
+	ld	[$.SLOT2], a;bank
 	
 	`if the level is underwater then skip loading the palette as the palettes
 	 `are handled by the code that does the raster split
-	bit	7, (iy+#vars.flags6)	        `underwater flag
+	bit	7, [iy+#vars.flags6]	        `underwater flag
 	jr	nz, ._1
 	
 	`get the palette loading parameters that were assigned by the main thread
 	 `(i.e. 'loadPaletteOnInterrupt')
-	ld	hl;addr, ($.LOADPALETTE_ADDRESS)
-	ld	a;flags, ($.LOADPALETTE_FLAGS)
+	ld	hl;addr, [$.LOADPALETTE_ADDRESS]
+	ld	a;flags, [$.LOADPALETTE_FLAGS]
 	
-	bit	3, (iy+#vars.flags0)	`check the flag to specify loading the palette
+	bit	3, [iy+#vars.flags0]	`check the flag to specify loading the palette
 	call	nz, :loadPalette	`load the palette if flag is set
-	res	3, (iy+#vars.flags0)	`unset the flag so it doesn't happen again
+	res	3, [iy+#vars.flags0]	`unset the flag so it doesn't happen again
 	ret
 	
 	`when the level is underwater, different logic controls loading the palette
@@ -298,16 +298,16 @@ PARAMS	$.LOADPALETTE_ADDRESS   `address to the palette data
 PROC	:_LABEL_1A0_18                          SECTION ::interrupts            `$10AD
         `------------------------------------------------------------------------------
 {	
-	bit	7, (iy+#vars.flags6)	        `check the underwater flag
+	bit	7, [iy+#vars.flags6]	        `check the underwater flag
 	ret	z			        `if off, leave now
 	
 	`switch pages 1 & 2 ($4000-$BFFF) to banks 1 & 2 ($4000-$BFFF)
 	ld	a;bank, 1
-	ld	($.SMS.SLOT1), a;bank
-	ld	($.SLOT1), a;bank
+	ld	[$.SMS.SLOT1], a;bank
+	ld	[$.SLOT1], a;bank
 	ld	a;bank, 2
-	ld	($.SMS.SLOT2), a;bank
-	ld	($.SLOT2), a;bank
+	ld	[$.SMS.SLOT2], a;bank
+	ld	[$.SLOT2], a;bank
 	
 	`this seems quite pointless but could do with
 	 `killing a specific amount of time
@@ -323,7 +323,7 @@ PROC	:loadPaletteFromInterrupt_water         SECTION ::interrupts            `$0
         `called only from `loadPaletteFromInterrupt`
 {	
         `get the position of the water line on screen
-	ld	a;waterline, ($.WATERLINE)
+	ld	a;waterline, [$.WATERLINE]
 	and	a;waterline
 	jr	z, ._2			        `is it 0? (above the screen)
 	cp	$FF			        `or $FF? (below the screen)
@@ -338,7 +338,7 @@ PROC	:loadPaletteFromInterrupt_water         SECTION ::interrupts            `$0
 	 `load their palettes on-demand
 	ld	hl;addr, :S1_UnderwaterPalette
 	`underwater boss palette?
-	bit	4, (iy+#vars.timeLightningFlags)
+	bit	4, [iy+#vars.timeLightningFlags]
 	jr	z, ._1			
 	ld	hl;addr, :S1_UnderwaterPalette_Boss
 	
@@ -347,14 +347,14 @@ PROC	:loadPaletteFromInterrupt_water         SECTION ::interrupts            `$0
 	ret
 	
 	`--- above water --------------------------------------------------------------
-._2	ld	a, ($.CYCLEPALETTE_INDEX)
+._2	ld	a, [$.CYCLEPALETTE_INDEX]
 	add	a, a			        `x2
 	add	a, a			        `x4
 	add	a, a			        `x8
 	add	a, a			        `x16
 	ld	e, a
 	ld	d, $00
-	ld	hl, ($.CYCLEPALETTE_POINTER)
+	ld	hl, [$.CYCLEPALETTE_POINTER]
 	add	hl, de
 	ld	a, %00000001
 	call	:loadPalette
@@ -381,60 +381,60 @@ PARAMS 	a;step	                `the raster split step number (counts down from 3
 	`--- step 3 -------------------------------------------------------------------
 	`set counter at step 2
 	dec	a;step
-	ld	($.RASTERSPLIT_STEP), a;step
+	ld	[$.RASTERSPLIT_STEP], a;step
 	
-	in	a;scanline, ($.VDP.SCANLINE)
+	in	a;scanline, [$.VDP.SCANLINE]
 	ld	c;scanline, a;scanline
-	ld	a;split, ($.RASTERSPLIT_LINE)
+	ld	a;split, [$.RASTERSPLIT_LINE]
 	sub	c;scanline	                `work out the difference
 	
 	`set VDP register 10 with the scanline number to interrupt at next
 	 `(that is, set the next interrupt to occur at the water line)
-	out	($.VDP.CONTROL), a;scanline
+	out	[$.VDP.CONTROL], a;scanline
 	ld	a;register, $.VDP_REGISTER_10
-	out	($.VDP.CONTROL), a;register
+	out	[$.VDP.CONTROL], a;register
 	
 	jp	._3
 	
 	`--- step 2 -------------------------------------------------------------------
 ._1	`we don't do anything on this step
 	dec	a;step
-	ld	($.RASTERSPLIT_STEP), a;step
+	ld	[$.RASTERSPLIT_STEP], a;step
 	jp	._3
 	
 	`--- step 1 -------------------------------------------------------------------
 ._2	dec	a;step
-	ld	($.RASTERSPLIT_STEP), a;step
+	ld	[$.RASTERSPLIT_STEP], a;step
 	
 	`set the VDP to point at the palette
 	ld	a, $00
-	out	($.VDP.CONTROL), a
+	out	[$.VDP.CONTROL], a
 	ld	a, %11000000
-	out	($.VDP.CONTROL), a
+	out	[$.VDP.CONTROL], a
 	
 	ld	b, 16
 	ld	hl, :S1_UnderwaterPalette
 	
 	`underwater boss palette?
-	bit	4, (iy+#vars.timeLightningFlags)
+	bit	4, [iy+#vars.timeLightningFlags]
 	jr	z, .loop
 	ld	hl, :S1_UnderwaterPalette_Boss
 
 	`copy the palette into the VDP
-.loop	ld      a, (hl)
-	out	($.VDP.DATA), a
+.loop	ld      a, [hl]
+	out	[$.VDP.DATA], a
 	inc	hl
 	nop
-	ld	a, (hl)
-	out	($.VDP.DATA), a
+	ld	a, [hl]
+	out	[$.VDP.DATA], a
 	inc	hl
 	djnz	.loop
 	
-	ld	a, ($.VDPREGISTER_0)
+	ld	a, [$.VDPREGISTER_0]
 	and	%11101111		        `remove bit 4: disable line interrupts
-	out	($.VDP.CONTROL), a
+	out	[$.VDP.CONTROL], a
 	ld	a, $.VDP_REGISTER_0
-	out	($.VDP.CONTROL), a
+	out	[$.VDP.CONTROL], a
 
 ._3	pop	bc, de, hl, af
 	ei
@@ -458,21 +458,21 @@ PROC	:init                                   SECTION ::interrupts            `$0
 {	
 	`tell the SMS the cartridge has no RAM and to use ROM banking
 	ld	a, %10000000
-	ld	($.SMS.SLOT_CONTROL), a
+	ld	[$.SMS.SLOT_CONTROL], a
 	`load banks 0, 1 & 2 of the ROM into the address space
 	 `($0000-$BFFF of the address space will be mapped to $0000-$BFFF of this ROM)
 	ld	a;bank, 0
-	ld	($.SMS.SLOT0), a;bank
+	ld	[$.SMS.SLOT0], a;bank
 	ld	a;bank, 1
-	ld	($.SMS.SLOT1), a;bank
+	ld	[$.SMS.SLOT1], a;bank
 	ld	a;bank, 2
-	ld	($.SMS.SLOT2), a;bank
+	ld	[$.SMS.SLOT2], a;bank
 	
 	`empty the RAM!
 	ld	hl, $.FLOORLAYOUT	`starting from $C000,
 	ld	de, $.FLOORLAYOUT+1	`and copying one byte to the next byte,
 	ld	bc, $1FEF		`copy 8'175 bytes ($C000-$DFEF),
-	ld	(hl), l			`using a value of 0 (the #$00 from the $C000)
+	ld	[hl], l			`using a value of 0 (the #$00 from the $C000)
 	ldir				 `--it's faster to read a register than RAM
 	
 	ld	sp, hl			`place the stack at the top of RAM ($DFEF)
@@ -484,15 +484,15 @@ PROC	:init                                   SECTION ::interrupts            `$0
 	ld	b, 11
 	ld	c, $8B
 				
-.loop	ld	a, (hl)			        `read the lo-byte for the VDP
-	ld	(de), a			        `copy to RAM
+.loop	ld	a, [hl]			        `read the lo-byte for the VDP
+	ld	[de], a			        `copy to RAM
 	inc	hl			        `move to the next byte
 	inc	de				
-	out	($.VDP.CONTROL), a	        `send the VDP lo-byte
+	out	[$.VDP.CONTROL], a	        `send the VDP lo-byte
 	ld	a, c			        `Load A with #$8B
 	sub	b			        `subtract B from A (B is decreasing),
                                                  `so A will count from #$80 to #8A
-	out	($.VDP.CONTROL), a	        `send the VDP hi-byte
+	out	[$.VDP.CONTROL], a	        `send the VDP hi-byte
 	djnz	.loop			        `loop until B has reached 0
 	
 	`move all sprites off the bottom of the screen!
@@ -521,14 +521,14 @@ PARAMS	a;songIndex	``index number of song to play
 	
 	`switch page 1 (Z80:$4000-$7FFF) to bank 3 ($C000-$FFFF)
 	ld	a;bank, :sound_playMusic.bank
-	ld	($.SMS.SLOT1), a;bank
+	ld	[$.SMS.SLOT1], a;bank
 	
 	pop	af;songIndex
-	ld	($.PREVIOUS_MUSIC), a;songIndex
+	ld	[$.PREVIOUS_MUSIC], a;songIndex
 	call	:sound_playMusic
 	
-	ld	a;bank, ($.SLOT1)
-	ld	($.SMS.SLOT1), a;bank
+	ld	a;bank, [$.SLOT1]
+	ld	[$.SMS.SLOT1], a;bank
 	
 	ei				        `enable interrupts
 	ret
@@ -542,10 +542,10 @@ PROC	:muteSound                              SECTION ::interrupts            `$0
 	
 	`switch page 1 (Z80:$4000-$7FFF) to bank 3 (ROM:$0C000-$0FFFF)
 	ld	a;bank, :sound_stop.bank
-	ld	($.SMS.SLOT1), a;bank
+	ld	[$.SMS.SLOT1], a;bank
 	call	:sound_stop
-	ld	a;bank, ($.SLOT1)
-	ld	($.SMS.SLOT1), a;bank
+	ld	a;bank, [$.SLOT1]
+	ld	[$.SMS.SLOT1], a;bank
 	
 	ei				        `enable interrupts
 	ret
@@ -560,12 +560,12 @@ PARAMS	a;SFXIndex
 	push	af;SFXIndex
 	
 	ld	a;bank,:sound_playSFX.bank
-	ld	($.SMS.SLOT1),a;bank
+	ld	[$.SMS.SLOT1],a;bank
 	
         pop	af;SFXIndex
 	call	:sound_playSFX
-	ld	a;bank,($.SLOT1)
-	ld	($.SMS.SLOT1),a;bank
+	ld	a;bank,[$.SLOT1]
+	ld	[$.SMS.SLOT1],a;bank
 	
 	ei	
 	ret
@@ -602,7 +602,7 @@ PROC	:waitForInterrupt                       SECTION ::interrupts            `$0
           execution until the interrupt handler has done its work``
 {
 	`test bit 0 of the IY parameter (IY=$D200)
-	bit	0, (iy+#vars.flags0)
+	bit	0, [iy+#vars.flags0]
 	`if bit 0 is off, then wait!
 	jr	z, :
 	ret
@@ -611,10 +611,10 @@ PROC	:waitForInterrupt                       SECTION ::interrupts            `$0
 PROC    :unused_0323                            SECTION ::interrupts            `$0323
         `==============================================================================
 {        
-	set	2,(iy+#vars.flags0)
-	ld	($.UNUSED_D225),hl              `unused RAM location!
-	ld	($.UNUSED_D227),de	        `unused RAM location!
-	ld	($.UNUSED_D229),bc	        `unused RAM location!
+	set	2,[iy+#vars.flags0]
+	ld	[$.UNUSED_D225],hl              `unused RAM location!
+	ld	[$.UNUSED_D227],de	        `unused RAM location!
+	ld	[$.UNUSED_D229],bc	        `unused RAM location!
 	ret
 }
 
@@ -622,10 +622,10 @@ PROC	:loadPaletteOnInterrupt                 SECTION ::interrupts            `$0
         `==============================================================================
 PARAMS	a;flags, hl;addr
 {	
-	set	3, (iy+#vars.flags0)	        `set the flag for the interrupt handler
+	set	3, [iy+#vars.flags0]	        `set the flag for the interrupt handler
 	`store the parameters
-	ld	($.LOADPALETTE_FLAGS), a;flags
-	ld	($.LOADPALETTE_ADDRESS), hl;addr
+	ld	[$.LOADPALETTE_FLAGS], a;flags
+	ld	[$.LOADPALETTE_ADDRESS], hl;addr
 	ret
 }
 
@@ -636,12 +636,12 @@ PROC	:updateVDPSprites                       SECTION ::interrupts            `$0
 	
 	`set the VDP address to $3F00 (sprite info table, Y-positions)
 	ld	a, LO $3F00
-	out	($.VDP.CONTROL), a
+	out	[$.VDP.CONTROL], a
 	ld	a, HI $3F00
 	or	%01000000		`add bit 6 to mark an address being given
-	out	($.VDP.CONTROL), a
+	out	[$.VDP.CONTROL], a
 	
-	ld	b, (iy+#vars.spriteUpdateCount)
+	ld	b, [iy+#vars.spriteUpdateCount]
 	ld	hl, $.SPRITETABLE+1	`Y-position of the first sprite
 	ld	de, 3			`sprite table is 3 bytes per sprite
 	
@@ -650,16 +650,16 @@ PROC	:updateVDPSprites                       SECTION ::interrupts            `$0
 	jr	z, ._1			`if so skip over setting the Y-positions
 
 	`set sprite Y-positions:
-.yLoop	ld	a, (hl)			`get the sprite's Y-position from RAM
-	out	($.VDP.DATA), a	`set the sprite's Y-position in the hardware
+.yLoop	ld	a, [hl]			`get the sprite's Y-position from RAM
+	out	[$.VDP.DATA], a	`set the sprite's Y-position in the hardware
 	add	hl, de			`move to the next sprite
 	djnz	.yLoop
 	
 	``if the number of sprites to update is equal or greater than the existing
 	  number of active sprites, skip ahead to setting the X-positions and indexes``
-._1	ld	a, ($.ACTIVESPRITECOUNT)
+._1	ld	a, [$.ACTIVESPRITECOUNT]
 	ld	b, a
-	ld	a, (iy+#vars.spriteUpdateCount)
+	ld	a, [iy+#vars.spriteUpdateCount]
 	ld	c, a
 	cp	b			`test spriteUpdateCount - RAM_ACTIVESPRITECOUNT	
 	jr	nc, ._2			`
@@ -673,7 +673,7 @@ PROC	:updateVDPSprites                       SECTION ::interrupts            `$0
 
 	`move remaining sprites off screen
 .yOff	ld	a, 224
-	out	($.VDP.DATA), a
+	out	[$.VDP.DATA], a
 	djnz	.yOff
 	
 	`--- sprite X positions / indexes ---------------------------------------------
@@ -682,29 +682,29 @@ PROC	:updateVDPSprites                       SECTION ::interrupts            `$0
 	ret	z
 	
 	ld	hl, $.SPRITETABLE	        `first X-position in the sprite table
-	ld	b, (iy+#vars.spriteUpdateCount)
+	ld	b, [iy+#vars.spriteUpdateCount]
 	
 	`set the VDP address to $3F80 (sprite info table, X-positions & indexes)
 	ld	a, LO $3F80
-	out	($.VDP.CONTROL), a
+	out	[$.VDP.CONTROL], a
 	ld	a, HI $3F80
 	or	%01000000		        `add bit 6 to mark an address is given
-	out	($.VDP.CONTROL), a
+	out	[$.VDP.CONTROL], a
 	
-.xLoop	ld	a, (hl)			        `set the sprite X-position
-	out	($.VDP.DATA), a
+.xLoop	ld	a, [hl]			        `set the sprite X-position
+	out	[$.VDP.DATA], a
 	inc	l			        `skip Y-position
 	inc	l				
-	ld	a, (hl)			        `set the sprite index number
-	out	($.VDP.DATA), a
+	ld	a, [hl]			        `set the sprite index number
+	out	[$.VDP.DATA], a
 	inc	l
 	djnz	.xLoop
 
 	`set the new number of active sprites
-	ld	a, (iy+#vars.spriteUpdateCount)
-	ld	($.ACTIVESPRITECOUNT), a
+	ld	a, [iy+#vars.spriteUpdateCount]
+	ld	[$.ACTIVESPRITECOUNT], a
 	`set the update count to 0
-	ld	(iy+#vars.spriteUpdateCount), b
+	ld	[iy+#vars.spriteUpdateCount], b
 	ret
 }
 
@@ -718,14 +718,14 @@ PARAMS  bc      `number of bytes to copy
 {
 	di	
 	ld	a,e
-	out	($.VDP.CONTROL),a
+	out	[$.VDP.CONTROL],a
 	ld	a,d
 	or	%01000000
-	out	($.VDP.CONTROL),a
+	out	[$.VDP.CONTROL],a
 	ei	
 
-.loop	ld	a,(hl)
-	out	($.VDP.DATA),a
+.loop	ld	a,[hl]
+	out	[$.VDP.DATA],a
 	inc	hl
 	
 	dec	bc
@@ -747,30 +747,30 @@ PARAMS  a       `bank number for page 1, A+1 will be used as the bank number for
 
 	`set the VDP address using DE
 	ld	a,e
-	out	($.VDP.CONTROL),a
+	out	[$.VDP.CONTROL],a
 	ld	a,d
 	or	%01000000
-	out	($.VDP.CONTROL),a
+	out	[$.VDP.CONTROL],a
 	
 	pop	af
-	ld	de,($.SLOT1)
+	ld	de,[$.SLOT1]
 	push	de
 	
-	ld	($.SMS.SLOT1),a
-	ld	($.SLOT1),a
+	ld	[$.SMS.SLOT1],a
+	ld	[$.SLOT1],a
 	inc	a
-	ld	($.SMS.SLOT2),a
-	ld	($.SLOT2),a
+	ld	[$.SMS.SLOT2],a
+	ld	[$.SLOT2],a
 	ei	
 
-._1	ld	a,(hl)
+._1	ld	a,[hl]
 	cpl	
 	ld	e,a
 
-._2	ld	a,(hl)
+._2	ld	a,[hl]
 	cp	e
 	jr	z,._3
-	out	($.VDP.DATA),a
+	out	[$.VDP.DATA],a
 	ld	e,a
 	inc	hl
 	dec	bc
@@ -786,9 +786,9 @@ PARAMS  a       `bank number for page 1, A+1 will be used as the bank number for
 	or	c
 	jr	z,._5
 	ld	a,d
-	ld	e,(hl)
+	ld	e,[hl]
 
-._4	out	($.VDP.DATA),a
+._4	out	[$.VDP.DATA],a
 	dec	e
 	nop	
 	nop	
@@ -805,11 +805,11 @@ PARAMS  a       `bank number for page 1, A+1 will be used as the bank number for
         
 	`restore bank numbers
 	pop	de;banks
-	ld	($.SLOT1),de;banks              `restore our copy of the bank numbers
+	ld	[$.SLOT1],de;banks              `restore our copy of the bank numbers
 	ld	a;banks,e;banks
-	ld	($.SMS.SLOT1),a;banks           `restore Slot 1 
+	ld	[$.SMS.SLOT1],a;banks           `restore Slot 1 
 	ld	a;banks,d;banks
-	ld	($.SMS.SLOT2),a;banks           `restore Slot 2
+	ld	[$.SMS.SLOT2],a;banks           `restore Slot 2
 	
         `enable interrupts and return
         ei	                                

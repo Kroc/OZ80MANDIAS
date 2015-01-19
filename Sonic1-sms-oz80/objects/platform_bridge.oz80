@@ -3,51 +3,51 @@
 
 PROC    :doObjectCode_platform_bridge           SECTION ::objects
 {
-	set	5,(ix+#object.flags)
-	ld	(ix+#object.width), 14
-	ld	(ix+#object.height),8
-	bit	0,(ix+#object.flags)
+	set	5,[ix+#object.flags]
+	ld	[ix+#object.width], 14
+	ld	[ix+#object.height],8
+	bit	0,[ix+#object.flags]
 	jr	nz,._2
         
 	xor	a;zero
-	ld	(ix+#object.spriteLayout.lo),a;zero
-	ld	(ix+#object.spriteLayout.hi),a;zero
+	ld	[ix+#object.spriteLayout.lo],a;zero
+	ld	[ix+#object.spriteLayout.hi],a;zero
 	ld	l;zero,a;zero
 	ld	h;zero,a;zero
-	ld	($.TEMP1),hl;zero
+	ld	[$.TEMP1],hl;zero
         
-	bit	1,(ix+#object.flags)
+	bit	1,[ix+#object.flags]
 	jr	nz,._1
 	
         call	:_LABEL_625_57
 	and	$1f
 	inc	a
-	ld	(ix+#object.unknown11),a
-	set	1,(ix+#object.flags)
-._1	dec	(ix+#object.unknown11)
+	ld	[ix+#object.unknown11],a
+	set	1,[ix+#object.flags]
+._1	dec	[ix+#object.unknown11]
 	jp	nz,._
-	ld	(ix+#object.unknown11),$01
-	ld	a,($.D2AB+1)
+	ld	[ix+#object.unknown11],$01
+	ld	a,[$.D2AB+1]
 	and	$80
 	jp	z,._
-	ld	l,(ix+#object.X.lo)
-	ld	h,(ix+#object.X.hi)
-	ld	($.D2AB),hl
-	ld	l,(ix+#object.Y.lo)
-	ld	h,(ix+#object.Y.hi)
+	ld	l,[ix+#object.X.lo]
+	ld	h,[ix+#object.X.hi]
+	ld	[$.D2AB],hl
+	ld	l,[ix+#object.Y.lo]
+	ld	h,[ix+#object.Y.hi]
 	ld	de,$000e
 	add	hl,de
-	ld	($.D2AD),hl
+	ld	[$.D2AD],hl
 	ld	hl,._848e
-	ld	($.D2AF),hl
-	set	0,(ix+#object.flags)
+	ld	[$.D2AF],hl
+	set	0,[ix+#object.flags]
 	ld	a,$20
 	rst	:rst_playSFX
-._2	ld	(ix+#object.spriteLayout.lo),._8481.lo
-	ld	(ix+#object.spriteLayout.hi),._8481.hi
-	ld	l,(ix+#object.Yspeed.lo)
-	ld	h,(ix+#object.Yspeed.hi)
-	ld	a,(ix+#object.Ydirection)
+._2	ld	[ix+#object.spriteLayout.lo],._8481.lo
+	ld	[ix+#object.spriteLayout.hi],._8481.hi
+	ld	l,[ix+#object.Yspeed.lo]
+	ld	h,[ix+#object.Yspeed.hi]
+	ld	a,[ix+#object.Ydirection]
 	ld	de,$0020
 	add	hl,de
 	adc	a,$00
@@ -56,30 +56,30 @@ PROC    :doObjectCode_platform_bridge           SECTION ::objects
 	cp	$04
 	jr	c,._3
 	ld	h,$04
-._3	ld	(ix+#object.Yspeed.lo),l
-	ld	(ix+#object.Yspeed.hi),h
-	ld	(ix+#object.Ydirection),c
-	ld	($.TEMP1),hl
-	ld	de,($.CAMERA_Y)
+._3	ld	[ix+#object.Yspeed.lo],l
+	ld	[ix+#object.Yspeed.hi],h
+	ld	[ix+#object.Ydirection],c
+	ld	[$.TEMP1],hl
+	ld	de,[$.CAMERA_Y]
 	inc	d
-	ld	l,(ix+#object.Y.lo)
-	ld	h,(ix+#object.Y.hi)
+	ld	l,[ix+#object.Y.lo]
+	ld	h,[ix+#object.Y.hi]
 	and	a
 	sbc	hl,de
 	jr	c,._
-	ld	(ix+#object.type),$FF	`remove object?
+	ld	[ix+#object.type],$FF	`remove object?
 	ret
 	
 ._4	ld	hl,$0402
-	ld	($.TEMP6),hl
+	ld	[$.TEMP6],hl
 	call	:detectCollisionWithSonic
 	ret	c
         
-	ld	a,($.SONIC.Ydirection)
+	ld	a,[$.SONIC.Ydirection]
 	and	a
 	ret	m
 	
-	ld	de,($.TEMP1)
+	ld	de,[$.TEMP1]
 	ld	bc,$0010
 	call	:_LABEL_7CC1_12
 	ret

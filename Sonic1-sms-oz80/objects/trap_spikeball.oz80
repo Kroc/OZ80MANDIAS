@@ -3,32 +3,32 @@
 
 PROC    :doObjectCode_trap_spikeBall            SECTION ::objects
 {
-	set	5,(ix+#object.flags)
-	ld	(ix+#object.width), 8
-	ld	(ix+#object.height),12
-	bit	0,(ix+#object.flags)
+	set	5,[ix+#object.flags]
+	ld	[ix+#object.width], 8
+	ld	[ix+#object.height],12
+	bit	0,[ix+#object.flags]
 	jr	nz,._1
-	ld	l,(ix+#object.X.lo)
-	ld	h,(ix+#object.X.hi)
+	ld	l,[ix+#object.X.lo]
+	ld	h,[ix+#object.X.hi]
 	ld	de,$0008
 	add	hl,de
-	ld	(ix+#object.unknown12),l
-	ld	(ix+#object.unknown13),h
-	ld	l,(ix+#object.Y.lo)
-	ld	h,(ix+#object.Y.hi)
+	ld	[ix+#object.unknown12],l
+	ld	[ix+#object.unknown13],h
+	ld	l,[ix+#object.Y.lo]
+	ld	h,[ix+#object.Y.hi]
 	ld	de,$0008
 	add	hl,de
-	ld	(ix+#object.unknown14),l
-	ld	(ix+#object.unknown15),h
-	set	0,(ix+#object.flags)
-._1	ld	l,(ix+#object.unknown11)
+	ld	[ix+#object.unknown14],l
+	ld	[ix+#object.unknown15],h
+	set	0,[ix+#object.flags]
+._1	ld	l,[ix+#object.unknown11]
 	ld	h,$00
 	add	hl,hl
 	ld	de,._898e
 	add	hl,de
-	ld	e,(hl)
+	ld	e,[hl]
 	inc	hl
-	ld	c,(hl)
+	ld	c,[hl]
 	ld	d,$00
 	ld	b,d
 	bit	7,e
@@ -37,27 +37,27 @@ PROC    :doObjectCode_trap_spikeBall            SECTION ::objects
 ._2	bit	7,c
 	jr	z,._3
 	dec	b
-._3	ld	l,(ix+#object.unknown12)
-	ld	h,(ix+#object.unknown13)
+._3	ld	l,[ix+#object.unknown12]
+	ld	h,[ix+#object.unknown13]
 	add	hl,de
-	ld	(ix+#object.X.lo),l
-	ld	(ix+#object.X.hi),h
-	ld	l,(ix+#object.unknown14)
-	ld	h,(ix+#object.unknown15)
+	ld	[ix+#object.X.lo],l
+	ld	[ix+#object.X.hi],h
+	ld	l,[ix+#object.unknown14]
+	ld	h,[ix+#object.unknown15]
 	add	hl,bc
-	ld	(ix+#object.Y.lo),l
-	ld	(ix+#object.Y.hi),h
+	ld	[ix+#object.Y.lo],l
+	ld	[ix+#object.Y.hi],h
 	ld	hl,$0204
-	ld	($.TEMP6),hl
+	ld	[$.TEMP6],hl
 	call	:detectCollisionWithSonic
 	call	nc,:_35fd
-	ld	(ix+#object.spriteLayout.lo),._8987.lo
-	ld	(ix+#object.spriteLayout.hi),._8987.hi
-	inc	(ix+#object.unknown11)
-	ld	a,(ix+#object.unknown11)
+	ld	[ix+#object.spriteLayout.lo],._8987.lo
+	ld	[ix+#object.spriteLayout.hi],._8987.hi
+	inc	[ix+#object.unknown11]
+	ld	a,[ix+#object.unknown11]
 	cp	$b4
 	ret	c
-	ld	(ix+#object.unknown11),$00
+	ld	[ix+#object.unknown11],$00
 	ret
  
         `sprite layout

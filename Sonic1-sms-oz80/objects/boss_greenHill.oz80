@@ -2,18 +2,18 @@
 `OBJECT: boss (Green Hill)
 
 PROC    :doObjectCode_boss_greenHill            SECTION ::objects {
-	set	5,(ix+#object.flags)
-	ld	(ix+#object.width), 32
-	ld	(ix+#object.height),28
+	set	5,[ix+#object.flags]
+	ld	[ix+#object.width], 32
+	ld	[ix+#object.height],28
 	call	:_7ca6
-	bit	0,(ix+#object.unknown11)
+	bit	0,[ix+#object.unknown11]
 	jr	nz,._1
-	ld	l,(ix+#object.Y.lo)
-	ld	h,(ix+#object.Y.hi)
+	ld	l,[ix+#object.Y.lo]
+	ld	h,[ix+#object.Y.hi]
 	ld	de,$fff8
 	add	hl,de
-	ld	(ix+#object.Y.lo),l
-	ld	(ix+#object.Y.hi),h
+	ld	[ix+#object.Y.lo],l
+	ld	[ix+#object.Y.hi],h
 	
 	`boss sprite set
 	ld	hl,$aeb1
@@ -29,43 +29,43 @@ PROC    :doObjectCode_boss_greenHill            SECTION ::objects {
 	rst	:rst_playMusic
 	
 	xor	a;zero
-	ld	($.D2EC),a;zero
-	ld	(ix+$12),a;zero
-	ld	(ix+#object.unknown14),$a1
-	ld	(ix+#object.unknown15),$72
+	ld	[$.D2EC],a;zero
+	ld	[ix+$12],a;zero
+	ld	[ix+#object.unknown14],$a1
+	ld	[ix+#object.unknown15],$72
 	
 	ld	hl,$0760
 	ld	de,$00e8
 	call	:_7c8c
 	
-	set	0,(ix+#object.unknown11)
-._1	ld	a,(ix+#object.unknown13)
+	set	0,[ix+#object.unknown11]
+._1	ld	a,[ix+#object.unknown13]
 	and	$3f
 	ld	e,a
 	ld	d,$00
 	ld	hl,$7261
 	add	hl,de
-	ld	a,(hl)
+	ld	a,[hl]
 	and	a
 	jp	p,._2
 	ld	c,$ff
 	jr	._3
 ._2	ld	c,$00
-._3	ld	(ix+#object.Yspeed.lo),a
-	ld	(ix+#object.Yspeed.hi),c
-	ld	(ix+#object.Ydirection),c
-._4	ld	e,(ix+$12)
+._3	ld	[ix+#object.Yspeed.lo],a
+	ld	[ix+#object.Yspeed.hi],c
+	ld	[ix+#object.Ydirection],c
+._4	ld	e,[ix+$12]
 	ld	d,$00
-	ld	l,(ix+#object.unknown14)
-	ld	h,(ix+#object.unknown15)
+	ld	l,[ix+#object.unknown14]
+	ld	h,[ix+#object.unknown15]
 	add	hl,de
-	ld	($.TEMP6),hl
-	ld	a,(hl)
+	ld	[$.TEMP6],hl
+	ld	a,[hl]
 	and	a
 	jr	nz,._5
 	inc	hl
-	ld	a,(hl)
-	ld	(ix+$12),a
+	ld	a,[hl]
+	ld	[ix+$12],a
 	jp	._4
 	
 ._5	dec	a
@@ -74,98 +74,98 @@ PROC    :doObjectCode_boss_greenHill            SECTION ::objects {
 	ld	d,$00
 	ld	hl,._724b
 	add	hl,de
-	ld	a,(hl)
+	ld	a,[hl]
 	inc	hl
-	ld	h,(hl)
+	ld	h,[hl]
 	ld	l,a
-	jp	(hl)
-	ld	hl,($.LEVEL_LEFT)
+	jp	[hl]
+	ld	hl,[$.LEVEL_LEFT]
 	ld	de,$0006
 	add	hl,de
-	ld	e,(ix+#object.X.lo)
-	ld	d,(ix+#object.X.hi)
+	ld	e,[ix+#object.X.lo]
+	ld	d,[ix+#object.X.hi]
 	and	a
 	sbc	hl,de
 	ld	c,$ff
 	ld	hl,$ff00
 	jp	c,._9
 	
-	ld	(ix+$12),$00
-	bit	1,(ix+#object.unknown11)
+	ld	[ix+$12],$00
+	bit	1,[ix+#object.unknown11]
 	jr	nz,._6
-	ld	(ix+#object.unknown14),$a4
-	ld	(ix+#object.unknown15),$72
-	set	1,(ix+#object.unknown11)
+	ld	[ix+#object.unknown14],$a4
+	ld	[ix+#object.unknown15],$72
+	set	1,[ix+#object.unknown11]
 	jp	._9
 	
-._6	ld	(ix+#object.unknown14),$a7
-	ld	(ix+#object.unknown15),$72
-	res	1,(ix+#object.unknown11)
+._6	ld	[ix+#object.unknown14],$a7
+	ld	[ix+#object.unknown15],$72
+	res	1,[ix+#object.unknown11]
 	jp	._9
 	
-	ld	hl,($.LEVEL_LEFT)
+	ld	hl,[$.LEVEL_LEFT]
 	ld	de,$00e0
 	add	hl,de
-	ld	e,(ix+#object.X.lo)
-	ld	d,(ix+#object.X.hi)
+	ld	e,[ix+#object.X.lo]
+	ld	d,[ix+#object.X.hi]
 	and	a
 	sbc	hl,de
 	ld	c,$00
 	ld	hl,$0100
 	jp	nc,._9
-	ld	(ix+$12),$00
-	bit	2,(ix+#object.unknown11)
+	ld	[ix+$12],$00
+	bit	2,[ix+#object.unknown11]
 	jr	nz,._7
-	ld	(ix+#object.unknown14),$a1
-	ld	(ix+#object.unknown15),$72
-	set	2,(ix+#object.unknown11)
+	ld	[ix+#object.unknown14],$a1
+	ld	[ix+#object.unknown15],$72
+	set	2,[ix+#object.unknown11]
 	jp	._9
 	
-._7	ld	(ix+#object.unknown14),$aa
-	ld	(ix+#object.unknown15),$72
-	res	2,(ix+#object.unknown11)
+._7	ld	[ix+#object.unknown14],$aa
+	ld	[ix+#object.unknown15],$72
+	res	2,[ix+#object.unknown11]
 	jp	._9
 	
-	ld	(ix+#object.Yspeed.lo),$60
-	ld	(ix+#object.Yspeed.hi),$00
-	ld	(ix+#object.Ydirection),$00
-	ld	hl,($.CAMERA_Y)
+	ld	[ix+#object.Yspeed.lo],$60
+	ld	[ix+#object.Yspeed.hi],$00
+	ld	[ix+#object.Ydirection],$00
+	ld	hl,[$.CAMERA_Y]
 	ld	de,$0074
 	add	hl,de
-	ld	e,(ix+#object.Y.lo)
-	ld	d,(ix+#object.Y.hi)
+	ld	e,[ix+#object.Y.lo]
+	ld	d,[ix+#object.Y.hi]
 	xor	a;zero
 	sbc	hl,de
 	ld	c,a;zero
 	ld	l,c
 	ld	h,c
 	jp	nc,._9
-	ld	(ix+$12),$00
-	ld	(ix+#object.unknown14),$b0
-	ld	(ix+#object.unknown15),$72
+	ld	[ix+$12],$00
+	ld	[ix+#object.unknown14],$b0
+	ld	[ix+#object.unknown15],$72
 	jp	._9
 	
 	ld	c,$00
 	ld	hl,$0400
 	jp	._9
 	
-	ld	(ix+#object.Yspeed.lo),$60
-	ld	(ix+#object.Yspeed.hi),$00
-	ld	(ix+#object.Ydirection),$00
-	ld	hl,($.CAMERA_Y)
+	ld	[ix+#object.Yspeed.lo],$60
+	ld	[ix+#object.Yspeed.hi],$00
+	ld	[ix+#object.Ydirection],$00
+	ld	hl,[$.CAMERA_Y]
 	ld	de,$0074
 	add	hl,de
-	ld	e,(ix+#object.Y.lo)
-	ld	d,(ix+#object.Y.hi)
+	ld	e,[ix+#object.Y.lo]
+	ld	d,[ix+#object.Y.hi]
 	xor	a;zero
 	sbc	hl,de
 	ld	c,a;zero
 	ld	l,c
 	ld	h,c
 	jp	nc,._9
-	ld	(ix+$12),$00
-	ld	(ix+#object.unknown14),$bc
-	ld	(ix+#object.unknown15),$72
+	ld	[ix+$12],$00
+	ld	[ix+#object.unknown14],$bc
+	ld	[ix+#object.unknown15],$72
 	jp	._9
 	
 	ld	c,$ff
@@ -180,74 +180,74 @@ PROC    :doObjectCode_boss_greenHill            SECTION ::objects {
 	ld	c,$00
 	ld	l,c
 	ld	h,c
-	ld	(ix+#object.unknown14),$ad
-	ld	(ix+#object.unknown15),$72
-	ld	(ix+$12),c
-	ld	(ix+#object.unknown13),c
+	ld	[ix+#object.unknown14],$ad
+	ld	[ix+#object.unknown15],$72
+	ld	[ix+$12],c
+	ld	[ix+#object.unknown13],c
 	jr	._9
 	
-	ld	(ix+#object.Yspeed.lo),$00
-	ld	(ix+#object.Yspeed.hi),$ff
-	ld	(ix+#object.Ydirection),$ff
-	ld	hl,($.CAMERA_Y)
+	ld	[ix+#object.Yspeed.lo],$00
+	ld	[ix+#object.Yspeed.hi],$ff
+	ld	[ix+#object.Ydirection],$ff
+	ld	hl,[$.CAMERA_Y]
 	ld	de,$001a
 	add	hl,de
-	ld	e,(ix+#object.Y.lo)
-	ld	d,(ix+#object.Y.hi)
+	ld	e,[ix+#object.Y.lo]
+	ld	d,[ix+#object.Y.hi]
 	xor	a;zero
 	sbc	hl,de
 	ld	c,a;zero
 	ld	l,c
 	ld	h,c
 	jp	c,._9
-	ld	l,(ix+#object.X.lo)
-	ld	h,(ix+#object.X.hi)
-	ld	de,($.LEVEL_LEFT)
+	ld	l,[ix+#object.X.lo]
+	ld	h,[ix+#object.X.hi]
+	ld	de,[$.LEVEL_LEFT]
 	xor	a;zero
 	sbc	hl,de
 	ld	c,a;zero
 	ld	l,c
 	ld	h,c
 	jr	c,._8
-	ld	(ix+#object.unknown14),$a1
-	ld	(ix+#object.unknown15),$72
-	ld	(ix+$12),a
+	ld	[ix+#object.unknown14],$a1
+	ld	[ix+#object.unknown15],$72
+	ld	[ix+$12],a
 	jr	._9
 	
-._8	ld	(ix+#object.unknown14),$a4
-	ld	(ix+#object.unknown15),$72
-	ld	(ix+$12),a
+._8	ld	[ix+#object.unknown14],$a4
+	ld	[ix+#object.unknown15],$72
+	ld	[ix+$12],a
 	jr	._9
 	
-._9	ld	(ix+#object.Xspeed.lo),l
-	ld	(ix+#object.Xspeed.hi),h
-	ld	(ix+#object.Xdirection),c
-	ld	hl,($.TEMP6)
-	ld	e,(hl)
+._9	ld	[ix+#object.Xspeed.lo],l
+	ld	[ix+#object.Xspeed.hi],h
+	ld	[ix+#object.Xdirection],c
+	ld	hl,[$.TEMP6]
+	ld	e,[hl]
 	ld	d,$00
 	ld	hl,._72c8
 	add	hl,de
-	ld	a,(hl)
+	ld	a,[hl]
 	ld	hl,._72f8
 	and	a
 	jr	z,._10
 	ld	hl,._730a
 ._10	ld	e,a
-	ld	a,(ix+#object.flags)
+	ld	a,[ix+#object.flags]
 	and	$fd
 	or	e
-	ld	(ix+#object.flags),a
-	ld	(ix+#object.spriteLayout.lo),l
-	ld	(ix+#object.spriteLayout.hi),h
+	ld	[ix+#object.flags],a
+	ld	[ix+#object.spriteLayout.lo],l
+	ld	[ix+#object.spriteLayout.hi],h
 	ld	hl,$0012
-	ld	($.D216),hl
+	ld	[$.D216],hl
 	call	:_77be
 	call	:_79fa
-	inc	(ix+#object.unknown13)
-	ld	a,(ix+#object.unknown13)
+	inc	[ix+#object.unknown13]
+	ld	a,[ix+#object.unknown13]
 	and	$0f
 	ret	nz
-	inc	(ix+$12)
+	inc	[ix+$12]
 	ret
 
 ._724b  BYTE $AC $70 $EC $70 $2C $71 $5D $71 $65 $71 $96 $71 $9D $71 $A3 $71

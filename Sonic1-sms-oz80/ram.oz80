@@ -170,7 +170,7 @@ RAM     $
 .OVERSCROLLCACHE_HORZ           BYTE x 128                                      `$D180
 
 ``throughout the codebase, IY is used as a shorthand to $D200 where many
-  commonly used RAM variables exist. therefore these use the `(iy+#VARS.abc)`
+  commonly used RAM variables exist. therefore these use the `[iy+#VARS.abc]`
   form of addressing. for the sake of completeness, we'll also define the
   absolute location of these variables too, i.e. `$.VARS.abc```
 .VARS                           HASH #vars                                      `$D200

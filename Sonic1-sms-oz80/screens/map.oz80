@@ -9,29 +9,29 @@ PROC    :_LABEL_C52_106                                                         
 {
 	`reset horizontal / vertical scroll
 	xor	a;zero				`set A to 0
-	ld	($.VDPSCROLL_HORZ), a;zero
-	ld	($.VDPSCROLL_VERT), a;zero
+	ld	[$.VDPSCROLL_HORZ], a;zero
+	ld	[$.VDPSCROLL_VERT], a;zero
 	
 	ld	a, $FF
-	ld	($.D216), a
+	ld	[$.D216], a
 	ld	c, $01
-	ld	a, ($.CURRENT_LEVEL)
+	ld	a, [$.CURRENT_LEVEL]
 	cp	18
 	ret	nc
 	cp	9
 	jr	c, ._1
 	ld	c, $02
-._1	ld	a, ($.D216)
+._1	ld	a, [$.D216]
 	cp	c
 	jp	z, ._4
 	ld	a, c
-	ld	($.D216), a
+	ld	[$.D216], a
 	dec	a
 	jr	nz, ._2
-	ld	a, ($.VDPREGISTER_1)
+	ld	a, [$.VDPREGISTER_1]
 	and	%10111111
-	ld	($.VDPREGISTER_1), a
-	res	0, (iy+#vars.flags0)
+	ld	[$.VDPREGISTER_1], a
+	res	0, [iy+#vars.flags0]
 	call	:waitForInterrupt
 	
 	`map screen 1 tileset
@@ -54,15 +54,15 @@ PROC    :_LABEL_C52_106                                                         
 	
 	`load page 1 ($4000-$7FFF) with bank 5 ($14000-$17FFF)
 	ld	a,5
-	ld	($.SMS.SLOT1),a
-	ld	($.SLOT1),a
+	ld	[$.SMS.SLOT1],a
+	ld	[$.SLOT1],a
 	
 	`map 1 background
 	ld	hl,$627e
 	ld	bc,$0178
 	ld	de,$.VDP.SCREENNAMETABLE
 	ld	a,$10
-	ld	($.TEMP1),a
+	ld	[$.TEMP1],a
 	call	:decompressScreen
 	
 	`map 1 foreground
@@ -70,7 +70,7 @@ PROC    :_LABEL_C52_106                                                         
 	ld	bc,$0145
 	ld	de,$.VDP.SCREENNAMETABLE
 	ld	a,$00
-	ld	($.TEMP1),a
+	ld	[$.TEMP1],a
 	call	:decompressScreen
 	
 	ld	hl,#S1_MapScreen1_Palette
@@ -78,11 +78,11 @@ PROC    :_LABEL_C52_106                                                         
 	jr	._3
 	
 ._2	`turn the screen off
-	ld	a, ($.VDPREGISTER_1)
+	ld	a, [$.VDPREGISTER_1]
 	and	%10111111		        `remove bit 6 of VDP register 1
-	ld	($.VDPREGISTER_1), a
+	ld	[$.VDPREGISTER_1], a
 	
-	res	0, (iy+#vars.flags0)
+	res	0, [iy+#vars.flags0]
 	call	:waitForInterrupt
 	
 	`map screen 2 tileset
@@ -105,15 +105,15 @@ PROC    :_LABEL_C52_106                                                         
 	
 	`load page 1 ($4000-$7FFF) with bank 5 ($14000-$17FFF)
 	ld	a,5
-	ld	($.SMS.SLOT1),a
-	ld	($.SLOT1),a
+	ld	[$.SMS.SLOT1],a
+	ld	[$.SLOT1],a
 	
 	`map screen 2 background
 	ld	hl,$653b
 	ld	bc,$0170
 	ld	de,$.VDP.SCREENNAMETABLE
 	ld	a,$10
-	ld	($.TEMP1),a
+	ld	[$.TEMP1],a
 	call	:decompressScreen
 	
 	`map screen 2 foreground
@@ -121,7 +121,7 @@ PROC    :_LABEL_C52_106                                                         
 	ld	bc,$0153
 	ld	de,$.VDP.SCREENNAMETABLE
 	ld	a,$00
-	ld	($.TEMP1),a
+	ld	[$.TEMP1],a
 	call	:decompressScreen
 	
 	ld	hl,#S1_MapScreen2_Palette
@@ -132,23 +132,23 @@ PROC    :_LABEL_C52_106                                                         
 	rst	:playMusic
 	
 ._4	call	:_LABEL_E86_110
-	ld	a, ($.CURRENT_LEVEL)
+	ld	a, [$.CURRENT_LEVEL]
 	add	a, a
 	ld	c, a
 	ld	b, $00
 	ld	hl, :S1_ZoneTitles
 	add	hl, bc
-	ld	a, (hl)
+	ld	a, [hl]
 	inc	hl
-	ld	h, (hl)
+	ld	h, [hl]
 	ld	l, a
 	
         `display in-front of sprites (bit 12 of tile)
 	ld	a, %00010000
-	ld	($.TEMP1), a
+	ld	[$.TEMP1], a
 	call	:print
 	
-	ld	a, ($.CURRENT_LEVEL)
+	ld	a, [$.CURRENT_LEVEL]
 	ld	c, a
 	add	a, a
 	add	a, c
@@ -156,12 +156,12 @@ PROC    :_LABEL_C52_106                                                         
 	ld	d, $00
 	ld	hl, :_f4e
 	add	hl, de
-	ld	e, (hl)
+	ld	e, [hl]
 	inc	hl
-	ld	d, (hl)
+	ld	d, [hl]
 	inc	hl
-	ld	($.TEMP3), de
-	ld	a, (hl)
+	ld	[$.TEMP3], de
+	ld	a, [hl]
 	and	a
 	jr	z, ._
 	
@@ -171,59 +171,59 @@ PROC    :_LABEL_C52_106                                                         
 	ld	d, $00
 	ld	hl, :_1201
 	add	hl, de
-	ld	a, (hl)
+	ld	a, [hl]
 	inc	hl
-	ld	h, (hl)
+	ld	h, [hl]
 	ld	l, a
-	jp	(hl)
+	jp	[hl]
 
 ._	ld      a, $01
-	ld	($.TEMP1),a
+	ld	[$.TEMP1],a
 	ld	bc,$012c
 
 ._5	push	bc
 	call	:_LABEL_E86_110
-	ld	a,($.TEMP1)
+	ld	a,[$.TEMP1]
 	dec	a
-	ld	($.TEMP1),a
+	ld	[$.TEMP1],a
 	jr	nz,._8
-	ld	hl,($.TEMP3)
-._6	ld	e,(hl)
+	ld	hl,[$.TEMP3]
+._6	ld	e,[hl]
 	inc	hl
-	ld	d,(hl)
+	ld	d,[hl]
 	inc	hl
-	ld	c,(hl)
+	ld	c,[hl]
 	inc	hl
-	ld	b,(hl)
+	ld	b,[hl]
 	inc	hl
-	ld	($.TEMP6),bc
-	ld	a,(hl)
+	ld	[$.TEMP6],bc
+	ld	a,[hl]
 	inc	hl
 	and	a
 	jr	nz,._7
 	ex	de,hl
 	jp	._6
 	
-._7	ld	($.TEMP1),a
-	ld	($.TEMP3),hl
-	ld	($.TEMP4),de
+._7	ld	[$.TEMP1],a
+	ld	[$.TEMP3],hl
+	ld	[$.TEMP4],de
 	
-._8	ld	hl,($.TEMP6)
+._8	ld	hl,[$.TEMP6]
 	push	hl
 	ld	e,h
 	ld	h,$00
 	ld	d,h
-	ld	bc,($.TEMP4)
+	ld	bc,[$.TEMP4]
 	call	:processSpriteLayout
 	pop	hl
-	ld	($.TEMP6),hl
+	ld	[$.TEMP6],hl
 	pop	bc
 	dec	bc
 	ld	a,b
 	or	c
 	ret	z
 	
-	bit	5,(iy+#vars.joypad)
+	bit	5,[iy+#vars.joypad]
 	jp	nz,._5
 	ret	nz
 	scf	
@@ -236,13 +236,13 @@ PROC    :_0dd9                                                                  
         `referenced by table at $1201
 {    
 	ld	hl,$0000
-	ld	($.TEMP1),hl
+	ld	[$.TEMP1],hl
 	ld	hl,$00dc
 	ld	de,$003c
 	ld	b,$00
 	
 ._1	call	:_LABEL_E86_110
-	ld	a,(iy+#vars.joypad)
+	ld	a,[iy+#vars.joypad]
 	cp	$ff
 	jp	nz,:_LABEL_C52_106._
 	push	bc
@@ -253,13 +253,13 @@ PROC    :_0dd9                                                                  
 	djnz	._1
 	
 	ld	hl,$0000
-	ld	($.TEMP1),hl
+	ld	[$.TEMP1],hl
 	ld	hl,$ffd8
 	ld	de,$0058
 	ld	b,$80
 	
 ._2	call	:_LABEL_E86_110
-	ld	a,(iy+#vars.joypad)
+	ld	a,[iy+#vars.joypad]
 	cp	$ff
 	jp	nz,:_LABEL_C52_106._
 	push	bc
@@ -277,13 +277,13 @@ PROC    :_0e24                                                                  
         `referenced by table at $1201
 {        
 	ld	hl,$0000
-	ld	($.TEMP1),hl
+	ld	[$.TEMP1],hl
 	ld	hl,$0080
 	ld	de,$00c0
 	ld	b,$78
 	
 .loop	call	:_LABEL_E86_110
-	ld	a,(iy+#vars.joypad)
+	ld	a,[iy+#vars.joypad]
 	cp	$ff
 	jp	nz,:_LABEL_C52_106._
 	push	bc
@@ -301,13 +301,13 @@ PROC    :_0e4b                                                                  
         `referenced by table at $1201
 {	
 	ld	hl,$0000
-	ld	($.TEMP1),hl
+	ld	[$.TEMP1],hl
 	ld	hl,$0078
 	ld	de,$0000
 	ld	b,$30
 	
 .loop	call	:_LABEL_E86_110
-	ld	a,(iy+#vars.joypad)
+	ld	a,[iy+#vars.joypad]
 	cp	$ff
 	jp	nz,:_LABEL_C52_106._
 	push	bc
@@ -341,14 +341,14 @@ PARAMS  $.TEMP1
 {       
 	push	hl, de, bc
 	
-	ld	hl, ($.TEMP1)
+	ld	hl, [$.TEMP1]
 	push	hl
 	
-	res	0, (iy+#vars.flags0)
+	res	0, [iy+#vars.flags0]
 	call	:waitForInterrupt
 	
-	ld	(iy+#vars.spriteUpdateCount), $00
-	ld	a, ($.LIVES)
+	ld	[iy+#vars.spriteUpdateCount], $00
+	ld	a, [$.LIVES]
 	ld	l, a
 	ld	h, $00
 	ld	c, $0A
@@ -357,13 +357,13 @@ PARAMS  $.TEMP1
 	ld	a, l
 	add	a, a
 	add	a, $80
-	ld	($.D2BE), a
+	ld	[$.D2BE], a
 	ld	c, 10
 	call	:decimalMultiplyBy10
 	
 	ex	de, hl
 	
-	ld	a, ($.LIVES)
+	ld	a, [$.LIVES]
 	ld	l, a
 	ld	h, $00
 	and	a
@@ -371,9 +371,9 @@ PARAMS  $.TEMP1
 	ld	a, l
 	add	a, a
 	add	a, $80
-	ld	($.D2BF), a
+	ld	[$.D2BF], a
 	ld	a, $FF
-	ld	($.D2BF+1), a
+	ld	[$.D2BF+1], a
         
 	ld	b;ypos, 167
 	ld	c;xpos, 40
@@ -381,9 +381,9 @@ PARAMS  $.TEMP1
 	ld	de, $.D2BE
 	call	:layoutSpritesHorizontal
 	
-	ld	($.SPRITETABLE_ADDR), hl
+	ld	[$.SPRITETABLE_ADDR], hl
 	pop	hl
-	ld	($.TEMP1), hl
+	ld	[$.TEMP1], hl
 	
 	pop	bc, de, hl
 	ret
@@ -401,7 +401,7 @@ PARAMS  bc
 	ld	l,c
 	ld	h,b
 	
-	ld	a,($.TEMP2)
+	ld	a,[$.TEMP2]
 	add	a,a			        `x2
 	add	a,a			        `x4
 	ld	e,a
@@ -409,20 +409,20 @@ PARAMS  bc
 	add	hl,de
 	
 	`read the address of a sprite layout from the list
-	ld	c,(hl)
+	ld	c,[hl]
 	inc	hl
-	ld	b,(hl)
+	ld	b,[hl]
 	inc	hl
 	
-	ld	a,($.TEMP1)
-	cp	(hl)
+	ld	a,[$.TEMP1]
+	cp	[hl]
 	jr	c,._1
 	
 	inc	hl
-	ld	a,(hl)
-	ld	($.TEMP2),a
+	ld	a,[hl]
+	ld	[$.TEMP2],a
 	xor	a;zero
-	ld	($.TEMP1),a;zero
+	ld	[$.TEMP1],a;zero
 	
 ._1	pop	de			        `Y-position
 	pop	hl			        `X-position
@@ -430,9 +430,9 @@ PARAMS  bc
 	push	de
 	call	:processSpriteLayout
 	
-	ld	a,($.TEMP1)
+	ld	a,[$.TEMP1]
 	inc	a
-	ld	($.TEMP1),a
+	ld	[$.TEMP1],a
 	
 	pop	de, hl
 	ret
@@ -755,12 +755,12 @@ PROC    :titleScreen                                                            
         `==============================================================================
 {        
 	`turn off screen
-	ld	a, ($.VDPREGISTER_1)
+	ld	a, [$.VDPREGISTER_1]
 	and	%10111111		        `remove bit 6 of $D219
-	ld	($.VDPREGISTER_1), a
+	ld	[$.VDPREGISTER_1], a
 	
 	`wait for interrupt to complete?
-	res	0, (iy+#vars.flags0)
+	res	0, [iy+#vars.flags0]
 	call	:waitForInterrupt
 	
 	`load the title screen tile set
@@ -779,28 +779,28 @@ PROC    :titleScreen                                                            
 	
 	`now switch page 1 ($4000-$7FFF) to bank 5 ($14000-$17FFF)
 	ld	a, 5
-	ld	($.SMS.SLOT1), a
-	ld	($.SLOT1), a
+	ld	[$.SMS.SLOT1], a
+	ld	[$.SLOT1], a
 	
 	`load the title screen itself
 	ld	hl, $6000		        `ROM:$16000
 	ld	de, $.VDP.SCREENNAMETABLE
 	ld	bc, $012E
 	ld	a, $00
-	ld	($.TEMP1), a
+	ld	[$.TEMP1], a
 	call	:decompressScreen
 	
 	`reset horizontal / vertical scroll
 	xor	a;zero			        `set A to zero
-	ld	($.VDPSCROLL_HORZ), a;zero
-	ld	($.VDPSCROLL_VERT), a;zero
+	ld	[$.VDPSCROLL_HORZ], a;zero
+	ld	[$.VDPSCROLL_VERT], a;zero
 	
 	`load the palette
 	ld	hl, .S1_TitleScreen_Palette
 	ld	a, %00000011		        `flags to load tile & sprite palettes
 	call	:loadPaletteOnInterrupt
 	
-	set	1, (iy+#vars.flags0)
+	set	1, [iy+#vars.flags0]
 	
 	`play title screen music
 	ld	a, #index_music_titleScreen
@@ -808,48 +808,48 @@ PROC    :titleScreen                                                            
 	
 	`initialise the animation parameters?
 	xor	a;zero
-	ld	($.D216), a;zero		`reset the screen counter
+	ld	[$.D216], a;zero		`reset the screen counter
 	ld	a, $01
-	ld	($.TEMP2), a
+	ld	[$.TEMP2], a
 	ld	hl, ._1372
-	ld	($.TEMP3), hl
+	ld	[$.TEMP3], hl
 	
 	`------------------------------------------------------------------------------
 ._1	`switch screen on (set bit 6 of VDP register 1)
-	ld	a, ($.VDPREGISTER_1)
+	ld	a, [$.VDPREGISTER_1]
 	or	%01000000
-	ld	($.VDPREGISTER_1), a
+	ld	[$.VDPREGISTER_1], a
 	
-	res	0, (iy+#vars.flags0)
+	res	0, [iy+#vars.flags0]
 	call	:waitForInterrupt
 	
 	`count to 100:
-	ld	a, ($.D216)		        `get the screen counter
+	ld	a, [$.D216]		        `get the screen counter
 	inc	a			        `add one
 	cp	100			        `if less than 100,
 	jr	c, ._2			        `keep counting,
 	xor	a;zero			        `otherwise go back to 0
-._2	ld	($.D216), a;zero		`update screen counter value
+._2	ld	[$.D216], a;zero		`update screen counter value
 	
 	ld	hl, ._1352
 	cp	$40
 	jr	c, ._3
 	ld	hl, ._1362
 ._3	xor	a;zero			        `set A to 0
-	ld	($.TEMP1), a;zero
+	ld	[$.TEMP1], a;zero
 	call	:print
 	
-	ld	a, ($.TEMP2)
+	ld	a, [$.TEMP2]
 	dec	a
-	ld	($.TEMP2), a
+	ld	[$.TEMP2], a
 	jr	nz, ._4
 	
-	ld	hl, ($.TEMP3)
-	ld	e, (hl)
+	ld	hl, [$.TEMP3]
+	ld	e, [hl]
 	inc	hl
-	ld	d, (hl)
+	ld	d, [hl]
 	inc	hl
-	ld	a, (hl)
+	ld	a, [hl]
 	inc	hl
 	
 	`when the animation reaches the end,
@@ -857,21 +857,21 @@ PROC    :titleScreen                                                            
 	and	a
 	jr	z, ._5
 	
-	ld	($.TEMP2), a
-	ld	($.TEMP3), hl
-	ld	($.TEMP4), de
+	ld	[$.TEMP2], a
+	ld	[$.TEMP3], hl
+	ld	[$.TEMP4], de
 	
 	`set the game's main sprite table as the table to use
 ._4	ld	hl, $.SPRITETABLE
-	ld	($.SPRITETABLE_ADDR), hl
+	ld	[$.SPRITETABLE_ADDR], hl
 	
 	ld	hl, $0080
 	ld	de, $0018
-	ld	bc, ($.TEMP4)
+	ld	bc, [$.TEMP4]
 	call	:processSpriteLayout
 	
 	`has the button been pressed? if not, repeat
-	bit	5, (iy+#vars.joypad)
+	bit	5, [iy+#vars.joypad]
 	jp	nz, ._1
 	
 	scf
@@ -934,11 +934,11 @@ PROC    :_1401                                                                  
         `Act Complete screen?
 {        
 	`turn off the screen
-	ld	a,($.VDPREGISTER_1)
+	ld	a,[$.VDPREGISTER_1]
 	and	%10111111		        `remove bit 6 of VDP register 1
-	ld	($.VDPREGISTER_1),a
+	ld	[$.VDPREGISTER_1],a
 	
-	res	0,(iy+#vars.flags0)
+	res	0,[iy+#vars.flags0]
 	call	:waitForInterrupt
 	di	
 	
@@ -950,20 +950,20 @@ PROC    :_1401                                                                  
 	
 	`switch page 1 ($4000-$7FFF) to bank 5 ($14000-$17FFF)
 	ld	a,5
-	ld	($.SMS.SLOT1),a
-	ld	($.SLOT1),a
+	ld	[$.SMS.SLOT1],a
+	ld	[$.SLOT1],a
 	
 	`act complete background
 	ld	hl,$67fe
 	ld	bc,$0032
 	ld	de,$.VDP.SCREENNAMETABLE
 	ld	a,$00
-	ld	($.TEMP1),a
+	ld	[$.TEMP1],a
 	call	:decompressScreen
 	
 	xor	a;zero
-	ld	($.VDPSCROLL_HORZ),a;zero
-	ld	($.VDPSCROLL_VERT),a;zero
+	ld	[$.VDPSCROLL_HORZ],a;zero
+	ld	[$.VDPSCROLL_VERT],a;zero
 	ld	hl,._14fc
 	ld	a,%00000011
 	call	:loadPaletteOnInterrupt
@@ -971,23 +971,23 @@ PROC    :_1401                                                                  
 	ld	b,$78
 	
 ._1	`turn the screen on
-	ld	a,($.VDPREGISTER_1)
+	ld	a,[$.VDPREGISTER_1]
 	or	%01000000		        `enable bit 6 on VDP register 1
-	ld	($.VDPREGISTER_1),a
+	ld	[$.VDPREGISTER_1],a
 	
-	res	0,(iy+#vars.flags0)
+	res	0,[iy+#vars.flags0]
 	call	:waitForInterrupt
 	
 	djnz	._1
 	
-	ld	a,($.D284)
+	ld	a,[$.D284]
 	and	a
 	jr	nz,._3
 	
 	ld	bc,$00b4
 ._2	push	bc
 	
-	res	0,(iy+#vars.flags0)
+	res	0,[iy+#vars.flags0]
 	call	:waitForInterrupt
 	
 	pop	bc
@@ -996,7 +996,7 @@ PROC    :_1401                                                                  
 	or	c
 	ret	z
 	
-	bit	5,(iy+#vars.joypad)
+	bit	5,[iy+#vars.joypad]
 	jp	nz,._2
 	
 	and	a
@@ -1011,13 +1011,13 @@ PROC    :_1401                                                                  
 	ld	hl,._14f1
 	call	:print
 	ld	a,$09
-	ld	($.D216),a
+	ld	[$.D216],a
 	
 ._4	ld	b,$3c
 ._5	push	bc
-	res	0,(iy+#vars.flags0)
+	res	0,[iy+#vars.flags0]
 	call	:waitForInterrupt
-	ld	(iy+#vars.spriteUpdateCount),$00
+	ld	[iy+#vars.spriteUpdateCount],$00
 	ld	hl,$.D216
 	ld	de,$.D2BE
 	ld	b,$01
@@ -1029,10 +1029,10 @@ PROC    :_1401                                                                  
 	ld	c;xpos,140
 	ld	b;ypos,94
 	call	:layoutSpritesHorizontal
-	ld	($.SPRITETABLE_ADDR),hl
+	ld	[$.SPRITETABLE_ADDR],hl
 	
 	pop	bc
-	bit	5,(iy+#vars.joypad)
+	bit	5,[iy+#vars.joypad]
 	jr	z,._6
 	djnz	._5
 	
@@ -1040,10 +1040,10 @@ PROC    :_1401                                                                  
 	rst	:playSFX
 	
 	ld	hl,$.D216
-	ld	a,(hl)
+	ld	a,[hl]
 	and	a
 	ret	z
-	dec	(hl)
+	dec	[hl]
 	jr	._4
 	
 	`get the bit flag for the level
@@ -1053,12 +1053,12 @@ PROC    :_1401                                                                  
 	cpl				        `invert the level bits (create a mask)
 	ld	c,a
 	
-	ld	a,(hl)
+	ld	a,[hl]
 	and	c			        `remove the level bit
-	ld	(hl),a
+	ld	[hl],a
 	
 	ld	hl,$.D284
-	dec	(hl)
+	dec	[hl]
 	scf				        `set carry flag
 	
 	ret
@@ -1087,15 +1087,15 @@ PROC    :_155e                                                                  
         `==============================================================================
         `Act Complete screen?
 {        
-	ld	a, ($.CURRENT_LEVEL)
+	ld	a, [$.CURRENT_LEVEL]
 	cp		19
 	jp	z,:_172f
 	
-	ld	a,($.VDPREGISTER_1)
+	ld	a,[$.VDPREGISTER_1]
 	and	%10111111
-	ld	($.VDPREGISTER_1),a
+	ld	[$.VDPREGISTER_1],a
 	
-	res	0,(iy+#vars.flags0)
+	res	0,[iy+#vars.flags0]
 	call	:waitForInterrupt
 	
 	`load HUD sprites
@@ -1112,14 +1112,14 @@ PROC    :_155e                                                                  
 	
 	`load page 1 ($4000-$7FFF) with bank 5 ($14000-$17FFF)
 	ld	a,5
-	ld	($.SMS.SLOT1),a
-	ld	($.SLOT1),a
+	ld	[$.SMS.SLOT1],a
+	ld	[$.SLOT1],a
 	
 	`UNKNOWN
 	ld	hl,$612e
 	ld	bc,$00bb
 	ld	de,$.VDP.SCREENNAMETABLE
-	ld	a,($.CURRENT_LEVEL)
+	ld	a,[$.CURRENT_LEVEL]
 	cp	28
 	jr	c,._1
 	
@@ -1129,29 +1129,29 @@ PROC    :_155e                                                                  
 	ld	de,$.VDP.SCREENNAMETABLE
 
 ._1	xor	a;zero
-	ld	($.TEMP1),a;zero
+	ld	[$.TEMP1],a;zero
 	call	:decompressScreen
 	
 	ld	hl,:_1711
 	ld	c,$10
-	ld	a,($.D27F)
+	ld	a,[$.D27F]
 	and	a
 	call	nz,:_16d9
 	
-	ld	a,($.CURRENT_LEVEL)
+	ld	a,[$.CURRENT_LEVEL]
 	cp	$1c
 	jr	nc,._3
 	
 	ld	a,$15
-	ld	($.D2BE),a
+	ld	[$.D2BE],a
 	ld	a,$04
-	ld	($.D2BF),a
-	ld	a,($.CURRENT_LEVEL)
+	ld	[$.D2BF],a
+	ld	a,[$.CURRENT_LEVEL]
 	ld	e,a
 	ld	d,$00
 	ld	hl,:_1b69
 	add	hl,de
-	ld	e,(hl)
+	ld	e,[hl]
 	ld	hl,:_1b51
 	add	hl,de
 	ld	b,$04
@@ -1159,14 +1159,14 @@ PROC    :_155e                                                                  
 ._2	push	bc
 	push	hl
 	ld	de,$.D2BF
-	ld	a,(de)
+	ld	a,[de]
 	inc	a
-	ld	(de),a
+	ld	[de],a
 	inc	de
 	ldi	
 	ldi	
 	ld	a,$ff
-	ld	(de),a
+	ld	[de],a
 	ld	hl,$.D2BE
 	call	:print
 	pop	hl
@@ -1176,39 +1176,39 @@ PROC    :_155e                                                                  
 	djnz	._2
 	
 ._3	xor	a;zero
-	ld	($.VDPSCROLL_HORZ),a;zero
-	ld	($.VDPSCROLL_VERT),a;zero
+	ld	[$.VDPSCROLL_HORZ],a;zero
+	ld	[$.VDPSCROLL_VERT],a;zero
 	ld	hl,$1b8d
 	ld	a,%00000011
 	call	:loadPaletteOnInterrupt
-	ld	a,($.CURRENT_LEVEL)
+	ld	a,[$.CURRENT_LEVEL]
 	cp	$1c
 	jr	c,._4
 	ld	hl,$D281
-	inc	(hl)
-	bit	2,(iy+#vars.flags9)
+	inc	[hl]
+	bit	2,[iy+#vars.flags9]
 	jr	nz,._4
 	ld	hl,$D282
-	inc	(hl)
+	inc	[hl]
 	ld	hl,$.D285
-	inc	(hl)
+	inc	[hl]
 
-._4	bit	2,(iy+#vars.flags9)
+._4	bit	2,[iy+#vars.flags9]
 	call	nz,:_1719
 	
-	bit	3,(iy+#vars.flags9)
+	bit	3,[iy+#vars.flags9]
 	call	nz,:_1726
 	
 	ld	hl,$153e
 	ld	de,$154e
 	ld	b,$08
 	
-._5	ld	a,($.D2CE)
-	cp	(hl)
+._5	ld	a,[$.D2CE]
+	cp	[hl]
 	jr	nz,._6
 	inc	hl
-	ld	a,($.D2CE+1)
-	cp	(hl)
+	ld	a,[$.D2CE+1]
+	cp	[hl]
 	jr	nc,._8
 	inc	hl
 	jr	._7
@@ -1224,12 +1224,12 @@ PROC    :_155e                                                                  
 	jr	._9
 	
 ._8	ex	de,hl
-	ld	e,(hl)
+	ld	e,[hl]
 	inc	hl
-	ld	d,(hl)
+	ld	d,[hl]
 ._9	ld	hl,$.TEMP4
 	ex	de,hl
-	ld	a,($.CURRENT_LEVEL)
+	ld	a,[$.CURRENT_LEVEL]
 	cp	$1c
 	jr	c,._10
 	ld	hl,:_1a14
@@ -1237,40 +1237,40 @@ PROC    :_155e                                                                  
 	ldi	
 	ldi	
 	ldi	
-	set	1,(iy+#vars.flags0)
+	set	1,[iy+#vars.flags0]
 	ld	b,$78
 	
 ._11	push	bc
-	ld	a,($.VDPREGISTER_1)
+	ld	a,[$.VDPREGISTER_1]
 	or	$40
-	ld	($.VDPREGISTER_1),a
+	ld	[$.VDPREGISTER_1],a
 	
-	res	0,(iy+#vars.flags0)
+	res	0,[iy+#vars.flags0]
 	call	:waitForInterrupt
 	
 	call	:_1a18
 	pop	bc
 	djnz	._11
 	
-._12	res	0,(iy+#vars.flags0)
+._12	res	0,[iy+#vars.flags0]
 	call	:waitForInterrupt
 	
 	call	:_1a18
 	call	:_19b4
-	ld	a,($.CURRENT_LEVEL)
+	ld	a,[$.CURRENT_LEVEL]
 	cp	28
 	call	c,:_19df
-	ld	a,($.D216)
+	ld	a,[$.D216]
 	inc	a
-	ld	($.D216),a
+	ld	[$.D216],a
 	and	$03
 	jr	nz,._13
 	ld	a,$02
 	rst	:playSFX
 
-._13	ld	hl,($.TEMP4)
-	ld	de,($.TEMP6)
-	ld	a,($.RINGS)
+._13	ld	hl,[$.TEMP4]
+	ld	de,[$.TEMP6]
+	ld	a,[$.RINGS]
 	or	h
 	or	l
 	or	d
@@ -1279,11 +1279,11 @@ PROC    :_155e                                                                  
 	ld	b,$b4
 	
 ._14	push	bc
-	res	0,(iy+#vars.flags0)
+	res	0,[iy+#vars.flags0]
 	call	:waitForInterrupt
 	call	:_1a18
 	pop	bc
-	bit	5,(iy+#vars.joypad)
+	bit	5,[iy+#vars.joypad]
 	jr	z,.exit
 	djnz	._14
 
@@ -1300,17 +1300,17 @@ PROC    :_16d9                                                                  
 	ld	b,a
 	ld	a,c
 	sub	b
-	ld	(de),a
+	ld	[de],a
 	inc	de
 	ld	bc,$0004
 	ldir	
-	ld	(de),a
+	ld	[de],a
 	inc	de
 	ld	bc,$0004
 	ldir	
 	pop	bc
 	xor	a;zero
-	ld	($.TEMP1),a;zero
+	ld	[$.TEMP1],a;zero
 	
 .loop	push	bc
 	ld	hl,$.D2BE
@@ -1318,11 +1318,11 @@ PROC    :_16d9                                                                  
 	ld	hl,$.D2C3
 	call	:print
 	ld	hl,$.D2BE
-	inc	(hl)
-	inc	(hl)
+	inc	[hl]
+	inc	[hl]
 	ld	hl,$.D2C3
-	inc	(hl)
-	inc	(hl)
+	inc	[hl]
+	inc	[hl]
 	pop	bc
 	djnz	.loop
 	
@@ -1340,9 +1340,9 @@ PROC    :_1719                                                                  
         `==============================================================================
 {        
 	xor	a;zero			        `set A to 0
-	ld	($.RINGS),a;zero
-	res	3,(iy+#vars.flags9)
-	res	2,(iy+#vars.flags9)
+	ld	[$.RINGS],a;zero
+	res	3,[iy+#vars.flags9]
+	res	2,[iy+#vars.flags9]
 	ret
 }
 
@@ -1351,8 +1351,8 @@ PROC    :_1726                                                                  
         `called by Act Complete screen?
 {        
 	ld	hl,$.D284
-	inc	(hl)
-	res	3,(iy+#vars.flags9)
+	inc	[hl]
+	res	3,[iy+#vars.flags9]
 	ret
 }
 
@@ -1361,34 +1361,34 @@ PROC    :_172f                                                                  
         `jumped to from $155E
 {
 	ld	a,$ff
-	ld	($.D2FD),a
+	ld	[$.D2FD],a
 	ld	c,$00
-	ld	a,($.D27F)
+	ld	a,[$.D27F]
 	cp	$06
 	jr	c,._1
 	ld	c,$05
-._1	ld	a,($D280)
+._1	ld	a,[$D280]
 	cp	$12
 	jr	c,._2
 	ld	a,c
 	add	a,$05
 	daa	
 	ld	c,a
-._2	ld	a,($D281)
+._2	ld	a,[$D281]
 	cp	$08
 	jr	c,._3
 	ld	a,c
 	add	a,$05
 	daa	
 	ld	c,a
-._3	ld	a,($D282)
+._3	ld	a,[$D282]
 	cp	$08
 	jr	c,._4
 	ld	a,c
 	add	a,$05
 	daa	
 	ld	c,a
-._4	ld	a,($.D283)
+._4	ld	a,[$.D283]
 	and	a
 	jr	nz,._5
 	ld	a,c
@@ -1405,11 +1405,11 @@ PROC    :_172f                                                                  
 	daa	
 	ld	c,a
 ._6	ld	hl,$.D2FF
-	ld	(hl),c
+	ld	[hl],c
 	inc	hl
-	ld	(hl),$00
+	ld	[hl],$00
 	inc	hl
-	ld	(hl),$00
+	ld	[hl],$00
 	ld	hl,:_1907
 	call	:print
 	ld	hl,:_191c
@@ -1427,17 +1427,17 @@ PROC    :_172f                                                                  
 	ld	hl,:_197e
 	call	:print
 	xor	a;zero
-	ld	($.D216),a;zero
+	ld	[$.D216],a;zero
 	ld	bc,$00b4
 	call	:_1860
 	
 ._7	ld	bc,$003c
 	call	:_1860
-	ld	a,($.D27F)
+	ld	a,[$.D27F]
 	and	a
 	jr	z,._8
 	dec	a
-	ld	($.D27F),a
+	ld	[$.D27F],a
 	ld	de,$0000
 	ld	c,$02
 	call	:_39d8
@@ -1450,7 +1450,7 @@ PROC    :_172f                                                                  
 ._8	ld	bc,$00b4
 	call	:_1860
 	ld	a,$01
-	ld	($.D216),a
+	ld	[$.D216],a
 	ld	hl,:_198e
 	call	:print
 	ld	bc,$00b4
@@ -1458,11 +1458,11 @@ PROC    :_172f                                                                  
 	
 ._9	ld	bc,$001e
 	call	:_1860
-	ld	a,($.LIVES)
+	ld	a,[$.LIVES]
 	and	a
 	jr	z,._10
 	dec	a
-	ld	($.LIVES),a
+	ld	[$.LIVES],a
 	ld	de,$5000
 	ld	c,$00
 	call	:_39d8
@@ -1475,7 +1475,7 @@ PROC    :_172f                                                                  
 ._10	ld	bc,$00b4
 	call	:_1860
 	ld	a,$02
-	ld	($.D216),a
+	ld	[$.D216],a
 	ld	hl,:_199e
 	call	:print
 	ld	hl,:_197a
@@ -1485,7 +1485,7 @@ PROC    :_172f                                                                  
 
 ._11	ld	bc,$001e
 	call	:_1860
-	ld	a,($.D2FF)
+	ld	a,[$.D2FF]
 	and	a
 	jr	z,._13
 	dec	a
@@ -1497,7 +1497,7 @@ PROC    :_172f                                                                  
 	sub	$06
 	ld	c,a
 ._12	ld	a,c
-	ld	($.D2FF),a
+	ld	[$.D2FF],a
 	ld	de,$0000
 	ld	c,$01
 	call	:_39d8
@@ -1517,25 +1517,25 @@ PROC    :_1860                                                                  
 {        
 	push	bc
 	
-	res	0,(iy+#vars.flags0)
+	res	0,[iy+#vars.flags0]
 	call	:waitForInterrupt
         
-	ld	(iy+#vars.spriteUpdateCount),$00
+	ld	[iy+#vars.spriteUpdateCount],$00
 	ld	hl,$.SPRITETABLE
-	ld	($.SPRITETABLE_ADDR),hl
+	ld	[$.SPRITETABLE_ADDR],hl
 	ld	hl,$.D2BA
 	ld	de,$.D2BE
 	ld	b,$04
 	call	:_1b13
 	
         ex	de,hl
-	ld	hl,($.SPRITETABLE_ADDR)
+	ld	hl,[$.SPRITETABLE_ADDR]
 	ld	c;xpos,144
 	ld	b;ypos,128
 	call	:layoutSpritesHorizontal
-	ld	($.SPRITETABLE_ADDR),hl
+	ld	[$.SPRITETABLE_ADDR],hl
 	
-        ld	a,($.D216)
+        ld	a,[$.D216]
 	and	a
 	jr	nz,._1
 	ld	hl,$.D27F
@@ -1544,11 +1544,11 @@ PROC    :_1860                                                                  
 	call	:_1b13
         
 	ex	de,hl
-	ld	hl,($.SPRITETABLE_ADDR)
+	ld	hl,[$.SPRITETABLE_ADDR]
 	ld	c;xpos,144
 	ld	b;ypos,96
 	call	:layoutSpritesHorizontal
-	ld	($.SPRITETABLE_ADDR),hl
+	ld	[$.SPRITETABLE_ADDR],hl
 	
         ld	hl,:_19ae
 	ld	de,$.D2BE
@@ -1556,11 +1556,11 @@ PROC    :_1860                                                                  
 	call	:_1b13
         
 	ex	de,hl
-	ld	hl,($.SPRITETABLE_ADDR)
+	ld	hl,[$.SPRITETABLE_ADDR]
 	ld	c;xpos,160
 	ld	b;ypos,96
 	call	:layoutSpritesHorizontal
-	ld	($.SPRITETABLE_ADDR),hl
+	ld	[$.SPRITETABLE_ADDR],hl
 	
         jr	._3
 	
@@ -1573,11 +1573,11 @@ PROC    :_1860                                                                  
 	call	:_1b13
         
 	ex	de,hl
-	ld	hl,($.SPRITETABLE_ADDR)
+	ld	hl,[$.SPRITETABLE_ADDR]
 	ld	c;xpos,160
 	ld	b;ypos,96
 	call	:layoutSpritesHorizontal
-	ld	($.SPRITETABLE_ADDR),hl
+	ld	[$.SPRITETABLE_ADDR],hl
 	
         jr	._3
 	
@@ -1587,11 +1587,11 @@ PROC    :_1860                                                                  
 	call	:_1b13
         
 	ex	de,hl
-	ld	hl,($.SPRITETABLE_ADDR)
+	ld	hl,[$.SPRITETABLE_ADDR]
 	ld	c;xpos,160
 	ld	b;ypos,96
 	call	:layoutSpritesHorizontal
-	ld	($.SPRITETABLE_ADDR),hl
+	ld	[$.SPRITETABLE_ADDR],hl
 	
 ._3	pop	bc
 	dec	bc
@@ -1665,7 +1665,7 @@ PROC    :_19b4                                                                  
         `==============================================================================
 {        
 	ld	hl,$.RINGS
-	ld	a,(hl)
+	ld	a,[hl]
 	and	a
 	ret	z
 	
@@ -1677,15 +1677,15 @@ PROC    :_19b4                                                                  
 	ld	a,c
 	sub	$06
 	ld	c,a
-._1	ld	(hl),c
+._1	ld	[hl],c
 	ld	de,$0100
 	ld	c,$00
-	ld	a,($.CURRENT_LEVEL)
+	ld	a,[$.CURRENT_LEVEL]
 	cp	$1c
 	jr	c,._2
-	ld	a,($.D285)
+	ld	a,[$.D285]
 	ld	d,a
-	ld	a,($.D286)
+	ld	a,[$.D286]
 	ld	e,a
 ._2	call	:_39d8
 	ret
@@ -1694,8 +1694,8 @@ PROC    :_19b4                                                                  
 PROC    :_19df                                                                  `$19DF
         `==============================================================================
 {        
-	ld	hl,($.TEMP4)
-	ld	de,($.TEMP6)
+	ld	hl,[$.TEMP4]
+	ld	de,[$.TEMP6]
 	ld	a,h
 	or	l
 	or	d
@@ -1705,7 +1705,7 @@ PROC    :_19df                                                                  
 	ld	hl,$.TEMP6
 	scf	
 	
-.loop	ld	a,(hl)
+.loop	ld	a,[hl]
 	sbc	a,$00
 	ld	c,a
 	and	$0f
@@ -1718,7 +1718,7 @@ PROC    :_19df                                                                  
 	cp	$a0
 	jr	c,._2
 	sub	$60
-._2	ld	(hl),a
+._2	ld	[hl],a
 	ccf	
 	dec	hl
 	djnz	.loop
@@ -1737,20 +1737,20 @@ TABLE   :_1a14                                                                  
 PROC    :_1a18                                                                  `$1A18
         `==============================================================================
 {        
-	ld	(iy+#vars.spriteUpdateCount),$00
+	ld	[iy+#vars.spriteUpdateCount],$00
 	ld	hl,$.SPRITETABLE
-	ld	($.SPRITETABLE_ADDR),hl
+	ld	[$.SPRITETABLE_ADDR],hl
 	ld	hl,$.D2BA
 	ld	de,$.D2BE
 	ld	b,$04
 	call	:_1b13
         
 	ex	de,hl
-	ld	hl,($.SPRITETABLE_ADDR)
+	ld	hl,[$.SPRITETABLE_ADDR]
 	ld	c;xpos,136
 	ld	b;ypos,80
 	call	:layoutSpritesHorizontal
-	ld	($.SPRITETABLE_ADDR),hl
+	ld	[$.SPRITETABLE_ADDR],hl
 	
         ld	hl,$.RINGS
 	ld	de,$.D2BE
@@ -1758,17 +1758,17 @@ PROC    :_1a18                                                                  
 	call	:_1b13
         
 	ex	de,hl
-	ld	hl,($.SPRITETABLE_ADDR)
+	ld	hl,[$.SPRITETABLE_ADDR]
 	ld	c;xpos,152
 	ld	b;ypos,128
-	ld	a,($.CURRENT_LEVEL)
+	ld	a,[$.CURRENT_LEVEL]
 	cp	$1c
 	jr	c,._1
 	ld	b;ypos,104
 ._1	call	:layoutSpritesHorizontal
-	ld	($.SPRITETABLE_ADDR),hl
+	ld	[$.SPRITETABLE_ADDR],hl
 	
-	ld	a,($.CURRENT_LEVEL)
+	ld	a,[$.CURRENT_LEVEL]
 	cp	$1c
 	jr	c,._2
 	ld	hl,$.D285
@@ -1785,11 +1785,11 @@ PROC    :_1a18                                                                  
 	ld	b;ypos,128
 ._3	ld	c;xpos,192
 	ex	de,hl
-	ld	hl,($.SPRITETABLE_ADDR)
+	ld	hl,[$.SPRITETABLE_ADDR]
 	call	:layoutSpritesHorizontal
-	ld	($.SPRITETABLE_ADDR),hl
+	ld	[$.SPRITETABLE_ADDR],hl
 	call	:_1aca
-	ld	a,($.CURRENT_LEVEL)
+	ld	a,[$.CURRENT_LEVEL]
 	cp	$1c
 	jr	nc,._4
 	ld	hl,$.TEMP4
@@ -1797,11 +1797,11 @@ PROC    :_1a18                                                                  
 	ld	b,$04
 	call	:_1b13
 	ex	de,hl
-	ld	hl,($.SPRITETABLE_ADDR)
+	ld	hl,[$.SPRITETABLE_ADDR]
 	ld	c;xpos,136
 	ld	b;ypos,104
 	call	:layoutSpritesHorizontal
-	ld	($.SPRITETABLE_ADDR),hl
+	ld	[$.SPRITETABLE_ADDR],hl
 	ret
 	
 ._4	ld	hl,$.D284
@@ -1809,11 +1809,11 @@ PROC    :_1a18                                                                  
 	ld	b,$01
 	call	:_1b13
 	ex	de,hl
-	ld	hl,($.SPRITETABLE_ADDR)
+	ld	hl,[$.SPRITETABLE_ADDR]
 	ld	c;xpos,168
 	ld	b;ypos,128
 	call	:layoutSpritesHorizontal
-	ld	($.SPRITETABLE_ADDR),hl
+	ld	[$.SPRITETABLE_ADDR],hl
 	ret
 }
 
@@ -1821,7 +1821,7 @@ PROC    :_1aca                                                                  
         `==============================================================================
 {        
 	`load number of lives into HL
-	ld	a,($.LIVES)
+	ld	a,[$.LIVES]
 	ld	l,a
 	ld	h,$00
 	ld	c,$0a
@@ -1830,12 +1830,12 @@ PROC    :_1aca                                                                  
 	ld	a,l
 	add	a,a
 	add	a,$80
-	ld	($.D2BE),a
+	ld	[$.D2BE],a
 	ld	c,10
 	call	:decimalMultiplyBy10
 	
 	ex	de,hl
-	ld	a,($.LIVES)
+	ld	a,[$.LIVES]
 	ld	l,a
 	ld	h,$00
 	and	a
@@ -1843,50 +1843,50 @@ PROC    :_1aca                                                                  
 	ld	a,l
 	add	a,a
 	add	a,$80
-	ld	($.D2BF),a
+	ld	[$.D2BF],a
 	ld	a,$ff
-	ld	($.D2BF+1),a
+	ld	[$.D2BF+1],a
 	ld	c,$38
 	ld	b,$9f
-	ld	a,($.CURRENT_LEVEL)
+	ld	a,[$.CURRENT_LEVEL]
 	cp	$13
 	jr	nz,._1
         
 	ld	b;ypos,96
 	ld	c;xpos,144
-._1	ld	hl,($.SPRITETABLE_ADDR)
+._1	ld	hl,[$.SPRITETABLE_ADDR]
 	ld	de,$.D2BE
 	call	:layoutSpritesHorizontal
-	ld	($.SPRITETABLE_ADDR),hl
+	ld	[$.SPRITETABLE_ADDR],hl
 	ret
 }
 
 PROC    :_1b13                                                                  `$1B13
         `==============================================================================
 {        
-	ld	a,(hl)
+	ld	a,[hl]
 	and	$f0
 	jr	nz,._
 	ld	a,$fe
-	ld	(de),a
+	ld	[de],a
 	inc	de
-	ld	a,(hl)
+	ld	a,[hl]
 	and	$0f
 	jr	nz,._1
 	ld	a,$fe
-	ld	(de),a
+	ld	[de],a
 	inc	hl
 	inc	de
 	djnz	:
 	ld	a,$ff
-	ld	(de),a
+	ld	[de],a
 	dec	de
 	ld	a,$80
-	ld	(de),a
+	ld	[de],a
 	ld	hl,$.D2BE
 	ret
 	
-._	ld      a,(hl)
+._	ld      a,[hl]
 	rrca	
 	rrca	
 	rrca	
@@ -1894,18 +1894,18 @@ PROC    :_1b13                                                                  
 	and	$0f
 	add	a,a
 	add	a,$80
-	ld	(de),a
+	ld	[de],a
 	inc	de
-._1	ld	a,(hl)
+._1	ld	a,[hl]
 	and	$0f
 	add	a,a
 	add	a,$80
-	ld	(de),a
+	ld	[de],a
 	inc	hl
 	inc	de
 	djnz	._
 	ld	a,$ff
-	ld	(de),a
+	ld	[de],a
 	ld	hl,$.D2BE
 	ret
 }
@@ -1936,17 +1936,17 @@ PROC    :_1bad                                                                  
         `==============================================================================
         `Demo playback??
 {        
-	ld	hl,($.D2B5)
+	ld	hl,[$.D2B5]
 	ld	de,._1bc6
 	add	hl,de
-	ld	a,(hl)
-	ld	(iy+#vars.joypad),a
-	ld	a,($.FRAMECOUNT)
+	ld	a,[hl]
+	ld	[iy+#vars.joypad],a
+	ld	a,[$.FRAMECOUNT]
 	and	$1F
 	ret	nz
-	ld	hl,($.D2B5)
+	ld	hl,[$.D2B5]
 	inc	hl
-	ld	($.D2B5),hl
+	ld	[$.D2B5],hl
 	ret
         
 ._1bc6                                                                          `$1BC6
@@ -1966,23 +1966,23 @@ PROC    :_LABEL_1C49_62                                                         
 {        
 	`set bit 0 of the parameter address (IY=$D200); `waitForInterrupt` will pause
 	 `until an interrupt event switches bit 0 of $D200 on
-	set	0, (iy+#vars.flags0)			
+	set	0, [iy+#vars.flags0]			
 	ei				        `enable interrupts
 	
 	`default to 3 lives
 ._1	ld	a, 3
-	ld	($.LIVES), a
+	ld	[$.LIVES], a
 	
 	ld	a, $05
-	ld	($.D2FD), a
+	ld	[$.D2FD], a
 	
 	ld	a, $1C
-	ld	($.D23F), a
+	ld	[$.D23F], a
 	
 	xor	a;zero			        `set A to 0
-	ld	($.CURRENT_LEVEL), a;zero	`set starting level!
-	ld	($.FRAMECOUNT), a;zero
-	ld	(iy+#vars.unknown_0D), a;zero
+	ld	[$.CURRENT_LEVEL], a;zero	`set starting level!
+	ld	[$.FRAMECOUNT], a;zero
+	ld	[iy+#vars.unknown_0D], a;zero
 	
 	ld	hl, $.D27F
 	ld	b, $08
@@ -2000,41 +2000,41 @@ PROC    :_LABEL_1C49_62                                                         
 	ld	b, $18
 	call	:fillMemoryWithValue
 	
-	res	0, (iy+#vars.flags2)
-	res	1, (iy+#vars.flags2)
+	res	0, [iy+#vars.flags2]
+	res	1, [iy+#vars.flags2]
 	call	:hideSprites
 	call	:titleScreen
 	
-	res	1, (iy+#vars.scrollRingFlags)
+	res	1, [iy+#vars.scrollRingFlags]
 	jr	c, ._LABEL_1C9F_104
 	
-	set	1, (iy+#vars.scrollRingFlags)
+	set	1, [iy+#vars.scrollRingFlags]
 	
 ._LABEL_1C9F_104
 	`are we on the end sequence?
-	ld	a, ($.CURRENT_LEVEL)
+	ld	a, [$.CURRENT_LEVEL]
 	cp	19
 	jr	nc, ._1
 	
-	res	0, (iy+#vars.flags2)
-	res	1, (iy+#vars.flags2)
+	res	0, [iy+#vars.flags2]
+	res	1, [iy+#vars.flags2]
 	call	:hideSprites
 	call	:_LABEL_C52_106
-	bit	1, (iy+#vars.scrollRingFlags)
+	bit	1, [iy+#vars.scrollRingFlags]
 	jr	z, ._LABEL_1CBD_120
 	jp	c, ._1
 	
 ._LABEL_1CBD_120
 	call	:fadeOut
 	call	:hideSprites
-	bit	0, (iy+#vars.scrollRingFlags)
+	bit	0, [iy+#vars.scrollRingFlags]
 	jr	nz, ._2
-	bit	4, (iy+#vars.flags6)
+	bit	4, [iy+#vars.flags6]
 	jr	nz, ._3
 	
 	`wait at title screen for button press?
 ._2	ld	b, $3C
-.wait	res	0, (iy+#vars.flags0)
+.wait	res	0, [iy+#vars.flags0]
 	call	:waitForInterrupt
 	djnz	.wait
 	
@@ -2054,7 +2054,7 @@ PARAMS	hl;addr	        `memory address
 	b;count	        `number of bytes to fill
 	a;value		`which value to fill with
 {
-	ld	(hl;addr), a;value
+	ld	[hl;addr], a;value
 	inc	hl;addr
 	djnz	:
 	ret
@@ -2066,22 +2066,22 @@ PROC    :_LABEL_1CED_131                                                        
 {        
 	`load page 1 (Z80:$4000-$7FFF) with bank 5 (ROM:$14000-$17FFF)
 	ld	a, 5
-	ld	($.SMS.SLOT1), a
-	ld	($.SLOT1), a
+	ld	[$.SMS.SLOT1], a
+	ld	[$.SLOT1], a
 	
-	ld	a, ($.CURRENT_LEVEL)
-	bit	4, (iy+#vars.flags6)
+	ld	a, [$.CURRENT_LEVEL]
+	bit	4, [iy+#vars.flags6]
 	jr	z, ._1
-	ld	a, ($.D2D3)
+	ld	a, [$.D2D3]
 ._1	add	a, a			        `double the level number
 	ld	l, a			        `put this into a 16-bit number
 	ld	h, $00
 	ld	de, $5580		        `the level pointers table begins at
                                                  `$15580 (page 1 $4000 + $1580)
 	add	hl, de			        `offset into the pointers table
-	ld	a, (hl)			        `read the low byte
+	ld	a, [hl]			        `read the low byte
 	inc	hl			        `move forward
-	ld	h, (hl)			        `read the hi-byte
+	ld	h, [hl]			        `read the hi-byte
 	ld	l, a			        `add the lo-byte to make 16-bit address
 	
 	`is this a null level? (offset $0000); the `OR H` will set Z if the result
@@ -2094,212 +2094,212 @@ PROC    :_LABEL_1CED_131                                                        
 	add	hl, de			
 	call	:loadLevel
 	
-	set	0,(iy+#vars.flags2)
-	set	1,(iy+#vars.flags2)
-	set	1,(iy+#vars.flags0)
-	set	3,(iy+#vars.flags6)
-	res	3,(iy+#vars.timeLightningFlags)
-	res	0,(iy+#vars.flags9)
-	res	6,(iy+#vars.flags6)
-	res	0,(iy+#vars.unknown0)
-	res	6,(iy+#vars.flags0)	        `camera moved left flag
+	set	0,[iy+#vars.flags2]
+	set	1,[iy+#vars.flags2]
+	set	1,[iy+#vars.flags0]
+	set	3,[iy+#vars.flags6]
+	res	3,[iy+#vars.timeLightningFlags]
+	res	0,[iy+#vars.flags9]
+	res	6,[iy+#vars.flags6]
+	res	0,[iy+#vars.unknown0]
+	res	6,[iy+#vars.flags0]	        `camera moved left flag
 	
 	`auto scroll right?
-	bit	3,(iy+#vars.scrollRingFlags)
+	bit	3,[iy+#vars.scrollRingFlags]
 	call	nz,:lockCameraHorizontal
 	
 	ld	b,$10
 ._2	push	bc
 	
-	res	0,(iy+#vars.flags0)
+	res	0,[iy+#vars.flags0]
 	call	:waitForInterrupt
 	
-	ld	(iy+#vars.joypad),$ff	        `clear joypad input
+	ld	[iy+#vars.joypad],$ff	        `clear joypad input
 	
-	ld	hl,($.FRAMECOUNT)
+	ld	hl,[$.FRAMECOUNT]
 	inc	hl
-	ld	($.FRAMECOUNT),hl
+	ld	[$.FRAMECOUNT],hl
 	
 	`switch page 1 ($4000-$7FFF) to bank 11 ($2C000-$2FFFF)
 	ld	a,11
-	ld	($.SMS.SLOT1),a
-	ld	($.SLOT1),a
+	ld	[$.SMS.SLOT1],a
+	ld	[$.SLOT1],a
 	
 	`are rings enabled?
-	bit	2,(iy+#vars.scrollRingFlags)
+	bit	2,[iy+#vars.scrollRingFlags]
 	call	nz,:updateRingFrame
 	
 	ld	hl,$0060
-	ld	($.D25F),hl
+	ld	[$.D25F],hl
 	
 	ld	hl,$0088
-	ld	($.D261),hl
+	ld	[$.D261],hl
 	
 	ld	hl,$0060
-	ld	($.D263),hl
+	ld	[$.D263],hl
 	
 	ld	hl,$0070
-	ld	($D265),hl
+	ld	[$D265],hl
 	
 	call	:_239c
 	
 	`switch pages 1 & 2 ($4000-$BFFF) to banks 1 & 2 ($4000-$BFFF)
 	ld	a,1
-	ld	($.SMS.SLOT1),a
-	ld	($.SLOT1),a
+	ld	[$.SMS.SLOT1],a
+	ld	[$.SLOT1],a
 	ld	a,2
-	ld	($.SMS.SLOT2),a
-	ld	($.SLOT2),a
+	ld	[$.SMS.SLOT2],a
+	ld	[$.SLOT2],a
 	
 	call	:_2e5a
 	call	:updateCamera
 	call	:fillOverscrollCache
 	
-	set	5,(iy+#vars.flags0)		
+	set	5,[iy+#vars.flags0]		
 	
 	pop	bc
 	djnz	._2
 	
 	`demo mode?
-	bit	1,(iy+#vars.scrollRingFlags)
+	bit	1,[iy+#vars.scrollRingFlags]
 	jr	z,._1dae
 	
 	ld	hl,$0000
-	ld	($.D2B5),hl
-	ld	(iy+#vars.spriteUpdateCount),h
+	ld	[$.D2B5],hl
+	ld	[iy+#vars.spriteUpdateCount],h
 ._1dae
-	res	0,(iy+#vars.flags0)
+	res	0,[iy+#vars.flags0]
 	call	:waitForInterrupt
 	
 	`switch page 1 ($4000-$7FFF) to bank 11 ($2C000-$2FFFF)
 	ld	a,11
-	ld	($.SMS.SLOT1),a
-	ld	($.SLOT1),a
+	ld	[$.SMS.SLOT1],a
+	ld	[$.SLOT1],a
 	
 	`are rings enabled?
-	bit	2,(iy+#vars.scrollRingFlags)
+	bit	2,[iy+#vars.scrollRingFlags]
 	call	nz,:updateRingFrame
 	
-	bit	3,(iy+#vars.flags6)		
+	bit	3,[iy+#vars.flags6]		
 	call	nz,:_3a03
 	
-	ld	a,($.FRAMECOUNT)
+	ld	a,[$.FRAMECOUNT]
 	and	%00000001
 	jr	nz,._3
 	
-	ld	a,($.D289)
+	ld	a,[$.D289]
 	and	a
 	call	nz,:_1fa9
 	
 	jr	._4
 	
-._3	ld	a,($.D287)
+._3	ld	a,[$.D287]
 	and	a
 	jp	nz,:_2067
 ._1de2					        `jump to here from _2067
-	ld	a,($.D2B1)
+	ld	a,[$.D2B1]
 	and	a
 	call	nz,:_1f06
 	
 	`is lightning effect enabled?
-	bit	1,(iy+#vars.timeLightningFlags)
+	bit	1,[iy+#vars.timeLightningFlags]
 	call	nz,:_1f49		        `if so, handle that
 	
-._4	bit	1,(iy+#vars.flags6)
+._4	bit	1,[iy+#vars.flags6]
 	call	nz,._7
 	
 	`are we in demo mode?
-	bit	1,(iy+#vars.scrollRingFlags)
+	bit	1,[iy+#vars.scrollRingFlags]
 	jr	z,._5			        `no, skip ahead
 	
-	bit	5,(iy+#vars.joypad)	        `is button pressed?
+	bit	5,[iy+#vars.joypad]	        `is button pressed?
 	jp	z,:_20b8		        `if yes, end demo mode
 	
 	call	:_1bad			        `process demo mode?
 	
 	`increase the frame counter
-._5	ld	hl,($.FRAMECOUNT)
+._5	ld	hl,[$.FRAMECOUNT]
 	inc	hl
-	ld	($.FRAMECOUNT),hl
+	ld	[$.FRAMECOUNT],hl
 	
 	`auto scrolling to the right? (ala Bridge 2)
-	bit	3,(iy+#vars.scrollRingFlags)
+	bit	3,[iy+#vars.scrollRingFlags]
 	call	nz,:autoscrollRight
 	
 	`auto scrolling upwards?
-	bit	4,(iy+#vars.scrollRingFlags)
+	bit	4,[iy+#vars.scrollRingFlags]
 	call	nz,:autoscrollUp
 	
 	`no down scrolling (ala Jungle 2)
-	bit	7,(iy+#vars.scrollRingFlags)
+	bit	7,[iy+#vars.scrollRingFlags]
 	call	nz,:dontScrollDown
 	
 	call	:_23c9
 	
 	`are rings enabled?
-	bit	2,(iy+#vars.scrollRingFlags)
+	bit	2,[iy+#vars.scrollRingFlags]
 	call	nz,:_239c
 	
 	xor	a;zero			        `set A to 0
-	ld	($.D302),a;zero
-	ld	($.D2DE),a;zero
-	ld	(iy+#vars.spriteUpdateCount),$15
+	ld	[$.D302],a;zero
+	ld	[$.D2DE],a;zero
+	ld	[iy+#vars.spriteUpdateCount],$15
 	ld	hl,$D03F		        `lives icon sprite table entry
-	ld	($.SPRITETABLE_ADDR),hl
+	ld	[$.SPRITETABLE_ADDR],hl
 	ld	hl,$.SPRITETABLE+1              `sprite Y-value
 	ld	b,$07
 	ld	de,$0003
 	ld	a,$e0
 	
-._6	ld	(hl),a
+._6	ld	[hl],a
 	add	hl,de
-	ld	(hl),a
+	ld	[hl],a
 	add	hl,de
-	ld	(hl),a
+	ld	[hl],a
 	add	hl,de
 	djnz	._6
 	
 	`switch pages 1 & 2 ($4000-$BFFF) to banks 1 & 2 ($4000-$BFFF)
 	ld	a,1
-	ld	($.SMS.SLOT1),a
-	ld	($.SLOT1),a
+	ld	[$.SMS.SLOT1],a
+	ld	[$.SLOT1],a
 	ld	a,2
-	ld	($.SMS.SLOT2),a
-	ld	($.SLOT2),a
+	ld	[$.SMS.SLOT2],a
+	ld	[$.SLOT2],a
 	
 	call	:_2e5a
 	call	:updateCamera
 	call	:fillOverscrollCache
 	
 	ld	hl,$.VDPREGISTER_1
-	set	6,(hl)
+	set	6,[hl]
 	
 	`paused?
-	bit	3,(iy+#vars.timeLightningFlags)
+	bit	3,[iy+#vars.timeLightningFlags]
 	call	nz,:_1e9e
 	
 	jp	._1dae
 	
 	`------------------------------------------------------------------------------
-._7	ld	(iy+#vars.joypad),$f7
-	ld	hl,($.LEVEL_LEFT)
+._7	ld	[iy+#vars.joypad],$f7
+	ld	hl,[$.LEVEL_LEFT]
 	ld	de,$0112
 	add	hl,de
 	ex	de,hl
-	ld	hl,($.SONIC.X)
+	ld	hl,[$.SONIC.X]
 	
 	xor	a;zero			        `set A to 0
 	sbc	hl,de
 	ret	c
 	
-        ld	(iy+#vars.joypad),$FF
+        ld	[iy+#vars.joypad],$FF
         
 	ld	l;zero,a;zero
 	ld	h;zero,a;zero
-	ld	($.SONIC.Xspeed),hl;zero
-	ld	($.SONIC.Xdirection),a;zero
-	ld	($.SONIC.Yspeed),hl;zero
-	ld	($.SONIC.Ydirection),a;zero
+	ld	[$.SONIC.Xspeed],hl;zero
+	ld	[$.SONIC.Xdirection],a;zero
+	ld	[$.SONIC.Yspeed],hl;zero
+	ld	[$.SONIC.Ydirection],a;zero
 	ret
 }
 
@@ -2307,31 +2307,31 @@ PROC    :_1e9e                                                                  
         `==============================================================================
         `demo mode?
 {        
-	bit	1,(iy+#vars.scrollRingFlags)
+	bit	1,[iy+#vars.scrollRingFlags]
 	ret	nz
 	
 	rst	:muteSound
 	
-._1	ld	a,(iy+#vars.spriteUpdateCount)
-	res	0,(iy+#vars.flags0)
+._1	ld	a,[iy+#vars.spriteUpdateCount]
+	res	0,[iy+#vars.flags0]
 	call	:waitForInterrupt
-	ld	(iy+#vars.spriteUpdateCount),a
+	ld	[iy+#vars.spriteUpdateCount],a
 	ld	a,11
-	ld	($.SMS.SLOT1),a
-	ld	($.SLOT1),a
+	ld	[$.SMS.SLOT1],a
+	ld	[$.SLOT1],a
 	
 	`are rings enabled?
-	bit	2,(iy+#vars.scrollRingFlags)
+	bit	2,[iy+#vars.scrollRingFlags]
 	call	nz,:updateRingFrame
 	call	:_23c9
 	call	:_239c
 	`paused?
-	bit	3,(iy+#vars.timeLightningFlags)
+	bit	3,[iy+#vars.timeLightningFlags]
 	jr	nz,._1
 	
 	ld	a,:sound_unpause.bank
-	ld	($.SMS.SLOT1),a
-	ld	($.SLOT1),a
+	ld	[$.SMS.SLOT1],a
+	ld	[$.SLOT1],a
 	call	:sound_unpause
 	ret
 }
@@ -2341,9 +2341,9 @@ PROC    :lockCameraHorizontal                                                   
         ``lock the screen -- prevents the screen scrolling left or right
           (i.e. during boss battles)``
 {
-	ld	hl,($.CAMERA_X)
-	ld	($.LEVEL_LEFT),hl
-	ld	($.LEVEL_RIGHT),hl
+	ld	hl,[$.CAMERA_X]
+	ld	[$.LEVEL_LEFT],hl
+	ld	[$.LEVEL_RIGHT],hl
 	ret
 }
 
@@ -2351,19 +2351,19 @@ PROC    :autoscrollRight                                                        
         `==============================================================================
         `move the left-hand side of the level across -- i.e. Bridge Act 2
 {        
-	ld	a,($.FRAMECOUNT)
+	ld	a,[$.FRAMECOUNT]
 	rrca	
 	ret	nc
 	
 	`increase the left hand crop by a pixel
-	ld	hl,($.LEVEL_LEFT)
+	ld	hl,[$.LEVEL_LEFT]
 	inc	hl
-	ld	($.LEVEL_LEFT),hl
+	ld	[$.LEVEL_LEFT],hl
 	`prevent scrolling to the right by limiting the width of the level to the same
         ``NOTE: removing this would allow the player to continue running right,
                 but not return left beyond a moving point -- this would be useful
                 for some kind of chase scene (i.e. wall of lava)`` 
-	ld	($.LEVEL_RIGHT),hl
+	ld	[$.LEVEL_RIGHT],hl
 	ret
 }
 
@@ -2373,14 +2373,14 @@ PROC    :autoscrollUp                                                           
 {       
         ``ensure there's a pause before starting to scroll upwards,
           otherwise the player won't have time to react``
-	ld	a,($.FRAMECOUNT)
+	ld	a,[$.FRAMECOUNT]
 	rrca	
 	ret	nc
 	
         `shift the bottom of the level up one pixel
-	ld	hl,($.LEVEL_BOTTOM)
+	ld	hl,[$.LEVEL_BOTTOM]
 	dec	hl
-	ld	($.LEVEL_BOTTOM),hl
+	ld	[$.LEVEL_BOTTOM],hl
 	ret
 }
 
@@ -2389,8 +2389,8 @@ PROC    :dontScrollDown                                                         
         ``fix the bottom of the level to the current screen position, 
           i.e. Jungle Act 2``
 {        
-	ld	hl,($.CAMERA_Y)
-	ld	($.LEVEL_BOTTOM),hl
+	ld	hl,[$.CAMERA_Y]
+	ld	[$.LEVEL_BOTTOM],hl
 	ret
 }
 
@@ -2398,38 +2398,38 @@ PROC    :_1f06                                                                  
         `==============================================================================
 {        
 	dec	a
-	ld	($.D2B1),a
+	ld	[$.D2B1],a
 	ld	e,a
 	
 	di	
 	ld	a,1
-	ld	($.SMS.SLOT1),a
-	ld	($.SLOT1),a
+	ld	[$.SMS.SLOT1],a
+	ld	[$.SLOT1],a
 	ld	a,2
-	ld	($.SMS.SLOT2),a
-	ld	($.SLOT2),a
+	ld	[$.SMS.SLOT2],a
+	ld	[$.SLOT2],a
 	
 	ld	e,$00
-	ld	a,($.D2B1+1)
-	ld	hl,($.LOADPALETTE_TILE)
+	ld	a,[$.D2B1+1]
+	ld	hl,[$.LOADPALETTE_TILE]
 	and	a
 	jp	p,._1
 	and	$7F
-	ld	hl,($.LOADPALETTE_SPRITE)
+	ld	hl,[$.LOADPALETTE_SPRITE]
 	ld	e,$10
 ._1	ld	c,a
 	ld	b,$00
 	add	hl,bc
 	add	a,e
-	out	($.VDP.CONTROL),a
+	out	[$.VDP.CONTROL],a
 	ld	a,%11000000
-	out	($.VDP.CONTROL),a
-	ld	a,($.D2B1)
+	out	[$.VDP.CONTROL],a
+	ld	a,[$.D2B1]
 	and	$01
-	ld	a,(hl)
+	ld	a,[hl]
 	jr	z,._2
-	ld	a,($.D2B3)
-._2	out	($.VDP.DATA),a
+	ld	a,[$.D2B3]
+._2	out	[$.VDP.DATA],a
         
 	ei	
 	ret
@@ -2439,7 +2439,7 @@ PROC    :_1f49                                                                  
         `==============================================================================
         `lightning is enabled...
 {       
-	ld	de,($.D2E9)
+	ld	de,[$.D2E9]
 	ld	hl,$00aa
 	xor	a;zero
 	sbc	hl,de
@@ -2471,25 +2471,25 @@ PROC    :_1f49                                                                  
 	pop	bc
 	
 ._3	ld	hl,$.CYCLEPALETTE_COUNTER
-	ld	a,(bc)
-	ld	(hl),a
+	ld	a,[bc]
+	ld	[hl],a
 	inc	hl
-	ld	(hl),a
+	ld	[hl],a
 	inc	hl
 	inc	bc
-	ld	(hl),$00
+	ld	[hl],$00
 	inc	hl
-	ld	a,(bc)
-	ld	(hl),a
+	ld	a,[bc]
+	ld	[hl],a
 	inc	bc
-	ld	a,(bc)
+	ld	a,[bc]
 	ld	l,a
 	inc	bc
-	ld	a,(bc)
+	ld	a,[bc]
 	ld	h,a
-	ld	($.CYCLEPALETTE_POINTER),hl
+	ld	[$.CYCLEPALETTE_POINTER],hl
 ._4	inc	de
-	ld	($.D2E9),de
+	ld	[$.D2E9],de
 	ret
 }
 	
@@ -2511,64 +2511,64 @@ PROC    :_1fa9                                                                  
         `==============================================================================
 {        
 	dec	a
-	ld	($.D289),a
+	ld	[$.D289],a
 	jr	z,._1
 	cp	$88
 	ret	nz
-	ld	a,($.D288)
+	ld	a,[$.D288]
 	add	a,a
 	ld	e,a
 	ld	d,$00
 	ld	hl,$2023
 	add	hl,de
-	ld	a,(hl)
+	ld	a,[hl]
 	inc	hl
-	ld	h,(hl)
+	ld	h,[hl]
 	ld	l,a
 	or	h
 	ret	z
-	jp	(hl)
+	jp	[hl]
 	
 ._1	call	:fadeOut
 	pop	hl
-	res	5,(iy+#vars.flags0)
-	bit	2,(iy+#vars.unknown_0D)
+	res	5,[iy+#vars.flags0]
+	bit	2,[iy+#vars.unknown_0D]
 	jr	nz,._4
-	bit	4,(iy+#vars.flags6)
+	bit	4,[iy+#vars.flags6]
 	jr	nz,._5
 	rst	:muteSound
-	bit	7,(iy+#vars.flags6)
+	bit	7,[iy+#vars.flags6]
 	call	nz,:disableWaterline
 	call	:hideSprites
 	call	:_155e			        `Act Complete screen?
 	
-	ld	a,($.CURRENT_LEVEL)
+	ld	a,[$.CURRENT_LEVEL]
 	cp	$1a
 	jr	nc,._3
-	bit	0,(iy+#vars.timeLightningFlags)
+	bit	0,[iy+#vars.timeLightningFlags]
 	jr	z,._2
 	ld	hl,$2047
 	call	:_b60
-	ld	a,($.CURRENT_LEVEL)
+	ld	a,[$.CURRENT_LEVEL]
 	push	af
-	ld	a,($.D23F)
-	ld	($.CURRENT_LEVEL),a
+	ld	a,[$.D23F]
+	ld	[$.CURRENT_LEVEL],a
 	inc	a
-	ld	($.D23F),a
+	ld	[$.D23F],a
 	call	:_LABEL_1CED_131
 	pop	af
-	ld	($.CURRENT_LEVEL),a
+	ld	[$.CURRENT_LEVEL],a
 ._2	ld	hl,$.CURRENT_LEVEL	        `note use of HL here
-	inc	(hl)
+	inc	[hl]
 	ld	a,$01
 	ret
 	
-._3	res	0,(iy+#vars.timeLightningFlags)
+._3	res	0,[iy+#vars.timeLightningFlags]
 	ld	a,$ff
 	ret
 	
 ._4	ld	hl,$.CURRENT_LEVEL	        `note use of HL here
-	inc	(hl)
+	inc	[hl]
 ._5	ld	a,$ff
 	ret
 }
@@ -2591,7 +2591,7 @@ PROC    :addExtraLife                                                           
         `increases lives
 {        
 	ld	hl,$.LIVES
-	inc	(hl)
+	inc	[hl]
         
 	ld	a;sfx,$09                       `extra life sound?
 	rst	:playSFX
@@ -2613,7 +2613,7 @@ PROC    :_203f                                                                  
 {        
 	ld	a,$07
 	rst	:playSFX
-	set	0,(iy+#vars.timeLightningFlags)
+	set	0,[iy+#vars.timeLightningFlags]
 	ret
 }
 
@@ -2627,29 +2627,29 @@ PROC    :_2067                                                                  
         `==============================================================================
 {        
 	dec	a
-	ld	($.D287),a
+	ld	[$.D287],a
 	jp	nz,:_LABEL_1CED_131._1de2
 	
 	`demo mode?
-	bit	1,(iy+#vars.scrollRingFlags)
+	bit	1,[iy+#vars.scrollRingFlags]
 	jr	nz,:_20b8
-	bit	4,(iy+#vars.origFlags6)
+	bit	4,[iy+#vars.origFlags6]
 	jr	z,._1
-	set	4,(iy+#vars.flags6)
-._1	bit	7,(iy+#vars.flags6)
+	set	4,[iy+#vars.flags6]
+._1	bit	7,[iy+#vars.flags6]
 	call	nz,:disableWaterline
-	ld	a,($.LIVES)
+	ld	a,[$.LIVES]
 	and	a
 	ld	a,$02
 	ret	nz
 	call	:fadeOut
 	call	:hideSprites
-	res	5,(iy+#vars.flags0)
+	res	5,[iy+#vars.flags0]
 	call	:_1401
 	ld	a,$00
 	ret	nc
 	ld	a,$03
-	ld	($.LIVES),a
+	ld	[$.LIVES],a
 	ld	a,$01
 	ret
 }
@@ -2659,15 +2659,15 @@ PROC    :disableWaterline                                                       
 {        
         ``wait until the water raster effect has finished its work
          (it requires three interrupts to produce)``
-	ld	a,($.RASTERSPLIT_STEP)
+	ld	a,[$.RASTERSPLIT_STEP]
 	and	a
 	jr	nz,:
 	
 	di	
-	res	7,(iy+#vars.flags6)	        `underwater?
+	res	7,[iy+#vars.flags6]	        `underwater?
 	xor	a;zero			        `set A to 0
-	ld	($.RASTERSPLIT_LINE),a;zero
-	ld	($.WATERLINE),a;zero
+	ld	[$.RASTERSPLIT_LINE],a;zero
+	ld	[$.WATERLINE],a;zero
 	ei	
 	
 	ret
@@ -2677,8 +2677,8 @@ PROC    :_20b8                                                                  
         `==============================================================================
 {        
 	ld	a,:sound_fadeOut.bank
-	ld	($.SMS.SLOT1),a
-	ld	($.SLOT1),a
+	ld	[$.SMS.SLOT1],a
+	ld	[$.SLOT1],a
 	
 	ld	hl,$0028
 	call	:sound_fadeOut
@@ -2694,11 +2694,11 @@ PARAMS  hl;header       `address of the level header
 {
         `PAGE 1 ($4000-$7FFF) is at BANK 5 ($14000-$17FFF)
         
-	ld	a, ($.VDPREGISTER_1)
+	ld	a, [$.VDPREGISTER_1]
 	and	%10111111		        `remove bit 6
-	ld	($.VDPREGISTER_1), a
+	ld	[$.VDPREGISTER_1], a
 	
-	res	0, (iy+#vars.flags0)
+	res	0, [iy+#vars.flags0]
 	call	:waitForInterrupt
 	
 	`copy the level header from ROM to RAM starting at $D354
@@ -2712,25 +2712,25 @@ PARAMS  hl;header       `address of the level header
 	push	hl;header       	        `remember the start point
 	
 	`read the current Scrolling / Ring HUD value
-	ld	a, (iy+#vars.scrollRingFlags)   `take a copy
-	ld	(iy+#vars.origScrollRingFlags), a     
-	ld	a, (iy+#vars.flags6)	        `read the current underwater flag value
-	ld	(iy+#vars.origFlags6), a	`take a copy
+	ld	a, [iy+#vars.scrollRingFlags]   `take a copy
+	ld	[iy+#vars.origScrollRingFlags], a     
+	ld	a, [iy+#vars.flags6]	        `read the current underwater flag value
+	ld	[iy+#vars.origFlags6], a	`take a copy
 	
 	ld	a, $FF
-	ld	($.D2AB), a
+	ld	[$.D2AB], a
 	
         `clear some variables
 	xor	a;zero			        `set A to 0
 	ld	l;zero, a;zero			`set HL to #$0000
 	ld	h;zero, a;zero
-	ld	($.VDPSCROLL_HORZ), a;zero
-	ld	($.VDPSCROLL_VERT), a;zero
-	ld	($.CAMERA_X_GOTO), hl;zero
-	ld	($.CAMERA_Y_GOTO), hl;zero
-	ld	($.D2B7), hl;zero
-	ld	($.RASTERSPLIT_STEP), a;zero
-	ld	($.RASTERSPLIT_LINE), a;zero
+	ld	[$.VDPSCROLL_HORZ], a;zero
+	ld	[$.VDPSCROLL_VERT], a;zero
+	ld	[$.CAMERA_X_GOTO], hl;zero
+	ld	[$.CAMERA_Y_GOTO], hl;zero
+	ld	[$.D2B7], hl;zero
+	ld	[$.RASTERSPLIT_STEP], a;zero
+	ld	[$.RASTERSPLIT_LINE], a;zero
 	
 	`clear $.D287-$D2A4 (29 bytes)
 	ld	hl, $.D287
@@ -2748,7 +2748,7 @@ PARAMS  hl;header       `address of the level header
 	ex	de, hl
 	
 	ld	hl, $0800
-	ld	a, ($.CURRENT_LEVEL)
+	ld	a, [$.CURRENT_LEVEL]
 	cp	9				
 	jr	c, ._2			        `less than level 9? (Labyrinth Act 1)
 	cp	11
@@ -2756,33 +2756,33 @@ PARAMS  hl;header       `address of the level header
 	jr	nc, ._2			        `if >= level 11 (Labyrinth Act 3)
 	
 	`this must be level 9 or 10 (Labyrinth Act 1/2)
-	ld	a, (de)			
+	ld	a, [de]			
 	and	c			        `is the bit for the level set?
 	jr	z, ._2			        `if so, skip this next part
 
 ._1	ld	a, $FF
-	ld	($.WATERLINE), a
+	ld	[$.WATERLINE], a
 	ld	hl, $0020
 
-._2	ld	($.D2DC), hl		        `either $0800 or $0020
+._2	ld	[$.D2DC], hl		        `either $0800 or $0020
 	ld	hl, $FFFE
-	ld	($.TIME), hl
+	ld	[$.TIME], hl
 	ld	hl, $23FF
 	
-	bit	4, (iy+#vars.flags6)
+	bit	4, [iy+#vars.flags6]
 	jr	z, ._3
 	
-	bit	0, (iy+#vars.scrollRingFlags)
+	bit	0, [iy+#vars.scrollRingFlags]
 	jr	z, ._5
 	
 	ld	hl, :_2402
 	
 	`set number of collected rings to 0
 ._3	xor	a;zero			        `set A to 0
-	ld	($.RINGS), a;zero
+	ld	[$.RINGS], a;zero
 	
 	`is this a special stage? (level number 28+)
-	ld	a, ($.CURRENT_LEVEL)
+	ld	a, [$.CURRENT_LEVEL]
 	sub	28
 	jr	c, ._4			        `skip ahead if level < 28
 	
@@ -2812,21 +2812,21 @@ PARAMS  hl;header       `address of the level header
 	
 	pop	hl;header		        `get back the level header address
 	`SP: Solidity Pointer
-	ld	a,(hl;header)
-	ld	($.LEVEL_SOLIDITY),a
+	ld	a,[hl;header]
+	ld	[$.LEVEL_SOLIDITY],a
 	inc	hl;header
 	`FW: Floor Width
-	ld	e,(hl;header)
+	ld	e,[hl;header]
 	inc	hl
-	ld	d,(hl)
+	ld	d,[hl]
 	inc	hl
-	ld	($.LEVEL_FLOORWIDTH),de
+	ld	[$.LEVEL_FLOORWIDTH],de
 	`FH: Floor Height
-	ld	e,(hl)
+	ld	e,[hl]
 	inc	hl
-	ld	d,(hl)
+	ld	d,[hl]
 	inc	hl
-	ld	($.LEVEL_FLOORHEIGHT),de
+	ld	[$.LEVEL_FLOORHEIGHT],de
 	`copy the next 8 bytes to $D273+
 	 `$D273/4 - LX: Level X Offset
 	 `$D275/6 - LW: Level Width
@@ -2847,7 +2847,7 @@ PARAMS  hl;header       `address of the level header
 	ld	hl,$.D311
 	call	:getLevelBitFlag
 	
-	ld	a,(hl)
+	ld	a,[hl]
 	ex	de,hl			        `DE will now be $.D311+
 	
 	`return to the "SX" byte in the level header,
@@ -2859,9 +2859,9 @@ PARAMS  hl;header       `address of the level header
 	
 	cpl				        `NOT A
 	ld	c,a
-	ld	a,(de)			        `Set A to the value at $.D311+0-7
+	ld	a,[de]			        `Set A to the value at $.D311+0-7
 	and	c			        `unset the level bit
-	ld	(de),a			
+	ld	[de],a			
 	
 	`copy 3 bytes from $2402 to $.D2CE, these will be $01, $30 & $00
 	 `(purpose unknown)
@@ -2870,7 +2870,7 @@ PARAMS  hl;header       `address of the level header
 	ld	bc,$0003
 	ldir	
 	
-	ld	a,($.CURRENT_LEVEL)	        `get current level number
+	ld	a,[$.CURRENT_LEVEL]	        `get current level number
 	add	a,a			        `double it (i.e. for 16-bit tables)
 	ld	e,a			        `put it into DE
 	ld	d,$00
@@ -2885,8 +2885,8 @@ PARAMS  hl;header       `address of the level header
 	`------------------------------------------------------------------------------
 	`set starting X position:
 	
-._6	ld	($.D216),hl		
-	ld	a,(hl)			        `get the value at that RAM address	
+._6	ld	[$.D216],hl		
+	ld	a,[hl]			        `get the value at that RAM address	
 	
 	`if the value is less than 3, just use 0
 	 `(this is so that if the player starting position is at the left of the level
@@ -2894,7 +2894,7 @@ PARAMS  hl;header       `address of the level header
 	sub	3
 	jr	nc,._7
 	xor	a;zero			        `set A to 0
-._7	ld	($.BLOCK_X),a;zero
+._7	ld	[$.BLOCK_X],a;zero
 	
 	`using the number as the hi-byte, divide by 8 into DE, e.g.
 	 `4	A: 00000100 E: 00000000 (1024) -> A: 00000000 E: 10000000 (128)
@@ -2912,20 +2912,20 @@ PARAMS  hl;header       `address of the level header
 	rr	e
 	and	%00011111		        `mask off top 3 bits from the rotation
 	ld	d,a
-	ld	($.CAMERA_X),de
-	ld	($.CAMERA_X_LEFT),de
+	ld	[$.CAMERA_X],de
+	ld	[$.CAMERA_X_LEFT],de
 	
 	`------------------------------------------------------------------------------
 	`set starting Y position:
 	
 	inc	hl
-	ld	a,(hl)
+	ld	a,[hl]
 	
 	sub	3
 	jr	nc,._8
 	xor	a;zero			        `set A to 0
 	
-._8	ld	($.BLOCK_Y),a
+._8	ld	[$.BLOCK_Y],a
 	ld	e,$00
 	rrca	
 	rr	e
@@ -2935,8 +2935,8 @@ PARAMS  hl;header       `address of the level header
 	rr	e
 	and	%00011111		        `mask off top 3 bits from the rotation
 	ld	d,a
-	ld	($.CAMERA_Y),de
-	ld	($.CAMERA_Y_UP),de
+	ld	[$.CAMERA_Y],de
+	ld	[$.CAMERA_Y_UP],de
 	
 	`return to the "SX" byte in the level header
 	pop	hl
@@ -2947,14 +2947,14 @@ PARAMS  hl;header       `address of the level header
 	 `assumedly from the level header copied to RAM at $D354+?
 	
 	`FL: Floor Layout
-	ld	e,(hl)
+	ld	e,[hl]
 	inc	hl
-	ld	d,(hl)
+	ld	d,[hl]
 	inc	hl
 	`FS: Floor Size
-	ld	c,(hl)
+	ld	c,[hl]
 	inc	hl
-	ld	b,(hl)
+	ld	b,[hl]
 	inc	hl
 	
 	`remember our place in the level header, we're currently sitting at the
@@ -2969,19 +2969,19 @@ PARAMS  hl;header       `address of the level header
 	sub	$40
 	ld	h,a
 	ld	a,6
-	ld	($.SMS.SLOT1),a
-	ld	($.SLOT1),a
+	ld	[$.SMS.SLOT1],a
+	ld	[$.SLOT1],a
 	ld	a,7
-	ld	($.SMS.SLOT2),a
-	ld	($.SLOT2),a
+	ld	[$.SMS.SLOT2],a
+	ld	[$.SLOT2],a
 	jr	._10
 	
 ._9	ld	a,5
-	ld	($.SMS.SLOT1),a
-	ld	($.SLOT1),a
+	ld	[$.SMS.SLOT1],a
+	ld	[$.SLOT1],a
 	ld	a,6
-	ld	($.SMS.SLOT2),a
-	ld	($.SLOT2),a
+	ld	[$.SMS.SLOT2],a
+	ld	[$.SLOT2],a
 	
 ._10	ei				        `enable interrupts
 	
@@ -2994,9 +2994,9 @@ PARAMS  hl;header       `address of the level header
 	pop	hl
 	
 	`BM: Block Mapping address
-	ld	e,(hl)
+	ld	e,[hl]
 	inc	hl
-	ld	d,(hl)
+	ld	d,[hl]
 	inc	hl
 	
 	`swap DE & HL
@@ -3007,16 +3007,16 @@ PARAMS  hl;header       `address of the level header
 	`rebase the Block Mapping address to Page 1
 	ld	bc,$4000
 	add	hl,bc
-	ld	($.BLOCKMAPPINGS),hl
+	ld	[$.BLOCKMAPPINGS],hl
 	
 	`swap back DE & HL
 	 `HL will be current position in the level header
 	ex	de,hl
 	
 	`LA : Level Art address
-	ld	e,(hl)
+	ld	e,[hl]
 	inc	hl
-	ld	d,(hl)
+	ld	d,[hl]
 	inc	hl
 	
 	`store the current position in the level header
@@ -3036,13 +3036,13 @@ PARAMS  hl;header       `address of the level header
 	pop	hl
 	
 	`SB: get the bank number for the sprite art
-	ld	a,(hl)
+	ld	a,[hl]
 	inc	hl
 	
 	`SA: Sprite Art address
-	ld	e,(hl)
+	ld	e,[hl]
 	inc	hl
-	ld	d,(hl)
+	ld	d,[hl]
 	inc	hl
 	`handle as with Level Art
 	push	hl
@@ -3052,7 +3052,7 @@ PARAMS  hl;header       `address of the level header
 	pop	hl
 	
 	`IP: Initial Palette
-	ld	a,(hl)
+	ld	a,[hl]
 	
 	`store our current position in the level header
 	push	hl
@@ -3067,24 +3067,24 @@ PARAMS  hl;header       `address of the level header
 	`switch pages 1 & 2 ($4000-$BFFF) to banks 1 & 2 ($4000-$BFFF)
 	di	
 	ld	a,1
-	ld	($.SMS.SLOT1),a
-	ld	($.SLOT1),a
+	ld	[$.SMS.SLOT1],a
+	ld	[$.SLOT1],a
 	ld	a,2
-	ld	($.SMS.SLOT2),a
-	ld	($.SLOT2),a
+	ld	[$.SMS.SLOT2],a
+	ld	[$.SLOT2],a
 	ei	
 	
 	`read the palette pointer into HL
-	ld	a,(hl)
+	ld	a,[hl]
 	inc	hl
-	ld	h,(hl)
+	ld	h,[hl]
 	ld	l,a
 	
 	`queue the palette to be loaded via the interrupt
 	ld	a,%00000011
 	call	:loadPaletteOnInterrupt
 	
-	res	0,(iy+#vars.flags0)
+	res	0,[iy+#vars.flags0]
 	call	:waitForInterrupt
 	
 	call	:fillScreenWithFloorLayout
@@ -3094,26 +3094,26 @@ PARAMS  hl;header       `address of the level header
 	
 	`CS: Cycle Speed
 	ld	de,$.CYCLEPALETTE_COUNTER
-	ld	a,(hl)
-	ld	(de),a
+	ld	a,[hl]
+	ld	[de],a
 	inc	de
 	`store a second copy at the next byte in RAM
-	ld	(de),a
+	ld	[de],a
 	inc	de
 	inc	hl
 	`store 0 at the next byte in RAM
 	 `(RAM_CYCLEPALETTE_INDEX)
 	xor	a;zero			        `set A to 0
-	ld	(de),a;zero
+	ld	[de],a;zero
 	inc	de
 	
 	`CC: Colour Cycles
-	ld	a,(hl)
-	ld	(de),a
+	ld	a,[hl]
+	ld	[de],a
 	
 	`CP: Cycle Palette
 	inc	hl
-	ld	a,(hl)
+	ld	a,[hl]
 	
 	`swap DE & HL,
 	 `DE will be current position in the level header
@@ -3129,19 +3129,19 @@ PARAMS  hl;header       `address of the level header
 	`switch pages 1 & 2 ($4000-$BFFF) to banks 1 & 2 ($4000-$BFFF)
 	di	
 	ld	a,1
-	ld	($.SMS.SLOT1),a
-	ld	($.SLOT1),a
+	ld	[$.SMS.SLOT1],a
+	ld	[$.SLOT1],a
 	ld	a,2
-	ld	($.SMS.SLOT2),a
-	ld	($.SLOT2),a
+	ld	[$.SMS.SLOT2],a
+	ld	[$.SLOT2],a
 	ei	
 	
 	`read the cycle palette pointer
-	ld	a,(hl)
+	ld	a,[hl]
 	inc	hl
-	ld	h,(hl)
+	ld	h,[hl]
 	ld	l,a
-	ld	($.CYCLEPALETTE_POINTER),hl
+	ld	[$.CYCLEPALETTE_POINTER],hl
 	
 	`swap back DE & HL
 	 `HL will be the current position in the level header
@@ -3149,9 +3149,9 @@ PARAMS  hl;header       `address of the level header
 	
 	`OL: Object Layout
 	inc	hl
-	ld	e,(hl)
+	ld	e,[hl]
 	inc	hl
-	ld	d,(hl)
+	ld	d,[hl]
 	inc	hl
 	
 	`store the current position in the level header
@@ -3163,48 +3163,48 @@ PARAMS  hl;header       `address of the level header
 	
 	`switch page 1 ($4000-$BFFF) to page 5 ($14000-$17FFF)
 	ld	a,5
-	ld	($.SMS.SLOT1),a
-	ld	($.SLOT1),a
+	ld	[$.SMS.SLOT1],a
+	ld	[$.SLOT1],a
 	call	:loadObjectLayout
 	
 	pop	hl
 	
 	`SR: Scrolling / Ring HUD flags
-	ld	c,(hl)
-	ld	a,(iy+#vars.scrollRingFlags)		
+	ld	c,[hl]
+	ld	a,[iy+#vars.scrollRingFlags]		
 	and	%00000010
 	or	c
-	ld	(iy+#vars.scrollRingFlags),a
+	ld	[iy+#vars.scrollRingFlags],a
 	
 	`UW: Underwater flag
 	inc	hl
-	ld	a,(hl)
-	ld	(iy+#vars.flags6),a
+	ld	a,[hl]
+	ld	[iy+#vars.flags6],a
 	
 	`TL: Time HUD / Lightning effect flags
 	inc	hl
-	ld	a,(hl)
-	ld	(iy+#vars.timeLightningFlags),a
+	ld	a,[hl]
+	ld	[iy+#vars.timeLightningFlags],a
 	
 	`00: Unknown byte
 	inc	hl
-	ld	a,(hl)
-	ld	(iy+#vars.unknown0),a
+	ld	a,[hl]
+	ld	[iy+#vars.unknown0],a
 	
 	`MU: Music
 	inc	hl
-	ld	a,($.PREVIOUS_MUSIC)	        `check previously played music
-	cp	(hl)
+	ld	a,[$.PREVIOUS_MUSIC]	        `check previously played music
+	cp	[hl]
 	jr	z,._12			        `if current music is the same, skip ahead
 	
-	ld	a,(hl)			        `get the music number from the level header
+	ld	a,[hl]			        `get the music number from the level header
 	and	a			        `this won't change the value of A, but it will
                                                  `update the flags, so that ...
 	jp	m,._11			        `we can check if the sign is negative,
                                                  `that is, A>127
 	
 	`remember the current level music to restore it after invincibility &c.
-	ld	($.LEVEL_MUSIC),a
+	ld	[$.LEVEL_MUSIC],a
 	rst	:playMusic
 
 	`fill 64 bytes (32 16-bit numbers) from $D37C-$D3BC
@@ -3212,15 +3212,15 @@ PARAMS  hl;header       `address of the level header
 	ld	hl,$.D37C
 	xor	a;zero			`set A to 0
 
-._12	ld	(hl),a
+._12	ld	[hl],a
 	inc	hl
-	ld	(hl),a
+	ld	[hl],a
 	inc	hl
 	djnz	._12
 	
-	bit	5,(iy+#vars.origFlags6)
+	bit	5,[iy+#vars.origFlags6]
 	ret	z
-	set	5,(iy+#vars.flags6)
+	set	5,[iy+#vars.flags6]
 	
 	ret
 }
@@ -3238,28 +3238,28 @@ PARAMS  hl      `address of an object layout
 	ld	de,$001A		        `length of the object?
 	ld	c,$00
 	
-	ld	hl,($.D216)		        `= D32E + (level number * 2)
+	ld	hl,[$.D216]		        `= D32E + (level number * 2)
 	ld	a,$00
 	call	:loadObject
 	
 	pop	hl
 	
 	`------------------------------------------------------------------------------
-	ld	a,(hl)			        `number of objects
+	ld	a,[hl]			        `number of objects
 	inc	hl
 	
-	ld	($.D2F2),a		        `put aside the number of objects in the layout
+	ld	[$.D2F2],a		        `put aside the number of objects in the layout
 	dec	a			        `reduce by 1,
 	ld	b,a			        `and set as the loop counter
 	
 	`loop over the number of objects:
-._1	ld	a,(hl)			        `load the Object ID
+._1	ld	a,[hl]			        `load the Object ID
 	inc	hl			        `move on to the X & Y position
 	call	:loadObject
 	djnz	._1
 	
 	`------------------------------------------------------------------------------
-	ld	a,($.D2F2)		        `retrieve number of objects in layout
+	ld	a,[$.D2F2]		        `retrieve number of objects in layout
 	ld	b,a
 	ld	a,$20
 	sub	b
@@ -3270,7 +3270,7 @@ PARAMS  hl      `address of an object layout
 	
 	`remove the remaining objects (out of 32)
 	ld	b,a
-._2	ld	(ix+#object.type),$FF	        `remove object?
+._2	ld	[ix+#object.type],$FF	        `remove object?
 	add	ix,de
 	djnz	._2
 	
@@ -3284,39 +3284,39 @@ PARAMS	a	`object type
 	de	`?
 	hl	`address with the X & Y positions of the object
 {        
-	ld	(ix+#object.type),a	        `set the object type
+	ld	[ix+#object.type],a	        `set the object type
 	
 	`--- X position ---------------------------------------------------------------
-	ld	a,(hl)			        `get X position from the object layout
+	ld	a,[hl]			        `get X position from the object layout
 	exx
 	ld	l,a			        `convert X-pos to 16-bit number in HL
 	ld	h,$00
-	ld	(ix+#object.Xsubpixel),h	`?
+	ld	[ix+#object.Xsubpixel],h	`?
 	`multiply by 32
 	add	hl,hl			        `x2 ...
 	add	hl,hl			        `x4 ...
 	add	hl,hl			        `x8 ...
 	add	hl,hl			        `x16 ...
 	add	hl,hl			        `x32
-	ld	(ix+#object.X.lo),l
-	ld	(ix+#object.X.hi),h
+	ld	[ix+#object.X.lo],l
+	ld	[ix+#object.X.hi],h
 	exx	
 	
 	`--- Y position ---------------------------------------------------------------
 	inc	hl
-	ld	a,(hl)			        `get the Y position from the object layout
+	ld	a,[hl]			        `get the Y position from the object layout
 	
 	exx	
 	ld	l,a
 	ld	h,$00
-	ld	(ix+#object.Ysubpixel),h        `?
+	ld	[ix+#object.Ysubpixel],h        `?
 	add	hl,hl			        `x2 ...
 	add	hl,hl			        `x4 ...
 	add	hl,hl			        `x8 ...
 	add	hl,hl			        `x16 ...
 	add	hl,hl			        `x32
-	ld	(ix+#object.Y.lo),l
-	ld	(ix+#object.Y.hi),h
+	ld	[ix+#object.Y.lo],l
+	ld	[ix+#object.Y.hi],h
 	
 	`transfer IX (object address) to HL
 	push	ix
@@ -3332,7 +3332,7 @@ PARAMS	a	`object type
 	`erase the next 19 bytes
 	ld	b,19
 	xor	a;zero			        `set A to 0
-.loop	ld	(hl),a
+.loop	ld	[hl],a
 	inc	hl
 	djnz	.loop
 	
@@ -3351,65 +3351,65 @@ PROC    :_239c                                                                  
         `ld      ($.D263) = $0060
         `ld      ($D265) = $0070
         
-	ld	a,($.D297)
+	ld	a,[$.D297]
 	ld	e,a
 	ld	d,$00
 	ld	hl,:_23f9
 	add	hl,de
-	ld	a,(hl)
+	ld	a,[hl]
 	ld	l,d
 	srl	a
 	rr	l
 	ld	h,a
 	ld	de,$7cf0
 	add	hl,de
-	ld	($.RING_CURRENT_FRAME),hl
+	ld	[$.RING_CURRENT_FRAME],hl
 	ld	hl,$.D298
-	ld	a,(hl)
+	ld	a,[hl]
 	inc	a
-	ld	(hl),a
+	ld	[hl],a
 	cp	$0a
 	ret	c
-	ld	(hl),$00
+	ld	[hl],$00
 	dec	hl
-	ld	a,(hl)
+	ld	a,[hl]
 	inc	a
 	cp	$06
 	jr	c,._1
 	xor	a;zero
-._1	ld	(hl),a
+._1	ld	[hl],a
 	ret
 }
 
 PROC    :_23c9                                                                  `$23C9
         `==============================================================================
 {        
-	ld	a,($.CYCLEPALETTE_COUNTER)
+	ld	a,[$.CYCLEPALETTE_COUNTER]
 	dec	a
-	ld	($.CYCLEPALETTE_COUNTER),a
+	ld	[$.CYCLEPALETTE_COUNTER],a
 	ret	nz
 	
-	ld	a,($.CYCLEPALETTE_INDEX)
+	ld	a,[$.CYCLEPALETTE_INDEX]
 	ld	l,a
 	ld	h,$00
 	add	hl,hl
 	add	hl,hl
 	add	hl,hl
 	add	hl,hl
-	ld	de,($.CYCLEPALETTE_POINTER)
+	ld	de,[$.CYCLEPALETTE_POINTER]
 	add	hl,de
 	ld	a,%00000001
 	call	:loadPaletteOnInterrupt
-	ld	hl,($.CYCLEPALETTE_INDEX)
+	ld	hl,[$.CYCLEPALETTE_INDEX]
 	ld	a,l
 	inc	a
 	cp	h
 	jr	c,._1
 	xor	a;zero
 ._1	ld	l,a
-	ld	($.CYCLEPALETTE_INDEX),hl
-	ld	a,($.CYCLEPALETTE_SPEED)
-	ld	($.CYCLEPALETTE_COUNTER),a
+	ld	[$.CYCLEPALETTE_INDEX],hl
+	ld	a,[$.CYCLEPALETTE_SPEED]
+	ld	[$.CYCLEPALETTE_COUNTER],a
 	ret
 }
 
@@ -3482,16 +3482,16 @@ TABLE   :_2405                                                                  
 PROC    :_LABEL_258B_133                                                        `$258B
         `==============================================================================
 {
-	ld	a, ($.VDPREGISTER_1)
+	ld	a, [$.VDPREGISTER_1]
 	and	%10111111
-	ld	($.VDPREGISTER_1), a
+	ld	[$.VDPREGISTER_1], a
 	
-	res	0, (iy+#vars.flags0)
+	res	0, [iy+#vars.flags0]
 	call	:waitForInterrupt
 	
 	xor	a;zero
-	ld	($.VDPSCROLL_HORZ), a;zero
-	ld	($.VDPSCROLL_VERT), a;zero
+	ld	[$.VDPSCROLL_HORZ], a;zero
+	ld	[$.VDPSCROLL_VERT], a;zero
 	
 	ld	hl, :_2828
 	ld	a, %00000011
@@ -3505,35 +3505,35 @@ PROC    :_LABEL_258B_133                                                        
 	
 	`load page 1 ($4000-$7FFF) with bank 5 ($14000-$17FFF)
 	ld	a,5
-	ld	($.SMS.SLOT1),a
-	ld	($.SLOT1),a
+	ld	[$.SMS.SLOT1],a
+	ld	[$.SLOT1],a
 	
 	`map 3 screen (end of game)
 	ld	hl,$6830
 	ld	bc,$0179
 	ld	de,$.VDP.SCREENNAMETABLE
 	xor	a;zero
-	ld	($.TEMP1),a;zero
+	ld	[$.TEMP1],a;zero
 	call	:decompressScreen
 	
-	ld	a,($.VDPREGISTER_1)
+	ld	a,[$.VDPREGISTER_1]
 	or	%01000000
-	ld	($.VDPREGISTER_1),a
+	ld	[$.VDPREGISTER_1],a
 	
-	res	0,(iy+#vars.flags0)
+	res	0,[iy+#vars.flags0]
 	call	:waitForInterrupt
 	
 	ld	a,1
-	ld	($.SMS.SLOT1),a
-	ld	($.SLOT1),a
-	ld	a,($.D27F)
+	ld	[$.SMS.SLOT1],a
+	ld	[$.SLOT1],a
+	ld	a,[$.D27F]
 	cp	$06
 	jp	c,._4
 	ld	b,$3c
 	
 ._1	push	bc
 	
-	res	0,(iy+#vars.flags0)
+	res	0,[iy+#vars.flags0]
 	call	:waitForInterrupt
 	
 	ld	hl,$.SPRITETABLE
@@ -3541,7 +3541,7 @@ PROC    :_LABEL_258B_133                                                        
 	ld	b;ypos,96
 	ld	de,:_2825
 	call	:layoutSpritesHorizontal
-	ld	($.SPRITETABLE_ADDR),hl
+	ld	[$.SPRITETABLE_ADDR],hl
 	pop	bc
 	djnz	._1
 	
@@ -3552,48 +3552,48 @@ PROC    :_LABEL_258B_133                                                        
 	ld	b,$3d
 	
 ._2	push	bc
-	ld	c,(iy+#vars.spriteUpdateCount)
-	res	0,(iy+#vars.flags0)
+	ld	c,[iy+#vars.spriteUpdateCount]
+	res	0,[iy+#vars.flags0]
 	call	:waitForInterrupt
-	ld	(iy+#vars.spriteUpdateCount),c
-	res	0,(iy+#vars.flags0)
+	ld	[iy+#vars.spriteUpdateCount],c
+	res	0,[iy+#vars.flags0]
 	call	:waitForInterrupt
 	ld	de,$.SPRITETABLE
-	ld	($.SPRITETABLE_ADDR),de
+	ld	[$.SPRITETABLE_ADDR],de
 	ld	b,$03
 	
 ._3	push	bc
 	push	hl
 	ld	a,$70
-	add	a,(hl)
+	add	a,[hl]
 	ld	c,a
 	inc	hl
 	ld	a,$60
-	add	a,(hl)
+	add	a,[hl]
 	ld	b,a
 	inc	hl
 	push	bc
 	ld	de,:_2825
-	ld	hl,($.SPRITETABLE_ADDR)
+	ld	hl,[$.SPRITETABLE_ADDR]
 	call	:layoutSpritesHorizontal
-	ld	($.SPRITETABLE_ADDR),hl
+	ld	[$.SPRITETABLE_ADDR],hl
 	pop	bc
 	pop	hl
-	ld	a,(hl)
+	ld	a,[hl]
 	neg	
 	add	a,$70
 	ld	c,a
 	inc	hl
-	ld	a,(hl)
+	ld	a,[hl]
 	neg	
 	add	a,$60
 	ld	b,a
 	inc	hl
 	push	hl
 	ld	de,:_2825
-	ld	hl,($.SPRITETABLE_ADDR)
+	ld	hl,[$.SPRITETABLE_ADDR]
 	call	:layoutSpritesHorizontal
-	ld	($.SPRITETABLE_ADDR),hl
+	ld	[$.SPRITETABLE_ADDR],hl
 	pop	hl
 	pop	bc
 	djnz	._3
@@ -3603,18 +3603,18 @@ PROC    :_LABEL_258B_133                                                        
 	
 	ld	hl,:_2047
 	call	:_b60
-	ld	(iy+#vars.spriteUpdateCount),$00
+	ld	[iy+#vars.spriteUpdateCount],$00
 	
 	ld	a,5
-	ld	($.SMS.SLOT1),a
-	ld	($.SLOT1),a
+	ld	[$.SMS.SLOT1],a
+	ld	[$.SLOT1],a
 	
 	`UNKNOWN
 	ld	hl,$69a9
 	ld	bc,$0145
 	ld	de,$.VDP.SCREENNAMETABLE
 	xor	a;zero
-	ld	($.TEMP1),a;zero
+	ld	[$.TEMP1],a;zero
 	call	:decompressScreen
 	
 	ld	hl,:_2828
@@ -3647,42 +3647,42 @@ PROC    :_LABEL_258B_133                                                        
 	call	:decompressArt
 	
 	ld	a,5
-	ld	($.SMS.SLOT1),a
-	ld	($.SLOT1),a
+	ld	[$.SMS.SLOT1],a
+	ld	[$.SLOT1],a
 	
 	`credits screen
 	ld	hl,$6c61
 	ld	bc,$0189
 	ld	de,$.VDP.SCREENNAMETABLE
 	xor	a;zero
-	ld	($.TEMP1),a;zero
+	ld	[$.TEMP1],a;zero
 	call	:decompressScreen
 	
 	xor	a;zero			        `set A to 0
 	ld	hl,$.D322
-	ld	(hl),$48
+	ld	[hl],$48
 	inc	hl
-	ld	(hl),$28
+	ld	[hl],$28
 	inc	hl
-	ld	(hl),a;zero
+	ld	[hl],a;zero
 	inc	hl
-	ld	(hl),$57
+	ld	[hl],$57
 	inc	hl
-	ld	(hl),$28
+	ld	[hl],$28
 	inc	hl
-	ld	(hl),a;zero
+	ld	[hl],a;zero
 	inc	hl
-	ld	(hl),$69
+	ld	[hl],$69
 	inc	hl
-	ld	(hl),$28
+	ld	[hl],$28
 	inc	hl
-	ld	(hl),a;zero
+	ld	[hl],a;zero
 	inc	hl
-	ld	(hl),$72
+	ld	[hl],$72
 	inc	hl
-	ld	(hl),$28
+	ld	[hl],$28
 	inc	hl
-	ld	(hl),a;zero
+	ld	[hl],a;zero
 	ld	bc,$0001
 	call	:_2718
 	ld	hl,:S1_Credits_Palette
@@ -3692,7 +3692,7 @@ PROC    :_LABEL_258B_133                                                        
 	rst	:playMusic
 	
 	xor	a;zero
-	ld	($.TEMP1),a;zero
+	ld	[$.TEMP1],a;zero
 	ld	hl,:S1_Credits_Text
 	call	:_2795
 }
@@ -3708,12 +3708,12 @@ PROC    :_2718                                                                  
 	push	af, hl, de, bc
 ._1	push 	bc
 	
-	res	0,(iy+#vars.flags0)
+	res	0,[iy+#vars.flags0]
 	call	:waitForInterrupt
 	
-	ld	(iy+#vars.spriteUpdateCount),$00
+	ld	[iy+#vars.spriteUpdateCount],$00
 	ld	hl,$.SPRITETABLE
-	ld	($.SPRITETABLE_ADDR),hl
+	ld	[$.SPRITETABLE_ADDR],hl
 	ld	hl,$.D322
 	ld	b,$04
 	
@@ -3741,12 +3741,12 @@ PARAMS 	bc	`number of frames to wait
 	push	bc
 	
 	`refresh the screen
-	ld	a,(iy+#vars.spriteUpdateCount)
+	ld	a,[iy+#vars.spriteUpdateCount]
 	
-	res	0,(iy+#vars.flags0)
+	res	0,[iy+#vars.flags0]
 	call	:waitForInterrupt
 	
-	ld	(iy+#vars.spriteUpdateCount),a
+	ld	[iy+#vars.spriteUpdateCount],a
 	
 	pop	bc
 	dec	bc
@@ -3761,49 +3761,49 @@ PARAMS 	bc	`number of frames to wait
 PROC    :_275a                                                                  `$275A
         `==============================================================================
 {        
-	ld	e,(hl)
+	ld	e,[hl]
 	inc	hl
-	ld	d,(hl)
+	ld	d,[hl]
 	inc	hl
-	inc	(hl)
-	ld	a,(de)
-	cp	(hl)
+	inc	[hl]
+	ld	a,[de]
+	cp	[hl]
 	jr	nc,._1
-	ld	(hl),$00
+	ld	[hl],$00
 	inc	de
 	inc	de
 	inc	de
 	dec	hl
-	ld	(hl),d
+	ld	[hl],d
 	dec	hl
-	ld	(hl),e
+	ld	[hl],e
 	inc	hl
 	inc	hl
-	ld	a,(de)
+	ld	a,[de]
 	cp	$ff
 	jr	nz,._1
 	inc	de
-	ld	a,(de)
+	ld	a,[de]
 	ld	b,a
 	inc	de
-	ld	a,(de)
+	ld	a,[de]
 	dec	hl
-	ld	(hl),a
+	ld	[hl],a
 	dec	hl
-	ld	(hl),b
+	ld	[hl],b
 	jr	:
 	
 ._1	inc	hl
 	inc	de
 	push	hl
 	ex	de,hl
-	ld	e,(hl)
+	ld	e,[hl]
 	inc	hl
-	ld	d,(hl)
+	ld	d,[hl]
 	ex	de,hl
-	ld	a,(hl)
+	ld	a,[hl]
 	inc	hl
-	ld	e,(hl)
+	ld	e,[hl]
 	inc	hl
 	ld	c,l
 	ld	b,h
@@ -3823,8 +3823,8 @@ PROC    :_2795                                                                  
 	ldi	
 	inc	de
 	ld	a,$ff
-	ld	(de),a
-._	ld      a,(hl)
+	ld	[de],a
+._	ld      a,[hl]
 	inc	hl
 	cp	$ff
 	ret	z
@@ -3834,25 +3834,25 @@ PROC    :_2795                                                                  
 	jr	z,._2
 	cp	$fd
 	jr	nz,._1
-	ld	c,(hl)
+	ld	c,[hl]
 	inc	hl
-	ld	b,(hl)
+	ld	b,[hl]
 	inc	hl
 	call	:_2718
 	jr	._
 	
 ._1	push	hl
-	ld	($.D2BF+1),a
+	ld	[$.D2BF+1],a
 	ld	bc,$0008
 	call	:_2718
 	ld	hl,$.D2BE
 	call	:print
 	ld	hl,$.D2BE
-	inc	(hl)
+	inc	[hl]
 	pop	hl
 	jr	._
 	
-._2	ld	b,(hl)
+._2	ld	b,[hl]
 	inc	hl
 	push	hl
 	
@@ -3870,24 +3870,24 @@ PROC    :_2795                                                                  
 	
 ._5	di	
 	ld	a,l
-	out	($.VDP.CONTROL),a
+	out	[$.VDP.CONTROL],a
 	ld	a,h
-	out	($.VDP.CONTROL),a
+	out	[$.VDP.CONTROL],a
 	push	ix
 	pop	ix
-	in	a,($.VDP.DATA)
+	in	a,[$.VDP.DATA]
 	ld	c,a
 	push	ix
 	pop	ix
 	ld	a,e
-	out	($.VDP.CONTROL),a
+	out	[$.VDP.CONTROL],a
 	ld	a,d
 	or	$40
-	out	($.VDP.CONTROL),a
+	out	[$.VDP.CONTROL],a
 	push	ix
 	pop	ix
 	ld	a,c
-	out	($.VDP.DATA),a
+	out	[$.VDP.DATA],a
 	push	ix
 	pop	ix
 	ei	
@@ -4231,7 +4231,7 @@ PROC    :_2e5a                                                                  
         `update HUD?
 {        
 	`do not update the Sonic sprite frame
-	res	7,(iy+#vars.timeLightningFlags)
+	res	7,[iy+#vars.timeLightningFlags]
 	
         ``populate $D2BE-$D2C2 with the bytes in the table above, 
           $A0, $A2, $A4, $00 $FF``
@@ -4240,69 +4240,69 @@ PROC    :_2e5a                                                                  
 	ld	bc,$0005
 	ldir
 	
-	ld	a,($.LIVES)
+	ld	a,[$.LIVES]
 	cp	9			        `9 lives?
 	jr	c,._1			        `if more than 9 lives,
 	ld	a,9			        `we will display as 9 lives
 	
 ._1	add	a,a			
 	add	a,$80			
-	ld	($.D2C1),a
+	ld	[$.D2C1],a
 	
 	ld	c;xpos,16
 	ld	b;ypos,172	                `Y-position of lives display
-	ld	hl,($.SPRITETABLE_ADDR)
+	ld	hl,[$.SPRITETABLE_ADDR]
 	ld	de,$.D2BE
 	call	:layoutSpritesHorizontal
-	ld	($.SPRITETABLE_ADDR),hl
+	ld	[$.SPRITETABLE_ADDR],hl
 	
 	`show rings?
-	bit	2,(iy+#vars.scrollRingFlags)
+	bit	2,[iy+#vars.scrollRingFlags]
 	call	nz,:_2ee6
 	
 	`show time?
-	bit	5,(iy+#vars.timeLightningFlags)
+	bit	5,[iy+#vars.timeLightningFlags]
 	call	nz,:_2f1f
 	
 	ld	de,$0060
 	ld	hl,$.D267
-	ld	a,(hl)
+	ld	a,[hl]
 	inc	hl
-	or	(hl)
+	or	[hl]
 	call	z,:_311a
 	
 	inc	hl
 	ld	de,$0088
-	ld	a,(hl)
+	ld	a,[hl]
 	inc	hl
-	or	(hl)
+	or	[hl]
 	call	z,:_311a
 	
 	inc	hl
 	ld	de,$0060
-	ld	a,(hl)
+	ld	a,[hl]
 	inc	hl
-	or	(hl)
+	or	[hl]
 	call	z,:_311a
 	
 	inc	hl
 	ld	de,$0070
-	bit	6,(iy+#vars.scrollRingFlags)
+	bit	6,[iy+#vars.scrollRingFlags]
 	jr	z,._2
 	ld	de,$0080
-._2	ld	a,(hl)
+._2	ld	a,[hl]
 	inc	hl
-	or	(hl)
+	or	[hl]
 	call	z,:_311a
 	
-	bit	0,(iy+#vars.scrollRingFlags)
+	bit	0,[iy+#vars.scrollRingFlags]
 	call	z,:_2f66
 	
 	ld	hl,$0000
-	ld	($.D267),hl
-	ld	($.D269),hl
-	ld	($.D26B),hl
-	ld	($.D26D),hl
+	ld	[$.D267],hl
+	ld	[$.D269],hl
+	ld	[$.D26B],hl
+	ld	[$.D26D],hl
 	call	:_31e6
 	
 	`run the code for all the different objects on screen (including the player)
@@ -4313,7 +4313,7 @@ PROC    :_2e5a                                                                  
 PROC    :_2ee6                                                                  `$2EE6
         `==============================================================================
 {        
-	ld	a,($.RINGS)
+	ld	a,[$.RINGS]
 	ld	c,a
 	rrca	
 	rrca	
@@ -4322,18 +4322,18 @@ PROC    :_2ee6                                                                  
 	and	$0f
 	add	a,a
 	add	a,$80
-	ld	($.D2BE),a
+	ld	[$.D2BE],a
 	ld	a,c
 	and	$0f
 	add	a,a
 	add	a,$80
-	ld	($.D2BF),a
+	ld	[$.D2BF],a
 	ld	a,$ff
-	ld	($.D2BF+1),a
+	ld	[$.D2BF+1],a
         
 	ld	c;xpos,20
 	ld	b;ypos,0
-	ld	hl,($.SPRITETABLE_ADDR)
+	ld	hl,[$.SPRITETABLE_ADDR]
 	ld	de,:_2e52
 	call	:layoutSpritesHorizontal
 	
@@ -4341,7 +4341,7 @@ PROC    :_2ee6                                                                  
 	ld	b;ypos,0
 	ld	de,$.D2BE
 	call	:layoutSpritesHorizontal
-	ld	($.SPRITETABLE_ADDR),hl
+	ld	[$.SPRITETABLE_ADDR],hl
 	
         ret
 }
@@ -4350,15 +4350,15 @@ PROC    :_2f1f                                                                  
         `==============================================================================
 {        
 	ld	hl,$.D2BE
-	ld	a,($.D2CE)
+	ld	a,[$.D2CE]
 	and	$0f
 	add	a,a
 	add	a,$80
-	ld	(hl),a
+	ld	[hl],a
 	inc	hl
-	ld	(hl),$b0
+	ld	[hl],$b0
 	inc	hl
-	ld	a,($.D2CE+1)
+	ld	a,[$.D2CE+1]
 	ld	c,a
 	srl	a
 	srl	a
@@ -4366,77 +4366,77 @@ PROC    :_2f1f                                                                  
 	srl	a
 	add	a,a
 	add	a,$80
-	ld	(hl),a
+	ld	[hl],a
 	inc	hl
 	ld	a,c
 	and	$0f
 	add	a,a
 	add	a,$80
-	ld	(hl),a
+	ld	[hl],a
 	inc	hl
-	ld	(hl),$ff
+	ld	[hl],$ff
 	ld	c,$18
 	ld	b,$10
-	ld	a,($.CURRENT_LEVEL)
+	ld	a,[$.CURRENT_LEVEL]
 	cp	28
 	jr	c,._1
 	
 	ld	c;xpos,112
 	ld	b;ypos,56
-._1	ld	hl,($.SPRITETABLE_ADDR)
+._1	ld	hl,[$.SPRITETABLE_ADDR]
 	ld	de,$.D2BE
 	call	:layoutSpritesHorizontal
-	ld	($.SPRITETABLE_ADDR),hl
+	ld	[$.SPRITETABLE_ADDR],hl
 	ret
 }
 
 PROC    :_2f66                                                                  `$2F66
         `==============================================================================
 {        
-	bit	6,(iy+#vars.timeLightningFlags)
+	bit	6,[iy+#vars.timeLightningFlags]
 	ret	nz
 	
-	ld	hl,($.CAMERA_X_GOTO)
+	ld	hl,[$.CAMERA_X_GOTO]
 	ld	a,l
 	or	h
 	call	nz,:scrollCameraTo_horizontal
 	
-	ld	hl,($.CAMERA_Y_GOTO)
+	ld	hl,[$.CAMERA_Y_GOTO]
 	ld	a,l
 	or	h
 	call	nz,:scrollCameraTo_vertical
 	
-	ld	hl,($.D267)
-	ld	de,($.D25F)
+	ld	hl,[$.D267]
+	ld	de,[$.D25F]
 	and	a
 	sbc	hl,de
 	call	nz,:_315e
 	
-	ld	($.D25F),de
-	ld	hl,($.D269)
-	ld	de,($.D261)
+	ld	[$.D25F],de
+	ld	hl,[$.D269]
+	ld	de,[$.D261]
 	and	a
 	sbc	hl,de
 	call	nz,:_315e
 	
-	ld	($.D261),de
-	ld	hl,($.D26B)
-	ld	de,($.D263)
+	ld	[$.D261],de
+	ld	hl,[$.D26B]
+	ld	de,[$.D263]
 	and	a
 	sbc	hl,de
 	call	nz,:_315e
 	
-	ld	($.D263),de
-	ld	hl,($.D26D)
-	ld	de,($D265)
+	ld	[$.D263],de
+	ld	hl,[$.D26D]
+	ld	de,[$D265]
 	and	a
 	sbc	hl,de
 	call	nz,:_315e
 	
-	ld	($D265),de
-	ld	bc,($.D25F)
-	ld	de,($.SONIC.X)
-	ld	hl,($.CAMERA_X)
+	ld	[$D265],de
+	ld	bc,[$.D25F]
+	ld	de,[$.SONIC.X]
+	ld	hl,[$.CAMERA_X]
 	add	hl,bc
 	and	a
 	sbc	hl,de
@@ -4451,21 +4451,21 @@ PROC    :_2f66                                                                  
 	jr	c,._2
 	
 ._1	ld	hl,$0008
-._2	bit	3,(iy+#vars.scrollRingFlags)
+._2	bit	3,[iy+#vars.scrollRingFlags]
 	jr	nz,._
-	bit	5,(iy+#vars.scrollRingFlags)
+	bit	5,[iy+#vars.scrollRingFlags]
 	jr	z,._3
 	ld	hl,$0001
 ._3	ex	de,hl
-	ld	hl,($.CAMERA_X)
+	ld	hl,[$.CAMERA_X]
 	and	a
 	sbc	hl,de
 	jr	c,._
-	ld	($.CAMERA_X),hl
+	ld	[$.CAMERA_X],hl
 	jp	._
 	
-._4	ld	bc,($.D261)
-	ld	hl,($.CAMERA_X)
+._4	ld	bc,[$.D261]
+	ld	hl,[$.CAMERA_X]
 	add	hl,bc
 	and	a
 	sbc	hl,de
@@ -4484,40 +4484,40 @@ PROC    :_2f66                                                                  
 	cp	$09
 	jr	c,._6
 ._5	ld	hl,$0008
-._6	bit	3,(iy+#vars.scrollRingFlags)
+._6	bit	3,[iy+#vars.scrollRingFlags]
 	jr	nz,._
-	bit	5,(iy+#vars.scrollRingFlags)
+	bit	5,[iy+#vars.scrollRingFlags]
 	jr	z,._7
 	ld	hl,$0001
-._7	ld	de,($.CAMERA_X)
+._7	ld	de,[$.CAMERA_X]
 	add	hl,de
 	jr	c,._
-	ld	($.CAMERA_X),hl
-._	ld      hl,($.CAMERA_X)
-	ld	de,($.LEVEL_LEFT)
+	ld	[$.CAMERA_X],hl
+._	ld      hl,[$.CAMERA_X]
+	ld	de,[$.LEVEL_LEFT]
 	and	a
 	sbc	hl,de
 	jr	nc,._8
-	ld	($.CAMERA_X),de
+	ld	[$.CAMERA_X],de
 	jr	._9
 	
-._8	ld	hl,($.CAMERA_X)
-	ld	de,($.LEVEL_RIGHT)
+._8	ld	hl,[$.CAMERA_X]
+	ld	de,[$.LEVEL_RIGHT]
 	and	a
 	sbc	hl,de
 	jr	c,._9
-	ld	($.CAMERA_X),de
-._9	bit	6,(iy+#vars.scrollRingFlags)
+	ld	[$.CAMERA_X],de
+._9	bit	6,[iy+#vars.scrollRingFlags]
 	call	nz,:_3164
-	ld	bc,($.D263)
-	ld	de,($.SONIC.Y+0)
-	ld	hl,($.CAMERA_Y)
-	bit	6,(iy+#vars.scrollRingFlags)
+	ld	bc,[$.D263]
+	ld	de,[$.SONIC.Y+0]
+	ld	hl,[$.CAMERA_Y]
+	bit	6,[iy+#vars.scrollRingFlags]
 	call	nz,:_31cf
-	bit	7,(iy+#vars.scrollRingFlags)
+	bit	7,[iy+#vars.scrollRingFlags]
 	call	nz,:_31d3
 	add	hl,bc
-	bit	7,(iy+#vars.scrollRingFlags)
+	bit	7,[iy+#vars.scrollRingFlags]
 	call	z,:_31db
 	and	a
 	sbc	hl,de
@@ -4526,7 +4526,7 @@ PROC    :_2f66                                                                  
 	ld	a,h
 	and	a
 	jr	nz,._10
-	bit	6,(iy+#vars.scrollRingFlags)
+	bit	6,[iy+#vars.scrollRingFlags]
 	call	nz,:_311f
 	ld	a,l
 	cp	c
@@ -4534,25 +4534,25 @@ PROC    :_2f66                                                                  
 ._10	dec	c
 	ld	l,c
 	ld	h,$00
-._11	bit	7,(iy+#vars.scrollRingFlags)
+._11	bit	7,[iy+#vars.scrollRingFlags]
 	jr	z,._12
 	srl	h
 	rr	l
-	bit	1,(iy+#vars.unknown0)
+	bit	1,[iy+#vars.unknown0]
 	jr	nz,._12
 	ld	hl,$0000
 ._12	ex	de,hl
-	ld	hl,($.CAMERA_Y)
+	ld	hl,[$.CAMERA_Y]
 	and	a
 	sbc	hl,de
 	jr	c,._16
-	ld	($.CAMERA_Y),hl
+	ld	[$.CAMERA_Y],hl
 	jp	._16
 	
-._13	ld	bc,($D265)
-	ld	hl,($.CAMERA_Y)
+._13	ld	bc,[$D265]
+	ld	hl,[$.CAMERA_Y]
 	add	hl,bc
-	bit	7,(iy+#vars.scrollRingFlags)
+	bit	7,[iy+#vars.scrollRingFlags]
 	call	z,:_31db
 	and	a
 	sbc	hl,de
@@ -4568,7 +4568,7 @@ PROC    :_2f66                                                                  
 	ld	a,h
 	and	a
 	jr	nz,._14
-	bit	6,(iy+#vars.scrollRingFlags)
+	bit	6,[iy+#vars.scrollRingFlags]
 	call	nz,:_311f
 	ld	a,l
 	cp	c
@@ -4576,33 +4576,33 @@ PROC    :_2f66                                                                  
 ._14	dec	c
 	ld	l,c
 	ld	h,$00
-._15	bit	4,(iy+#vars.scrollRingFlags)
+._15	bit	4,[iy+#vars.scrollRingFlags]
 	jr	nz,._16
-	ld	de,($.CAMERA_Y)
+	ld	de,[$.CAMERA_Y]
 	add	hl,de
 	jr	c,._16
-	ld	($.CAMERA_Y),hl
-._16	ld      hl,($.CAMERA_Y)
-	ld	de,($.LEVEL_TOP)
+	ld	[$.CAMERA_Y],hl
+._16	ld      hl,[$.CAMERA_Y]
+	ld	de,[$.LEVEL_TOP]
 	and	a
 	sbc	hl,de
 	jr	nc,._17
-	ld	($.CAMERA_Y),de
-._17	ld	hl,($.CAMERA_Y)
-	ld	de,($.LEVEL_BOTTOM)
+	ld	[$.CAMERA_Y],de
+._17	ld	hl,[$.CAMERA_Y]
+	ld	de,[$.LEVEL_BOTTOM]
 	and	a
 	sbc	hl,de
 	jr	c,.ret
-	ld	($.CAMERA_Y),de
+	ld	[$.CAMERA_Y],de
 .ret	ret
 }
 
 PROC    :_311a                                                                  `$311A
         `==============================================================================
 {        
-	ld	(hl),d
+	ld	[hl],d
 	dec	hl
-	ld	(hl),e
+	ld	[hl],e
 	inc	hl
 	ret
 }
@@ -4620,7 +4620,7 @@ PROC    :scrollCameraTo_vertical                                                
 
 PARAMS  hl
 {
-	ld	de;ypos,($.LEVEL_TOP)
+	ld	de;ypos,[$.LEVEL_TOP]
 	and	a
 	sbc	hl,de;ypos
 	ret	z
@@ -4628,14 +4628,14 @@ PARAMS  hl
         
         `scroll downwards
 	inc	de;ypos
-	ld	($.LEVEL_TOP),de;ypos
-	ld	($.LEVEL_BOTTOM),de;ypos
+	ld	[$.LEVEL_TOP],de;ypos
+	ld	[$.LEVEL_BOTTOM],de;ypos
 	ret
 	
         `scroll upwards
 .up	dec	de;ypos
-	ld	($.LEVEL_TOP),de;ypos
-	ld	($.LEVEL_BOTTOM),de;ypos
+	ld	[$.LEVEL_TOP],de;ypos
+	ld	[$.LEVEL_BOTTOM],de;ypos
 	ret
 }
 
@@ -4645,20 +4645,20 @@ PROC    :scrollCameraTo_horizontal                                              
         
 PARAMS  hl      `$.RAM_CAMERA_X_GOTO
 {
-	ld	de,($.LEVEL_LEFT)
+	ld	de,[$.LEVEL_LEFT]
 	and	a			        `reset carry so it doesn't affect `sbc`
 	sbc	hl,de
 	ret	z			        `if HL = DE then return -- no change
 	jr	c,._1			        `is DE > HL?
 	
 	inc	de
-	ld	($.LEVEL_LEFT),de
-	ld	($.LEVEL_RIGHT),de
+	ld	[$.LEVEL_LEFT],de
+	ld	[$.LEVEL_RIGHT],de
 	ret
 	
 ._1	dec	de
-	ld	($.LEVEL_LEFT),de
-	ld	($.LEVEL_RIGHT),de
+	ld	[$.LEVEL_LEFT],de
+	ld	[$.LEVEL_RIGHT],de
 	ret
 }
 
@@ -4677,8 +4677,8 @@ PROC    :_315e                                                                  
 PROC    :_3164                                                                  `$3164
         `==============================================================================
 {        
-	ld	hl,($.D29D)
-	ld	de,($.TIME)
+	ld	hl,[$.D29D]
+	ld	de,[$.TIME]
 	add	hl,de
 	ld	bc,$0200
 	ld	a,h
@@ -4690,26 +4690,26 @@ PROC    :_3164                                                                  
 	jr	c,._2
 	ld	l,c
 	ld	h,b
-._2	ld	($.D29D),hl
+._2	ld	[$.D29D],hl
 	ld	c,l
 	ld	b,h
-	ld	hl,($.D25C)		        `between RAM_CAMERA_X & Y
-	ld	a,($.CAMERA_Y+1)	        `high-byte of RAM_CAMERA_X
+	ld	hl,[$.D25C]		        `between RAM_CAMERA_X & Y
+	ld	a,[$.CAMERA_Y+1]	        `high-byte of RAM_CAMERA_X
 	add	hl,bc
 	ld	e,$00
 	bit	7,b
 	jr	z,._3
 	ld	e,$ff
 ._3	adc	a,e
-	ld	($.D25C),hl
-	ld	($.CAMERA_Y+1),a
-	ld	hl,($.D2A1)
-	ld	a,($.D2A3)
+	ld	[$.D25C],hl
+	ld	[$.CAMERA_Y+1],a
+	ld	hl,[$.D2A1]
+	ld	a,[$.D2A3]
 	add	hl,bc
 	adc	a,e
-	ld	($.D2A1),hl
-	ld	($.D2A3),a
-	ld	hl,($.D2A2)
+	ld	[$.D2A1],hl
+	ld	[$.D2A3],a
+	ld	hl,[$.D2A2]
 	bit	7,h
 	jr	z,._4
 	ld	bc,$ffe0
@@ -4717,16 +4717,16 @@ PROC    :_3164                                                                  
 	sbc	hl,bc
 	jr	nc,._4
 	ld	hl,$0002
-	ld	($.TIME),hl
+	ld	[$.TIME],hl
 	ret
 	
-._4	ld	hl,($.D2A2)
+._4	ld	hl,[$.D2A2]
 	ld	bc,$0020
 	and	a
 	sbc	hl,bc
 	ret	c
 	ld	hl,$fffe
-	ld	($.TIME),hl
+	ld	[$.TIME],hl
 	ret
 }
 
@@ -4754,9 +4754,9 @@ PROC    :unused_31d7                                                            
 PROC    :_31db                                                                  `$31DB
         `==============================================================================
 {        
-	bit	6,(iy+#vars.scrollRingFlags)
+	bit	6,[iy+#vars.scrollRingFlags]
 	ret	nz
-	ld	bc,($.D2B7)
+	ld	bc,[$.D2B7]
 	add	hl,bc
 	ret
 }
@@ -4764,7 +4764,7 @@ PROC    :_31db                                                                  
 PROC    :_31e6                                                                  `$31E6
         `==============================================================================
 {        
-	ld	a,($.FRAMECOUNT)
+	ld	a,[$.FRAMECOUNT]
 	and	$07
 	ld	c,a
 	ld	hl,$0068
@@ -4772,7 +4772,7 @@ PROC    :_31e6                                                                  
 	ld	de,$.SONIC
 	add	hl,de
 	ex	de,hl
-	ld	a,($.FRAMECOUNT)
+	ld	a,[$.FRAMECOUNT]
 	and	$07
 	add	a,a
 	add	a,a
@@ -4783,7 +4783,7 @@ PROC    :_31e6                                                                  
 	add	hl,bc
 	ld	c,b
 	ld	b,$04
-.loop	ld	a,(de)
+.loop	ld	a,[de]
 	cp	$56
 	jp	nc,._4
 	push	de
@@ -4796,9 +4796,9 @@ PROC    :_31e6                                                                  
 	add	hl,hl
 	ld	de,:_2ba2
 	add	hl,de
-	ld	c,(hl)
+	ld	c,[hl]
 	inc	hl
-	ld	b,(hl)
+	ld	b,[hl]
 	inc	hl
 	ld	de,$.TEMP1
 	ldi	
@@ -4807,44 +4807,44 @@ PROC    :_31e6                                                                  
 	ldi	
 	ldi	
 	ldi	
-	ld	hl,($.CAMERA_X)
+	ld	hl,[$.CAMERA_X]
 	xor	a;zero
 	sbc	hl,bc
 	jr	nc,._1
 	ld	l,a;zero
 	ld	h,a;zero
 	xor	a;zero
-._1	ld	e,(ix+#object.X.lo)
-	ld	d,(ix+#object.X.hi)
+._1	ld	e,[ix+#object.X.lo]
+	ld	d,[ix+#object.X.hi]
 	sbc	hl,de
 	jp	nc,._3
-	ld	hl,($.TEMP1)
-	ld	bc,($.CAMERA_X)
+	ld	hl,[$.TEMP1]
+	ld	bc,[$.CAMERA_X]
 	add	hl,bc
 	xor	a;zero
 	sbc	hl,de
 	jp	c,._3
-	ld	hl,($.CAMERA_Y)
-	ld	bc,($.TEMP3)
+	ld	hl,[$.CAMERA_Y]
+	ld	bc,[$.TEMP3]
 	sbc	hl,bc
 	jr	nc,._2
 	ld	l,a
 	ld	h,a
 	xor	a;zero
-._2	ld	e,(ix+#object.Y.lo)
-	ld	d,(ix+#object.Y.hi)
+._2	ld	e,[ix+#object.Y.lo]
+	ld	d,[ix+#object.Y.hi]
 	sbc	hl,de
 	jp	nc,._3
-	ld	hl,($.TEMP4)
-	ld	bc,($.CAMERA_Y)
+	ld	hl,[$.TEMP4]
+	ld	bc,[$.CAMERA_Y]
 	add	hl,bc
 	xor	a;zero
 	sbc	hl,de
 	jp	c,._3
 	exx	
-	ld	(hl),e
+	ld	[hl],e
 	inc	hl
-	ld	(hl),d
+	ld	[hl],d
 	inc	hl
 	push	hl
 	ld	hl,$001a
@@ -4857,9 +4857,9 @@ PROC    :_31e6                                                                  
 	
 ._3	exx	
 	
-._4	ld	(hl),c
+._4	ld	[hl],c
 	inc	hl
-	ld	(hl),c
+	ld	[hl],c
 	inc	hl
 	push	hl
 	ld	hl,$001a
@@ -4880,9 +4880,9 @@ PROC    :doObjects                                                              
 	ld	hl,$.D37C+2
 	ld	b,31
 	
-.loop	ld	e,(hl)
+.loop	ld	e,[hl]
 	inc	hl
-	ld	d,(hl)
+	ld	d,[hl]
 	inc	hl
 	
 	`is the value greater than zero?
@@ -4893,23 +4893,23 @@ PROC    :doObjects                                                              
 	`keep reading memory until either something non-zero is found or we hit $D3BC
 	djnz	.loop
 	
-	ld	a,(iy+#vars.spriteUpdateCount)
-	ld	hl,($.SPRITETABLE_ADDR)
+	ld	a,[iy+#vars.spriteUpdateCount]
+	ld	hl,[$.SPRITETABLE_ADDR]
 	
 	push	af
 	push	hl
 	
 	`process the player:
 	ld	hl,$D024		        `Sonic's sprite table entry
-	ld	($.SPRITETABLE_ADDR),hl
+	ld	[$.SPRITETABLE_ADDR],hl
 	ld	de,$.SONIC
 	call	:doObjectCode
 	
 	pop	hl
 	pop	af
 	
-	ld	($.SPRITETABLE_ADDR),hl
-	ld	(iy+#vars.spriteUpdateCount),a
+	ld	[$.SPRITETABLE_ADDR],hl
+	ld	[iy+#vars.spriteUpdateCount],a
 	ret
 }
 
@@ -4917,7 +4917,7 @@ PROC    :doObjectCode                                                           
         `------------------------------------------------------------------------------
 PARAMS  de
 {        
-	ld	a,(de)			        `get object from the list
+	ld	a,[de]			        `get object from the list
 	cp	$FF			        `ignore object #$FF
 	ret	z
 	
@@ -4937,9 +4937,9 @@ PARAMS  de
 	add	hl,de
 	
 	`get the object's pointer address into HL
-	ld	a,(hl)
+	ld	a,[hl]
 	inc	hl
-	ld	h,(hl)
+	ld	h,[hl]
 	ld	l,a
 	
 	`once the object's own code has been run,
@@ -4948,7 +4948,7 @@ PARAMS  de
 	push	de
 	
 	`run the object's code
-	jp	(hl)
+	jp	[hl]
 }
 	
 PROC    :processObject                                                          `$32E2
@@ -4960,102 +4960,102 @@ PROC    :processObject                                                          
         `------------------------------------------------------------------------------
         
         `move the object horizontally 
-	ld	e;speed, (ix+#object.Xspeed.lo)
-	ld	d;speed, (ix+#object.Xspeed.hi)
-	ld	c;dir, (ix+#object.Xdirection)
+	ld	e;speed, [ix+#object.Xspeed.lo]
+	ld	d;speed, [ix+#object.Xspeed.hi]
+	ld	c;dir, [ix+#object.Xdirection]
         
-	ld	l;xpos, (ix+#object.Xsubpixel)
-	ld	h;xpos, (ix+#object.X.lo)
-	ld	a;xpos, (ix+#object.X.hi)
+	ld	l;xpos, [ix+#object.Xsubpixel]
+	ld	h;xpos, [ix+#object.X.lo]
+	ld	a;xpos, [ix+#object.X.hi]
 	add	hl;xpos, de;speed
 	adc	a;xpos, c;dir
         
-	ld	(ix+#object.Xsubpixel), l;ypos
-	ld	(ix+#object.X.lo), h;ypos
-	ld	(ix+#object.X.hi), a;ypos
+	ld	[ix+#object.Xsubpixel], l;ypos
+	ld	[ix+#object.X.lo], h;ypos
+	ld	[ix+#object.X.hi], a;ypos
         
         `move the object vertically
-	ld	e;speed, (ix+#object.Yspeed.lo)
-	ld	d;speed, (ix+#object.Yspeed.hi)
-	ld	c;dir, (ix+#object.Ydirection)
-	ld	l;ypos, (ix+#object.Ysubpixel)
-	ld	h;ypos, (ix+#object.Y.lo)
-	ld	a;ypos, (ix+#object.Y.hi)
+	ld	e;speed, [ix+#object.Yspeed.lo]
+	ld	d;speed, [ix+#object.Yspeed.hi]
+	ld	c;dir, [ix+#object.Ydirection]
+	ld	l;ypos, [ix+#object.Ysubpixel]
+	ld	h;ypos, [ix+#object.Y.lo]
+	ld	a;ypos, [ix+#object.Y.hi]
 	add	hl;ypos, de;speed
 	adc	a;ypos, c;dir
         
-	ld	(ix+#object.Ysubpixel), l;ypos
-	ld	(ix+#object.Y.lo), h;ypos
-	ld	(ix+#object.Y.hi), a;ypos
+	ld	[ix+#object.Ysubpixel], l;ypos
+	ld	[ix+#object.Y.lo], h;ypos
+	ld	[ix+#object.Y.hi], a;ypos
         
         `------------------------------------------------------------------------------
         
-	bit	5, (ix+#object.flags)
+	bit	5, [ix+#object.flags]
 	jp	nz, :_34e6
 	ld	b, $00
 	ld	d, b
-	ld	e, (ix+#object.height)
+	ld	e, [ix+#object.height]
 	srl	e
-	bit	7, (ix+#object.Xspeed.hi)
+	bit	7, [ix+#object.Xspeed.hi]
 	jr	nz, ._1
-	ld	c, (ix+#object.width)
+	ld	c, [ix+#object.width]
 	ld	hl, $411E
 	jp	._2
 
 ._1	ld	c, $00
 	ld	hl, $4020
-._2	ld	($.TEMP3), bc
-	res	6,(ix+#object.flags)
+._2	ld	[$.TEMP3], bc
+	res	6,[ix+#object.flags]
 	push	de
 	push	hl
 	call	:getFloorLayoutRAMPositionForObject
-	ld	e,(hl)
+	ld	e,[hl]
 	ld	d,$00
-	ld	a,($.LEVEL_SOLIDITY)
+	ld	a,[$.LEVEL_SOLIDITY]
 	add	a,a
 	ld	c,a
 	ld	b,d
 	ld	hl,:S1_SolidityPointers
 	add	hl,bc
-	ld	a,(hl)
+	ld	a,[hl]
 	inc	hl
-	ld	h,(hl)
+	ld	h,[hl]
 	ld	l,a
 	add	hl,de
-	ld	a,(hl)
+	ld	a,[hl]
 	and	$3f
-	ld	($.TEMP6),a
+	ld	[$.TEMP6],a
 	pop	hl
 	pop	de
 	and	$3f
 	jp	z,._7
-	ld	a,($.TEMP6)
+	ld	a,[$.TEMP6]
 	add	a,a
 	ld	c,a
 	ld	b,$00
 	ld	d,b
 	add	hl,bc
-	ld	a,(hl)
+	ld	a,[hl]
 	inc	hl
-	ld	h,(hl)
+	ld	h,[hl]
 	ld	l,a
-	ld	a,(ix+#object.Y.lo)
+	ld	a,[ix+#object.Y.lo]
 	add	a,e
 	and	$1f
 	ld	e,a
 	add	hl,de
-	ld	a,(hl)
+	ld	a,[hl]
 	cp	$80
 	jp	z,._7
 	ld	e,a
 	and	a
 	jp	p,._3
 	ld	d,$ff
-._3	ld	l,(ix+#object.X.lo)
-	ld	h,(ix+#object.X.hi)
-	ld	bc,($.TEMP3)
+._3	ld	l,[ix+#object.X.lo]
+	ld	h,[ix+#object.X.hi]
+	ld	bc,[$.TEMP3]
 	add	hl,bc
-	bit	7,(ix+#object.Xdirection)
+	bit	7,[ix+#object.Xdirection]
 	jr	nz,._4
 	and	a
 	jp	m,._5
@@ -5071,118 +5071,118 @@ PROC    :processObject                                                          
 	and	$1f
 	cp	e
 	jr	nc,._7
-._5	set	6,(ix+#object.flags)
+._5	set	6,[ix+#object.flags]
 	ld	a,l
 	and	$e0
 	ld	l,a
 	add	hl,de
 	and	a
 	sbc	hl,bc
-	ld	(ix+#object.X.lo),l
-	ld	(ix+#object.X.hi),h
-	ld	a,($.TEMP6)
+	ld	[ix+#object.X.lo],l
+	ld	[ix+#object.X.hi],h
+	ld	a,[$.TEMP6]
 	ld	e,a
 	ld	d,$00
 	ld	hl,$3fbf		        `data?
 	add	hl,de
-	ld	c,(hl)
-	ld	(ix+#object.Xspeed.lo),d
-	ld	(ix+#object.Xspeed.hi),d
-	ld	(ix+#object.Xdirection),d
+	ld	c,[hl]
+	ld	[ix+#object.Xspeed.lo],d
+	ld	[ix+#object.Xspeed.hi],d
+	ld	[ix+#object.Xdirection],d
 	ld	a,d
 	ld	b,d
 	bit	7,c
 	jr	z,._6
 	dec	a
 	dec	b
-._6	ld	l,(ix+#object.Yspeed.lo)
-	ld	h,(ix+#object.Yspeed.hi)
+._6	ld	l,[ix+#object.Yspeed.lo]
+	ld	h,[ix+#object.Yspeed.hi]
 	add	hl,bc
-	adc	a,(ix+#object.Ydirection)
-	ld	(ix+#object.Yspeed.lo),l
-	ld	(ix+#object.Yspeed.hi),h
-	ld	(ix+#object.Ydirection),a
+	adc	a,[ix+#object.Ydirection]
+	ld	[ix+#object.Yspeed.lo],l
+	ld	[ix+#object.Yspeed.hi],h
+	ld	[ix+#object.Ydirection],a
 ._7	ld	b,$00
 	ld	d,b
-	bit	7,(ix+#object.Yspeed.hi)
+	bit	7,[ix+#object.Yspeed.hi]
 	jr	nz,._8
-	ld	c,(ix+#object.width)
+	ld	c,[ix+#object.width]
 	srl	c
-	ld	e,(ix+#object.height)
+	ld	e,[ix+#object.height]
 	ld	hl,$448a		        `data?
 	jp	._9
 	
-._8	ld	c,(ix+#object.width)
+._8	ld	c,[ix+#object.width]
 	srl	c
 	ld	e,$00
 	ld	hl,$41ec		        `data?
-._9	ld	($.TEMP3),de
-	res	7,(ix+#object.flags)
+._9	ld	[$.TEMP3],de
+	res	7,[ix+#object.flags]
 	push	bc
 	push	hl
 	call	:getFloorLayoutRAMPositionForObject
-	ld	e,(hl)
+	ld	e,[hl]
 	ld	d,$00
-	ld	a,($.LEVEL_SOLIDITY)
+	ld	a,[$.LEVEL_SOLIDITY]
 	add	a,a
 	ld	c,a
 	ld	b,d
 	ld	hl,:S1_SolidityPointers
 	add	hl,bc
-	ld	a,(hl)
+	ld	a,[hl]
 	inc	hl
-	ld	h,(hl)
+	ld	h,[hl]
 	ld	l,a
 	add	hl,de
-	ld	a,(hl)
+	ld	a,[hl]
 	and	$3f
-	ld	($.TEMP6),a
+	ld	[$.TEMP6],a
 	pop	hl
 	pop	bc
 	and	$3f
 	jp	z,._34e6
-	ld	a,($.TEMP6)
+	ld	a,[$.TEMP6]
 	add	a,a
 	ld	e,a
 	ld	d,$00
 	ld	b,d
 	add	hl,de
-	ld	a,(hl)
+	ld	a,[hl]
 	inc	hl
-	ld	h,(hl)
+	ld	h,[hl]
 	ld	l,a
-	ld	a,(ix+#object.X.lo)
+	ld	a,[ix+#object.X.lo]
 	add	a,c
 	and	$1f
 	ld	c,a
 	add	hl,bc
-	ld	a,(hl)
+	ld	a,[hl]
 	cp	$80
 	jp	z,._34e6
 	ld	c,a
 	and	a
 	jp	p,._10
 	ld	b,$ff
-._10	ld	l,(ix+#object.Y.lo)
-	ld	h,(ix+#object.Y.hi)
-	ld	de,($.TEMP3)
+._10	ld	l,[ix+#object.Y.lo]
+	ld	h,[ix+#object.Y.hi]
+	ld	de,[$.TEMP3]
 	add	hl,de
-	bit	7,(ix+#object.Ydirection)
+	bit	7,[ix+#object.Ydirection]
 	jr	nz,._11
 	and	a
 	jp	m,._12
 	ld	a,l
 	and	$1f
 	exx	
-	ld	hl,($.TEMP6)
+	ld	hl,[$.TEMP6]
 	ld	h,$00
 	ld	de,$3ff0		        `data?
 	add	hl,de
-	add	a,(hl)
+	add	a,[hl]
 	exx	
 	cp	c
 	jr	c,._34e6
-	set	7,(ix+#object.flags)
+	set	7,[ix+#object.flags]
 	jp	._12
 	
 ._11	and	a
@@ -5190,11 +5190,11 @@ PROC    :processObject                                                          
 	ld	a,l
 	and	$1f
 	exx	
-	ld	hl,($.TEMP6)
+	ld	hl,[$.TEMP6]
 	ld	h,$00
 	ld	de,$3ff0		        `data?
 	add	hl,de
-	add	a,(hl)
+	add	a,[hl]
 	exx	
 	cp	c
 	jr	nc,._34e6
@@ -5204,44 +5204,44 @@ PROC    :processObject                                                          
 	add	hl,bc
 	and	a
 	sbc	hl,de
-	ld	(ix+#object.Y.lo),l
-	ld	(ix+#object.Y.hi),h
-	ld	a,($.TEMP6)
+	ld	[ix+#object.Y.lo],l
+	ld	[ix+#object.Y.hi],h
+	ld	a,[$.TEMP6]
 	ld	e,a
 	ld	d,$00
 	ld	hl,$3f90		        `data?
 	add	hl,de
-	ld	c,(hl)
-	ld	(ix+#object.Yspeed.lo),d
-	ld	(ix+#object.Yspeed.hi),d
-	ld	(ix+#object.Ydirection),d
+	ld	c,[hl]
+	ld	[ix+#object.Yspeed.lo],d
+	ld	[ix+#object.Yspeed.hi],d
+	ld	[ix+#object.Ydirection],d
 	ld	a,d
 	ld	b,d
 	bit	7,c
 	jr	z,._13
 	dec	a
 	dec	b
-._13	ld	l,(ix+#object.Xspeed.lo)
-	ld	h,(ix+#object.Xspeed.hi)
+._13	ld	l,[ix+#object.Xspeed.lo]
+	ld	h,[ix+#object.Xspeed.hi]
 	add	hl,bc
-	adc	a,(ix+#object.Xdirection)
-	ld	(ix+#object.Xspeed.lo),l
-	ld	(ix+#object.Xspeed.hi),h
-	ld	(ix+#object.Xdirection),a
+	adc	a,[ix+#object.Xdirection]
+	ld	[ix+#object.Xspeed.lo],l
+	ld	[ix+#object.Xspeed.hi],h
+	ld	[ix+#object.Xdirection],a
 ._34e6
-	ld	l,(ix+#object.Y.lo)
-	ld	h,(ix+#object.Y.hi)
-	ld	bc,($.CAMERA_Y)
+	ld	l,[ix+#object.Y.lo]
+	ld	h,[ix+#object.Y.hi]
+	ld	bc,[$.CAMERA_Y]
 	and	a
 	sbc	hl,bc
 	ex	de,hl
-	ld	l,(ix+#object.X.lo)
-	ld	h,(ix+#object.X.hi)
-	ld	bc,($.CAMERA_X)
+	ld	l,[ix+#object.X.lo]
+	ld	h,[ix+#object.X.hi]
+	ld	bc,[$.CAMERA_X]
 	and	a
 	sbc	hl,bc
-	ld	c,(ix+#object.spriteLayout.lo)
-	ld	b,(ix+#object.spriteLayout.hi)
+	ld	c,[ix+#object.spriteLayout.lo]
+	ld	b,[ix+#object.spriteLayout.hi]
 	ld	a,c
 	or	b
 	call	nz,:processSpriteLayout
@@ -5261,7 +5261,7 @@ PARAMS	hl	        HELP ""X-position to place sprite layout on screen
 	bc;layout       HELP ""Address of a sprite layout
 {
 	`store the X-position of the sprite for aligning the rows
-	ld	($.TEMP6), hl;xpos
+	ld	[$.TEMP6], hl;xpos
 	
 	`copy BC (address of a sprite layout) to its shadow value BC'
 	push	bc;layout
@@ -5276,13 +5276,13 @@ PARAMS	hl	        HELP ""X-position to place sprite layout on screen
 	
 ._1	exx				        `switch to BC/DE/HL shadow values
 	
-	ld	hl;xpos, ($.TEMP6)	        `get the starting X-position
+	ld	hl;xpos, [$.TEMP6]	        `get the starting X-position
                                                  `(original HL parameter)
 	
 	`if a row begins with $FF, the data ends early
 	 `begin a row with $FE to provide a space without ending the data early
 	
-	ld	a, (bc;layout)  	        `get a byte from the sprite layout data
+	ld	a, [bc;layout]  	        `get a byte from the sprite layout data
 	exx				        `switch to original BC/DE/HL values
 	cp	$FF			        `is the byte $FF?
 	ret	z			        `if so leave
@@ -5317,27 +5317,27 @@ PARAMS	hl	        HELP ""X-position to place sprite layout on screen
 	and	a			        `is it >0? i.e. HL = $0100
 	jr	nz, ._4			        `if so skip
 	
-	ld	a, (bc)			        `check the current byte of the layout data
+	ld	a, [bc]			        `check the current byte of the layout data
 	cp	$FE			        `is it >= than $FE?
 	jr	nc, ._4			        `if so, skip
 	
 	`get the address of the sprite table entry
-	ld	de, ($.SPRITETABLE_ADDR)	
+	ld	de, [$.SPRITETABLE_ADDR]	
 	ld	a, l			        `take the current X-position
-	ld	(de), a			        `and set the sprite's X-position
+	ld	[de], a			        `and set the sprite's X-position
 	inc	e				
 	exx
 	ld	a, e			        `get the current Y-position
 	exx
-	ld	(de), a			        `set the sprite's Y-position 
+	ld	[de], a			        `set the sprite's Y-position 
 	inc	e
-	ld	a, (bc)			        `read the layout byte
-	ld	(de), a			        `set the sprite index number
+	ld	a, [bc]			        `read the layout byte
+	ld	[de], a			        `set the sprite index number
 	
 	`move to the next sprite table entry
 	inc	e
-	ld	($.SPRITETABLE_ADDR), de	
-	inc	(iy+#vars.spriteUpdateCount)
+	ld	[$.SPRITETABLE_ADDR], de	
+	inc	[iy+#vars.spriteUpdateCount]
 	
 	`move across 8 pixels
 ._4	inc	bc
@@ -5386,17 +5386,17 @@ PARAMS	hl	        HELP ""X-position to place sprite layout on screen
 PROC    :_3581                                                                  `$3581
         `==============================================================================
 {        
-	ld	hl,($.TEMP3)
-	ld	bc,($.TEMP6)
+	ld	hl,[$.TEMP3]
+	ld	bc,[$.TEMP6]
 	add	hl,bc
-	ld	bc,($.CAMERA_Y)
+	ld	bc,[$.CAMERA_Y]
 	and	a
 	sbc	hl,bc
 	ex	de,hl
-	ld	hl,($.TEMP1)
-	ld	bc,($.TEMP4)
+	ld	hl,[$.TEMP1]
+	ld	bc,[$.TEMP4]
 	add	hl,bc
-	ld	bc,($.CAMERA_X)
+	ld	bc,[$.CAMERA_X]
 	and	a
 	sbc	hl,bc
 	ld	c,a
@@ -5417,18 +5417,18 @@ PROC    :_3581                                                                  
 	cp	$c0
 	ret	nc
 ._2	ld	h,c
-	ld	bc,($.SPRITETABLE_ADDR)
+	ld	bc,[$.SPRITETABLE_ADDR]
 	ld	a,l
-	ld	(bc),a
+	ld	[bc],a
 	inc	c
 	ld	a,e
-	ld	(bc),a
+	ld	[bc],a
 	inc	c
 	ld	a,h
-	ld	(bc),a
+	ld	[bc],a
 	inc	c
-	ld	($.SPRITETABLE_ADDR),bc
-	inc	(iy+#vars.spriteUpdateCount)
+	ld	[$.SPRITETABLE_ADDR],bc
+	inc	[iy+#vars.spriteUpdateCount]
 	ret
 }
 
@@ -5444,20 +5444,20 @@ PARAMS  iy
         hl;addr         `($.SPRITETABLE_ADDR)  
         de;data         `$.D2BE	: $A0, $A2, $A4, ($80 + $.LIVES * 2), $FF
 {       
-	ld	a, (de;data)                    `check the current byte in the list
+	ld	a, [de;data]                    `check the current byte in the list
 	cp	$FF                             `is it an end marker? ($FF)
 	ret	z                               `if so, return
 	
 	cp	$FE                             `special case for $FE command
 	jr	z, .skip                        `(skip ahead)
 	
-	ld	(hl;addr), c;xpos
+	ld	[hl;addr], c;xpos
 	inc	l;addr
-	ld	(hl;addr), b;ypos
+	ld	[hl;addr], b;ypos
 	inc	l;addr
-	ld	(hl;addr), a
+	ld	[hl;addr], a
 	inc	l;addr
-	inc	(iy+#vars.spriteUpdateCount)
+	inc	[iy+#vars.spriteUpdateCount]
         
 .skip	inc	de;data
 	ld	a;xpos, c;xpos
@@ -5469,13 +5469,13 @@ PARAMS  iy
 PROC    :_35e5                                                                  `$35E5
         `==============================================================================
 {        
-	bit	0,(iy+#vars.scrollRingFlags)
+	bit	0,[iy+#vars.scrollRingFlags]
 	ret	nz
         
-	bit	0,(iy+#vars.unknown0)
+	bit	0,[iy+#vars.unknown0]
 	jp	nz,:_36be
 	
-        ld	a,($.SONIC.flags)
+        ld	a,[$.SONIC.flags]
 	rrca	
 	jp	c,:_36be
 	
@@ -5488,19 +5488,19 @@ PROC    :_35e5                                                                  
 PROC    :_35fd                                                                  `$35FD
         `------------------------------------------------------------------------------
 {        
-	bit	0,(iy+#vars.flags9)
+	bit	0,[iy+#vars.flags9]
 	ret	nz
         
-	bit	6,(iy+#vars.flags6)
+	bit	6,[iy+#vars.flags6]
 	ret	nz
         
-	bit	0,(iy+#vars.unknown0)
+	bit	0,[iy+#vars.unknown0]
 	ret	nz
         
-	bit	5,(iy+#vars.flags6)
+	bit	5,[iy+#vars.flags6]
 	jr	nz,:_367e
         
-	ld	a,($.RINGS)
+	ld	a,[$.RINGS]
 	and	a
 	jr	nz,:_3644
 }
@@ -5508,19 +5508,19 @@ PROC    :_35fd                                                                  
 PROC    :_3618                                                                  `$3618
         `------------------------------------------------------------------------------
 {        
-	set	0,(iy+#vars.scrollRingFlags)
+	set	0,[iy+#vars.scrollRingFlags]
 	ld	hl,$.SONIC.flags
-	set	7,(hl)
+	set	7,[hl]
 	ld	hl,$FFFA
 	xor	a;zero
-	ld	($.SONIC.Yspeed+0),a;zero
-	ld	($.SONIC.Yspeed+1),hl
+	ld	[$.SONIC.Yspeed+0],a;zero
+	ld	[$.SONIC.Yspeed+1],hl
 	ld	a,$60
-	ld	($.D287),a
-	res	6,(iy+#vars.flags6)
-	res	5,(iy+#vars.flags6)
-	res	6,(iy+#vars.flags6)
-	res	0,(iy+#vars.unknown0)
+	ld	[$.D287],a
+	res	6,[iy+#vars.flags6]
+	res	5,[iy+#vars.flags6]
+	res	6,[iy+#vars.flags6]
+	res	0,[iy+#vars.unknown0]
 	
 	ld	a,#index_music_death
 	rst	:playMusic
@@ -5532,51 +5532,51 @@ PROC    :_3644                                                                  
         `------------------------------------------------------------------------------
 {       
 	xor	a;zero
-	ld	($.RINGS),a;zero
+	ld	[$.RINGS],a;zero
 	call	:findEmptyObject
 	jr	c,._367e
 	push	ix
 	push	hl
 	pop	ix
-	ld	(ix+#object.type),$55	        `"make Sonic blink"?
-	ld	(ix+#object.unknown11),$06
-	ld	(ix+$12),$00
-	ld	hl,($.SONIC.X)
-	ld	(ix+#object.X.lo),l
-	ld	(ix+#object.X.hi),h
-	ld	hl,($.SONIC.Y)
-	ld	(ix+#object.Y.lo),l
-	ld	(ix+#object.Y.hi),h
-	ld	(ix+#object.Yspeed.lo),$00
-	ld	(ix+#object.Yspeed.hi),$fc
-	ld	(ix+#object.Ydirection),$ff
+	ld	[ix+#object.type],$55	        `"make Sonic blink"?
+	ld	[ix+#object.unknown11],$06
+	ld	[ix+$12],$00
+	ld	hl,[$.SONIC.X]
+	ld	[ix+#object.X.lo],l
+	ld	[ix+#object.X.hi],h
+	ld	hl,[$.SONIC.Y]
+	ld	[ix+#object.Y.lo],l
+	ld	[ix+#object.Y.hi],h
+	ld	[ix+#object.Yspeed.lo],$00
+	ld	[ix+#object.Yspeed.hi],$fc
+	ld	[ix+#object.Ydirection],$ff
 	pop	ix
         
 ._367e	ld	hl,$.SONIC.flags
 	ld	de,$fffc
 	xor	a;zero
-	bit	4,(hl)
+	bit	4,[hl]
 	jr	z,._1
 	ld	de,$fffe
-._1	ld	($.SONIC.Yspeed+0),a
-	ld	($.SONIC.Yspeed+1),de
-	bit	1,(hl)
+._1	ld	[$.SONIC.Yspeed+0],a
+	ld	[$.SONIC.Yspeed+1],de
+	bit	1,[hl]
 	jr	z,._2
-	ld	a,(hl)
+	ld	a,[hl]
 	or	$12
-	ld	(hl),a
+	ld	[hl],a
 	xor	a;zero
 	ld	de,$0002
 	jr	._3
 	
-._2	res	1,(hl)
+._2	res	1,[hl]
 	xor	a;zero
 	ld	de,$fffe
-._3	ld	($.SONIC.Xspeed+0),a
-	ld	($.SONIC.Xspeed+1),de
-	res	5,(iy+#vars.flags6)
-	set	6,(iy+#vars.flags6)
-	ld	(iy+#vars.joypad),$ff
+._3	ld	[$.SONIC.Xspeed+0],a
+	ld	[$.SONIC.Xspeed+1],de
+	res	5,[iy+#vars.flags6]
+	set	6,[iy+#vars.flags6]
+	ld	[iy+#vars.joypad],$ff
 	ld	a,$11
 	rst	:playSFX
 	ret
@@ -5585,25 +5585,25 @@ PROC    :_3644                                                                  
 PROC    :_36be                                                                  `$36BE
         `------------------------------------------------------------------------------
 {        
-	ld	(ix+#object.type),$0A	        `explosion
-	ld	a,($.TEMP1)
+	ld	[ix+#object.type],$0A	        `explosion
+	ld	a,[$.TEMP1]
 	ld	e,a
 	ld	d,$00
-	ld	l,(ix+#object.X.lo)
-	ld	h,(ix+#object.X.hi)
+	ld	l,[ix+#object.X.lo]
+	ld	h,[ix+#object.X.hi]
 	add	hl,de
-	ld	(ix+#object.X.lo),l
-	ld	(ix+#object.X.hi),h
-	ld	a,($.TEMP2)
+	ld	[ix+#object.X.lo],l
+	ld	[ix+#object.X.hi],h
+	ld	a,[$.TEMP2]
 	ld	e,a
-	ld	l,(ix+#object.Y.lo)
-	ld	h,(ix+#object.Y.hi)
+	ld	l,[ix+#object.Y.lo]
+	ld	h,[ix+#object.Y.hi]
 	add	hl,de
-	ld	(ix+#object.Y.lo),l
-	ld	(ix+#object.Y.hi),h
+	ld	[ix+#object.Y.lo],l
+	ld	[ix+#object.Y.hi],h
 	xor	a;zero
-	ld	(ix+#object.spriteLayout.lo),a;zero
-	ld	(ix+#object.spriteLayout.hi),a;zero
+	ld	[ix+#object.spriteLayout.lo],a;zero
+	ld	[ix+#object.spriteLayout.hi],a;zero
 	ld	a,$01
 	rst	:playSFX
 	ld	de,$0100
@@ -5623,7 +5623,7 @@ PARAMS	bc;xoff	        ``horizontal pixel offset to add to the object's X positi
 RETURN  hl;addr         `an address within the floor layout in RAM ("$.FLOORLAYOUT")
 {        
 	`how wide is the level?
-	ld	a,($.LEVEL_FLOORWIDTH)
+	ld	a,[$.LEVEL_FLOORWIDTH]
 	cp	128
 	jr	z,._1
 	cp	64
@@ -5637,8 +5637,8 @@ RETURN  hl;addr         `an address within the floor layout in RAM ("$.FLOORLAYO
 	`------------------------------------------------------------------------------
 	`128 block wide level:
 	
-._1	ld	l,(ix+#object.Y.lo)
-	ld	h,(ix+#object.Y.hi)
+._1	ld	l,[ix+#object.Y.lo]
+	ld	h,[ix+#object.Y.hi]
 	add	hl,de
 	ld	a,l
 	add	a,a
@@ -5648,8 +5648,8 @@ RETURN  hl;addr         `an address within the floor layout in RAM ("$.FLOORLAYO
 	and	%10000000
 	ld	l,a
 	ex	de,hl
-	ld	l,(ix+#object.X.lo)
-	ld	h,(ix+#object.X.hi)
+	ld	l,[ix+#object.X.lo]
+	ld	h,[ix+#object.X.hi]
 	add	hl,bc
 	ld	a,l
 	add	a,a
@@ -5668,8 +5668,8 @@ RETURN  hl;addr         `an address within the floor layout in RAM ("$.FLOORLAYO
 	`------------------------------------------------------------------------------
 	`64 block wide level:
 	
-._2	ld	l,(ix+#object.Y.lo)
-	ld	h,(ix+#object.Y.hi)
+._2	ld	l,[ix+#object.Y.lo]
+	ld	h,[ix+#object.Y.hi]
 	add	hl,de
 	ld	a,l
 	add	a,a
@@ -5677,8 +5677,8 @@ RETURN  hl;addr         `an address within the floor layout in RAM ("$.FLOORLAYO
 	and	%11000000
 	ld	l,a
 	ex	de,hl
-	ld	l,(ix+#object.X.lo)
-	ld	h,(ix+#object.X.hi)
+	ld	l,[ix+#object.X.lo]
+	ld	h,[ix+#object.X.hi]
 	add	hl,bc
 	ld	a,l
 	add	a,a
@@ -5697,15 +5697,15 @@ RETURN  hl;addr         `an address within the floor layout in RAM ("$.FLOORLAYO
 	`------------------------------------------------------------------------------
 	`32 block wide level:
 	
-._3	ld	l,(ix+#object.Y.lo)
-	ld	h,(ix+#object.Y.hi)
+._3	ld	l,[ix+#object.Y.lo]
+	ld	h,[ix+#object.Y.hi]
 	add	hl,de
 	ld	a,l
 	and	%11100000
 	ld	l,a
 	ex	de,hl
-	ld	l,(ix+#object.X.lo)
-	ld	h,(ix+#object.X.hi)
+	ld	l,[ix+#object.X.lo]
+	ld	h,[ix+#object.X.hi]
 	add	hl,bc
 	ld	a,l
 	add	a,a
@@ -5724,8 +5724,8 @@ RETURN  hl;addr         `an address within the floor layout in RAM ("$.FLOORLAYO
 	`------------------------------------------------------------------------------
 	`16 block wide level:
 	
-._4	ld	l,(ix+#object.Y.lo)
-	ld	h,(ix+#object.Y.hi)
+._4	ld	l,[ix+#object.Y.lo]
+	ld	h,[ix+#object.Y.hi]
 	add	hl,de
 	ld	a,l
 	srl	h
@@ -5733,8 +5733,8 @@ RETURN  hl;addr         `an address within the floor layout in RAM ("$.FLOORLAYO
 	and	%11110000
 	ld	l,a
 	ex	de,hl
-	ld	l,(ix+#object.X.lo)
-	ld	h,(ix+#object.X.hi)
+	ld	l,[ix+#object.X.lo]
+	ld	h,[ix+#object.X.hi]
 	add	hl,bc
 	ld	a,l
 	add	a,a
@@ -5753,8 +5753,8 @@ RETURN  hl;addr         `an address within the floor layout in RAM ("$.FLOORLAYO
 	`------------------------------------------------------------------------------
 	`256 block wide level?
 	
-._5	ld	l,(ix+#object.Y.lo)		`Object Y position?
-	ld	h,(ix+#object.Y.hi)
+._5	ld	l,[ix+#object.Y.lo]		`Object Y position?
+	ld	h,[ix+#object.Y.hi]
 	add	hl,de
 	ld	a,l
 	rlca				        `x2 ...
@@ -5765,8 +5765,8 @@ RETURN  hl;addr         `an address within the floor layout in RAM ("$.FLOORLAYO
 	rl	h
 	ex	de,hl			        `put HL aside into DE
 	
-	ld	l,(ix+#object.X.lo)		`Object X position?
-	ld	h,(ix+#object.X.hi)
+	ld	l,[ix+#object.X.lo]		`Object X position?
+	ld	h,[ix+#object.X.hi]
 	add	hl,bc
 	ld	a,l
 	rlca				        `x2 ...
@@ -5789,8 +5789,8 @@ PROC    :updateSonicSpriteFrame                                                 
         `==============================================================================
         `copy the current Sonic animation frame into the sprite data
 {        
-	ld	de, ($.SONIC_CURRENT_FRAME)
-	ld	hl, ($.SONIC_PREVIOUS_FRAME)
+	ld	de, [$.SONIC_CURRENT_FRAME]
+	ld	hl, [$.SONIC_PREVIOUS_FRAME]
 	
 	and	a
 	sbc	hl, de
@@ -5801,15 +5801,15 @@ PROC    :updateSonicSpriteFrame                                                 
 	
 	``I can't find an instance where bit 0 of IY+$06 is set,
 	  this may be dead code``
-	bit	0, (iy+#vars.flags6)
+	bit	0, [iy+#vars.flags6]
 	jp	nz, ._2
 	
 	`------------------------------------------------------------------------------
 	ld	a, e			        `$80
-	out	($.VDP.CONTROL), a
+	out	[$.VDP.CONTROL], a
 	ld	a, d			        `$36
 	or	%01000000
-	out	($.VDP.CONTROL), a
+	out	[$.VDP.CONTROL], a
 	
 	xor	a;zero			        `set A to 0
 	ld	c, $.VDP.DATA
@@ -5822,25 +5822,25 @@ PROC    :updateSonicSpriteFrame                                                 
 ._1	outi
 	outi
 	outi
-	out	($.VDP.DATA), a
+	out	[$.VDP.DATA], a
 	outi
 	outi
 	outi
-	out	($.VDP.DATA), a
+	out	[$.VDP.DATA], a
 	outi
 	outi
 	outi
-	out	($.VDP.DATA), a
+	out	[$.VDP.DATA], a
 	outi
 	outi
 	outi
-	out	($.VDP.DATA), a
+	out	[$.VDP.DATA], a
 	
 	dec	e
 	jp	nz, ._1
 	
-	ld	hl, ($.SONIC_CURRENT_FRAME)
-	ld	($.SONIC_PREVIOUS_FRAME), hl
+	ld	hl, [$.SONIC_CURRENT_FRAME]
+	ld	[$.SONIC_PREVIOUS_FRAME], hl
 	ret
 	
 	`------------------------------------------------------------------------------
@@ -5849,10 +5849,10 @@ PROC    :updateSonicSpriteFrame                                                 
 	add	hl, bc
 	
 	ld	a, e
-	out	($.VDP.CONTROL), a
+	out	[$.VDP.CONTROL], a
 	ld	a, d
 	or	%01000000
-	out	($.VDP.CONTROL), a
+	out	[$.VDP.CONTROL], a
 	
 	exx
 	push	bc
@@ -5865,22 +5865,22 @@ PROC    :updateSonicSpriteFrame                                                 
 ._3	outi
 	outi
 	outi
-	out	($.VDP.DATA), a
+	out	[$.VDP.DATA], a
 	add	hl, de
 	outi
 	outi
 	outi
-	out	($.VDP.DATA), a
+	out	[$.VDP.DATA], a
 	add	hl, de
 	outi
 	outi
 	outi
-	out	($.VDP.DATA), a
+	out	[$.VDP.DATA], a
 	add	hl, de
 	outi
 	outi
 	outi
-	out	($.VDP.DATA), a
+	out	[$.VDP.DATA], a
 	add	hl, de
 	exx
 	dec	b
@@ -5890,16 +5890,16 @@ PROC    :updateSonicSpriteFrame                                                 
 	exx
 	pop	bc
 	exx
-	ld	hl, ($.SONIC_CURRENT_FRAME)
-	ld	($.SONIC_PREVIOUS_FRAME), hl
+	ld	hl, [$.SONIC_CURRENT_FRAME]
+	ld	[$.SONIC_PREVIOUS_FRAME], hl
 	ret
 }
 
 PROC    :updateRingFrame                                                        `$3879
         `==============================================================================
 {        
-	ld	de,($.RING_CURRENT_FRAME)
-	ld	hl,($.RING_PREVIOUS_FRAME)
+	ld	de,[$.RING_CURRENT_FRAME]
+	ld	hl,[$.RING_PREVIOUS_FRAME]
 	
 	and	a
 	sbc	hl,de
@@ -5909,44 +5909,44 @@ PROC    :updateRingFrame                                                        
 	ex	de,hl
 	di	
 	ld	a,e
-	out	($.VDP.CONTROL),a
+	out	[$.VDP.CONTROL],a
 	ld	a,d
 	or	%01000000
-	out	($.VDP.CONTROL),a
+	out	[$.VDP.CONTROL],a
 	ld	b,$20
 	
-.loop	ld	a,(hl)
-	out	($.VDP.DATA),a
+.loop	ld	a,[hl]
+	out	[$.VDP.DATA],a
 	nop	
 	inc	hl
-	ld	a,(hl)
-	out	($.VDP.DATA),a
+	ld	a,[hl]
+	out	[$.VDP.DATA],a
 	nop	
 	inc	hl
-	ld	a,(hl)
-	out	($.VDP.DATA),a
+	ld	a,[hl]
+	out	[$.VDP.DATA],a
 	nop	
 	inc	hl
-	ld	a,(hl)
-	out	($.VDP.DATA),a
+	ld	a,[hl]
+	out	[$.VDP.DATA],a
 	inc	hl
 	djnz	.loop
 	
 	ei	
-	ld	hl,($.RING_CURRENT_FRAME)
-	ld	($.RING_PREVIOUS_FRAME),hl
+	ld	hl,[$.RING_CURRENT_FRAME]
+	ld	[$.RING_PREVIOUS_FRAME],hl
 	ret
 }
 
 PROC    :_LABEL_38B0_51                                                         `$38B0
         `==============================================================================
 {        
-	ld	hl, ($.D2AB)
+	ld	hl, [$.D2AB]
 	ld	a, l
 	and	%11111000
 	ld	l, a
 	
-	ld	de, ($.CAMERA_X)
+	ld	de, [$.CAMERA_X]
 	ld	a, e
 	and	%11111000
 	ld	e, a
@@ -5963,7 +5963,7 @@ PROC    :_LABEL_38B0_51                                                         
 	ret	c
 	
 	ld	d, a
-	ld	a, ($.VDPSCROLL_HORZ)
+	ld	a, [$.VDPSCROLL_HORZ]
 	and	%11111000
 	ld	e, a
 	add	hl, de
@@ -5977,11 +5977,11 @@ PROC    :_LABEL_38B0_51                                                         
 	and	$1F
 	add	a, a
 	ld	c, a
-	ld	hl, ($.D2AD)
+	ld	hl, [$.D2AD]
 	ld	a, l
 	and	$F8
 	ld	l, a
-	ld	de, ($.CAMERA_Y)
+	ld	de, [$.CAMERA_Y]
 	ld	a, e
 	and	$F8
 	ld	e, a
@@ -5994,7 +5994,7 @@ PROC    :_LABEL_38B0_51                                                         
 	cp	$C0
 	ret	nc
 	ld	d, $00
-	ld	a, ($.VDPSCROLL_VERT)
+	ld	a, [$.VDPSCROLL_VERT]
 	and	$F8
 	ld	e, a
 	add	hl, de
@@ -6022,32 +6022,32 @@ PROC    :_LABEL_38B0_51                                                         
 	add	hl, bc
 	ld	bc, $.VDP.SCREENNAMETABLE
 	add	hl, bc
-	ld	de, ($.D2AF)
+	ld	de, [$.D2AF]
 	ld	b, $02
 
 .loop	ld	a, l
-	out	($.VDP.CONTROL), a
+	out	[$.VDP.CONTROL], a
 	ld	a, h
 	or	%01000000
-	out	($.VDP.CONTROL), a
+	out	[$.VDP.CONTROL], a
 	
-	ld	a, (de)
-	out	($.VDP.DATA), a
+	ld	a, [de]
+	out	[$.VDP.DATA], a
 	inc	de
 	nop
 	nop
-	ld	a, (de)
-	out	($.VDP.DATA), a
+	ld	a, [de]
+	out	[$.VDP.DATA], a
 	inc	de
 	nop
 	nop
-	ld	a, (de)
-	out	($.VDP.DATA), a
+	ld	a, [de]
+	out	[$.VDP.DATA], a
 	inc	de
 	nop
 	nop
-	ld	a, (de)
-	out	($.VDP.DATA), a
+	ld	a, [de]
+	out	[$.VDP.DATA], a
 	inc	de
 	
 	ld	a, b
@@ -6068,7 +6068,7 @@ RETURN  c;carry         HELP ""Carry flag is clear if collision, otherwise set
         a;zero          HELP ""A is always set to zero for no discernible reason
 {
         `is Sonic dead? (no collision detection)
-	bit	0, (iy+#vars.scrollRingFlags)
+	bit	0, [iy+#vars.scrollRingFlags]
 	scf                                     `return carry flag set (no-collision)
 	ret	nz
 	
@@ -6076,13 +6076,13 @@ RETURN  c;carry         HELP ""Carry flag is clear if collision, otherwise set
         
         `calculate the right-hand edge of the object
          `(object X-position + object width)
-	ld	l;xpos, (ix+#object.X.lo)
-	ld	h;xpos, (ix+#object.X.hi)
-	ld	c;width, (ix+#object.width)
+	ld	l;xpos, [ix+#object.X.lo]
+	ld	h;xpos, [ix+#object.X.hi]
+	ld	c;width, [ix+#object.width]
 	ld	b;width, $00
 	add	hl;xpos, bc;width
         
-	ld	de;sonic_xpos, ($.SONIC.X)
+	ld	de;sonic_xpos, [$.SONIC.X]
 	
         `is Sonic is to the right of the object?
 	xor	a;zero			        `set A to 0
@@ -6094,9 +6094,9 @@ RETURN  c;carry         HELP ""Carry flag is clear if collision, otherwise set
         `calculate the object's left edge:
          `note that the object provides an 'indent'. the sprite may well begin at
          `a certain X-position but the graphic within may be indented a little
-	ld	l;obj_xpos, (ix+#object.X.lo)   `begin with the object's left position
-	ld	h;obj_xpos, (ix+#object.X.hi)
-	ld	a;left, ($.TEMP6)               `get the object's left indent
+	ld	l;obj_xpos, [ix+#object.X.lo]   `begin with the object's left position
+	ld	h;obj_xpos, [ix+#object.X.hi]
+	ld	a;left, [$.TEMP6]               `get the object's left indent
 	ld	c;left, a;zero
 	add	hl;obj_xpos, bc;left            `combine the two
 	
@@ -6106,7 +6106,7 @@ RETURN  c;carry         HELP ""Carry flag is clear if collision, otherwise set
         ex	de;sonic_xpos, hl;obj_xpos
 	
         `calculate Sonic's right edge:
-	ld	a;width, ($.SONIC.width)
+	ld	a;width, [$.SONIC.width]
 	ld	c;width, a;width                `note that B is still 0
 	add	hl;sonic_xpos, bc;width
         
@@ -6118,24 +6118,24 @@ RETURN  c;carry         HELP ""Carry flag is clear if collision, otherwise set
         `------------------------------------------------------------------------------
         
         `calculate the object's bottom edge
-	ld	l;ypos, (ix+#object.Y.lo)
-	ld	h;ypos, (ix+#object.Y.hi)
-	ld	c;height, (ix+#object.height)
+	ld	l;ypos, [ix+#object.Y.lo]
+	ld	h;ypos, [ix+#object.Y.hi]
+	ld	c;height, [ix+#object.height]
 	add	hl;ypos, bc;height
 	
-        ld	de;sonic, ($.SONIC.Y+0)
+        ld	de;sonic, [$.SONIC.Y+0]
         xor	a;zero			        `set A to 0
 	sbc	hl;ypos, de;sonic
 	ret	c
 	
-	ld	l, (ix+#object.Y.lo)
-	ld	h, (ix+#object.Y.hi)
-	ld	a, ($.TEMP7)
+	ld	l, [ix+#object.Y.lo]
+	ld	h, [ix+#object.Y.hi]
+	ld	a, [$.TEMP7]
 	ld	c, a
 	add	hl, bc
 	ex	de, hl
 	
-	ld	a, ($.SONIC.height)
+	ld	a, [$.SONIC.height]
 	ld	c, a
 	add	hl, bc
 	xor	a;zero
@@ -6151,7 +6151,7 @@ PARAMS  a;count         HELP ""Number of rings to add
 {
         `add the given number to the total ring count
 	ld	c;count,a;count
-	ld	a;rings,($.RINGS)
+	ld	a;rings,[$.RINGS]
 	add	a;rings,c;count
 	ld	c;rings,a;rings                 `move the new total to C
 	
@@ -6170,12 +6170,12 @@ PARAMS  a;count         HELP ""Number of rings to add
 	
         `subtract 100 rings
         sub	100
-	ld	($.RINGS),a
+	ld	[$.RINGS],a
         
         `add 1 to the lives count
-	ld	a,($.LIVES)
+	ld	a,[$.LIVES]
 	inc	a
-	ld	($.LIVES),a
+	ld	[$.LIVES],a
         
         `play the 1-up sound effect
 	ld	a,$09
@@ -6184,7 +6184,7 @@ PARAMS  a;count         HELP ""Number of rings to add
         ret
 	
 .playSFX
-        ld	($.RINGS),a;rings
+        ld	[$.RINGS],a;rings
 	ld	a;sfx,$02
 	rst	:playSFX
 	ret
@@ -6198,40 +6198,40 @@ PARAMS  e
         `add the E param to the value in $D2BD and then adjust to decimal
 	ld	hl,$.D2BD
 	ld	a,e
-	add	a,(hl)
+	add	a,[hl]
 	daa	
-	ld	(hl),a
+	ld	[hl],a
         
 	dec	hl                              `move down to $D2BC
 	ld	a,d
-	adc	a,(hl)
+	adc	a,[hl]
 	daa	
-	ld	(hl),a
+	ld	[hl],a
 	
         dec	hl                              `move down to $D2BB
         ld	a,c
-	adc	a,(hl)
+	adc	a,[hl]
 	daa	
-	ld	(hl),a
+	ld	[hl],a
 	
         ld	c,a
 	dec	hl                              `move down to $D2BA
 	ld	a,$00
-	adc	a,(hl)
+	adc	a,[hl]
 	daa	
-	ld	(hl),a
+	ld	[hl],a
         
 	ld	hl,$.D2FD
 	ld	a,c
-	cp	(hl)
+	cp	[hl]
 	ret	c
 	
 	ld	a,$05
-	add	a,(hl)
+	add	a,[hl]
 	daa	
-	ld	(hl),a
+	ld	[hl],a
 	ld	hl,$.LIVES
-	inc	(hl)
+	inc	[hl]
         
 	ld	a,$09
 	rst	:playSFX
@@ -6242,29 +6242,29 @@ PARAMS  e
 PROC    :_3a03                                                                  `$3A03
         `==============================================================================
 {        
-	bit	0,(iy+#vars.scrollRingFlags)
+	bit	0,[iy+#vars.scrollRingFlags]
 	ret	nz	
 	ld	hl,$.D2D0
-	bit	0,(iy+#vars.timeLightningFlags)
+	bit	0,[iy+#vars.timeLightningFlags]
 	jr	nz,._4
-	ld	a,(hl)
+	ld	a,[hl]
 	inc	a
 	cp	$3c
 	jr	c,._1
 	xor	a;zero
-._1	ld	(hl),a
+._1	ld	[hl],a
 	dec	hl
 	ccf	
-	ld	a,(hl)
+	ld	a,[hl]
 	adc	a,$00
 	daa	
 	cp	$60
 	jr	c,._2
 	xor	a;zero
-._2	ld	(hl),a
+._2	ld	[hl],a
 	dec	hl
 	ccf	
-	ld	a,(hl)
+	ld	a,[hl]
 	adc	a,$00
 	daa	
 	cp	$10
@@ -6273,36 +6273,36 @@ PROC    :_3a03                                                                  
 	call	:_3618
 	pop	hl
 	xor	a;zero
-._3	ld	(hl),a
+._3	ld	[hl],a
 	ret
 	
-._4	ld	a,(hl)
+._4	ld	a,[hl]
 	inc	a
 	cp	$3c
 	jr	c,._5
 	xor	a;zero
-._5	ld	(hl),a
+._5	ld	[hl],a
 	dec	hl
 	ccf	
-	ld	a,(hl)
+	ld	a,[hl]
 	sbc	a,$00
 	daa	
 	cp	$60
 	jr	c,._6
 	ld	a,$59
-._6	ld	(hl),a
+._6	ld	[hl],a
 	dec	hl
 	ccf	
-	ld	a,(hl)
+	ld	a,[hl]
 	sbc	a,$00
 	daa	
 	cp	$60
 	jr	c,._7
 	ld	a,$01
-	ld	($.D289),a
-	set	2,(iy+#vars.flags9)
+	ld	[$.D289],a
+	set	2,[iy+#vars.flags9]
 	xor	a;zero
-._7	ld	(hl),a
+._7	ld	[hl],a
 	ret
 }
 

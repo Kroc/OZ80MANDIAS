@@ -10,11 +10,11 @@
 
 PROC	:doObjectCode_powerUp_ring              SECTION ::objects
 {	
-	ld	(ix+#object.width), 20
-	ld	(ix+#object.height),24
+	ld	[ix+#object.width], 20
+	ld	[ix+#object.height],24
 	call	:_5da8
 	ld	hl,$0003
-	ld	($.TEMP6),hl
+	ld	[$.TEMP6],hl
 	call	:detectCollisionWithSonic
 	jr	c,._1
 	call	:_5deb
@@ -25,8 +25,8 @@ PROC	:doObjectCode_powerUp_ring              SECTION ::objects
 	call	:increaseRings
         
 ._5b29	xor	a;zero			        `set A to 0
-	ld	(ix+#object.spriteLayout.lo),a;zero
-	ld	(ix+#object.spriteLayout.hi),a;zero
+	ld	[ix+#object.spriteLayout.lo],a;zero
+	ld	[ix+#object.spriteLayout.hi],a;zero
 	ret	
 	
         `------------------------------------------------------------------------------
@@ -34,57 +34,57 @@ PROC	:doObjectCode_powerUp_ring              SECTION ::objects
 ._1	ld	hl,$5180		        `$15180 - blinking items art
 ._5b34
 	call	:loadPowerUpIcon
-	ld	(ix+#object.spriteLayout.lo),._5bbf.lo
-	ld	(ix+#object.spriteLayout.hi),._5bbf.hi
-	ld	a,($.FRAMECOUNT)
+	ld	[ix+#object.spriteLayout.lo],._5bbf.lo
+	ld	[ix+#object.spriteLayout.hi],._5bbf.hi
+	ld	a,[$.FRAMECOUNT]
 	and	$07
 	cp	$05
 	ret	nc
-	ld	(ix+#object.spriteLayout.lo),._5bcc.lo
-	ld	(ix+#object.spriteLayout.hi),._5bcc.hi
-	ld	l,(ix+#object.Xsubpixel)
-	ld	h,(ix+#object.X.lo)
-	ld	a,(ix+#object.X.hi)
-	ld	e,(ix+#object.Xspeed.lo)
-	ld	d,(ix+#object.Xspeed.hi)
+	ld	[ix+#object.spriteLayout.lo],._5bcc.lo
+	ld	[ix+#object.spriteLayout.hi],._5bcc.hi
+	ld	l,[ix+#object.Xsubpixel]
+	ld	h,[ix+#object.X.lo]
+	ld	a,[ix+#object.X.hi]
+	ld	e,[ix+#object.Xspeed.lo]
+	ld	d,[ix+#object.Xspeed.hi]
 	add	hl,de
-	adc	a,(ix+#object.Xdirection)
+	adc	a,[ix+#object.Xdirection]
 	ld	l,h
 	ld	h,a
-	ld	($.TEMP1),hl
-	ld	l,(ix+#object.Ysubpixel)
-	ld	h,(ix+#object.Y.lo)
-	ld	a,(ix+#object.Y.hi)
-	bit	7,(ix+#object.flags)
+	ld	[$.TEMP1],hl
+	ld	l,[ix+#object.Ysubpixel]
+	ld	h,[ix+#object.Y.lo]
+	ld	a,[ix+#object.Y.hi]
+	bit	7,[ix+#object.flags]
 	jr	nz,._2
-	ld	e,(ix+#object.Yspeed.lo)
-	ld	d,(ix+#object.Yspeed.hi)
+	ld	e,[ix+#object.Yspeed.lo]
+	ld	d,[ix+#object.Yspeed.hi]
 	add	hl,de
-	adc	a,(ix+#object.Ydirection)
+	adc	a,[ix+#object.Ydirection]
 ._2	ld	l,h
 	ld	h,a
-	ld	($.TEMP3),hl
+	ld	[$.TEMP3],hl
 	ld	hl,$0004
-	ld	($.TEMP4),hl
+	ld	[$.TEMP4],hl
 	ld	hl,$0000
-	ld	($.TEMP6),hl
+	ld	[$.TEMP6],hl
 	ld	a,$5c
 	call	:_3581
 	ld	hl,$000c
-	ld	($.TEMP4),hl
+	ld	[$.TEMP4],hl
 	ld	a,$5e
 	call	:_3581
-	bit	1,(ix+#object.flags)
+	bit	1,[ix+#object.flags]
 	ret	z
-	ld	l,(ix+#object.Yspeed.lo)
-	ld	h,(ix+#object.Yspeed.hi)
-	ld	a,(ix+#object.Ydirection)
+	ld	l,[ix+#object.Yspeed.lo]
+	ld	h,[ix+#object.Yspeed.hi]
+	ld	a,[ix+#object.Ydirection]
 	ld	de,$0040
 	add	hl,de
 	adc	a,$00
-	ld	(ix+#object.Yspeed.lo),l
-	ld	(ix+#object.Yspeed.hi),h
-	ld	(ix+#object.Ydirection),a
+	ld	[ix+#object.Yspeed.lo],l
+	ld	[ix+#object.Yspeed.hi],h
+	ld	[ix+#object.Ydirection],a
 	ret
         
 ._5bbf
@@ -102,17 +102,17 @@ PROC	:doObjectCode_powerUp_ring              SECTION ::objects
 
 PROC	:doObjectCode_powerUp_speed             SECTION ::objects {
 	
-	ld	(ix+#object.width), 20
-	ld	(ix+#object.height),24
+	ld	[ix+#object.width], 20
+	ld	[ix+#object.height],24
 	call	:_5da8
 	ld	hl,$0003
-	ld	($.TEMP6),hl
+	ld	[$.TEMP6],hl
 	call	:detectCollisionWithSonic
 	jr	c,._1
 	call	:_5deb
 	jr	c,._1
 	ld	a,$f0
-	ld	($.SONIC.unknown15),a
+	ld	[$.SONIC.unknown15],a
 	ld	a,$02
 	rst	:rst_playSFX
 	jp	:doObjectCode_powerUp_ring._5b29
@@ -127,55 +127,55 @@ PROC	:doObjectCode_powerUp_speed             SECTION ::objects {
 
 PROC	:doObjectCode_powerUp_life              SECTION ::objects {
 	
-	ld	(ix+#object.width), 20
-	ld	(ix+#object.height),24
+	ld	[ix+#object.width], 20
+	ld	[ix+#object.height],24
 	call	:_5da8
 	
 	`check if the level has its bit flag set at $.D305+
 	ld	hl,$.D305
 	call	:getLevelBitFlag
-	ld	a,(hl)
+	ld	a,[hl]
 	and	c
 	jr	z,._1			        `if not set, skip ahead
 	
-	ld	(ix+#object.type),$FF	        `remove object?
+	ld	[ix+#object.type],$FF	        `remove object?
 	jp	:doObjectCode_powerUp_ring._5b29
 	
 ._1	ld	hl,$0003
-	ld	($.TEMP6),hl
+	ld	[$.TEMP6],hl
 	call	:detectCollisionWithSonic
 	jr	c,._2
 	call	:_5deb
 	jr	c,._2
-	bit	2,(ix+#object.flags)
+	bit	2,[ix+#object.flags]
 	jp	nz,:doObjectCode_powerUp_ring._5b24
 	ld	hl,$.LIVES
-	inc	(hl)
+	inc	[hl]
 	
 	`set the level's bit flag at $.D305+
 	ld	hl,$.D305
 	call	:getLevelBitFlag
-	ld	a,(hl)
+	ld	a,[hl]
 	or	c
-	ld	(hl),a
+	ld	[hl],a
 	
 	xor	a;zero			        `set A to 0
-	ld	(ix+#object.spriteLayout.lo),a;zero
-	ld	(ix+#object.spriteLayout.hi),a;zero
+	ld	[ix+#object.spriteLayout.lo],a;zero
+	ld	[ix+#object.spriteLayout.hi],a;zero
 	
 	ld	a,$09
 	rst	:rst_playSFX
 	
-	ld	a,($.CURRENT_LEVEL)
+	ld	a,[$.CURRENT_LEVEL]
 	cp	28			        `special stage?
 	ret	nc
 	
 	ld	hl,$.D280
-	inc	(hl)
+	inc	[hl]
 	ret
 	
 	`------------------------------------------------------------------------------
-._2	ld	a,($.CURRENT_LEVEL)
+._2	ld	a,[$.CURRENT_LEVEL]
 	cp	4			        `level 4 (Bridge Act 2)?
 	jr	z,._4
 	cp	$09			        `level 9 (Labyrinth Act 1)?
@@ -190,42 +190,42 @@ PROC	:doObjectCode_powerUp_life              SECTION ::objects {
 
 ._4	ld	c,$00
 	ld	de,$0040
-	ld	a,(ix+#object.unknown13)
+	ld	a,[ix+#object.unknown13]
 	cp	$3c
 	jr	c,._5
 	dec	c
 	ld	de,$ffc0
-._5	ld	(ix+#object.Yspeed.lo),e
-	ld	(ix+#object.Yspeed.hi),d
-	ld	(ix+#object.Ydirection),c
-	inc	(ix+#object.unknown13)
-	ld	a,(ix+#object.unknown13)
+._5	ld	[ix+#object.Yspeed.lo],e
+	ld	[ix+#object.Yspeed.hi],d
+	ld	[ix+#object.Ydirection],c
+	inc	[ix+#object.unknown13]
+	ld	a,[ix+#object.unknown13]
 	cp	$50
 	jr	c,._3
-	ld	(ix+#object.unknown13),$28
+	ld	[ix+#object.unknown13],$28
 	jr	._3
 	
-._6	set	2,(ix+#object.flags)
+._6	set	2,[ix+#object.flags]
 	ld	hl,$.D317
 	call	:getLevelBitFlag
-	ld	a,(hl)
+	ld	a,[hl]
 	ld	hl,$5180
 	and	c
 	jp	z,:doObjectCode_powerUp_ring._5b34
-	res	2,(ix+#object.flags)
+	res	2,[ix+#object.flags]
 	ld	hl,$5280
 	jp	:doObjectCode_powerUp_ring._5b34
 	
-._7	set	1,(ix+#object.flags)
-	ld	(ix+#object.Xspeed.lo),$80
-	ld	(ix+#object.Xspeed.hi),$00
-	ld	(ix+#object.Xdirection),$00
+._7	set	1,[ix+#object.flags]
+	ld	[ix+#object.Xspeed.lo],$80
+	ld	[ix+#object.Xspeed.hi],$00
+	ld	[ix+#object.Xdirection],$00
 	jr	._3
 	
-._8	ld	a,($.D280)
+._8	ld	a,[$.D280]
 	cp	$11
 	jr	nc,._3
-	ld	(ix+#object.type),$FF	`remove object?
+	ld	[ix+#object.type],$FF	`remove object?
 	jr	._3
 
 }
@@ -235,16 +235,16 @@ PROC	:doObjectCode_powerUp_life              SECTION ::objects {
 
 PROC	:doObjectCode_powerUp_shield            SECTION ::objects {
 	
-	ld	(ix+#object.width), 20
-	ld	(ix+#object.height),24
+	ld	[ix+#object.width], 20
+	ld	[ix+#object.height],24
 	call	:_5da8
 	ld	hl,$0003
-	ld	($.TEMP6),hl
+	ld	[$.TEMP6],hl
 	call	:detectCollisionWithSonic
 	jr	c,._1
 	call	:_5deb
 	jr	c,._1
-	set	5,(iy+#vars.flags6)
+	set	5,[iy+#vars.flags6]
 	jp	:doObjectCode_powerUp_ring._5b29
 	
 ._1	ld	hl,$5300
@@ -257,18 +257,18 @@ PROC	:doObjectCode_powerUp_shield            SECTION ::objects {
 
 PROC	:doObjectCode_powerUp_invincibility     SECTION ::objects {
 	
-	ld	(ix+#object.width), 20
-	ld	(ix+#object.height),24
+	ld	[ix+#object.width], 20
+	ld	[ix+#object.height],24
 	call	:_5da8
 	ld	hl,$0003
-	ld	($.TEMP6),hl
+	ld	[$.TEMP6],hl
 	call	:detectCollisionWithSonic
 	jr	c,._1
 	call	:_5deb
 	jr	c,._1
-	set	0,(iy+#vars.unknown0)
+	set	0,[iy+#vars.unknown0]
 	ld	a,$F0
-	ld	($.D28D),a
+	ld	[$.D28D],a
 	
 	ld	a,#index_music_invincibility
 	rst	:rst_playMusic
@@ -285,11 +285,11 @@ PROC	:doObjectCode_powerUp_invincibility     SECTION ::objects {
 
 PROC	:doObjectCode_powerUp_checkpoint        SECTION ::objects {
 	
-	ld	(ix+#object.width), 20
-	ld	(ix+#object.height),24
+	ld	[ix+#object.width], 20
+	ld	[ix+#object.height],24
 	call	:_5da8
 	ld	hl,$0003
-	ld	($.TEMP6),hl
+	ld	[$.TEMP6],hl
 	call	:detectCollisionWithSonic
 	jr	c,._1
 	call	:_5deb
@@ -297,33 +297,33 @@ PROC	:doObjectCode_powerUp_checkpoint        SECTION ::objects {
 	
 	ld	hl,$.D311
 	call	:getLevelBitFlag
-	ld	a,(hl)
+	ld	a,[hl]
 	or	c
-	ld	(hl),a
+	ld	[hl],a
 	
-	ld	a,($.CURRENT_LEVEL)
+	ld	a,[$.CURRENT_LEVEL]
 	add	a,a
 	ld	e,a
 	ld	d,$00
 	ld	hl,$.D32E
 	add	hl,de
 	ex	de,hl			        `DE is $.D32E + level number * 2
-	ld	l,(ix+#object.X.lo)
-	ld	h,(ix+#object.X.hi)
+	ld	l,[ix+#object.X.lo]
+	ld	h,[ix+#object.X.hi]
 	add	hl,hl
 	add	hl,hl
 	add	hl,hl
 	ld	a,h
-	ld	(de),a
+	ld	[de],a
 	inc	de
-	ld	l,(ix+#object.Y.lo)
-	ld	h,(ix+#object.Y.hi)
+	ld	l,[ix+#object.Y.lo]
+	ld	h,[ix+#object.Y.hi]
 	add	hl,hl
 	add	hl,hl
 	add	hl,hl
 	ld	a,h
 	dec	a
-	ld	(de),a
+	ld	[de],a
 	jp	:doObjectCode_powerUp_ring._5b29
 	
 ._1	ld	hl,$5480
@@ -336,16 +336,16 @@ PROC	:doObjectCode_powerUp_checkpoint        SECTION ::objects {
 
 PROC	:doObjectCode_powerUp_continue          SECTION ::objects {
 	
-	ld	(ix+#object.width), 20
-	ld	(ix+#object.height),24
+	ld	[ix+#object.width], 20
+	ld	[ix+#object.height],24
 	call	:_5da8
 	ld	hl,$0003
-	ld	($.TEMP6),hl
+	ld	[$.TEMP6],hl
 	call	:detectCollisionWithSonic
 	jr	c,._1
 	call	:_5deb
 	jr	c,._1
-	set	3,(iy+#vars.flags9)
+	set	3,[iy+#vars.flags9]
 	jp	:doObjectCode_powerUp_ring._5b29
 	
 ._1	ld	hl,$5500
@@ -357,9 +357,9 @@ PROC	:doObjectCode_powerUp_continue          SECTION ::objects {
 
 PROC	:_5da8                                  SECTION ::objects {
 	
-	bit	0,(ix+#object.flags)
+	bit	0,[ix+#object.flags]
 	ret	nz
-	ld	a,($.LEVEL_SOLIDITY)
+	ld	a,[$.LEVEL_SOLIDITY]
 	and	a
 	jr	nz,._1
 	ld	bc,$0000
@@ -368,22 +368,22 @@ PROC	:_5da8                                  SECTION ::objects {
 	call	:getFloorLayoutRAMPositionForObject
 	ld	de,$0016
 	ld	bc,$0012
-	ld	a,(hl)
+	ld	a,[hl]
 	cp	$ab
 	jr	z,._2
 ._1	ld	de,$0004
 	ld	bc,$0000
-._2	ld	l,(ix+#object.X.lo)
-	ld	h,(ix+#object.X.hi)
+._2	ld	l,[ix+#object.X.lo]
+	ld	h,[ix+#object.X.hi]
 	add	hl,de
-	ld	(ix+#object.X.lo),l
-	ld	(ix+#object.X.hi),h
-	ld	l,(ix+#object.Y.lo)
-	ld	h,(ix+#object.Y.hi)
+	ld	[ix+#object.X.lo],l
+	ld	[ix+#object.X.hi],h
+	ld	l,[ix+#object.Y.lo]
+	ld	h,[ix+#object.Y.hi]
 	add	hl,bc
-	ld	(ix+#object.Y.lo),l
-	ld	(ix+#object.Y.hi),h
-	set	0,(ix+#object.flags)
+	ld	[ix+#object.Y.lo],l
+	ld	[ix+#object.Y.hi],h
+	set	0,[ix+#object.flags]
 	ret
 
 }
@@ -393,13 +393,13 @@ PROC	:_5da8                                  SECTION ::objects {
 PROC	:_5deb                                  SECTION ::objects {
 	
 	ld	hl,$0804
-	ld	($.TEMP1),hl
-	ld	a,($.SONIC.flags)
+	ld	[$.TEMP1],hl
+	ld	a,[$.SONIC.flags]
 	and	$01
 	jr	nz,._2
-	ld	de,($.SONIC.X)
-	ld	c,(ix+#object.X.lo)
-	ld	b,(ix+#object.X.hi)
+	ld	de,[$.SONIC.X]
+	ld	c,[ix+#object.X.lo]
+	ld	b,[ix+#object.X.hi]
 	ld	hl,$ffee
 	add	hl,bc
 	and	a
@@ -410,28 +410,28 @@ PROC	:_5deb                                  SECTION ::objects {
 	and	a
 	sbc	hl,de
 	jr	c,._4
-	ld	a,($.SONIC.flags)
+	ld	a,[$.SONIC.flags]
 	and	$04
 	jr	nz,._1
-	ld	l,(ix+#object.Y.lo)
-	ld	h,(ix+#object.Y.hi)
-	ld	a,($.SONIC.width)
+	ld	l,[ix+#object.Y.lo]
+	ld	h,[ix+#object.Y.hi]
+	ld	a,[$.SONIC.width]
 	ld	c,a
 	xor	a;zero
 	ld	b,a;zero
 	sbc	hl,bc
-	ld	($.SONIC.Y),hl
-	ld	($.D28E),a;zero
-	ld	a,($.D2E8)
-	ld	hl,($.D2E6)
-	ld	($.SONIC.Yspeed),hl
-	ld	($.SONIC.Ydirection),a
+	ld	[$.SONIC.Y],hl
+	ld	[$.D28E],a;zero
+	ld	a,[$.D2E8]
+	ld	hl,[$.D2E6]
+	ld	[$.SONIC.Yspeed],hl
+	ld	[$.SONIC.Ydirection],a
 	ld	hl,$.SONIC.flags
-	set	7,(hl)
+	set	7,[hl]
 	scf	
 	ret
 
-._1	ld	a,($.SONIC.Ydirection)
+._1	ld	a,[$.SONIC.Ydirection]
 	and	a
 	jp	m,._3
 	
@@ -439,24 +439,24 @@ PROC	:_5deb                                  SECTION ::objects {
 	and	a
 	ret
 
-._3	ld	(ix+#object.Yspeed.lo),$80
-	ld	(ix+#object.Yspeed.hi),$fe
-	ld	(ix+#object.Ydirection),$ff
+._3	ld	[ix+#object.Yspeed.lo],$80
+	ld	[ix+#object.Yspeed.hi],$fe
+	ld	[ix+#object.Ydirection],$ff
 	ld	hl,$0400
 	xor	a;zero
-	ld	($.SONIC.Yspeed),hl
-	ld	($.SONIC.Ydirection),a
-	ld	($.D28E),a
-	set	1,(ix+#object.flags)
+	ld	[$.SONIC.Yspeed],hl
+	ld	[$.SONIC.Ydirection],a
+	ld	[$.D28E],a
+	set	1,[ix+#object.flags]
 	scf	
 	ret
 
-._4	ld	hl,($.SONIC.X)
+._4	ld	hl,[$.SONIC.X]
 	ld	de,$000c
 	add	hl,de
 	ex	de,hl
-	ld	l,(ix+#object.X.lo)
-	ld	h,(ix+#object.X.hi)
+	ld	l,[ix+#object.X.lo]
+	ld	h,[ix+#object.X.hi]
 	ld	bc,$000a
 	add	hl,bc
 	ld	bc,$ffeb
@@ -464,17 +464,17 @@ PROC	:_5deb                                  SECTION ::objects {
 	sbc	hl,de
 	jr	nc,._5
 	ld	bc,$0015
-._5	ld	l,(ix+#object.X.lo)
-	ld	h,(ix+#object.X.hi)
+._5	ld	l,[ix+#object.X.lo]
+	ld	h,[ix+#object.X.hi]
 	add	hl,bc
-	ld	($.SONIC.X),hl
+	ld	[$.SONIC.X],hl
         
 	xor	a;zero
-	ld	($.SONIC.Xsubpixel),a;zero
+	ld	[$.SONIC.Xsubpixel],a;zero
 	ld	l;zero,a;zero
 	ld	h;zero,a;zero
-	ld	($.SONIC.Xspeed.lo),a;zero
-	ld	($.SONIC.Xspeed.hi),hl;zero
+	ld	[$.SONIC.Xspeed.lo],a;zero
+	ld	[$.SONIC.Xspeed.hi],hl;zero
 	scf	
 	ret
 
@@ -487,51 +487,51 @@ PROC	:doObjectCode_powerUp_emerald           SECTION ::objects {
 	
 	ld	hl,$.D30B
 	call	:getLevelBitFlag
-	ld	a,(hl)
+	ld	a,[hl]
 	and	c
 	jr	nz,._1
-	ld	(ix+#object.width), 12
-	ld	(ix+#object.height),17
+	ld	[ix+#object.width], 12
+	ld	[ix+#object.height],17
 	call	:_5da8
         
 	xor	a;zero
-	ld	(ix+#object.spriteLayout.lo),a;zero
-	ld	(ix+#object.spriteLayout.hi),a;zero
+	ld	[ix+#object.spriteLayout.lo],a;zero
+	ld	[ix+#object.spriteLayout.hi],a;zero
         
 	ld	hl,$0202
-	ld	($.TEMP6),hl
+	ld	[$.TEMP6],hl
 	call	:detectCollisionWithSonic
 	jr	c,._2
 	ld	hl,$.D30B
 	call	:getLevelBitFlag
-	ld	a,(hl)
+	ld	a,[hl]
 	or	c
-	ld	(hl),a
+	ld	[hl],a
 	ld	hl,$.D27F
-	inc	(hl)
+	inc	[hl]
 	ld	a,$fe
-	ld	($.D28B),a
+	ld	[$.D28B],a
 	
 	ld	a,#index_music_emerald
 	rst	:rst_playMusic
 	
-._1	ld	(ix+#object.type),$FF	`remove object?
+._1	ld	[ix+#object.type],$FF	`remove object?
 	ret
 
-._2	ld	a,($.FRAMECOUNT)
+._2	ld	a,[$.FRAMECOUNT]
 	rrca	
 	jr	c,._3
-	ld	(ix+#object.spriteLayout.lo),._5f10.lo
-	ld	(ix+#object.spriteLayout.hi),._5f10.hi
-._3	ld	l,(ix+#object.Yspeed.lo)
-	ld	h,(ix+#object.Yspeed.hi)
-	ld	a,(ix+#object.Ydirection)
+	ld	[ix+#object.spriteLayout.lo],._5f10.lo
+	ld	[ix+#object.spriteLayout.hi],._5f10.hi
+._3	ld	l,[ix+#object.Yspeed.lo]
+	ld	h,[ix+#object.Yspeed.hi]
+	ld	a,[ix+#object.Ydirection]
 	ld	de,$0020
 	add	hl,de
 	adc	a,$00
-	ld	(ix+#object.Yspeed.lo),l
-	ld	(ix+#object.Yspeed.hi),h
-	ld	(ix+#object.Ydirection),a
+	ld	[ix+#object.Yspeed.lo],l
+	ld	[ix+#object.Yspeed.hi],h
+	ld	[ix+#object.Ydirection],a
 	ld	hl,$5400		        `$15400 - emerald in blinking items art
 	call	:loadPowerUpIcon
 	ret

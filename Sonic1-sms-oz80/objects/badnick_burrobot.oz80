@@ -3,19 +3,19 @@
 
 PROC    :doObjectCode_badnick_burrobot          SECTION ::objects
 {
-	ld	(ix+#object.width), 12
-	ld	(ix+#object.height),32
+	ld	[ix+#object.width], 12
+	ld	[ix+#object.height],32
 	ld	hl,$0202                        `loads $.TEMP6 & $.TEMP7 with $02
-	ld	($.TEMP6),hl
+	ld	[$.TEMP6],hl
 	call	:detectCollisionWithSonic
 	
         ld	hl,$0800
-	ld	($.TEMP1),hl
+	ld	[$.TEMP1],hl
 	call	nc,:_35e5
 	
-        ld	l,(ix+#object.Yspeed.lo)
-	ld	h,(ix+#object.Yspeed.hi)
-	ld	a,(ix+#object.Ydirection)
+        ld	l,[ix+#object.Yspeed.lo]
+	ld	h,[ix+#object.Yspeed.hi]
+	ld	a,[ix+#object.Ydirection]
 	ld	de,$0010
 	add	hl,de
 	adc	a,$00
@@ -26,63 +26,63 @@ PROC    :doObjectCode_badnick_burrobot          SECTION ::objects
 	jr	c,._1
 	ld	hl,$0300
 	ld	c,$00
-._1	ld	(ix+#object.Yspeed.lo),l
-	ld	(ix+#object.Yspeed.hi),h
-	ld	(ix+#object.Ydirection),c
-	bit	0,(ix+#object.flags)
+._1	ld	[ix+#object.Yspeed.lo],l
+	ld	[ix+#object.Yspeed.hi],h
+	ld	[ix+#object.Ydirection],c
+	bit	0,[ix+#object.flags]
 	jp	nz,._4
 	ld	de,$ffd0
-	ld	l,(ix+#object.X.lo)
-	ld	h,(ix+#object.X.hi)
+	ld	l,[ix+#object.X.lo]
+	ld	h,[ix+#object.X.hi]
 	add	hl,de
-	ld	de,($.SONIC.X)
+	ld	de,[$.SONIC.X]
 	and	a
 	sbc	hl,de
 	jr	nc,._2
 	ld	bc,$0030
-	ld	l,(ix+#object.X.lo)
-	ld	h,(ix+#object.X.hi)
+	ld	l,[ix+#object.X.lo]
+	ld	h,[ix+#object.X.hi]
 	add	hl,bc
 	and	a
 	sbc	hl,de
 	jr	c,._2
-	set	0,(ix+#object.flags)
-	ld	(ix+#object.Yspeed.lo),$80
-	ld	(ix+#object.Yspeed.hi),$fd
-	ld	(ix+#object.Ydirection),$ff
-._2	ld	l,(ix+#object.X.lo)
-	ld	h,(ix+#object.X.hi)
-	ld	de,($.SONIC.X)
+	set	0,[ix+#object.flags]
+	ld	[ix+#object.Yspeed.lo],$80
+	ld	[ix+#object.Yspeed.hi],$fd
+	ld	[ix+#object.Ydirection],$ff
+._2	ld	l,[ix+#object.X.lo]
+	ld	h,[ix+#object.X.hi]
+	ld	de,[$.SONIC.X]
 	and	a
 	sbc	hl,de
 	jr	c,._3
-	ld	(ix+#object.Xspeed.lo),$c0
-	ld	(ix+#object.Xspeed.hi),$ff
-	ld	(ix+#object.Xdirection),$ff
+	ld	[ix+#object.Xspeed.lo],$c0
+	ld	[ix+#object.Xspeed.hi],$ff
+	ld	[ix+#object.Xdirection],$ff
 	ld	de,._9059
 	ld	bc,._904a
 	call	:_7c41
-	set	1,(ix+#object.flags)
+	set	1,[ix+#object.flags]
 	ret
 	
-._3	ld	(ix+#object.Xspeed.lo),$40
-	ld	(ix+#object.Xspeed.hi),$00
-	ld	(ix+#object.Xdirection),$00
+._3	ld	[ix+#object.Xspeed.lo],$40
+	ld	[ix+#object.Xspeed.hi],$00
+	ld	[ix+#object.Xdirection],$00
 	ld	de,._9059
 	ld	bc,._9045
 	call	:_7c41
-	res	1,(ix+#object.flags)
+	res	1,[ix+#object.flags]
 	ret
 	
 ._4	ld	bc,._9054
-	bit	1,(ix+#object.flags)
+	bit	1,[ix+#object.flags]
 	jr	nz,._5
 	ld	bc,._904f
 ._5	ld	de,._9059
 	call	:_7c41
-	bit	7,(ix+#object.flags)
+	bit	7,[ix+#object.flags]
 	ret	z
-	res	0,(ix+#object.flags)
+	res	0,[ix+#object.flags]
 	ret
         
         `------------------------------------------------------------------------------

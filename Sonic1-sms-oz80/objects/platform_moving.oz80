@@ -2,34 +2,34 @@
 `OBJECT: wooden platform - moving (Green Hill)
 
 PROC    :doObjectCode_platform_leftRight        SECTION ::objects {
-	set	5,(ix+#object.flags)
+	set	5,[ix+#object.flags]
 	
-	ld	a,($.CURRENT_LEVEL)
+	ld	a,[$.CURRENT_LEVEL]
 	cp	$07			        `Jungle act 2?
 	jr	z,._1
 	
 	ld	hl,$0020
-	ld	($.D267),hl
+	ld	[$.D267],hl
 	
 	ld	hl,$0048
-	ld	($.D269),hl
+	ld	[$.D269],hl
 	
 	ld	hl,$0030
-	ld	($.D26B),hl
+	ld	[$.D26B],hl
 	
 	ld	hl,$0030
-	ld	($.D26D),hl
+	ld	[$.D26D],hl
 	
-._1	ld	(ix+#object.width), 26
-	ld	(ix+#object.height),16
+._1	ld	[ix+#object.width], 26
+	ld	[ix+#object.height],16
 	ld	c,$00
 	
-	ld	a,($.SONIC.Ydirection)
+	ld	a,[$.SONIC.Ydirection]
 	and	a
 	jp	m,._2
 	
 	ld	hl,$0806
-	ld	($.TEMP6),hl
+	ld	[$.TEMP6],hl
 	call	:detectCollisionWithSonic
 	
 	ld	c,$00
@@ -41,42 +41,42 @@ PROC    :doObjectCode_platform_leftRight        SECTION ::objects {
 	ld	c,$01
 	
 	`move right 1px
-._2	ld	l,(ix+$12)
-	ld	h,(ix+#object.unknown13)
+._2	ld	l,[ix+$12]
+	ld	h,[ix+#object.unknown13]
 	inc	hl
-	ld	(ix+$12),l
-	ld	(ix+#object.unknown13),h
+	ld	[ix+$12],l
+	ld	[ix+#object.unknown13],h
 	
 	ld	de,$00A0
 	xor	a;zero			        `set A to 0
 	sbc	hl,de
 	jr	c,._3
 	
-	ld	(ix+$12),a;zero
-	ld	(ix+#object.unknown13),a;zero
-	inc	(ix+#object.unknown14)
+	ld	[ix+$12],a;zero
+	ld	[ix+#object.unknown13],a;zero
+	inc	[ix+#object.unknown14]
 	
 ._3	ld	de,$0001
-	bit	0,(ix+#object.unknown14)
+	bit	0,[ix+#object.unknown14]
 	jr	z,._4
 	
 	`move left 1px?
 	ld	de,$FFFF
-._4	ld	l,(ix+#object.X.lo)
-	ld	h,(ix+#object.X.hi)
+._4	ld	l,[ix+#object.X.lo]
+	ld	h,[ix+#object.X.hi]
 	add	hl,de
-	ld	(ix+#object.X.lo),l
-	ld	(ix+#object.X.hi),h
+	ld	[ix+#object.X.lo],l
+	ld	[ix+#object.X.hi],h
 	ld	a,c
 	and	a
 	jr	z,._5
 	
-	ld	hl,($.SONIC.X)
+	ld	hl,[$.SONIC.X]
 	add	hl,de
-	ld	($.SONIC.X),hl
+	ld	[$.SONIC.X],hl
 	
 ._5	ld	hl,:object_platform_spriteLayouts._6911
-	ld	a,($.LEVEL_SOLIDITY)
+	ld	a,[$.LEVEL_SOLIDITY]
 	and	a
 	jr	z,._6
 	
@@ -85,7 +85,7 @@ PROC    :doObjectCode_platform_leftRight        SECTION ::objects {
 	jr	z,._6
 	
 	ld	hl,:object_platform_spriteLayouts._6923
-._6	ld	(ix+#object.spriteLayout.lo),l
-	ld	(ix+#object.spriteLayout.hi),h
+._6	ld	[ix+#object.spriteLayout.lo],l
+	ld	[ix+#object.spriteLayout.hi],h
 	ret
 }

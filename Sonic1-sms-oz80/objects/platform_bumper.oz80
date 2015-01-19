@@ -3,56 +3,56 @@
 
 PROC    :doObjectCode_platform_bumper           SECTION ::objects
 {
-	set	5,(ix+#object.flags)
-	ld	(ix+#object.width),$1c
-	ld	(ix+#object.height),$06
-	ld	(ix+#object.spriteLayout.lo),._9b6e.lo
-	ld	(ix+#object.spriteLayout.hi),._9b6e.hi
+	set	5,[ix+#object.flags]
+	ld	[ix+#object.width],$1c
+	ld	[ix+#object.height],$06
+	ld	[ix+#object.spriteLayout.lo],._9b6e.lo
+	ld	[ix+#object.spriteLayout.hi],._9b6e.hi
 	ld	hl,$0001
-	ld	a,(ix+$12)
+	ld	a,[ix+$12]
 	cp	$60
 	jr	nc,._1
 	ld	hl,$ffff
-._1	ld	(ix+#object.Xspeed.lo),$00
-	ld	(ix+#object.Xspeed.hi),l
-	ld	(ix+#object.Xdirection),h
+._1	ld	[ix+#object.Xspeed.lo],$00
+	ld	[ix+#object.Xspeed.hi],l
+	ld	[ix+#object.Xdirection],h
 	inc	a
 	cp	$c0
 	jr	c,._2
 	xor	a;zero
-._2	ld	(ix+$12),a;zero
-	ld	a,(ix+#object.unknown11)
+._2	ld	[ix+$12],a;zero
+	ld	a,[ix+#object.unknown11]
 	and	a
 	jr	nz,._3
 	ld	hl,$0602
-	ld	($.TEMP6),hl
+	ld	[$.TEMP6],hl
 	call	:detectCollisionWithSonic
 	ret	c
-	ld	a,($.D2E8)
-	ld	de,($.D2E6)
+	ld	a,[$.D2E8]
+	ld	de,[$.D2E6]
 	ld	c,a
-	ld	hl,($.SONIC.Yspeed)
+	ld	hl,[$.SONIC.Yspeed]
 	ld	a,l
 	cpl	
 	ld	l,a
 	ld	a,h
 	cpl	
 	ld	h,a
-	ld	a,($.SONIC.Ydirection)
+	ld	a,[$.SONIC.Ydirection]
 	cpl	
 	add	hl,de
 	adc	a,c
 	ld	de,$0001
 	add	hl,de
 	adc	a,$00
-	ld	($.SONIC.Yspeed),hl
-	ld	($.SONIC.Ydirection),a
-	ld	(ix+#object.unknown11),$08
+	ld	[$.SONIC.Yspeed],hl
+	ld	[$.SONIC.Ydirection],a
+	ld	[ix+#object.unknown11],$08
 	ld	a,$07
 	rst	:rst_playSFX
 	ret
 	
-._3	dec	(ix+#object.unknown11)
+._3	dec	[ix+#object.unknown11]
 	ret
         
         `sprite layout

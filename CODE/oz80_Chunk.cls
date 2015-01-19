@@ -122,7 +122,7 @@ End Sub
 '======================================================================================
 'Prefix         | $DD for IX Register, $FD for IY Register, $ED for some opcodes
 'Opcode         | Z80 Instruction opcode
-'Offset         | 8-Bit Index for IX & IY memory references, e.g. "(IX+$FF)"
+'Offset         | 8-Bit Index for IX & IY memory references, e.g. "[IX+$FF]"
 'ValueLo        | 8-Bit value or the Low-byte of a 16-bit value
 'ValueHi        | High-byte of a 16-bit value
 '======================================================================================
@@ -144,7 +144,7 @@ End Sub
 '======================================================================================
 'Prefix         | $DD for IX Register, $FD for IY Register, $ED for some opcodes
 'Opcode         | Z80 Instruction opcode
-'Offset         | 8-Bit Index for IX & IY memory references, e.g. "(IX+$FF)"
+'Offset         | 8-Bit Index for IX & IY memory references, e.g. "[IX+$FF]"
 '======================================================================================
 Public Sub AddInstructionCB( _
     Optional ByRef Prefix As Long = -1, _

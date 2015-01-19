@@ -66,12 +66,12 @@ Public Enum OZ80_SYNTAX
     SYNTAX_NUMBER_HEX = UCS2.DOLLAR_SIGN            ' $ - Hexadecimal number, `$FFFF`
     SYNTAX_NUMBER_BIN = UCS2.PERCENT_SIGN           ' % - Binary number, `%10101011`
     SYNTAX_NEXT = UCS2.COMMA                        ' , - Item seperator, optional
-    SYNTAX_Z80MEM_OPEN = UCS2.LEFT_PARENTHESIS      ' ( - Memory reference begin
-    SYNTAX_Z80MEM_CLOSE = UCS2.RIGHT_PARENHESIS     ' ) - Memory reference end
-    SYNTAX_CHUNK_OPEN = UCS2.LEFT_CURLY_BRACKET     ' { - Open brace
-    SYNTAX_CHUNK_CLOSE = UCS2.RIGHT_CURLY_BRACKET   ' } - Close brace
-    SYNTAX_HASH_OPEN = UCS2.LEFT_SQUARE_BRACKET     ' [ - Hash array open bracket
-    SYNTAX_HASH_CLOSE = UCS2.RIGHT_SQUARE_BRACKET   ' ] - Hash array close bracket
+    SYNTAX_PARENS_OPEN = UCS2.LEFT_PARENTHESIS      ' ( - Open parentheses
+    SYNTAX_PARENS_CLOSE = UCS2.RIGHT_PARENHESIS     ' ) - Close parentheses
+    SYNTAX_BRACES_OPEN = UCS2.LEFT_CURLY_BRACKET    ' { - Open brace
+    SYNTAX_BRACES_CLOSE = UCS2.RIGHT_CURLY_BRACKET  ' } - Close brace
+    SYNTAX_SQUARE_OPEN = UCS2.LEFT_SQUARE_BRACKET   ' [ - Open bracket
+    SYNTAX_SQUARE_CLOSE = UCS2.RIGHT_SQUARE_BRACKET ' ] - Close bracket
     SYNTAX_OPERATOR_ADD = UCS2.PLUS_SIGN            ' + - Add
     SYNTAX_OPERATOR_SUB = UCS2.HYPHEN_MINUS         ' - - Subtract
     SYNTAX_OPERATOR_MUL = UCS2.ASTERISK             ' * - Multiply
@@ -194,11 +194,10 @@ Private Const FORMAT_QUOTE          As String = """"
 Private Const FORMAT_TOKEN          As String = "<tkn> {$} ({$},{$}) [{$}] {$}"
 Private Const FORMAT_TOKEN_CHUNK    As String = "   CHUNK"
 Private Const FORMAT_TOKEN_CONST    As String = "   CONST"
+Private Const FORMAT_TOKEN_EXPR     As String = "    EXPR"
 Private Const FORMAT_TOKEN_FLAG     As String = "    FLAG"
-Private Const FORMAT_TOKEN_HASH     As String = "    HASH"
 Private Const FORMAT_TOKEN_KEYWORD  As String = " KEYWORD"
 Private Const FORMAT_TOKEN_LABEL    As String = "   LABEL"
-Private Const FORMAT_TOKEN_MEMZ80   As String = "  MEMZ80"
 Private Const FORMAT_TOKEN_NUMBER   As String = "  NUMBER"
 Private Const FORMAT_TOKEN_OPERATOR As String = "OPERATOR"
 Private Const FORMAT_TOKEN_PREFIX   As String = "  PREFIX"
@@ -206,6 +205,7 @@ Private Const FORMAT_TOKEN_PROPERTY As String = "PROPERTY"
 Private Const FORMAT_TOKEN_RAM      As String = "     RAM"
 Private Const FORMAT_TOKEN_REGISTER As String = "REGISTER"
 Private Const FORMAT_TOKEN_SECTION  As String = " SECTION"
+Private Const FORMAT_TOKEN_SQUARE   As String = "HASH/MEM"
 Private Const FORMAT_TOKEN_TEXT     As String = "    TEXT"
 Private Const FORMAT_TOKEN_Z80      As String = "     Z80"
 
@@ -545,7 +545,7 @@ Public Function Tokenise( _
         
         'If the token consititutes an Expression (a calculable Value)
         '..............................................................................
-        ElseIf (t = TOKEN_CHUNK_OPEN) Or _
+        ElseIf (t = TOKEN_PARENS_OPEN) Or _
                (t = TOKEN_CONST) Or _
                (t = TOKEN_HASH) Or _
                (t = TOKEN_KEYWORD_HI) Or _
@@ -568,9 +568,9 @@ Public Function Tokenise( _
             Let My_IsList(t) = True
         
         'Z80 parameters are Expressions, with the addition of _
-         Z80 register / memory references, e.g. `(ix+$FF)`
+         Z80 register / memory references, e.g. `[ix+$FF]`
         '..............................................................................
-        ElseIf (t = TOKEN_Z80MEM_OPEN) Then
+        ElseIf (t = TOKEN_SQUARE_OPEN) Then
             Let My_IsParameter(t) = True
             
         'The `START` keyword acts as a Label for the System's boot vector
@@ -732,12 +732,12 @@ ReadChar:
              When we hit one of these we need to end the word immediately, but parsing _
              normally ends a word on the letter after, so we deal with the edge case
             If Char = SYNTAX_NEXT Then GoTo Punctuation
-            If Char = SYNTAX_CHUNK_OPEN Then GoTo Punctuation
-            If Char = SYNTAX_CHUNK_CLOSE Then GoTo Punctuation
-            If Char = SYNTAX_HASH_OPEN Then GoTo Punctuation
-            If Char = SYNTAX_HASH_CLOSE Then GoTo Punctuation
-            If Char = SYNTAX_Z80MEM_OPEN Then GoTo Punctuation
-            If Char = SYNTAX_Z80MEM_CLOSE Then GoTo Punctuation
+            If Char = SYNTAX_BRACES_OPEN Then GoTo Punctuation
+            If Char = SYNTAX_BRACES_CLOSE Then GoTo Punctuation
+            If Char = SYNTAX_PARENS_OPEN Then GoTo Punctuation
+            If Char = SYNTAX_PARENS_CLOSE Then GoTo Punctuation
+            If Char = SYNTAX_SQUARE_OPEN Then GoTo Punctuation
+            If Char = SYNTAX_SQUARE_CLOSE Then GoTo Punctuation
             
             If Char = SYNTAX_OPERATOR_ADD Then GoTo Punctuation
             If Char = SYNTAX_OPERATOR_SUB Then GoTo Punctuation
@@ -768,12 +768,12 @@ ReadChar:
             
             'Symbols that can break a word in the middle without spaces to separate
             If Char = SYNTAX_NEXT Then GoTo WordBreak
-            If Char = SYNTAX_CHUNK_OPEN Then GoTo WordBreak
-            If Char = SYNTAX_CHUNK_CLOSE Then GoTo WordBreak
-            If Char = SYNTAX_HASH_OPEN Then GoTo WordBreak
-            If Char = SYNTAX_HASH_CLOSE Then GoTo WordBreak
-            If Char = SYNTAX_Z80MEM_OPEN Then GoTo WordBreak
-            If Char = SYNTAX_Z80MEM_CLOSE Then GoTo WordBreak
+            If Char = SYNTAX_BRACES_OPEN Then GoTo WordBreak
+            If Char = SYNTAX_BRACES_CLOSE Then GoTo WordBreak
+            If Char = SYNTAX_PARENS_OPEN Then GoTo WordBreak
+            If Char = SYNTAX_PARENS_CLOSE Then GoTo WordBreak
+            If Char = SYNTAX_SQUARE_OPEN Then GoTo WordBreak
+            If Char = SYNTAX_SQUARE_CLOSE Then GoTo WordBreak
             
             If Char = SYNTAX_OPERATOR_ADD Then GoTo WordBreak
             If Char = SYNTAX_OPERATOR_SUB Then GoTo WordBreak
@@ -1265,36 +1265,36 @@ TokenWord:
         'There is no 'z' register
         GoTo WordError
         
-    ElseIf Asc1 = SYNTAX_CHUNK_OPEN Then '..................................... `{` ...
+    ElseIf Asc1 = SYNTAX_BRACES_OPEN Then '.................................... `{` ...
         'Open another nesting level (if there was an error, stop parsing)
-        If NestIn(TOKEN_CHUNK_OPEN) Then GoTo Finish
+        If NestIn(TOKEN_BRACES_OPEN) Then GoTo Finish
         GoTo NextWord
         
-    ElseIf Asc1 = SYNTAX_CHUNK_CLOSE Then  '................................... `}` ...
+    ElseIf Asc1 = SYNTAX_BRACES_CLOSE Then  '.................................. `}` ...
         'Close the current nesting level, error if incorrect bracket-matching
-        If NestOut(TOKEN_CHUNK_OPEN, TOKEN_CHUNK_CLOSE) Then GoTo Finish
+        If NestOut(TOKEN_BRACES_OPEN, TOKEN_BRACES_CLOSE) Then GoTo Finish
         GoTo NextWord
         
-    ElseIf Asc1 = SYNTAX_Z80MEM_OPEN Then '.................................... `(` ...
+    ElseIf Asc1 = SYNTAX_PARENS_OPEN Then '.................................... `(` ...
         'Open another nesting level (if there was an error, stop parsing)
-        If NestIn(TOKEN_Z80MEM_OPEN) Then GoTo Finish
+        If NestIn(TOKEN_PARENS_OPEN) Then GoTo Finish
         GoTo NextWord
         
-    ElseIf Asc1 = SYNTAX_Z80MEM_CLOSE Then '................................... `)` ...
+    ElseIf Asc1 = SYNTAX_PARENS_CLOSE Then '................................... `)` ...
         'Close the current nesting level, error if incorrect bracket-matching
-        If NestOut(TOKEN_Z80MEM_OPEN, TOKEN_Z80MEM_CLOSE) Then GoTo Finish
+        If NestOut(TOKEN_PARENS_OPEN, TOKEN_PARENS_CLOSE) Then GoTo Finish
         GoTo NextWord
         
-    ElseIf Asc1 = SYNTAX_HASH_OPEN Then '...................................... `[` ...
+    ElseIf Asc1 = SYNTAX_SQUARE_OPEN Then '.................................... `[` ...
         'Open another nesting level (if there was an error, stop parsing)
-        If NestIn(TOKEN_HASH_OPEN) Then GoTo Finish
+        If NestIn(TOKEN_SQUARE_OPEN) Then GoTo Finish
         GoTo NextWord
         
-    ElseIf Asc1 = SYNTAX_HASH_CLOSE Then '..................................... `]` ...
+    ElseIf Asc1 = SYNTAX_SQUARE_CLOSE Then '................................... `]` ...
         'Close the current nesting level, error if incorrect bracket-matching
-        If NestOut(TOKEN_HASH_OPEN, TOKEN_HASH_CLOSE) Then GoTo Finish
+        If NestOut(TOKEN_SQUARE_OPEN, TOKEN_SQUARE_CLOSE) Then GoTo Finish
         GoTo NextWord
-    
+        
     ElseIf Asc1 = SYNTAX_OPERATOR_ADD Then '................................... `+` ...
         Call Add(TOKEN_OPERATOR_ADD): GoTo NextWord
     ElseIf Asc1 = SYNTAX_OPERATOR_SUB Then '................................... `-` ...
@@ -1545,11 +1545,23 @@ Private Function FormatToken( _
     Dim Format_Msg As New bluString
     Dim Format_TokenType As String
     
-    If My_TokenKind = TOKEN_CHUNK_OPEN _
-    Or My_TokenKind = TOKEN_CHUNK_CLOSE Then
+    If My_TokenKind = TOKEN_BRACES_OPEN _
+    Or My_TokenKind = TOKEN_BRACES_CLOSE Then
         '..............................................................................
         Let Format_Msg.Text = oz80.TokenName(My_TokenKind)
         Let Format_TokenType = FORMAT_TOKEN_CHUNK
+        
+    ElseIf My_TokenKind = TOKEN_PARENS_OPEN _
+        Or My_TokenKind = TOKEN_PARENS_CLOSE Then
+        '..............................................................................
+        Let Format_Msg.Text = oz80.TokenName(My_TokenKind)
+        Let Format_TokenType = FORMAT_TOKEN_EXPR
+        
+    ElseIf My_TokenKind = TOKEN_SQUARE_OPEN _
+        Or My_TokenKind = TOKEN_SQUARE_CLOSE Then
+        '..............................................................................
+        Let Format_Msg.Text = oz80.TokenName(My_TokenKind)
+        Let Format_TokenType = FORMAT_TOKEN_SQUARE
         
     ElseIf My_TokenKind = TOKEN_CONST Then
         '..............................................................................
@@ -1566,13 +1578,7 @@ Private Function FormatToken( _
         '..............................................................................
         Let Format_Msg.Text = Strings.Item(My_TokenValue)
         Call Format_Msg.Wrap(FORMAT_QUOTE)
-        Let Format_TokenType = FORMAT_TOKEN_HASH
-        
-    ElseIf My_TokenKind = TOKEN_HASH_OPEN _
-        Or My_TokenKind = TOKEN_HASH_CLOSE Then
-        '..............................................................................
-        Let Format_Msg.Text = oz80.TokenName(My_TokenKind)
-        Let Format_TokenType = FORMAT_TOKEN_HASH
+        Let Format_TokenType = FORMAT_TOKEN_SQUARE
         
     ElseIf My_IsInstruction(My_TokenKind) Then
         '..............................................................................
@@ -1637,12 +1643,6 @@ Private Function FormatToken( _
         Let Format_Msg.Text = Strings.Item(My_TokenValue)
         Call Format_Msg.Wrap(FORMAT_QUOTE)
         Let Format_TokenType = FORMAT_TOKEN_TEXT
-            
-    ElseIf My_TokenKind = TOKEN_Z80MEM_OPEN _
-        Or My_TokenKind = TOKEN_Z80MEM_CLOSE Then
-        '..............................................................................
-        Let Format_Msg.Text = oz80.TokenName(My_TokenKind)
-        Let Format_TokenType = FORMAT_TOKEN_MEMZ80
     
     Else
         Debug.Print oz80.TokenName(My_TokenKind)

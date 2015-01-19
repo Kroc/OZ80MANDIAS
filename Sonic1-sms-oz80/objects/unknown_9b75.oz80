@@ -3,15 +3,15 @@
 
 PROC    :_9b75                                  SECTION ::objects
 {
-	set	5,(ix+#object.flags)
-	ld	(ix+#object.width),$1e
-	ld	(ix+#object.height),$60
+	set	5,[ix+#object.flags]
+	ld	[ix+#object.width],$1e
+	ld	[ix+#object.height],$60
 	ld	hl,$0000
-	ld	($.TEMP6),hl
+	ld	[$.TEMP6],hl
 	call	:detectCollisionWithSonic
 	jr	c,._2
-	ld	l,(ix+#object.X.lo)
-	ld	h,(ix+#object.X.hi)
+	ld	l,[ix+#object.X.lo]
+	ld	h,[ix+#object.X.hi]
 	ld	a,l
 	add	a,a
 	rl	h
@@ -20,8 +20,8 @@ PROC    :_9b75                                  SECTION ::objects
 	add	a,a
 	rl	h
 	ld	e,h
-	ld	l,(ix+#object.Y.lo)
-	ld	h,(ix+#object.Y.hi)
+	ld	l,[ix+#object.Y.lo]
+	ld	h,[ix+#object.Y.hi]
 	ld	a,l
 	add	a,a
 	rl	h
@@ -33,19 +33,19 @@ PROC    :_9b75                                  SECTION ::objects
 	ld	hl,._9bd9
 	ld	b,$05
 	
-.loop	ld	a,(hl)
+.loop	ld	a,[hl]
 	inc	hl
 	cp	e
 	jr	nz,._1
-	ld	a,(hl)
+	ld	a,[hl]
 	cp	d
 	jr	nz,._1
 	inc	hl
-	ld	a,(hl)
-	ld	($.D2D3),a
+	ld	a,[hl]
+	ld	[$.D2D3],a
 	ld	a,$01
-	ld	($.D289),a
-	set	4,(iy+#vars.flags6)
+	ld	[$.D289],a
+	set	4,[iy+#vars.flags6]
 	jp	._2
 	
 ._1	inc	hl
@@ -53,8 +53,8 @@ PROC    :_9b75                                  SECTION ::objects
 	djnz	.loop
 	
 ._2	xor	a;zero
-	ld	(ix+#object.spriteLayout.lo),a;zero
-	ld	(ix+#object.spriteLayout.hi),a;zero
+	ld	[ix+#object.spriteLayout.lo],a;zero
+	ld	[ix+#object.spriteLayout.hi],a;zero
 	ret
 
 ._9bd9  BYTE $7D, $1A, $15, $7D, $01, $14, $01, $3C, $18, $01, $02

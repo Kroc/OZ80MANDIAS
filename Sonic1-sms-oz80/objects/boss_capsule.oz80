@@ -3,101 +3,101 @@
 
 PROC    :doObjectCode_boss_capsule              SECTION ::objects
 {
-	set	5,(ix+#object.flags)
-	bit	0,(ix+#object.flags)
+	set	5,[ix+#object.flags]
+	bit	0,[ix+#object.flags]
 	jr	nz,._1
-	ld	l,(ix+#object.Y.lo)
-	ld	h,(ix+#object.Y.hi)
+	ld	l,[ix+#object.Y.lo]
+	ld	h,[ix+#object.Y.hi]
 	ld	de,$0010
 	add	hl,de
-	ld	(ix+#object.Y.lo),l
-	ld	(ix+#object.Y.hi),h
-	set	0,(ix+#object.flags)
-._1	ld	(ix+#object.width), 28
-	ld	(ix+#object.height),64
+	ld	[ix+#object.Y.lo],l
+	ld	[ix+#object.Y.hi],h
+	set	0,[ix+#object.flags]
+._1	ld	[ix+#object.width], 28
+	ld	[ix+#object.height],64
 	ld	hl,._7564
-	bit	1,(ix+#object.flags)
+	bit	1,[ix+#object.flags]
 	jr	z,._2
 	ld	hl,._757c
-._2	ld	a,($.FRAMECOUNT)
+._2	ld	a,[$.FRAMECOUNT]
 	rrca	
 	jr	nc,._3
 	ld	de,$000c
 	add	hl,de
-._3	ld	c,(hl)
+._3	ld	c,[hl]
 	inc	hl
-	ld	b,(hl)
+	ld	b,[hl]
 	inc	hl
 	ex	de,hl
-	ld	l,(ix+#object.X.lo)
-	ld	h,(ix+#object.X.hi)
+	ld	l,[ix+#object.X.lo]
+	ld	h,[ix+#object.X.hi]
 	add	hl,bc
-	ld	($.D2AB),hl
+	ld	[$.D2AB],hl
 	ex	de,hl
-	ld	c,(hl)
+	ld	c,[hl]
 	inc	hl
-	ld	b,(hl)
+	ld	b,[hl]
 	inc	hl
-	ld	($.D2AF),hl
-	ld	l,(ix+#object.Y.lo)
-	ld	h,(ix+#object.Y.hi)
+	ld	[$.D2AF],hl
+	ld	l,[ix+#object.Y.lo]
+	ld	h,[ix+#object.Y.hi]
 	add	hl,bc
-	ld	($.D2AD),hl
+	ld	[$.D2AD],hl
 	ld	hl,._752e
-	ld	a,($.FRAMECOUNT)
+	ld	a,[$.FRAMECOUNT]
 	and	$10
 	jr	z,._4
 	ld	hl,._7552
-._4	ld	(ix+#object.spriteLayout.lo),l
-	ld	(ix+#object.spriteLayout.hi),h
-	ld	hl,($.CAMERA_X)
-	ld	($.LEVEL_LEFT),hl
+._4	ld	[ix+#object.spriteLayout.lo],l
+	ld	[ix+#object.spriteLayout.hi],h
+	ld	hl,[$.CAMERA_X]
+	ld	[$.LEVEL_LEFT],hl
 	
 	`something to do with scrolling
-	ld	l,(ix+#object.X.lo)
-	ld	h,(ix+#object.X.hi)
+	ld	l,[ix+#object.X.lo]
+	ld	h,[ix+#object.X.hi]
 	ld	de,$FF90
 	add	hl,de
-	ld	($.LEVEL_RIGHT),hl
+	ld	[$.LEVEL_RIGHT],hl
 	
 	ld	hl,$0002
-	ld	($.TEMP6),hl
+	ld	[$.TEMP6],hl
 	call	:detectCollisionWithSonic
 	jp	c,._8
 	
-	ld	a,($.SONIC.Ydirection)
+	ld	a,[$.SONIC.Ydirection]
 	and	a
 	jp	m,._8
 	
-	ld	e,(ix+#object.Y.lo)
-	ld	d,(ix+#object.Y.hi)
-	ld	hl,($.SONIC.Y)
+	ld	e,[ix+#object.Y.lo]
+	ld	d,[ix+#object.Y.hi]
+	ld	hl,[$.SONIC.Y]
 	and	a
 	sbc	hl,de
 	jr	c,._6
-	ld	l,(ix+#object.X.lo)
-	ld	h,(ix+#object.X.hi)
+	ld	l,[ix+#object.X.lo]
+	ld	h,[ix+#object.X.hi]
 	ld	de,$0010
 	add	hl,de
 	ld	de,$ffea
-	ld	bc,($.SONIC.X)
+	ld	bc,[$.SONIC.X]
 	and	a
 	sbc	hl,bc
 	jr	nc,._5
 	ld	de,$001d
-._5	ld	l,(ix+#object.X.lo)
-	ld	h,(ix+#object.X.hi)
+._5	ld	l,[ix+#object.X.lo]
+	ld	h,[ix+#object.X.hi]
 	add	hl,de
-	ld	($.SONIC.X),hl
+	ld	[$.SONIC.X],hl
 	jp	._7
 	
-._6	ld	hl,($.SONIC.X)
+._6	ld	hl,[$.SONIC.X]
 	ld	bc,$000c
 	add	hl,bc
 	ld	c,l
 	ld	b,h
-	ld	e,(ix+#object.X.lo)
-	ld	d,(ix+#object.X.hi)
+	ld	e,[ix+#object.X.lo]
+	ld	d,[ix+#object.X.hi]
 	and	a
 	sbc	hl,de
 	ret	c
@@ -113,113 +113,113 @@ PROC    :doObjectCode_boss_capsule              SECTION ::objects
 	ld	b,$00
 	ld	hl,._750e
 	add	hl,bc
-	ld	c,(hl)
-	ld	l,(ix+#object.Y.lo)
-	ld	h,(ix+#object.Y.hi)
+	ld	c,[hl]
+	ld	l,[ix+#object.Y.lo]
+	ld	h,[ix+#object.Y.hi]
 	ld	de,$ffe0
 	add	hl,de
 	add	hl,bc
-	ld	($.SONIC.Y),hl
-	ld	a,($.D2E8)
-	ld	hl,($.D2E6)
-	ld	($.SONIC.Yspeed),hl
-	ld	($.SONIC.Ydirection),a
+	ld	[$.SONIC.Y],hl
+	ld	a,[$.D2E8]
+	ld	hl,[$.D2E6]
+	ld	[$.SONIC.Yspeed],hl
+	ld	[$.SONIC.Ydirection],a
 	ld	hl,$.SONIC.flags
-	set	7,(hl)
+	set	7,[hl]
 	ld	a,c
 	cp	$03
 	ret	nz
-	ld	(ix+#object.spriteLayout.lo),._7540.lo
-	ld	(ix+#object.spriteLayout.hi),._7540.hi
-	bit	1,(iy+#vars.flags6)
+	ld	[ix+#object.spriteLayout.lo],._7540.lo
+	ld	[ix+#object.spriteLayout.hi],._7540.hi
+	bit	1,[iy+#vars.flags6]
 	jr	nz,._9
-	set	1,(iy+#vars.flags6)
+	set	1,[iy+#vars.flags6]
         
         `Stop Sonic's movement (reset speed and direction)
 ._7	xor	a;zero
 	ld	l;zero,a;zero
 	ld	h;zero,a;zero
-	ld	($.SONIC.Xspeed),hl;zero
-	ld	($.SONIC.Xdirection),a;zero
+	ld	[$.SONIC.Xspeed],hl;zero
+	ld	[$.SONIC.Xdirection],a;zero
         
-._8	bit	1,(iy+#vars.flags6)
+._8	bit	1,[iy+#vars.flags6]
 	ret	z
-._9	ld	a,(ix+$12)
+._9	ld	a,[ix+$12]
 	cp	$08
 	jr	nc,._10
-	inc	(ix+#object.unknown11)
-	ld	a,(ix+#object.unknown11)
+	inc	[ix+#object.unknown11]
+	ld	a,[ix+#object.unknown11]
 	cp	$14
 	ret	c
-	ld	(ix+#object.unknown11),$00
+	ld	[ix+#object.unknown11],$00
 	call	:_7a3a
-	inc	(ix+$12)
+	inc	[ix+$12]
 	ret
 	
-._10	bit	1,(ix+#object.flags)
+._10	bit	1,[ix+#object.flags]
 	jr	nz,._11
 	ld	a,$a0
-	ld	($.D289),a
+	ld	[$.D289],a
 	
 	ld	a,#index_music_actComplete
 	rst	:rst_playMusic
 	
-	set	1,(ix+#object.flags)
+	set	1,[ix+#object.flags]
 ._11	xor	a;zero
-	ld	(ix+#object.spriteLayout.lo),a;zero
-	ld	(ix+#object.spriteLayout.hi),a;zero
-	res	5,(iy+#vars.flags0)
-	ld	a,($.FRAMECOUNT)
+	ld	[ix+#object.spriteLayout.lo],a;zero
+	ld	[ix+#object.spriteLayout.hi],a;zero
+	res	5,[iy+#vars.flags0]
+	ld	a,[$.FRAMECOUNT]
 	and	$0f
 	ret	nz
 	call	:_LABEL_625_57
 	and	$01
 	add	a,$23
 	call	._74b6
-	inc	(ix+#object.unknown16)
-	ld	a,(ix+#object.unknown16)
+	inc	[ix+#object.unknown16]
+	ld	a,[ix+#object.unknown16]
 	cp	$0c
 	ret	c
-	ld	(ix+#object.type),$FF	        `remove object?
+	ld	[ix+#object.type],$FF	        `remove object?
 	ret
 
         `--------------------------------------------------------------------[$74B6]---
 
-._74b6  ld	($.D216),a
+._74b6  ld	[$.D216],a
 	call	:findEmptyObject
 	ret	c
-	ld	e,(ix+#object.X.lo)
-	ld	d,(ix+#object.X.hi)
-	ld	c,(ix+#object.Y.lo)
-	ld	b,(ix+#object.Y.hi)
+	ld	e,[ix+#object.X.lo]
+	ld	d,[ix+#object.X.hi]
+	ld	c,[ix+#object.Y.lo]
+	ld	b,[ix+#object.Y.hi]
 	push	ix
 	push	hl
 	pop	ix
-	ld	a,($.D216)
-	ld	(ix+#object.type),a
+	ld	a,[$.D216]
+	ld	[ix+#object.type],a
         
 	xor	a;zero			        `set A to 0
-	ld	(ix+#object.unknown16),a;zero
-	ld	(ix+#object.unknown17),a;zero
-	ld	(ix+#object.Xsubpixel),a;zero
+	ld	[ix+#object.unknown16],a;zero
+	ld	[ix+#object.unknown17],a;zero
+	ld	[ix+#object.Xsubpixel],a;zero
 	ld	hl,$0008
 	add	hl,de
-	ld	(ix+#object.X.lo),l
-	ld	(ix+#object.X.hi),h
-	ld	(ix+#object.Ysubpixel),a;zero
+	ld	[ix+#object.X.lo],l
+	ld	[ix+#object.X.hi],h
+	ld	[ix+#object.Ysubpixel],a;zero
 	ld	hl,$001a
 	add	hl,bc
-	ld	(ix+#object.Y.lo),l
-	ld	(ix+#object.Y.hi),h
+	ld	[ix+#object.Y.lo],l
+	ld	[ix+#object.Y.hi],h
 	call	:_LABEL_625_57
-	ld	(ix+#object.Yspeed.lo),a
+	ld	[ix+#object.Yspeed.lo],a
 	call	:_LABEL_625_57
 	and	$01
 	inc	a
 	inc	a
 	neg	
-	ld	(ix+#object.Yspeed.hi),a
-	ld	(ix+#object.Ydirection),$ff
+	ld	[ix+#object.Yspeed.hi],a
+	ld	[ix+#object.Ydirection],$ff
 	pop	ix
 	ret
 

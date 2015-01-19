@@ -8,17 +8,17 @@
 
 PROC	:doObjectCode_badnick_crabMeat  SECTION ::objects
 {	
-	ld	(ix+#object.width),$10
-	ld	(ix+#object.height),$1F
-	ld	e,(ix+$12)
+	ld	[ix+#object.width],$10
+	ld	[ix+#object.height],$1F
+	ld	e,[ix+$12]
 	ld	d,$00
 ._1	ld	hl,._66c5
 	add	hl,de
-	ld	($.TEMP6),hl
-	ld	a,(hl)
+	ld	[$.TEMP6],hl
+	ld	a,[hl]
 	and	a
 	jr	nz,._2
-	ld	(ix+$12),a
+	ld	[ix+$12],a
 	ld	e,a
 	jp	._1
 	
@@ -42,13 +42,13 @@ PROC	:doObjectCode_badnick_crabMeat  SECTION ::objects
 	ld	h,c
 	jp	._6
 	
-._5	ld	a,(ix+#object.unknown11)
+._5	ld	a,[ix+#object.unknown11]
 	cp	$20
 	jp	nz,._6
 	ld	hl,$ffff
-	ld	($.TEMP4),hl
+	ld	[$.TEMP4],hl
 	ld	hl,$fffc
-	ld	($.TEMP6),hl
+	ld	[$.TEMP6],hl
 	call	:findEmptyObject
 	jp	c,._6
 	ld	de,$0000
@@ -56,9 +56,9 @@ PROC	:doObjectCode_badnick_crabMeat  SECTION ::objects
 	ld	b,d
 	call	:_ac96
 	ld	hl,$0001
-	ld	($.TEMP4),hl
+	ld	[$.TEMP4],hl
 	ld	hl,$fffc
-	ld	($.TEMP6),hl
+	ld	[$.TEMP6],hl
 	call	:findEmptyObject
 	jr	c,._6
 	ld	de,$000e
@@ -68,41 +68,41 @@ PROC	:doObjectCode_badnick_crabMeat  SECTION ::objects
 	rst	:rst_playSFX
 	jp	._7
 	
-._6	ld	(ix+#object.Xspeed.lo),l
-	ld	(ix+#object.Xspeed.hi),h
-	ld	(ix+#object.Xdirection),c
+._6	ld	[ix+#object.Xspeed.lo],l
+	ld	[ix+#object.Xspeed.hi],h
+	ld	[ix+#object.Xdirection],c
 	
-._7	ld	l,(ix+#object.unknown11)
-	ld	h,(ix+$12)
+._7	ld	l,[ix+#object.unknown11]
+	ld	h,[ix+$12]
 	ld	de,$0008
 	add	hl,de
-	ld	(ix+#object.unknown11),l
-	ld	(ix+$12),h
-	ld	l,(ix+#object.Yspeed.lo)
-	ld	h,(ix+#object.Yspeed.hi)
-	ld	a,(ix+#object.Ydirection)
+	ld	[ix+#object.unknown11],l
+	ld	[ix+$12],h
+	ld	l,[ix+#object.Yspeed.lo]
+	ld	h,[ix+#object.Yspeed.hi]
+	ld	a,[ix+#object.Ydirection]
 	ld	de,$0020
 	add	hl,de
 	adc	a,d
-	ld	(ix+#object.Yspeed.lo),l
-	ld	(ix+#object.Yspeed.hi),h
-	ld	(ix+#object.Ydirection),a
-	ld	hl,($.TEMP6)
-	ld	a,(hl)
+	ld	[ix+#object.Yspeed.lo],l
+	ld	[ix+#object.Yspeed.hi],h
+	ld	[ix+#object.Ydirection],a
+	ld	hl,[$.TEMP6]
+	ld	a,[hl]
 	add	a,a
 	ld	e,a
 	ld	hl,._66e0
 	add	hl,de
-	ld	c,(hl)
+	ld	c,[hl]
 	inc	hl
-	ld	b,(hl)
+	ld	b,[hl]
 	ld	de,.layout
 	call	:_7c41
 	ld	hl,$0a04
-	ld	($.TEMP6),hl
+	ld	[$.TEMP6],hl
 	call	:detectCollisionWithSonic
 	ld	hl,$0804
-	ld	($.TEMP1),hl
+	ld	[$.TEMP1],hl
 	call	nc,:_35e5
 	ret
 

@@ -3,38 +3,38 @@
 
 PROC    :_bcdf                                  SECTION ::objects
 {
-	set	5,(ix+#object.flags)
-	set	5,(iy+#vars.unknown0)
+	set	5,[ix+#object.flags]
+	set	5,[iy+#vars.unknown0]
 	ld	hl,$0202
-	ld	($.TEMP6),hl
+	ld	[$.TEMP6],hl
 	call	:detectCollisionWithSonic
 	jr	c,._1
-	bit	0,(iy+#vars.scrollRingFlags)
+	bit	0,[iy+#vars.scrollRingFlags]
 	call	z,:_35fd
 	jp	._8
 	
-._1	ld	a,(ix+#object.unknown11)
+._1	ld	a,[ix+#object.unknown11]
 	cp	$c8
 	jp	c,._6
-	ld	e,(ix+#object.X.lo)
-	ld	d,(ix+#object.X.hi)
-	ld	hl,($.CAMERA_X)
+	ld	e,[ix+#object.X.lo]
+	ld	d,[ix+#object.X.hi]
+	ld	hl,[$.CAMERA_X]
 	ld	bc,$fff4
 	add	hl,bc
 	and	a
 	sbc	hl,de
 	jp	nc,._8
-	ld	hl,($.CAMERA_X)
+	ld	hl,[$.CAMERA_X]
 	inc	h
 	and	a
 	sbc	hl,de
 	jp	c,._8
-	ld	hl,($.SONIC.X)
+	ld	hl,[$.SONIC.X]
 	and	a
 	sbc	hl,de
-	ld	l,(ix+#object.Xspeed.lo)
-	ld	h,(ix+#object.Xspeed.hi)
-	ld	a,(ix+#object.Xdirection)
+	ld	l,[ix+#object.Xspeed.lo]
+	ld	h,[ix+#object.Xspeed.hi]
+	ld	a,[ix+#object.Xdirection]
 	jr	nc,._2
 	ld	c,$ff
 	ld	de,$fff4
@@ -50,29 +50,29 @@ PROC    :_bcdf                                  SECTION ::objects
 	ld	de,$0018
 ._3	add	hl,de
 	adc	a,c
-	ld	(ix+#object.Xspeed.lo),l
-	ld	(ix+#object.Xspeed.hi),h
-	ld	(ix+#object.Xdirection),a
-	ld	e,(ix+#object.Y.lo)
-	ld	d,(ix+#object.Y.hi)
-	ld	hl,($.CAMERA_Y)
+	ld	[ix+#object.Xspeed.lo],l
+	ld	[ix+#object.Xspeed.hi],h
+	ld	[ix+#object.Xdirection],a
+	ld	e,[ix+#object.Y.lo]
+	ld	d,[ix+#object.Y.hi]
+	ld	hl,[$.CAMERA_Y]
 	ld	bc,$fff4
 	add	hl,bc
 	and	a
 	sbc	hl,de
 	jr	nc,._8
-	ld	hl,($.CAMERA_Y)
+	ld	hl,[$.CAMERA_Y]
 	ld	bc,$00c0
 	add	hl,de
 	and	a
 	sbc	hl,de
 	jr	c,._8
-	ld	hl,($.SONIC.Y)
+	ld	hl,[$.SONIC.Y]
 	and	a
 	sbc	hl,de
-	ld	l,(ix+#object.Yspeed.lo)
-	ld	h,(ix+#object.Yspeed.hi)
-	ld	a,(ix+#object.Ydirection)
+	ld	l,[ix+#object.Yspeed.lo]
+	ld	h,[ix+#object.Yspeed.hi]
+	ld	a,[ix+#object.Ydirection]
 	jr	nc,._4
 	ld	c,$ff
 	ld	de,$fff6
@@ -88,18 +88,18 @@ PROC    :_bcdf                                  SECTION ::objects
 	ld	de,$0005
 ._5	add	hl,de
 	adc	a,c
-	ld	(ix+#object.Yspeed.lo),l
-	ld	(ix+#object.Yspeed.hi),h
-	ld	(ix+#object.Ydirection),a
+	ld	[ix+#object.Yspeed.lo],l
+	ld	[ix+#object.Yspeed.hi],h
+	ld	[ix+#object.Ydirection],a
 	jr	._7
-._6	inc	(ix+#object.unknown11)
+._6	inc	[ix+#object.unknown11]
 ._7	ld	bc,._bdc7
 	ld	de,._bdce
 	call	:_7c41
-	bit	4,(iy+#vars.unknown0)
+	bit	4,[iy+#vars.unknown0]
 	ret	nz
-._8	ld	(ix+#object.type),$FF	`remove object?
-	res	5,(iy+#vars.unknown0)
+._8	ld	[ix+#object.type],$FF	`remove object?
+	res	5,[iy+#vars.unknown0]
 	ret
         
 ._bdc7  BYTE $00, $01, $01, $01, $02, $01, $FF

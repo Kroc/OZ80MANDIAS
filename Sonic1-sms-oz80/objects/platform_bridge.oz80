@@ -3,10 +3,10 @@
 
 PROC    :doObjectCode_platform_bridge           SECTION ::objects
 {
-	set	5,(ix+#object.unknown18)
+	set	5,(ix+#object.flags)
 	ld	(ix+#object.width), 14
 	ld	(ix+#object.height),8
-	bit	0,(ix+#object.unknown18)
+	bit	0,(ix+#object.flags)
 	jr	nz,._2
         
 	xor	a;zero
@@ -16,14 +16,14 @@ PROC    :doObjectCode_platform_bridge           SECTION ::objects
 	ld	h;zero,a;zero
 	ld	($.TEMP1),hl;zero
         
-	bit	1,(ix+#object.unknown18)
+	bit	1,(ix+#object.flags)
 	jr	nz,._1
 	
         call	:_LABEL_625_57
 	and	$1f
 	inc	a
 	ld	(ix+#object.unknown11),a
-	set	1,(ix+#object.unknown18)
+	set	1,(ix+#object.flags)
 ._1	dec	(ix+#object.unknown11)
 	jp	nz,._
 	ld	(ix+#object.unknown11),$01
@@ -40,7 +40,7 @@ PROC    :doObjectCode_platform_bridge           SECTION ::objects
 	ld	($.D2AD),hl
 	ld	hl,._848e
 	ld	($.D2AF),hl
-	set	0,(ix+#object.unknown18)
+	set	0,(ix+#object.flags)
 	ld	a,$20
 	rst	:rst_playSFX
 ._2	ld	(ix+#object.spriteLayout.lo),._8481.lo
@@ -72,7 +72,7 @@ PROC    :doObjectCode_platform_bridge           SECTION ::objects
 	
 ._4	ld	hl,$0402
 	ld	($.TEMP6),hl
-	call	:_LABEL_3956_11
+	call	:detectCollisionWithSonic
 	ret	c
         
 	ld	a,($.SONIC.Ydirection)

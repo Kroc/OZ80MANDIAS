@@ -15,15 +15,16 @@ PROC	:doObjectCode_powerUp_ring              SECTION ::objects
 	call	:_5da8
 	ld	hl,$0003
 	ld	($.TEMP6),hl
-	call	:_LABEL_3956_11
+	call	:detectCollisionWithSonic
 	jr	c,._1
 	call	:_5deb
 	jr	c,._1
-._5b24
-	ld	a,$10
-	call	:_39ac
-._5b29
-	xor	a;zero			        `set A to 0
+        
+        `Add 10 rings to the ring count
+._5b24  ld	a,$10
+	call	:increaseRings
+        
+._5b29	xor	a;zero			        `set A to 0
 	ld	(ix+#object.spriteLayout.lo),a;zero
 	ld	(ix+#object.spriteLayout.hi),a;zero
 	ret	
@@ -54,7 +55,7 @@ PROC	:doObjectCode_powerUp_ring              SECTION ::objects
 	ld	l,(ix+#object.Ysubpixel)
 	ld	h,(ix+#object.Y.lo)
 	ld	a,(ix+#object.Y.hi)
-	bit	7,(ix+#object.unknown18)
+	bit	7,(ix+#object.flags)
 	jr	nz,._2
 	ld	e,(ix+#object.Yspeed.lo)
 	ld	d,(ix+#object.Yspeed.hi)
@@ -73,7 +74,7 @@ PROC	:doObjectCode_powerUp_ring              SECTION ::objects
 	ld	($.TEMP4),hl
 	ld	a,$5e
 	call	:_3581
-	bit	1,(ix+#object.unknown18)
+	bit	1,(ix+#object.flags)
 	ret	z
 	ld	l,(ix+#object.Yspeed.lo)
 	ld	h,(ix+#object.Yspeed.hi)
@@ -106,7 +107,7 @@ PROC	:doObjectCode_powerUp_speed             SECTION ::objects {
 	call	:_5da8
 	ld	hl,$0003
 	ld	($.TEMP6),hl
-	call	:_LABEL_3956_11
+	call	:detectCollisionWithSonic
 	jr	c,._1
 	call	:_5deb
 	jr	c,._1
@@ -142,11 +143,11 @@ PROC	:doObjectCode_powerUp_life              SECTION ::objects {
 	
 ._1	ld	hl,$0003
 	ld	($.TEMP6),hl
-	call	:_LABEL_3956_11
+	call	:detectCollisionWithSonic
 	jr	c,._2
 	call	:_5deb
 	jr	c,._2
-	bit	2,(ix+#object.unknown18)
+	bit	2,(ix+#object.flags)
 	jp	nz,:doObjectCode_powerUp_ring._5b24
 	ld	hl,$.LIVES
 	inc	(hl)
@@ -204,18 +205,18 @@ PROC	:doObjectCode_powerUp_life              SECTION ::objects {
 	ld	(ix+#object.unknown13),$28
 	jr	._3
 	
-._6	set	2,(ix+#object.unknown18)
+._6	set	2,(ix+#object.flags)
 	ld	hl,$.D317
 	call	:getLevelBitFlag
 	ld	a,(hl)
 	ld	hl,$5180
 	and	c
 	jp	z,:doObjectCode_powerUp_ring._5b34
-	res	2,(ix+#object.unknown18)
+	res	2,(ix+#object.flags)
 	ld	hl,$5280
 	jp	:doObjectCode_powerUp_ring._5b34
 	
-._7	set	1,(ix+#object.unknown18)
+._7	set	1,(ix+#object.flags)
 	ld	(ix+#object.Xspeed.lo),$80
 	ld	(ix+#object.Xspeed.hi),$00
 	ld	(ix+#object.Xdirection),$00
@@ -239,7 +240,7 @@ PROC	:doObjectCode_powerUp_shield            SECTION ::objects {
 	call	:_5da8
 	ld	hl,$0003
 	ld	($.TEMP6),hl
-	call	:_LABEL_3956_11
+	call	:detectCollisionWithSonic
 	jr	c,._1
 	call	:_5deb
 	jr	c,._1
@@ -261,7 +262,7 @@ PROC	:doObjectCode_powerUp_invincibility     SECTION ::objects {
 	call	:_5da8
 	ld	hl,$0003
 	ld	($.TEMP6),hl
-	call	:_LABEL_3956_11
+	call	:detectCollisionWithSonic
 	jr	c,._1
 	call	:_5deb
 	jr	c,._1
@@ -289,7 +290,7 @@ PROC	:doObjectCode_powerUp_checkpoint        SECTION ::objects {
 	call	:_5da8
 	ld	hl,$0003
 	ld	($.TEMP6),hl
-	call	:_LABEL_3956_11
+	call	:detectCollisionWithSonic
 	jr	c,._1
 	call	:_5deb
 	jr	c,._1
@@ -340,7 +341,7 @@ PROC	:doObjectCode_powerUp_continue          SECTION ::objects {
 	call	:_5da8
 	ld	hl,$0003
 	ld	($.TEMP6),hl
-	call	:_LABEL_3956_11
+	call	:detectCollisionWithSonic
 	jr	c,._1
 	call	:_5deb
 	jr	c,._1
@@ -356,7 +357,7 @@ PROC	:doObjectCode_powerUp_continue          SECTION ::objects {
 
 PROC	:_5da8                                  SECTION ::objects {
 	
-	bit	0,(ix+#object.unknown18)
+	bit	0,(ix+#object.flags)
 	ret	nz
 	ld	a,($.LEVEL_SOLIDITY)
 	and	a
@@ -382,7 +383,7 @@ PROC	:_5da8                                  SECTION ::objects {
 	add	hl,bc
 	ld	(ix+#object.Y.lo),l
 	ld	(ix+#object.Y.hi),h
-	set	0,(ix+#object.unknown18)
+	set	0,(ix+#object.flags)
 	ret
 
 }
@@ -393,7 +394,7 @@ PROC	:_5deb                                  SECTION ::objects {
 	
 	ld	hl,$0804
 	ld	($.TEMP1),hl
-	ld	a,($.SONIC.unknown18)
+	ld	a,($.SONIC.flags)
 	and	$01
 	jr	nz,._2
 	ld	de,($.SONIC.X)
@@ -409,7 +410,7 @@ PROC	:_5deb                                  SECTION ::objects {
 	and	a
 	sbc	hl,de
 	jr	c,._4
-	ld	a,($.SONIC.unknown18)
+	ld	a,($.SONIC.flags)
 	and	$04
 	jr	nz,._1
 	ld	l,(ix+#object.Y.lo)
@@ -425,7 +426,7 @@ PROC	:_5deb                                  SECTION ::objects {
 	ld	hl,($.D2E6)
 	ld	($.SONIC.Yspeed),hl
 	ld	($.SONIC.Ydirection),a
-	ld	hl,$.SONIC.unknown18
+	ld	hl,$.SONIC.flags
 	set	7,(hl)
 	scf	
 	ret
@@ -446,7 +447,7 @@ PROC	:_5deb                                  SECTION ::objects {
 	ld	($.SONIC.Yspeed),hl
 	ld	($.SONIC.Ydirection),a
 	ld	($.D28E),a
-	set	1,(ix+#object.unknown18)
+	set	1,(ix+#object.flags)
 	scf	
 	ret
 
@@ -499,7 +500,7 @@ PROC	:doObjectCode_powerUp_emerald           SECTION ::objects {
         
 	ld	hl,$0202
 	ld	($.TEMP6),hl
-	call	:_LABEL_3956_11
+	call	:detectCollisionWithSonic
 	jr	c,._2
 	ld	hl,$.D30B
 	call	:getLevelBitFlag

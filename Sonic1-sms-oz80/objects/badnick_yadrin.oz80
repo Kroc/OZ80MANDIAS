@@ -7,13 +7,13 @@ PROC    :doObjectCode_badnick_yadrin            SECTION ::objects
 	ld	(ix+#object.height),15
 	ld	hl,$0408
 	ld	($.TEMP6),hl
-	call	:_LABEL_3956_11
+	call	:detectCollisionWithSonic
 	call	nc,:_35fd
 	ld	(ix+#object.width), 20
 	ld	(ix+#object.height),32
 	ld	hl,$1006
 	ld	($.TEMP6),hl
-	call	:_LABEL_3956_11
+	call	:detectCollisionWithSonic
 	ld	hl,$0404
 	ld	($.TEMP1),hl
 	call	nc,:_35e5

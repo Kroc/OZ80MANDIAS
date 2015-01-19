@@ -3,7 +3,7 @@
 
 PROC    :doObjectCode_meta_water                SECTION ::objects
 {
-	set	5,(ix+#object.unknown18)
+	set	5,(ix+#object.flags)
 	ld	a,(ix+#object.unknown11)
 	ld	e,a
 	ld	d,$00
@@ -62,11 +62,11 @@ PROC    :doObjectCode_meta_water                SECTION ::objects
 	ld	hl,($.CAMERA_Y)
 	ld	($.TEMP3),hl
 	ld	a,(iy+#vars.spriteUpdateCount)
-	ld	hl,($.SPRITES_CURRENT)
+	ld	hl,($.SPRITETABLE_ADDR)
 	push	af
 	push	hl
-	ld	hl,$.SPRITES
-	ld	($.SPRITES_CURRENT),hl
+	ld	hl,$.SPRITETABLE
+	ld	($.SPRITETABLE_ADDR),hl
 	ld	a,($.FRAMECOUNT)
 	and	$03
 	add	a,a
@@ -101,7 +101,7 @@ PROC    :doObjectCode_meta_water                SECTION ::objects
 	
 	pop	hl
 	pop	af
-	ld	($.SPRITES_CURRENT),hl
+	ld	($.SPRITETABLE_ADDR),hl
 	ld	(iy+#vars.spriteUpdateCount),a
 	ret
         

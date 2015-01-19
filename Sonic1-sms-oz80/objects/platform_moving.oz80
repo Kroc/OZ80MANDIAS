@@ -2,7 +2,7 @@
 `OBJECT: wooden platform - moving (Green Hill)
 
 PROC    :doObjectCode_platform_leftRight        SECTION ::objects {
-	set	5,(ix+#object.unknown18)
+	set	5,(ix+#object.flags)
 	
 	ld	a,($.CURRENT_LEVEL)
 	cp	$07			        `Jungle act 2?
@@ -30,7 +30,7 @@ PROC    :doObjectCode_platform_leftRight        SECTION ::objects {
 	
 	ld	hl,$0806
 	ld	($.TEMP6),hl
-	call	:_LABEL_3956_11
+	call	:detectCollisionWithSonic
 	
 	ld	c,$00
 	jr	c,._2

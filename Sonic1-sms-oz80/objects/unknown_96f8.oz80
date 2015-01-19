@@ -3,12 +3,12 @@
 
 PROC    :_96f8                                  SECTION ::objects
 {
-	set	5,(ix+#object.unknown18)
+	set	5,(ix+#object.flags)
 	xor	a;zero
 	ld	(ix+#object.spriteLayout.lo),a;zero
 	ld	(ix+#object.spriteLayout.hi),a;zero
 	ld	a,(iy+#vars.spriteUpdateCount)
-	ld	hl,($.SPRITES_CURRENT)
+	ld	hl,($.SPRITETABLE_ADDR)
 	push	af
 	push	hl
 	ld	a,($.D2DE)
@@ -16,9 +16,9 @@ PROC    :_96f8                                  SECTION ::objects
 	jr	nc,._3
 	ld	e,a
 	ld	d,$00
-	ld	hl,$.SPRITES
+	ld	hl,$.SPRITETABLE
 	add	hl,de
-	ld	($.SPRITES_CURRENT),hl
+	ld	($.SPRITETABLE_ADDR),hl
 	ld	l,(ix+#object.X.lo)
 	ld	h,(ix+#object.X.hi)
 	ld	($.TEMP1),hl
@@ -51,7 +51,7 @@ PROC    :_96f8                                  SECTION ::objects
 	ld	($.D2DE),a
 ._3	pop	hl
 	pop	af
-	ld	($.SPRITES_CURRENT),hl
+	ld	($.SPRITETABLE_ADDR),hl
 	ld	(iy+#vars.spriteUpdateCount),a
 	ld	(ix+#object.width),$0a
 	ld	(ix+#object.height),$0c
@@ -71,7 +71,7 @@ PROC    :_96f8                                  SECTION ::objects
 	
 ._4	ld	hl,$0206
 	ld	($.TEMP6),hl
-	call	:_LABEL_3956_11
+	call	:detectCollisionWithSonic
 	jr	c,._5
 	ld	bc,($.SONIC.Y)
 	ld	e,(ix+#object.Y.lo)

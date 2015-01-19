@@ -63,10 +63,10 @@ Private Const LOG_PHASE3        As String = "Phase 3: Full Assemble"
 Private Const LOG_PHASE4        As String = "Phase 4: Post Processing"
 Private Const LOG_ASM_COMPLETE  As String = "Assembly Complete"
 Private Const LOG_TIME          As String = "Time: {$}s"
-Private Const LOG_Z80           As String = "{$} | {$} {$} {$} {$} {$} {$} | {$} " & vbTab & "{$}" & vbTab & "{$}" & vbTab & "{$}"
-Private Const LOG_Z80_CB        As String = "{$} | {$} CB {$} {$} ·· ·· | {$} " & vbTab & "{$}" & vbTab & "{$}" & vbTab & "{$}"
-Private Const LOG_Z80_VAL8      As String = "{$} | {$} {$} {$} ·· {$} ·· | {$} " & vbTab & "{$}" & vbTab & "{$}" & vbTab & "{$}"
-Private Const LOG_Z80_VAL16     As String = "{$} | {$} {$} ·· ·· {$} {$} | {$} " & vbTab & "{$}" & vbTab & "{$}" & vbTab & "{$}"
+Private Const LOG_Z80           As String = "{$} | {$} {$} {$} {$} {$} {$} | {$} " & vbTab & "{$}{$}{$}"
+Private Const LOG_Z80_CB        As String = "{$} | {$} CB {$} {$} ·· ·· | {$} " & vbTab & "{$}{$}{$}"
+Private Const LOG_Z80_VAL8      As String = "{$} | {$} {$} {$} ·· {$} ·· | {$} " & vbTab & "{$}{$}{$}"
+Private Const LOG_Z80_VAL16     As String = "{$} | {$} {$} ·· ·· {$} {$} | {$} " & vbTab & "{$}{$}"
 Private Const LOG_SECTION       As String = "SECTION {$}"
 
 'String constants to save these being temporarily created and destroyed multiple times
@@ -985,11 +985,12 @@ Private Sub DefineProc()
     Let Interrupt = INDEFINITE
     
 ReadParams:
-    'Keep track of which params have been included or not
+    'Keep track of which parameters have been included or not
     Dim IsInterruptDefined As Boolean
     Dim IsSectionDefined As Boolean
     Dim IsParamsDefined As Boolean
     Dim IsReturnDefined As Boolean
+    Dim IsHelpDefined As Boolean
     
     '----------------------------------------------------------------------------------
     '`SECTION` Parameter : Set which Section the Procedure belongs to _
@@ -1025,34 +1026,88 @@ ReadParams:
         If Not File.NextToken() Then Call RaiseError(OZ80_ERROR_FILE_END): GoTo ErrOut
         
         GoTo ReadParams
+    
+    '----------------------------------------------------------------------------------
+    '`HELP` Parameter : Provide a description for the procedure
+    '----------------------------------------------------------------------------------
+    ElseIf File.TokenKind = TOKEN_KEYWORD_HELP Then
+        'ERROR: The `HELP` parameter has already been specified
+        If IsParamsDefined Then Call RaiseError( _
+            OZ80_ERROR_DUPLICATE_PROC_HELP _
+        ): GoTo ErrOut
+         
+        'Pass over the `HELP` keyword, the file cannot end here
+        If Not File.NextToken Then Call RaiseError(OZ80_ERROR_FILE_END): GoTo ErrOut
+        
+        'Fetch the text description (ignored for now)
+        'TODO: The opening brace for the PROC is read as an Expression! _
+               We need to change our use of brackets...
+        'For now, just read and discard only text tokens
+        Do
+            'If not a text token, then continue
+            If File.TokenKind <> TOKEN_TEXT Then Exit Do
+            'Move over the token, the file ending is an error
+            If Not File.NextToken Then Call RaiseError(OZ80_ERROR_FILE_END): GoTo ErrOut
+        Loop
+        
+        Let IsHelpDefined = True
+        GoTo ReadParams
         
     '----------------------------------------------------------------------------------
     '`PARAMS` Parameter : Document which Z80 parameters the Procedure uses _
      ----------------------------------------------------------------------------------
     ElseIf File.TokenKind = TOKEN_KEYWORD_PARAMS Then
         'The `PARAMS` parameter is not used by the assembler at this time, _
-         neither is it a standard list as it consists of Registers and/or RAM Names
+         neither is it a standard list as it consists of Registers and/or RAM Names, _
+         and optional `HELP` descriptions for each
          
         'ERROR: The `PARAMS` parameter has already been specified
         If IsParamsDefined Then Call RaiseError( _
             OZ80_ERROR_DUPLICATE_PROC_PARAMS _
         ): GoTo ErrOut
          
+        'Pass over the `PARAMS` keyword, the file cannot end here
+        If Not File.NextToken Then Call RaiseError(OZ80_ERROR_FILE_END): GoTo ErrOut
+        
         Do
-            'ERROR: File cannot end in the midst of the List
-            If Not File.NextToken() Then Call RaiseError(OZ80_ERROR_FILE_END): GoTo ErrOut
-            
-            'The List ends when we hit a Keyword or open bracket
-            If (File.TokenKind = TOKEN_CHUNK_OPEN) _
-            Or (File.TokenIsKeyword) _
+            'Check for a valid `PARAMS` item
+            If File.TokenIsRegister() _
+            Or File.TokenKind = TOKEN_RAM _
             Then
+                'Skip over the list item, these are not recorded just yet _
+                 but will be in the future (for auto-documentation)
+                'ERROR: File cannot end in the midst of the List
+                If Not File.NextToken() Then Call RaiseError(OZ80_ERROR_FILE_END): GoTo ErrOut
+                
+                'Check for a `HELP` description for the list item
+                If File.TokenKind = TOKEN_KEYWORD_HELP Then
+                    'Pass over the `HELP` keyword, the file cannot end here
+                    If Not File.NextToken Then Call RaiseError(OZ80_ERROR_FILE_END): GoTo ErrOut
+                    'Fetch the text description (ignored for now)
+                    'TODO: The opening brace for the PROC is read as an Expression! _
+                           We need to change our use of brackets...
+                    'For now, just read and discard only text tokens
+                    Do
+                        'If not a text token, then continue
+                        If File.TokenKind <> TOKEN_TEXT Then Exit Do
+                        'Move over the token, the file ending is an error
+                        If Not File.NextToken Then Call RaiseError(OZ80_ERROR_FILE_END): GoTo ErrOut
+                    Loop
+                End If
+                
+            'The list ends when we hit one of the other `PROC` parameters or the _
+             opening brace. Anything else is considered a bad `PARAMS` list item
+            ElseIf File.TokenKind = TOKEN_KEYWORD_HELP _
+            Or File.TokenKind = TOKEN_KEYWORD_RETURN _
+            Or File.TokenKind = TOKEN_KEYWORD_SECTION _
+            Or File.TokenKind = TOKEN_CHUNK_OPEN _
+            Then
+                'The list has come to the end, _
+                 look for more parameters
                 Let IsParamsDefined = True
                 GoTo ReadParams
-            'ERROR: Only Registers and RAM Names are allowed at the moment
-            ElseIf _
-                (Not File.TokenIsRegister) And _
-                (File.TokenKind <> TOKEN_RAM) _
-            Then
+            Else
+                'ERROR: Only Registers and RAM Names are allowed at the moment
                 Call RaiseError(OZ80_ERROR_EXPECTED_PROC_PARAMS)
                 GoTo ErrOut
             End If
@@ -1067,24 +1122,51 @@ ReadParams:
          
         'ERROR: The `RETURN` parameter has already been specified
         If IsReturnDefined Then Call RaiseError( _
-            OZ80_ERROR_DUPLICATE_PROC_RETURN _
+            OZ80_ERROR_DUPLICATE_PROC_PARAMS _
         ): GoTo ErrOut
          
+        'Pass over the `RETURN` keyword, the file cannot end here
+        If Not File.NextToken Then Call RaiseError(OZ80_ERROR_FILE_END): GoTo ErrOut
+        
         Do
-            'ERROR: File cannot end in the midst of the List
-            If Not File.NextToken() Then Call RaiseError(OZ80_ERROR_FILE_END): GoTo ErrOut
-            
-            'The List ends when we hit a Keyword or open bracket
-            If (File.TokenKind = TOKEN_CHUNK_OPEN) _
-            Or (File.TokenIsKeyword) _
+            'Check for a valid `RETURN` item
+            If File.TokenIsRegister() _
+            Or File.TokenKind = TOKEN_RAM _
             Then
+                'Skip over the list item, these are not recorded just yet _
+                 but will be in the future (for auto-documentation)
+                'ERROR: File cannot end in the midst of the List
+                If Not File.NextToken() Then Call RaiseError(OZ80_ERROR_FILE_END): GoTo ErrOut
+                
+                'Check for a `HELP` description for the list item
+                If File.TokenKind = TOKEN_KEYWORD_HELP Then
+                    'Pass over the `HELP` keyword, the file cannot end here
+                    If Not File.NextToken Then Call RaiseError(OZ80_ERROR_FILE_END): GoTo ErrOut
+                    'Fetch the text description (ignored for now)
+                    'TODO: The opening brace for the PROC is read as an Expression! _
+                           We need to change our use of brackets...
+                    'For now, just read and discard only text tokens
+                    Do
+                        'If not a text token, then continue
+                        If File.TokenKind <> TOKEN_TEXT Then Exit Do
+                        'Move over the token, the file ending is an error
+                        If Not File.NextToken Then Call RaiseError(OZ80_ERROR_FILE_END): GoTo ErrOut
+                    Loop
+                End If
+                
+            'The list ends when we hit one of the other `PROC` parameters or the _
+             opening brace. Anything else is considered a bad `RETURN` list item
+            ElseIf File.TokenKind = TOKEN_KEYWORD_HELP _
+            Or File.TokenKind = TOKEN_KEYWORD_PARAMS _
+            Or File.TokenKind = TOKEN_KEYWORD_SECTION _
+            Or File.TokenKind = TOKEN_CHUNK_OPEN _
+            Then
+                'The list has come to the end, _
+                 look for more parameters
                 Let IsReturnDefined = True
                 GoTo ReadParams
-            'ERROR: Only Registers and RAM Names are allowed at the moment
-            ElseIf _
-                (Not File.TokenIsRegister) And _
-                (File.TokenKind <> TOKEN_RAM) _
-            Then
+            Else
+                'ERROR: Only Registers and RAM Names are allowed at the moment
                 Call RaiseError(OZ80_ERROR_EXPECTED_PROC_RETURN)
                 GoTo ErrOut
             End If
@@ -1529,8 +1611,6 @@ Private Function GetZ80Parameter( _
 ) As OZ80_ERROR
     Dim Value As Double
     
-    Let ReturnParam.Mask = 0
-    
     'If the parameter doesn't contain a Value, default to -1. This is so that when _
      building the opcode we can immediately tell when to include the offset byte
     Let ReturnParam.Value = -1
@@ -1669,6 +1749,7 @@ EndScope:
          token of the expression -- it might be a label for instance and we can _
          only send registers or numbers to be assembled into opcodes
         Let ReturnParam.Token = TOKEN_NUMBER
+        Let ReturnParam.Mask = MASK_VAL
 
 GetValue:
         'Try and calculate the expression
@@ -1683,11 +1764,6 @@ GetValue:
         If Value = INDEFINITE _
             Then Let ReturnParam.Value = 0 _
             Else Let ReturnParam.Value = Value
-        
-        'IX/IY values are always 8-bit, so don't use the MASK_VAL bits
-        If ReturnParam.Token = TOKEN_NUMBER Then
-            Let ReturnParam.Mask = ReturnParam.Mask Or MASK_VAL
-        End If
     
     '----------------------------------------------------------------------------------
     Else
@@ -1822,6 +1898,20 @@ Private Function AssembleZ80( _
         'Does it include an offset byte? i.e. "(IX+$8)"
         If (ParamIXY.Mask And MASK_MEM_IXY) <> 0 Then Let Offset = ParamIXY.Value
     End If
+    
+'    Dim Param1Str As String, Param2Str As String, Param3Str As String
+'    If Z80Param1.Mask <> 0 Then
+'        Let LogMsg.Text = ParamToString(Z80Param1)
+'        Let Param1Str = LogMsg.Left(10).Text
+'    End If
+'    If Z80Param2.Mask <> 0 Then
+'        Let LogMsg.Text = ParamToString(Z80Param2)
+'        Let Param2Str = LogMsg.Left(10).Text
+'    End If
+'    If Z80Param3.Mask <> 0 Then
+'        Let LogMsg.Text = ParamToString(Z80Param3)
+'        Let Param3Str = LogMsg.Left(10).Text
+'    End If
     
     'OPCODE MAP: _
      Here's a complete list of the Z80 instruction set and the opcodes used for each _
@@ -2878,17 +2968,17 @@ Output:
         Prefix, Opcode, Offset, Value _
     )
     
-    '*** TIMER BEGIN ***
-    Call oz80.Profiler.EventBegin(EVENT_PROCESSZ80_LOG)
-    Call RaiseMessage(OZ80_LOG_DEBUG, LOG_Z80_VAL8, _
-        LogAdr, _
-        oz80.HexStr8(Prefix), oz80.HexStr8(Opcode), oz80.HexStr8(Offset), _
-        oz80.HexStr8(Value), _
-        oz80.TokenName(Instruction), _
-        ParamToString(Z80Param1), ParamToString(Z80Param2), ParamToString(Z80Param3) _
-    )
-    Call oz80.Profiler.EventEnd(EVENT_PROCESSZ80_LOG)
-    '*** TIMER END ***
+'    '*** TIMER BEGIN ***
+'    Call oz80.Profiler.EventBegin(EVENT_PROCESSZ80_LOG)
+'    Call RaiseMessage(OZ80_LOG_DEBUG, LOG_Z80_VAL8, _
+'        LogAdr, _
+'        oz80.HexStr8(Prefix), oz80.HexStr8(Opcode), oz80.HexStr8(Offset), _
+'        oz80.HexStr8(Value), _
+'        oz80.TokenName(Instruction), _
+'        Param1Str, Param2Str, Param3Str _
+'    )
+'    Call oz80.Profiler.EventEnd(EVENT_PROCESSZ80_LOG)
+'    '*** TIMER END ***
     
     GoTo Finish
     
@@ -2901,18 +2991,18 @@ Output16:
         (Value And &HFF&), ((Value \ &H100&) And &HFF&) _
     )
     
-    '*** TIMER BEGIN ***
-    Call oz80.Profiler.EventBegin(EVENT_PROCESSZ80_LOG)
-    Call RaiseMessage(OZ80_LOG_DEBUG, LOG_Z80_VAL16, _
-        LogAdr, _
-        oz80.HexStr8(Prefix), oz80.HexStr8(Opcode), _
-        oz80.HexStr8(Value And &HFF&), _
-        oz80.HexStr8((Value And &HFF00&) \ &H100&), _
-        oz80.TokenName(Instruction), _
-        ParamToString(Z80Param1), ParamToString(Z80Param2), ParamToString(Z80Param3) _
-    )
-    Call oz80.Profiler.EventEnd(EVENT_PROCESSZ80_LOG)
-    '*** TIMER END ***
+'    '*** TIMER BEGIN ***
+'    Call oz80.Profiler.EventBegin(EVENT_PROCESSZ80_LOG)
+'    Call RaiseMessage(OZ80_LOG_DEBUG, LOG_Z80_VAL16, _
+'        LogAdr, _
+'        oz80.HexStr8(Prefix), oz80.HexStr8(Opcode), _
+'        oz80.HexStr8(Value And &HFF&), _
+'        oz80.HexStr8((Value And &HFF00&) \ &H100&), _
+'        oz80.TokenName(Instruction), _
+'        Param1Str, Param2Str _
+'    )
+'    Call oz80.Profiler.EventEnd(EVENT_PROCESSZ80_LOG)
+'    '*** TIMER END ***
     
     GoTo Finish
     
@@ -2922,16 +3012,16 @@ OutputCB:
      the offset byte. It's fastest to handle and log this special case specifically
     Call Chunk.AddInstructionCB(Prefix, Opcode, Offset)
     
-    '*** TIMER BEGIN ***
-    Call oz80.Profiler.EventBegin(EVENT_PROCESSZ80_LOG)
-    Call RaiseMessage(OZ80_LOG_DEBUG, LOG_Z80_CB, _
-        LogAdr, _
-        oz80.HexStr8(Prefix), oz80.HexStr8(Offset), oz80.HexStr8(Opcode), _
-        oz80.TokenName(Instruction), _
-        ParamToString(Z80Param1), ParamToString(Z80Param2), ParamToString(Z80Param3) _
-    )
-    Call oz80.Profiler.EventEnd(EVENT_PROCESSZ80_LOG)
-    '*** TIMER END ***
+'    '*** TIMER BEGIN ***
+'    Call oz80.Profiler.EventBegin(EVENT_PROCESSZ80_LOG)
+'    Call RaiseMessage(OZ80_LOG_DEBUG, LOG_Z80_CB, _
+'        LogAdr, _
+'        oz80.HexStr8(Prefix), oz80.HexStr8(Offset), oz80.HexStr8(Opcode), _
+'        oz80.TokenName(Instruction), _
+'        Param1Str, Param2Str, Param3Str _
+'    )
+'    Call oz80.Profiler.EventEnd(EVENT_PROCESSZ80_LOG)
+'    '*** TIMER END ***
     GoTo Finish
     
 InvalidParams:
@@ -3104,27 +3194,27 @@ End Function
 Private Function ParseExpression( _
     ByRef ReturnValue As Double _
 ) As OZ80_ERROR
-    'TODO: Handle functions like LO, HI
-    
     Dim Operand1 As Double              'Left-hand value in a calculation
     Dim Operand2 As Double              'Right-hand value in a calculation
     Dim Operator As OZ80_TOKEN          'Operator to use
     
     'Begin with fetching the first operand
-    If ParseValue(Operand1) Then Stop
+    If ParseValue(Operand1) Then GoTo ErrOut
+    'For the moment the Expression's calculated Value will be this unless we find _
+     an Operator to extend the Expression
     Let ReturnValue = Operand1
     
-    'The file could legitimately end with an expression, so don't error out if the _
-     token stream comes to an end since the expression is valid. The parent scopes _
+    'The file could legitimately end with an Expression, so don't error out if the _
+     token stream comes to an end since the Expression is valid. The parent scopes _
      will handle an unexpected end error
     If File.EOF Then Exit Function
     
-    'If next token is not an operator assume the expression has finished, _
+    'If next token is not an Operator assume the Expression has finished, _
       the parent will handle whatever the next token is used for
     If Not File.TokenIsOperator Then Exit Function
     
 Continue:
-    'Remember the operator for after we have operand 2 to work with
+    'Remember the Operator for after we have operand 2 to work with
     Let Operator = File.TokenKind
     
     'Get the second operand
@@ -3183,6 +3273,10 @@ Continue:
         Let Operand1 = ReturnValue
         GoTo Continue
     End If
+    
+ErrOut:
+    'Return the error number
+    Let ParseExpression = My_Error
 End Function
 
 'ParseValue : Get a single Value as part of an Expression
@@ -3196,32 +3290,82 @@ End Function
 Private Function ParseValue( _
     ByRef ReturnValue As Double _
 ) As OZ80_ERROR
+    '----------------------------------------------------------------------------------
     'A nested Expression?
+    '----------------------------------------------------------------------------------
     If File.TokenKind = TOKEN_CHUNK_OPEN Then
-        '..............................................................................
-        'Parse the nested Expression and return it's Value as our own
-        If ParseExpression(ReturnValue) Then GoTo ErrOut
-        GoTo ErrOut
+        'Move over the open brace. If the file ends here, it's an error
+        If Not File.NextToken Then Call RaiseError(OZ80_ERROR_FILE_END): GoTo ErrOut
         
-    '`HI` function -- return the high-byte of a 16-bit Value
-    
-    '`LO` function -- return the low-byte of a 16-bit Value
-    
-    'If the negative sign preceeds, remember this until the full number has been _
-     fetched and calculated. ONLY decimal numbers can be negative, you cannot negate _
-     hexadecimal/binary numbers or named-items (Constants, RAM names, Labels etc.)
+        'Parse the nested Expression and return its Value as our own
+        If ParseExpression(ReturnValue) Then GoTo ErrOut
+        
+        'The nested Expression has to be closed
+        If File.TokenKind <> TOKEN_CHUNK_CLOSE Then
+            Call RaiseError(OZ80_ERROR_EXPECTED_BRACKET)
+            GoTo ErrOut
+        End If
+        
+        'Move over the closing brace. The Expression can end here, so it's not _
+         necessarily an error if the file suddenly ends. The parent can check for _
+         any scopes remaining open
+        Call File.NextToken
+        
+        'The token pointer will already be at the next token to read, _
+         so we exit without moving it forward any more
+        Exit Function
+        
+    '----------------------------------------------------------------------------------
+    'The `HI` function -- returns the high-byte of a 16-bit Value
+    '----------------------------------------------------------------------------------
+    ElseIf File.TokenKind = TOKEN_KEYWORD_HI Then
+        'Move over the `HI` keyword. If the file ends here, it's an error
+        If Not File.NextToken Then Call RaiseError(OZ80_ERROR_FILE_END): GoTo ErrOut
+        'Fetch the parameter to the `HI` function
+        If ParseExpression(ReturnValue) Then GoTo ErrOut
+        'Check that this is no more than a 16-bit number
+        If ReturnValue > 65535 Then Call RaiseError(OZ80_ERROR_OVERFLOW_HILO): GoTo ErrOut
+        'Extract the high-byte
+        Let ReturnValue = (ReturnValue And &HFF00&) \ &H100&
+        'The token pointer will already be at the next token to read, _
+         so we exit without moving it forward any more
+        Exit Function
+        
+    '----------------------------------------------------------------------------------
+    'The `LO` function -- returns the low-byte of a 16-bit Value
+    '----------------------------------------------------------------------------------
+    ElseIf File.TokenKind = TOKEN_KEYWORD_LO Then
+        'Move over the `LO` keyword. If the file ends here, it's an error
+        If Not File.NextToken Then Call RaiseError(OZ80_ERROR_FILE_END): GoTo ErrOut
+        'Fetch the parameter to the `LO` function
+        If ParseExpression(ReturnValue) Then GoTo ErrOut
+        'Check that this is no more than a 16-bit number _
+         (despite this not being an issue to the low 8-bits, we prevent numbers _
+          higher than 16-bit to protect against unintended behaviour)
+        If ReturnValue > 65535 Then Call RaiseError(OZ80_ERROR_OVERFLOW_HILO): GoTo ErrOut
+        'Extract the low-byte
+        Let ReturnValue = ReturnValue And &HFF&
+        'The token pointer will already be at the next token to read, _
+         so we exit without moving it forward any more
+        Exit Function
+        
+    '----------------------------------------------------------------------------------
+    'Negative Numbers
+    '----------------------------------------------------------------------------------
     ElseIf File.TokenKind = TOKEN_OPERATOR_SUB Then
-        '..............................................................................
-        Dim IsNegative As Boolean
-        Let IsNegative = True
+        'If the negative sign preceeds, remember this until the full number has _
+         been calculated. ONLY decimal numbers can be negative, you cannot negate _
+         hexadecimal/binary numbers or named-items (Constants, RAM names, Labels etc.)
+        Dim IsNegative As Boolean: Let IsNegative = True
         'Move forward past the negative sign. If the file ends here, it's an error
         If Not File.NextToken() Then Call RaiseError(OZ80_ERROR_FILE_END): GoTo ErrOut
         'Continue parsing the number...
         GoTo GetNumber
         
+    '----------------------------------------------------------------------------------
     'A decimal number:
+    '----------------------------------------------------------------------------------
     ElseIf File.TokenKind = TOKEN_NUMBER Then
-        '..............................................................................
 GetNumber:
         'Begin with getting the given value
         Let ReturnValue = File.TokenValue
@@ -3233,6 +3377,7 @@ GetNumber:
          checking for a number prefix, but we do need to apply any negative sign
         If File.NextToken Then
             'Check for a number prefix, e.g. `KB`
+            '..........................................................................
             If File.TokenKind = TOKEN_PREFIX_K Then
                 'Check for min/max number you can multiply by 1'000 without overflowing
                 If (ReturnValue < NUMBER_MIN_K) Or (ReturnValue > NUMBER_MAX_K) Then
@@ -3244,6 +3389,7 @@ GetNumber:
                 'Move over the prefix
                 Call File.NextToken
                 
+            '..........................................................................
             ElseIf File.TokenKind = TOKEN_PREFIX_KB Then
                 'Check for min/max number you can multiply by 1'024 without overflowing
                 If (ReturnValue < NUMBER_MIN_KB) Or (ReturnValue > NUMBER_MAX_KB) Then
@@ -3259,9 +3405,10 @@ GetNumber:
             End If
         End If
     
-    'A Constant:
+    '----------------------------------------------------------------------------------
+    'Constants
+    '----------------------------------------------------------------------------------
     ElseIf File.TokenKind = TOKEN_CONST Then
-        '..............................................................................
         'Has the constant been defined?
         If Not Values.Exists(File.TokenText) Then
             'ERROR: Constant not yet defined. Constants cannot be indefinite
@@ -3271,11 +3418,12 @@ GetNumber:
         'Retrieve the Constant value
         Let ReturnValue = Values.Item(File.TokenText)
         
-    'A RAM Name:
+    '----------------------------------------------------------------------------------
+    'RAM Names
+    '----------------------------------------------------------------------------------
     ElseIf File.TokenKind = TOKEN_RAM _
         Or File.TokenKind = TOKEN_HASH _
     Then
-        '..............................................................................
         'Has the RAM Name / Hash value been defined?
         If Not Values.Exists(File.TokenText) Then
             'Return Indefinite
@@ -3285,9 +3433,11 @@ GetNumber:
             Let ReturnValue = Values.Item(File.TokenText)
         End If
         
+    '----------------------------------------------------------------------------------
     'The `START` keyword refers to the System's boot vector
+    '----------------------------------------------------------------------------------
     ElseIf File.TokenKind = TOKEN_KEYWORD_START Then
-        '..............................................................................
+        'TODO: This is determined by the System, so we can forgo having to reference it
         If Not Labels.Exists(STR_START) Then
             'Return Indefinite
             Let ReturnValue = INDEFINITE
@@ -3296,9 +3446,10 @@ GetNumber:
             Let ReturnValue = Labels.Item(STR_START)
         End If
     
-    'A Label:
+    '----------------------------------------------------------------------------------
+    'Labels
+    '----------------------------------------------------------------------------------
     ElseIf File.TokenKind = TOKEN_LABEL Then
-        '..............................................................................
         'Label names have to be expanded to their fully-qualified form
         'TODO: If a Label is not found in this Section, check the global Section
         If Not Labels.Exists(CurrentSection & File.TokenText) Then
@@ -3309,9 +3460,10 @@ GetNumber:
             Let ReturnValue = Labels.Item(CurrentSection & File.TokenText)
         End If
         
-    'A Property:
+    '----------------------------------------------------------------------------------
+    'Properties
+    '----------------------------------------------------------------------------------
     ElseIf File.TokenKind = TOKEN_PROPERTY_USE Then
-        '..............................................................................
         'Property names have to be expanded to their fully-qualified form
         If Not Labels.Exists(CurrentSection & CurrentLabel & File.TokenText) Then
             'Return Indefinite
@@ -3321,6 +3473,7 @@ GetNumber:
             Let ReturnValue = Labels.Item(CurrentSection & CurrentLabel & File.TokenText)
         End If
         
+    '----------------------------------------------------------------------------------
     Else
         Debug.Print oz80.TokenName(File.TokenKind)
         Stop
@@ -3363,7 +3516,7 @@ Private Sub BeginChunk( _
             "=====================================================================" _
         )
         Call RaiseMessage(OZ80_LOG_DEBUG, _
-            "ADDR | PX OP OF CB LO HI | MNEMONIC   PARAM1  PARAM2  PARAM3" _
+            "ADDR | PX OP OF CB LO HI | MNEMONIC   PARAM1    PARAM2    PARAM3" _
         )
         Call RaiseMessage(OZ80_LOG_DEBUG, _
             "-----+-------------------+-------------------------------------------" _
@@ -3390,7 +3543,8 @@ End Sub
 '======================================================================================
 'Returns        | The error number
 '======================================================================================
-Private Function LayoutROM() As OZ80_ERROR
+Private Function LayoutROM( _
+) As OZ80_ERROR
     'For dereferencing the list of Chunks. This is slow, but will have to do until _
      the Chunk list can be converted to a traditional array
     Dim Item As Variant
@@ -3436,8 +3590,10 @@ Private Function LayoutROM() As OZ80_ERROR
     'TODO: Layout the Sectionless code
     'TODO: Layout the Sections
      
-     'For easier tail-recursion, return the error number
-     Let LayoutROM = My_Error
+    Call RaiseMessage(OZ80_LOG_INFO, "Chunks: {$}", Chunks.Count)
+     
+    'For easier tail-recursion, return the error number
+    Let LayoutROM = My_Error
 End Function
 
 
@@ -3477,11 +3633,9 @@ Private Function ParamToString( _
     ElseIf Param.Mask = MASK_REG_IYH Then Let ParamToString = "IYH"
     
     ElseIf Param.Mask = MASK_VAL Then
-        If Param.Value > 255 Then
-            Let ParamToString = "$" & oz80.HexStr16(Param.Value)
-        Else
-            Let ParamToString = "$" & oz80.HexStr8(Param.Value)
-        End If
+        If Param.Value > 255 _
+            Then Let ParamToString = "$" & oz80.HexStr16(Param.Value) _
+            Else Let ParamToString = "$" & oz80.HexStr8(Param.Value)
         
     'The mask bits do not specify every flag, _
      we refer to the token kind for that
@@ -3512,11 +3666,9 @@ Private Function ParamToString( _
     ElseIf Param.Mask = MASK_MEM_DE Then Let ParamToString = "(DE)"
     ElseIf Param.Mask = MASK_MEM_SP Then Let ParamToString = "(SP)"
     ElseIf Param.Mask = MASK_MEM_VAL Then
-        If Param.Value > 255 Then
-            Let ParamToString = "($" & oz80.HexStr16(Param.Value) & ")"
-        Else
-            Let ParamToString = "($" & oz80.HexStr8(Param.Value) & ")"
-        End If
+        If Param.Value > 255 _
+            Then Let ParamToString = "($" & oz80.HexStr16(Param.Value) & ")" _
+            Else Let ParamToString = "($" & oz80.HexStr8(Param.Value) & ")"
     Else
         Let ParamToString = oz80.TokenName(Param.Token)
     End If

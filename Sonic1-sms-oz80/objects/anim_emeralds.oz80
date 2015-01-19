@@ -2,11 +2,11 @@
 `OBJECT: all emeralds animation
 
 PROC    :doObjectCode_anim_emeralds             SECTION ::objects {
-	set	5,(ix+#object.unknown18)
+	set	5,(ix+#object.flags)
 	ld	hl,$5400		        `$15400 - emerald image
 	call	:loadPowerUpIcon
 	
-	bit	0,(ix+#object.unknown18)
+	bit	0,(ix+#object.flags)
 	jr	nz,._1
 	
 	xor	a;zero			        `set A to 0
@@ -20,7 +20,7 @@ PROC    :doObjectCode_anim_emeralds             SECTION ::objects {
 	ld	a,(ix+#object.unknown11)
 	cp	$50
 	ret	c
-	set	0,(ix+#object.unknown18)
+	set	0,(ix+#object.flags)
 	ld	(ix+#object.unknown11),$64
 	ret
 	
@@ -38,11 +38,11 @@ PROC    :doObjectCode_anim_emeralds             SECTION ::objects {
 	rrca	
 	jr	nc,._4
 	ld	a,(iy+#vars.spriteUpdateCount)
-	ld	hl,($.SPRITES_CURRENT)
+	ld	hl,($.SPRITETABLE_ADDR)
 	push	af
 	push	hl
-	ld	hl,$.SPRITES
-	ld	($.SPRITES_CURRENT),hl
+	ld	hl,$.SPRITETABLE
+	ld	($.SPRITETABLE_ADDR),hl
 	ld	l,(ix+#object.Y.lo)
 	ld	h,(ix+#object.Y.hi)
 	ld	de,($.CAMERA_Y)
@@ -58,7 +58,7 @@ PROC    :doObjectCode_anim_emeralds             SECTION ::objects {
 	call	:processSpriteLayout
 	pop	hl
 	pop	af
-	ld	($.SPRITES_CURRENT),hl
+	ld	($.SPRITETABLE_ADDR),hl
 	ld	(iy+#vars.spriteUpdateCount),a
 ._4	ld	l,(ix+#object.Y.lo)
 	ld	h,(ix+#object.Y.hi)

@@ -4,7 +4,7 @@
 `OBJECT: Explosion
 
 PROC :doObjectCode_explosion                    SECTION ::objects {
-	set	5,(ix+#object.unknown18)
+	set	5,(ix+#object.flags)
 	ld	a,(ix+#object.unknown15)
 	cp	$aa
 	jr	z,._1
@@ -18,7 +18,7 @@ PROC :doObjectCode_explosion                    SECTION ::objects {
 	ld	a,($.CURRENT_LEVEL)
 	cp	$12
 	jr	z,._1
-	ld	a,($.SONIC.unknown18)
+	ld	a,($.SONIC.flags)
 	rlca	
 	jr	c,._1
 	ld	a,($.D2E8)

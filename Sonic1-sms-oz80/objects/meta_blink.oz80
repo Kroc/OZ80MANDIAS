@@ -2,7 +2,7 @@
 `OBJECT: "make Sonic blink"
 
 PROC    :_7b95                                  SECTION ::objects {
-	set	5,(ix+#object.unknown18)
+	set	5,(ix+#object.flags)
 	set	0,(iy+#vars.flags9)
 	ld	a,($.FRAMECOUNT)
 	and	$01

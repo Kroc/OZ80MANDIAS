@@ -38,11 +38,11 @@ PROC    :_77be                                  SECTION ::objects
 	jp	nz,._2
 	ld	hl,$0c08
 	ld	($.TEMP6),hl
-	call	:_LABEL_3956_11
+	call	:detectCollisionWithSonic
 	ret	c
 	bit	0,(iy+#vars.scrollRingFlags)
 	ret	nz
-	ld	a,($.SONIC.unknown18)
+	ld	a,($.SONIC.flags)
 	rrca	
 	jr	c,._1
 	and	$02
@@ -75,15 +75,18 @@ PROC    :_77be                                  SECTION ::objects
 	ld	($.D2B1+1),a
 	ld	a,$3f
 	ld	($.D2B3),a
+        
 	ld	a,$01
 	rst	:rst_playSFX
-	ld	a,($.D2EC)
+	
+        ld	a,($.D2EC)
 	inc	a
 	ld	($.D2EC),a
+        
 ._2	ld	hl,($.D216)
 	ld	de,._7922
 	add	hl,de
-	bit	1,(ix+#object.unknown18)
+	bit	1,(ix+#object.flags)
 	jr	z,._3
 	ld	de,$0012
 	add	hl,de
@@ -106,7 +109,7 @@ PROC    :_77be                                  SECTION ::objects
         
 	ld	de,$0024
 	ld	hl,($.D216)
-	bit	1,(ix+#object.unknown18)
+	bit	1,(ix+#object.flags)
 	jr	z,._5
 	ld	de,$0036
 ._5	add	hl,de
@@ -467,7 +470,7 @@ PARAMS  d       `bit 7 sets A to $FF instead of 0 -- direction?
 	ld	($.SONIC.Yspeed), hl
 	ld	($.SONIC.Ydirection), a
 	
-	ld	hl, $.SONIC.unknown18
+	ld	hl, $.SONIC.flags
 	set	7, (hl)
 	
 	ret
@@ -480,7 +483,7 @@ INCLUDE "badnick_chopper.oz80"
 
 PROC    :doObjectCode_platform_fallVert         SECTION ::objects
 {
-	set	5,(ix+#object.unknown18)
+	set	5,(ix+#object.flags)
 	ld	hl,$0030
 	ld	($.D267),hl
 	ld	hl,$0058
@@ -489,14 +492,14 @@ PROC    :doObjectCode_platform_fallVert         SECTION ::objects
 	ld	(ix+#object.height),$10
 	ld	(ix+#object.spriteLayout.lo),._7e89.lo
 	ld	(ix+#object.spriteLayout.hi),._7e89.hi
-	bit	0,(ix+#object.unknown18)
+	bit	0,(ix+#object.flags)
 	jr	nz,._7e3c
 	ld	a,(ix+#object.Y.lo)
 	ld	(ix+$12),a
 	ld	a,(ix+#object.Y.hi)
 	ld	(ix+#object.unknown13),a
 	ld	(ix+#object.unknown14),$c0
-	set	0,(ix+#object.unknown18)
+	set	0,(ix+#object.flags)
 ._7e3c
 	ld	(ix+#object.Yspeed.lo),$80
 	xor	a;zero
@@ -509,7 +512,7 @@ PROC    :doObjectCode_platform_fallVert         SECTION ::objects
 	
 	ld	hl, $0806
 	ld	($.TEMP6), hl
-	call	:_LABEL_3956_11
+	call	:detectCollisionWithSonic
 	jr	c, ._1
 	ld	bc, $0010
 	ld	e, (ix+#object.Yspeed.lo)
@@ -542,7 +545,7 @@ PROC    :doObjectCode_platform_fallVert         SECTION ::objects
 
 PROC    :doObjectCode_platform_fallHoriz        SECTION ::objects
 {
-	set	5,(ix+#object.unknown18)
+	set	5,(ix+#object.flags)
 	ld	hl,$0030
 	ld	($.D267),hl
 	ld	hl,$0058
@@ -551,14 +554,14 @@ PROC    :doObjectCode_platform_fallHoriz        SECTION ::objects
 	ld	(ix+#object.height),$10
 	ld	(ix+#object.spriteLayout.lo),.layout.lo
 	ld	(ix+#object.spriteLayout.hi),.layout.hi
-	bit	0,(ix+#object.unknown18)
+	bit	0,(ix+#object.flags)
 	jp	nz,:doObjectCode_platform_fallVert._7e3c
 	ld	a,(ix+#object.Y.lo)
 	ld	(ix+$12),a
 	ld	a,(ix+#object.Y.hi)
 	ld	(ix+#object.unknown13),a
 	ld	(ix+#object.unknown14),$c6
-	set	0,(ix+#object.unknown18)
+	set	0,(ix+#object.flags)
 	jp	:doObjectCode_platform_fallVert._7e3c
         
         `sprite layout
@@ -572,10 +575,10 @@ PROC    :doObjectCode_platform_fallHoriz        SECTION ::objects
 
 PROC    :doObjectCode_platform_roll             SECTION ::objects
 {
-	set	5,(ix+#object.unknown18)
+	set	5,(ix+#object.flags)
 	ld	(ix+#object.width),$0a
 	ld	(ix+#object.height),$10
-	bit	0,(ix+#object.unknown18)
+	bit	0,(ix+#object.flags)
 	jr	nz,._1
 	ld	l,(ix+#object.Y.lo)
 	ld	h,(ix+#object.Y.hi)
@@ -583,7 +586,7 @@ PROC    :doObjectCode_platform_roll             SECTION ::objects
 	add	hl,de
 	ld	(ix+#object.Y.lo),l
 	ld	(ix+#object.Y.hi),h
-	set	0,(ix+#object.unknown18)
+	set	0,(ix+#object.flags)
 ._1	ld	(ix+#object.Yspeed.lo),$40
 	xor	a;zero
 	ld	(ix+#object.Yspeed.hi),a;zero
@@ -601,7 +604,7 @@ PROC    :doObjectCode_platform_roll             SECTION ::objects
 	
 	ld	hl,$0806
 	ld	($.TEMP6),hl
-	call	:_LABEL_3956_11
+	call	:detectCollisionWithSonic
 	jp	c,:_8003
 	ld	bc,$0010
 	ld	e,(ix+#object.Yspeed.lo)
@@ -734,13 +737,13 @@ INCLUDE "platform_bridge.oz80"
 
 PROC    :doObjectCode_boss_bridge               SECTION ::objects
 {
-	set	5,(ix+#object.unknown18)
+	set	5,(ix+#object.flags)
 	ld	(ix+#object.width), 30
 	ld	(ix+#object.height),28
 	call	:_7ca6
 	ld	(ix+#object.spriteLayout.lo),:_865a.lo
 	ld	(ix+#object.spriteLayout.hi),:_865a.hi
-	bit	0,(ix+#object.unknown18)
+	bit	0,(ix+#object.flags)
 	jr	nz,._1
 	
 	ld	hl,$03a0
@@ -762,7 +765,7 @@ PROC    :doObjectCode_boss_bridge               SECTION ::objects
 	ld	a,#index_music_boss1
 	rst	:rst_playMusic
 	
-	set	0,(ix+#object.unknown18)
+	set	0,(ix+#object.flags)
 ._1	ld	a,(ix+#object.unknown11)
 	and	a
 	jr	nz,._2
@@ -969,7 +972,7 @@ INCLUDE "powerup_bubbles.oz80"
 
 PROC    :_8eca                                  SECTION ::objects
 {
-	set	5, (ix+#object.unknown18)
+	set	5, (ix+#object.flags)
 	xor	a;zero
 	ld	(ix+#object.spriteLayout.lo),a;zero
 	ld	(ix+#object.spriteLayout.hi),a;zero
@@ -1092,7 +1095,7 @@ PROC    :_91eb                                  SECTION ::objects
 	ld	(ix+#object.Y.hi),h
 	ld	(ix+#object.unknown11),a;zero
 	ld	(ix+$12),a;zero
-	ld	(ix+#object.unknown18),a;zero
+	ld	(ix+#object.flags),a;zero
 	ld	(ix+#object.Xspeed.lo),a;zero
 	ld	(ix+#object.Xspeed.hi),a;zero
 	ld	(ix+#object.Xdirection),a;zero
@@ -1108,13 +1111,13 @@ PROC    :_91eb                                  SECTION ::objects
 
 PROC    :doObjectCode_boss_labyrinth            SECTION ::objects
 {
-	set	5, (ix+#object.unknown18)
+	set	5, (ix+#object.flags)
 	ld	(ix+#object.width),  32
 	ld	(ix+#object.height), 28
 	call	:_7ca6
 	ld	(ix+#object.spriteLayout.lo),._9493.lo
 	ld	(ix+#object.spriteLayout.hi),._9493.hi
-	bit	0,(ix+#object.unknown18)
+	bit	0,(ix+#object.flags)
 	jr	nz,._1
 	
 	ld	hl,$02d0
@@ -1138,7 +1141,7 @@ PROC    :doObjectCode_boss_labyrinth            SECTION ::objects
 	ld	a,#index_music_boss1
 	rst	:rst_playMusic
 	
-	set	0,(ix+#object.unknown18)
+	set	0,(ix+#object.flags)
 ._1	ld	a,(ix+#object.unknown11)
 	and	a
 	jr	nz,._2
@@ -1238,7 +1241,7 @@ PROC    :doObjectCode_boss_labyrinth            SECTION ::objects
 	ld	(ix+#object.Ysubpixel),a;zero
 	ld	(ix+#object.Y.lo),l
 	ld	(ix+#object.Y.hi),h
-	ld	(ix+#object.unknown18),a;zero
+	ld	(ix+#object.flags),a;zero
 	ld	(ix+#object.Xspeed.lo),a;zero
 	ld	(ix+#object.Xspeed.hi),a;zero
 	ld	(ix+#object.Xdirection),a;zero
@@ -1371,8 +1374,8 @@ PROC    :_9c70                                  SECTION ::objects
 `OBJECT: flame thrower - scrap brain
 
 PROC :doObjectCode_trap_flameThrower {
-	set	5,(ix+#object.unknown18)
-	bit	0,(ix+#object.unknown18)
+	set	5,(ix+#object.flags)
+	bit	0,(ix+#object.flags)
 	jr	nz,._1
 	ld	l,(ix+#object.X.lo)
 	ld	h,(ix+#object.X.hi)
@@ -1388,7 +1391,7 @@ PROC :doObjectCode_trap_flameThrower {
 	ld	(ix+#object.Y.hi),h
 	call	:_LABEL_625_57
 	ld	(ix+#object.unknown11),a
-	set	0,(ix+#object.unknown18)
+	set	0,(ix+#object.flags)
 ._1	ld	l,(ix+#object.X.lo)
 	ld	h,(ix+#object.X.hi)
 	ld	($.TEMP1),hl
@@ -1448,7 +1451,7 @@ PROC :doObjectCode_trap_flameThrower {
 	jr	z,._2
 	ld	hl,$0202
 	ld	($.TEMP6),hl
-	call	:_LABEL_3956_11
+	call	:detectCollisionWithSonic
 	call	nc,:_35fd
 ._2	inc	(ix+#object.unknown11)
 	xor	a;zero
@@ -1485,14 +1488,14 @@ TABLE   :_9d6a
 `OBJECT: door - one way left (Scrap Brain)
 
 PROC :doObjectCode_door_left {
-	set	5,(ix+#object.unknown18)
+	set	5,(ix+#object.flags)
 	call	:_9ed4
 	ld	a,(ix+#object.unknown11)
 	cp	$28
 	jr	nc,._2
 	ld	hl,$0005
 	ld	($.TEMP6),hl
-	call	:_LABEL_3956_11
+	call	:detectCollisionWithSonic
 	jr	c,._2
 	ld	de,$0005
 	ld	a,($.SONIC.Xdirection)
@@ -1620,7 +1623,7 @@ PROC :_9ed4 {
 	add	a,a
 	add	a,a
 	ld	(ix+#object.height),a
-	bit	0,(ix+#object.unknown18)
+	bit	0,(ix+#object.flags)
 	ret	nz
 	ld	bc,$0000
 	ld	de,$fff0
@@ -1630,7 +1633,7 @@ PROC :_9ed4 {
 	cp	$a3
 	jr	z,._1
 	ld	de,$0004
-	set	1,(ix+#object.unknown18)
+	set	1,(ix+#object.flags)
 ._1	ld	l,(ix+#object.X.lo)
 	ld	h,(ix+#object.X.hi)
 	add	hl,de
@@ -1640,7 +1643,7 @@ PROC :_9ed4 {
 	ld	(ix+$12),a
 	ld	a,(ix+#object.Y.hi)
 	ld	(ix+#object.unknown13),a
-	set	0,(ix+#object.unknown18)
+	set	0,(ix+#object.flags)
 	ret
 }
 
@@ -1665,14 +1668,14 @@ TABLE   :_9f2b
 `OBJECT: door - one way right (Scrap Brain)
 
 PROC :doObjectCode_door_right {
-	set	5,(ix+#object.unknown18)
+	set	5,(ix+#object.flags)
 	call	:_9ed4
 	ld	a,(ix+#object.unknown11)
 	cp	$28
 	jr	nc,._2
 	ld	hl,$0005
 	ld	($.TEMP6),hl
-	call	:_LABEL_3956_11
+	call	:detectCollisionWithSonic
 	jr	c,._2
 	ld	de,$0005
 	ld	a,($.SONIC.Xdirection)
@@ -1747,14 +1750,14 @@ TABLE   :_9fee
 `OBJECT: door (Scrap Brain)
 
 PROC :doObjectCode_door {
-	set	5,(ix+#object.unknown18)
+	set	5,(ix+#object.flags)
 	call	:_9ed4
 	ld	a,(ix+#object.unknown11)
 	cp	$28
 	jr	nc,._2
 	ld	hl,$0005
 	ld	($.TEMP6),hl
-	call	:_LABEL_3956_11
+	call	:detectCollisionWithSonic
 	jr	c,._2
 	ld	de,$0005
 	ld	a,($.SONIC.Xdirection)
@@ -1830,10 +1833,10 @@ TABLE   :_a0b1
 `OBJECT: electric sphere (Scrap Brain)
 
 PROC :doObjectCode_trap_electric {
-	set	5,(ix+#object.unknown18)
+	set	5,(ix+#object.flags)
 	ld	(ix+#object.width),$30
 	ld	(ix+#object.height),$10
-	bit	0,(ix+#object.unknown18)
+	bit	0,(ix+#object.flags)
 	jr	nz,._1
 	ld	l,(ix+#object.X.lo)
 	ld	h,(ix+#object.X.hi)
@@ -1847,7 +1850,7 @@ PROC :doObjectCode_trap_electric {
 	add	hl,de
 	ld	(ix+#object.Y.lo),l
 	ld	(ix+#object.Y.hi),h
-	set	0,(ix+#object.unknown18)
+	set	0,(ix+#object.flags)
 ._1	ld	a,(ix+#object.unknown11)
 	cp	$64
 	jr	c,._3
@@ -1856,7 +1859,7 @@ PROC :doObjectCode_trap_electric {
 	rst	:rst_playSFX
 ._2	ld	hl,$0000
 	ld	($.TEMP6),hl
-	call	:_LABEL_3956_11
+	call	:detectCollisionWithSonic
 	call	nc,:_35fd
 	ld	de,:_a173
 	ld	bc,:_a167
@@ -1915,7 +1918,7 @@ PROC :doObjectCode_badnick_ballHog {
 	ld	(ix+#object.height),$20
 	ld	hl,$0803
 	ld	($.TEMP6),hl
-	call	:_LABEL_3956_11
+	call	:detectCollisionWithSonic
 	ld	hl,$0e00
 	ld	($.TEMP1),hl
 	call	nc,:_35e5
@@ -2065,14 +2068,14 @@ TABLE   :_a30b
 `OBJECT: UNKNOWN (ball from Ball Hog?)
 
 PROC :_a33c {
-	res	5,(ix+#object.unknown18)
+	res	5,(ix+#object.flags)
 	ld	(ix+#object.width),$0a
 	ld	(ix+#object.height),$0f
 	ld	hl,$0101
 	ld	($.TEMP6),hl
-	call	:_LABEL_3956_11
+	call	:detectCollisionWithSonic
 	call	nc,:_35fd
-	bit	7,(ix+#object.unknown18)
+	bit	7,(ix+#object.flags)
 	jr	z,._1
 	ld	(ix+#object.Yspeed.lo),$00
 	ld	(ix+#object.Yspeed.hi),$fd
@@ -2143,7 +2146,7 @@ TABLE   :_a3bb
 PROC :doObjectCode_switch {
 	ld	(ix+#object.width),$0a
 	ld	(ix+#object.height),$11
-	bit	0,(ix+#object.unknown18)
+	bit	0,(ix+#object.flags)
 	jr	nz,._1
 	ld	l,(ix+#object.X.lo)
 	ld	h,(ix+#object.X.hi)
@@ -2151,10 +2154,10 @@ PROC :doObjectCode_switch {
 	add	hl,de
 	ld	(ix+#object.X.lo),l
 	ld	(ix+#object.X.hi),h
-	set	0,(ix+#object.unknown18)
+	set	0,(ix+#object.flags)
 ._1	ld	hl,$0001
 	ld	($.TEMP6),hl
-	call	:_LABEL_3956_11
+	call	:detectCollisionWithSonic
 	jr	c,._3
 	
 	ld	a,($.SONIC.Ydirection)
@@ -2171,9 +2174,9 @@ PROC :doObjectCode_switch {
 ._2	ld	bc,$0006
 	ld	de,$0000
 	call	:_LABEL_7CC1_12
-	bit	1,(ix+#object.unknown18)
+	bit	1,(ix+#object.flags)
 	jr	nz,._4
-	set	1,(ix+#object.unknown18)
+	set	1,(ix+#object.flags)
 	ld	hl,$.D317
 	call	:getLevelBitFlag
 	ld	a,(hl)
@@ -2183,7 +2186,7 @@ PROC :doObjectCode_switch {
 	rst	:rst_playSFX
 	jr	._4
 	
-._3	res	1,(ix+#object.unknown18)
+._3	res	1,(ix+#object.flags)
 	ld	(ix+#object.spriteLayout.lo),:_a493.lo
 	ld	(ix+#object.spriteLayout.hi),:_a493.hi
 	ld	a,($.LEVEL_SOLIDITY)
@@ -2220,14 +2223,14 @@ TABLE   :_a49b
 `OBJECT: switch door
 
 PROC :doObjectCode_door_switchActivated {
-	set	5,(ix+#object.unknown18)
+	set	5,(ix+#object.flags)
 	call	:_9ed4
 	ld	a,(ix+#object.unknown11)
 	cp	$28
 	jr	nc,._2
 	ld	hl,$0005
 	ld	($.TEMP6),hl
-	call	:_LABEL_3956_11
+	call	:detectCollisionWithSonic
 	jr	c,._2
 	ld	de,$0005
 	ld	a,($.SONIC.Xdirection)
@@ -2246,7 +2249,7 @@ PROC :doObjectCode_door_switchActivated {
 	
 ._2	ld	hl,$.D317
 	call	:getLevelBitFlag
-	bit	1,(ix+#object.unknown18)
+	bit	1,(ix+#object.flags)
 	jr	z,._3
 	ld	a,(hl)
 	and	c
@@ -2301,7 +2304,7 @@ PROC :doObjectCode_badnick_caterkiller {
 	and	$01
 	jr	nz,._5
 	ld	hl,:_a6b9
-	bit	1,(ix+#object.unknown18)
+	bit	1,(ix+#object.flags)
 	jr	z,._1
 	ld	hl,:_a769
 ._1	ld	e,(ix+#object.unknown11)
@@ -2345,7 +2348,7 @@ PROC :doObjectCode_badnick_caterkiller {
 	ld	l,(ix+#object.Y.lo)
 	ld	h,(ix+#object.Y.hi)
 	ld	($.TEMP3),hl
-	bit	1,(ix+#object.unknown18)
+	bit	1,(ix+#object.flags)
 	jr	nz,._7
 	ld	hl,:_a711
 	ld	e,(ix+#object.unknown11)
@@ -2362,7 +2365,7 @@ PROC :doObjectCode_badnick_caterkiller {
 	ld	(ix+#object.width),$06
 	ld	hl,$0802
 	ld	($.TEMP6),hl
-	call	:_LABEL_3956_11
+	call	:detectCollisionWithSonic
 	ld	hl,$0000
 	ld	($.TEMP1),hl
 	jr	c,._6
@@ -2372,7 +2375,7 @@ PROC :doObjectCode_badnick_caterkiller {
 ._6	ld	(ix+#object.width),$16
 	ld	hl,$0806
 	ld	($.TEMP6),hl
-	call	:_LABEL_3956_11
+	call	:detectCollisionWithSonic
 	call	nc,:_35fd
 	jr	._9
 	
@@ -2391,7 +2394,7 @@ PROC :doObjectCode_badnick_caterkiller {
 	ld	(ix+#object.width),$10
 	ld	hl,$0401
 	ld	($.TEMP6),hl
-	call	:_LABEL_3956_11
+	call	:detectCollisionWithSonic
 	jr	c,._8
 	call	:_35fd
 	jr	._9
@@ -2399,7 +2402,7 @@ PROC :doObjectCode_badnick_caterkiller {
 ._8	ld	(ix+#object.width),$16
 	ld	hl,$0410
 	ld	($.TEMP6),hl
-	call	:_LABEL_3956_11
+	call	:detectCollisionWithSonic
 	ld	hl,$0000
 	ld	($.TEMP1),hl
 	call	nc,:_35e5
@@ -2417,9 +2420,9 @@ PROC :doObjectCode_badnick_caterkiller {
 	cp	$14
 	ret	c
 	ld	(ix+#object.unknown15),$00
-	ld	a,(ix+#object.unknown18)
+	ld	a,(ix+#object.flags)
 	xor	$02
-	ld	(ix+#object.unknown18),a
+	ld	(ix+#object.flags),a
 	ret
 }
 
@@ -2498,7 +2501,7 @@ TABLE   :_a795
 PROC :doObjectCode_boss_scrapBrain {
 	ld	(ix+#object.width),$1e
 	ld	(ix+#object.height),$2f
-	bit	0,(ix+#object.unknown18)
+	bit	0,(ix+#object.flags)
 	jr	nz,._1
 	ld	hl,$0340
 	ld	($.LEVEL_LEFT),hl
@@ -2527,8 +2530,8 @@ PROC :doObjectCode_boss_scrapBrain {
 	ld	a,#index_music_boss1
 	rst	:rst_playMusic
 	
-	set	0,(ix+#object.unknown18)
-._1	bit	1,(ix+#object.unknown18)
+	set	0,(ix+#object.flags)
+._1	bit	1,(ix+#object.flags)
 	jr	nz,._4
 	ld	hl,($.CAMERA_X)
 	ld	($.LEVEL_LEFT),hl
@@ -2564,10 +2567,10 @@ PROC :doObjectCode_boss_scrapBrain {
 	ld	(ix+#object.Xspeed.hi),a
 	ld	($.SONIC.Xspeed),hl
 	ld	($.SONIC.Xdirection),a
-	set	1,(ix+#object.unknown18)
+	set	1,(ix+#object.flags)
 	jp	._9
 	
-._4	bit	2,(ix+#object.unknown18)
+._4	bit	2,(ix+#object.flags)
 	jr	nz,._5
 	
 	ld	hl,$0530
@@ -2585,10 +2588,10 @@ PROC :doObjectCode_boss_scrapBrain {
 	ld	a,(ix+#object.unknown11)
 	cp	$c0
 	jp	c,._9
-	set	2,(ix+#object.unknown18)
+	set	2,(ix+#object.flags)
 	jp	._9
 	
-._5	bit	3,(ix+#object.unknown18)
+._5	bit	3,(ix+#object.flags)
 	jr	nz,._6
 	ld	(iy+#vars.joypad),$ff
 	xor	a;zero
@@ -2596,10 +2599,10 @@ PROC :doObjectCode_boss_scrapBrain {
 	ld	(ix+#object.spriteLayout.hi),a;zero
 	dec	(ix+#object.unknown11)
 	jp	nz,._9
-	set	3,(ix+#object.unknown18)
+	set	3,(ix+#object.flags)
 	jp	._9
 	
-._6	bit	4,(ix+#object.unknown18)
+._6	bit	4,(ix+#object.flags)
 	jr	nz,._8
 	ld	de,($.SONIC.X)
 	ld	hl,$0596
@@ -2622,7 +2625,7 @@ PROC :doObjectCode_boss_scrapBrain {
 	ld	($.SONIC.Xspeed),hl;zero
 	ld	($.SONIC.Xdirection),a;zero
 ._7	ld	a,$80
-	ld	($.SONIC.unknown18),a
+	ld	($.SONIC.flags),a
 	ld	hl,$05a0
 	ld	($.SONIC.X),hl
 	ld	(iy+#vars.joypad),$ff
@@ -2644,7 +2647,7 @@ PROC :doObjectCode_boss_scrapBrain {
 	ld	hl,($.CAMERA_X)
 	inc	h
 	ld	($.SONIC.X),hl
-	set	4,(ix+#object.unknown18)
+	set	4,(ix+#object.flags)
 	
 	ld	a,#index_music_actComplete
 	rst	:rst_playMusic
@@ -2706,9 +2709,9 @@ TABLE   :_a9c0
 `OBJECT: meta - clouds (Sky Base)
 
 PROC :doObjectCode_meta_clouds {
-	set	5,(ix+#object.unknown18)
+	set	5,(ix+#object.flags)
 	ld	a,(iy+#vars.spriteUpdateCount)
-	ld	hl,($.SPRITES_CURRENT)
+	ld	hl,($.SPRITETABLE_ADDR)
 	push	af
 	push	hl
 	ld	a,($.D2DE)
@@ -2716,9 +2719,9 @@ PROC :doObjectCode_meta_clouds {
 	jr	nc,._1
 	ld	e,a
 	ld	d,$00
-	ld	hl,$.SPRITES
+	ld	hl,$.SPRITETABLE
 	add	hl,de
-	ld	($.SPRITES_CURRENT),hl
+	ld	($.SPRITETABLE_ADDR),hl
 	ld	a,($.D2A3)
 	ld	c,a
 	ld	de,($.D2A1)
@@ -2745,7 +2748,7 @@ PROC :doObjectCode_meta_clouds {
 	ld	($.D2DE),a
 ._1	pop	hl
 	pop	af
-	ld	($.SPRITES_CURRENT),hl
+	ld	($.SPRITETABLE_ADDR),hl
 	ld	(iy+#vars.spriteUpdateCount),a
 	ld	hl,($.CAMERA_X)
 	ld	de,$ffe0
@@ -2786,10 +2789,10 @@ TABLE   :_aa63
 `OBJECT: propeller (Sky Base)
 
 PROC :doObjectCode_trap_propeller {
-	set	5,(ix+#object.unknown18)
+	set	5,(ix+#object.flags)
 	ld	(ix+#object.width),$05
 	ld	(ix+#object.height),$14
-	bit	0,(ix+#object.unknown18)
+	bit	0,(ix+#object.flags)
 	jr	nz,._1
 	ld	l,(ix+#object.X.lo)
 	ld	h,(ix+#object.X.hi)
@@ -2803,7 +2806,7 @@ PROC :doObjectCode_trap_propeller {
 	add	hl,de
 	ld	(ix+#object.Y.lo),l
 	ld	(ix+#object.Y.hi),h
-	set	0,(ix+#object.unknown18)
+	set	0,(ix+#object.flags)
 ._1	ld	l,(ix+#object.X.lo)
 	ld	h,(ix+#object.X.hi)
 	ld	($.TEMP1),hl
@@ -2841,7 +2844,7 @@ PROC :doObjectCode_trap_propeller {
 	
 	ld	hl,$0202
 	ld	($.TEMP6),hl
-	call	:_LABEL_3956_11
+	call	:detectCollisionWithSonic
 	call	nc,:_35fd
 	ld	(ix+#object.spriteLayout.lo),$00
 	ld	(ix+#object.spriteLayout.hi),$00
@@ -2992,7 +2995,7 @@ PROC :doObjectCode_badnick_bomb {
 	ld	(ix+#object.Ydirection),$00
 ._8	ld	hl,$0202
 	ld	($.TEMP6),hl
-	call	:_LABEL_3956_11
+	call	:detectCollisionWithSonic
 	call	nc,:_35fd
 	ld	a,($.FRAMECOUNT)
 	and	$3f
@@ -3100,8 +3103,8 @@ TABLE   :_ad53
 `OBJECT: canon (Sky Base)
 
 PROC :doObjectCode_trap_cannon{
-	set	5,(ix+#object.unknown18)
-	bit	0,(ix+#object.unknown18)
+	set	5,(ix+#object.flags)
+	bit	0,(ix+#object.flags)
 	jr	nz,._1
 	ld	l,(ix+#object.X.lo)
 	ld	h,(ix+#object.X.hi)
@@ -3111,7 +3114,7 @@ PROC :doObjectCode_trap_cannon{
 	ld	(ix+#object.X.hi),h
 	call	:_LABEL_625_57
 	ld	(ix+#object.unknown11),a
-	set	0,(ix+#object.unknown18)
+	set	0,(ix+#object.flags)
 ._1	ld	a,(ix+#object.unknown11)
 	cp	$64
 	jr	nz,._2
@@ -3184,7 +3187,7 @@ TABLE   :_ae04
 
 PROC    :doObjectCode_trap_cannonBall
 {
-	set	5,(ix+#object.unknown18)
+	set	5,(ix+#object.flags)
 	ld	(ix+#object.width),$0c
 	ld	(ix+#object.height),$0c
 	ld	hl,($.CAMERA_X)
@@ -3198,7 +3201,7 @@ PROC    :doObjectCode_trap_cannonBall
 	ld	(ix+#object.type),$FF	`remove object?
 ._1	ld	hl,$0202
 	ld	($.TEMP6),hl
-	call	:_LABEL_3956_11
+	call	:detectCollisionWithSonic
 	call	nc,:_35fd
 	xor	a;zero
 	ld	(ix+#object.Xspeed.lo),$80
@@ -3223,14 +3226,14 @@ TABLE   :_ae81
 `OBJECT: badnick - Unidos (Sky Base)
 
 PROC :doObjectCode_badnick_unidos {
-	set	5,(ix+#object.unknown18)
-	bit	0,(ix+#object.unknown18)
+	set	5,(ix+#object.flags)
+	bit	0,(ix+#object.flags)
 	jr	nz,._1
 	ld	(ix+#object.unknown11),$00
 	ld	(ix+$12),$2a
 	ld	(ix+#object.unknown13),$52
 	ld	(ix+#object.unknown14),$7c
-	set	0,(ix+#object.unknown18)
+	set	0,(ix+#object.flags)
 ._1	ld	l,(ix+#object.X.lo)
 	ld	h,(ix+#object.X.hi)
 	ld	de,($.SONIC.X)
@@ -3261,7 +3264,7 @@ PROC :doObjectCode_badnick_unidos {
 	ld	(ix+#object.height),$1c
 	ld	hl,$1212
 	ld	($.TEMP6),hl
-	call	:_LABEL_3956_11
+	call	:detectCollisionWithSonic
 	ld	hl,$1010
 	ld	($.TEMP1),hl
 	call	nc,:_35e5
@@ -3309,7 +3312,7 @@ PROC :doObjectCode_badnick_unidos {
 	ld	($.TEMP7),a
 	add	a,$04
 	ld	(ix+#object.height),a
-	call	:_LABEL_3956_11
+	call	:detectCollisionWithSonic
 	call	nc,:_35fd
 ._4	pop	hl
 	pop	bc
@@ -3459,14 +3462,14 @@ TABLE   :_b0e7
 `OBJECT: UNKNOWN
 
 PROC :_b0f4 {
-	set	5,(ix+#object.unknown18)
+	set	5,(ix+#object.flags)
 	ld	(ix+#object.spriteLayout.lo),$00
 	ld	(ix+#object.spriteLayout.hi),$00
 	ld	(ix+#object.width),$04
 	ld	(ix+#object.height),$0a
 	ld	hl,$0602
 	ld	($.TEMP6),hl
-	call	:_LABEL_3956_11
+	call	:detectCollisionWithSonic
 	call	nc,:_35fd
 	ld	l,(ix+#object.X.lo)
 	ld	h,(ix+#object.X.hi)
@@ -3515,13 +3518,13 @@ PROC :_b0f4 {
 `OBJECT: rotating turret (Sky Base)
 
 PROC :doObjectCode_trap_turretRotating {
-	set	5,(ix+#object.unknown18)
-	bit	0,(ix+#object.unknown18)
+	set	5,(ix+#object.flags)
+	bit	0,(ix+#object.flags)
 	jr	nz,._1
 	call	:_LABEL_625_57
 	and	$07
 	ld	(ix+#object.unknown11),a
-	set	0,(ix+#object.unknown18)
+	set	0,(ix+#object.flags)
 ._1	ld	(ix+#object.spriteLayout.lo),$00
 	ld	(ix+#object.spriteLayout.hi),$00
 	ld	l,(ix+#object.X.lo)
@@ -3630,8 +3633,8 @@ TABLE   :_b267
 `OBJECT: flying platform (Sky Base)
 
 PROC :doObjectCode_platform_flyingRight {
-	set	5, (ix+#object.unknown18)
-	bit	0, (ix+#object.unknown18)
+	set	5, (ix+#object.flags)
+	bit	0, (ix+#object.flags)
 	jr	nz,._1
 	
 	ld	a,(ix+#object.Ysubpixel)
@@ -3643,7 +3646,7 @@ PROC :doObjectCode_platform_flyingRight {
 	ld	a,(ix+#object.Y.hi)
 	ld	(ix+#object.unknown14),a
 	
-	set	0,(ix+#object.unknown18)
+	set	0,(ix+#object.flags)
 	
 ._1	ld	a,($.D2A3)
 	ld	c,a
@@ -3665,7 +3668,7 @@ PROC :doObjectCode_platform_flyingRight {
 	ld	(ix+#object.height),$10
 	ld	hl,$0a02
 	ld	($.TEMP6),hl
-	call	:_LABEL_3956_11
+	call	:detectCollisionWithSonic
 	jr	c,._2
 	
 	ld	hl,$0030
@@ -3749,8 +3752,8 @@ INCLUDE "trap_spikewall.oz80"
 
 PROC    :doObjectCode_trap_turretFixed          SECTION ::objects
 {
-	set	5,(ix+#object.unknown18)
-	bit	0,(ix+#object.unknown18)
+	set	5,(ix+#object.flags)
+	bit	0,(ix+#object.flags)
 	jr	nz,._1
 	ld	bc,$0000
 	ld	e,c
@@ -3761,7 +3764,7 @@ PROC    :doObjectCode_trap_turretFixed          SECTION ::objects
 	cp	$04
 	ret	nc
 	ld	(ix+#object.unknown11),a
-	set	0,(ix+#object.unknown18)
+	set	0,(ix+#object.flags)
 ._1	inc	(ix+$12)
 	ld	a,(ix+$12)
 	bit	6,a
@@ -3830,7 +3833,7 @@ PROC    :doObjectCode_trap_turretFixed          SECTION ::objects
 
 PROC    :doObjectCode_platform_flyingUpDown     SECTION ::objects
 {
-	set	5,(ix+#object.unknown18)
+	set	5,(ix+#object.flags)
 	ld	hl,:_b37b
 	ld	a,($.LEVEL_SOLIDITY)
 	cp	$01
@@ -3899,7 +3902,7 @@ PROC    :doObjectCode_platform_flyingUpDown     SECTION ::objects
 	ld	(ix+#object.height),$1c
 	ld	hl,$0802
 	ld	($.TEMP6),hl
-	call	:_LABEL_3956_11
+	call	:detectCollisionWithSonic
 	ret	c
 	ld	e,(ix+#object.Yspeed.lo)
 	ld	d,(ix+#object.Yspeed.hi)
@@ -3977,12 +3980,12 @@ PROC    :doObjectCode_boss_skyBase              SECTION ::objects
 {
 	ld	(ix+#object.width),$1e
 	ld	(ix+#object.height),$2f
-	set	5,(ix+#object.unknown18)
-	bit	2,(ix+#object.unknown18)
+	set	5,(ix+#object.flags)
+	bit	2,(ix+#object.flags)
 	jp	nz,._b821
 	call	:_7ca6
 	call	._b7e6
-	bit	0,(ix+#object.unknown18)
+	bit	0,(ix+#object.flags)
 	jr	nz,._1
 	
 	ld	hl,$0350
@@ -4012,7 +4015,7 @@ PROC    :doObjectCode_boss_skyBase              SECTION ::objects
 	rst	:rst_playMusic
 	
 	set	4,(iy+#vars.unknown0)
-	set	0,(ix+#object.unknown18)
+	set	0,(ix+#object.flags)
 ._1	ld	a,(ix+#object.unknown15)
 	and	a
 	jp	nz,._4
@@ -4099,19 +4102,19 @@ PROC    :doObjectCode_boss_skyBase              SECTION ::objects
 	and	a
 	call	z,._b9d5
 	ld	(ix+#object.unknown17),$02
-	set	1,(ix+#object.unknown18)
+	set	1,(ix+#object.flags)
 	call	._b99f
 	inc	(ix+#object.unknown16)
 	ld	a,(ix+#object.unknown16)
 	cp	$12
 	jr	c,._8
-	res	1,(ix+#object.unknown18)
+	res	1,(ix+#object.flags)
 	xor	a;zero
 	ld	(ix+#object.unknown15),a;zero
 	ld	(ix+#object.unknown16),a;zero
 	
 ._8	ld	hl,$ba31
-	bit	1,(ix+#object.unknown18)
+	bit	1,(ix+#object.flags)
 	jr	z,._9
 	ld	hl,._ba3b
 ._9	ld	de,$.TEMP1
@@ -4141,7 +4144,7 @@ PROC    :doObjectCode_boss_skyBase              SECTION ::objects
 	ld	(ix+#object.unknown11),a;zero
 	ld	(ix+#object.unknown16),a;zero
 	ld	(ix+#object.unknown17),a;zero
-	set	2,(ix+#object.unknown18)
+	set	2,(ix+#object.flags)
 	res	4,(iy+#vars.unknown0)
 	
 	ld	a,#index_music_scrapBrain
@@ -4158,7 +4161,7 @@ PROC    :doObjectCode_boss_skyBase              SECTION ::objects
 	ret	nz
 	bit	0,(iy+#vars.scrollRingFlags)
 	ret	nz
-	ld	a,($.SONIC.unknown18)
+	ld	a,($.SONIC.flags)
 	rrca	
 	jr	c,._10
 	and	$02
@@ -4186,9 +4189,9 @@ PROC    :doObjectCode_boss_skyBase              SECTION ::objects
 
         `--------------------------------------------------------------------[$B821]---
 
-._b821	bit	3,(ix+#object.unknown18)
+._b821	bit	3,(ix+#object.flags)
 	jp	nz,._20
-	res	5,(ix+#object.unknown18)
+	res	5,(ix+#object.flags)
 	ld	a,(ix+#object.unknown11)
 	cp	$0f
 	jr	nc,._11
@@ -4255,7 +4258,7 @@ PROC    :doObjectCode_boss_skyBase              SECTION ::objects
 	ld	a,(ix+#object.unknown16)
 	dec	a
 	jr	nz,._16
-	bit	7,(ix+#object.unknown18)
+	bit	7,(ix+#object.flags)
 	jr	z,._16
 	ld	(ix+#object.Yspeed.lo),$00
 	ld	(ix+#object.Yspeed.hi),$ff
@@ -4271,7 +4274,7 @@ PROC    :doObjectCode_boss_skyBase              SECTION ::objects
 	and	$3f
 	and	a
 	jr	z,._17
-	bit	7,(ix+#object.unknown18)
+	bit	7,(ix+#object.flags)
 	jr	z,._17
 	ld	(ix+#object.Yspeed.lo),$80
 	ld	(ix+#object.Yspeed.hi),$fd
@@ -4282,7 +4285,7 @@ PROC    :doObjectCode_boss_skyBase              SECTION ::objects
 	ld	a,(hl)
 	cp	$49
 	jr	nz,._18
-	bit	7,(ix+#object.unknown18)
+	bit	7,(ix+#object.flags)
 	jr	z,._18
 	xor	a;zero
 	ld	(ix+#object.unknown16),a;zero
@@ -4299,7 +4302,7 @@ PROC    :doObjectCode_boss_skyBase              SECTION ::objects
 	ld	de,$0120
 	call	:_7c8c
 	
-	set	3,(ix+#object.unknown18)
+	set	3,(ix+#object.flags)
 	jp	._20
 	
 ._18	ld	l,(ix+#object.Yspeed.lo)
@@ -4405,7 +4408,7 @@ PROC    :doObjectCode_boss_skyBase              SECTION ::objects
 	ld	(ix+#object.Y.lo),l
 	ld	(ix+#object.Y.hi),h
 	ld	(ix+#object.unknown11),a;zero
-	ld	(ix+#object.unknown18),a;zero
+	ld	(ix+#object.flags),a;zero
 	ld	(ix+#object.Xspeed.lo),a;zero
 	ld	(ix+#object.Xspeed.hi),a;zero
 	ld	(ix+#object.Xdirection),a;zero
@@ -4472,10 +4475,10 @@ TABLE   :_bb77                                  SECTION ::objects
 
 PROC    :doObjectCode_boss_electricBeam         SECTION ::objects
 {
-	set	5,(ix+#object.unknown18)
+	set	5,(ix+#object.flags)
 	ld	hl,$0008
 	ld	($.D26B),hl
-	bit	0,(ix+#object.unknown18)
+	bit	0,(ix+#object.flags)
 	jr	nz,._1
 
 	`UNKNOWN
@@ -4485,7 +4488,7 @@ PROC    :doObjectCode_boss_electricBeam         SECTION ::objects
 	call	:decompressArt
 
 	ld	(ix+$12),$01
-	set	0,(ix+#object.unknown18)
+	set	0,(ix+#object.flags)
 ._1	ld	hl,$0390
 	ld	($.TEMP1),hl
 	ld	l,(ix+#object.unknown11)
@@ -4504,7 +4507,7 @@ PROC    :doObjectCode_boss_electricBeam         SECTION ::objects
 	call	._bca5
 	bit	4,(iy+#vars.unknown0)
 	ret	z
-	bit	1,(ix+#object.unknown18)
+	bit	1,(ix+#object.flags)
 	jr	z,._2
 	ld	a,($.FRAMECOUNT)
 	bit	0,a
@@ -4552,7 +4555,7 @@ PROC    :doObjectCode_boss_electricBeam         SECTION ::objects
 ._2	ld	a,($.D2EC)
 	cp	$06
 	jr	nc,._5
-	bit	1,(ix+#object.unknown18)
+	bit	1,(ix+#object.flags)
 	jr	nz,._3
 	ld	a,(ix+#object.unknown11)
 	inc	a
@@ -4563,7 +4566,7 @@ PROC    :doObjectCode_boss_electricBeam         SECTION ::objects
 	ld	c,a
 	and	$01
 	ret	nz
-	set	1,(ix+#object.unknown18)
+	set	1,(ix+#object.flags)
 	ret
 	
 ._3	ld	a,($.FRAMECOUNT)
@@ -4574,7 +4577,7 @@ PROC    :doObjectCode_boss_electricBeam         SECTION ::objects
 ._4	dec	(ix+#object.unknown11)
 	ret	nz
 	ld	(ix+#object.unknown11),$00
-	res	1,(ix+#object.unknown18)
+	res	1,(ix+#object.flags)
 	ret
 	
 ._5	ld	hl,($.SONIC.X)
@@ -4593,7 +4596,7 @@ PROC    :doObjectCode_boss_electricBeam         SECTION ::objects
 	cp	$80
 	jr	nc,._7
 	inc	(ix+#object.unknown11)
-._7	res	1,(ix+#object.unknown18)
+._7	res	1,(ix+#object.flags)
 	ld	a,($.FRAMECOUNT)
 	ld	c,a
 	and	$40
@@ -4601,7 +4604,7 @@ PROC    :doObjectCode_boss_electricBeam         SECTION ::objects
 	ld	a,($.D2EC)
 	cp	$06
 	ret	z
-	set	1,(ix+#object.unknown18)
+	set	1,(ix+#object.flags)
 	ld	a,c
 	and	$1f
 	ret	nz

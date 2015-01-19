@@ -100,7 +100,7 @@ PROC	:doObjectCode_badnick_crabMeat  SECTION ::objects
 	call	:_7c41
 	ld	hl,$0a04
 	ld	($.TEMP6),hl
-	call	:_LABEL_3956_11
+	call	:detectCollisionWithSonic
 	ld	hl,$0804
 	ld	($.TEMP1),hl
 	call	nc,:_35e5

@@ -5,13 +5,15 @@ PROC    :doObjectCode_badnick_burrobot          SECTION ::objects
 {
 	ld	(ix+#object.width), 12
 	ld	(ix+#object.height),32
-	ld	hl,$0202
+	ld	hl,$0202                        `loads $.TEMP6 & $.TEMP7 with $02
 	ld	($.TEMP6),hl
-	call	:_LABEL_3956_11
-	ld	hl,$0800
+	call	:detectCollisionWithSonic
+	
+        ld	hl,$0800
 	ld	($.TEMP1),hl
 	call	nc,:_35e5
-	ld	l,(ix+#object.Yspeed.lo)
+	
+        ld	l,(ix+#object.Yspeed.lo)
 	ld	h,(ix+#object.Yspeed.hi)
 	ld	a,(ix+#object.Ydirection)
 	ld	de,$0010
@@ -27,7 +29,7 @@ PROC    :doObjectCode_badnick_burrobot          SECTION ::objects
 ._1	ld	(ix+#object.Yspeed.lo),l
 	ld	(ix+#object.Yspeed.hi),h
 	ld	(ix+#object.Ydirection),c
-	bit	0,(ix+#object.unknown18)
+	bit	0,(ix+#object.flags)
 	jp	nz,._4
 	ld	de,$ffd0
 	ld	l,(ix+#object.X.lo)
@@ -44,7 +46,7 @@ PROC    :doObjectCode_badnick_burrobot          SECTION ::objects
 	and	a
 	sbc	hl,de
 	jr	c,._2
-	set	0,(ix+#object.unknown18)
+	set	0,(ix+#object.flags)
 	ld	(ix+#object.Yspeed.lo),$80
 	ld	(ix+#object.Yspeed.hi),$fd
 	ld	(ix+#object.Ydirection),$ff
@@ -60,7 +62,7 @@ PROC    :doObjectCode_badnick_burrobot          SECTION ::objects
 	ld	de,._9059
 	ld	bc,._904a
 	call	:_7c41
-	set	1,(ix+#object.unknown18)
+	set	1,(ix+#object.flags)
 	ret
 	
 ._3	ld	(ix+#object.Xspeed.lo),$40
@@ -69,18 +71,18 @@ PROC    :doObjectCode_badnick_burrobot          SECTION ::objects
 	ld	de,._9059
 	ld	bc,._9045
 	call	:_7c41
-	res	1,(ix+#object.unknown18)
+	res	1,(ix+#object.flags)
 	ret
 	
 ._4	ld	bc,._9054
-	bit	1,(ix+#object.unknown18)
+	bit	1,(ix+#object.flags)
 	jr	nz,._5
 	ld	bc,._904f
 ._5	ld	de,._9059
 	call	:_7c41
-	bit	7,(ix+#object.unknown18)
+	bit	7,(ix+#object.flags)
 	ret	z
-	res	0,(ix+#object.unknown18)
+	res	0,(ix+#object.flags)
 	ret
         
         `------------------------------------------------------------------------------

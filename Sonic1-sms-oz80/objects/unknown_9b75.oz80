@@ -3,12 +3,12 @@
 
 PROC    :_9b75                                  SECTION ::objects
 {
-	set	5,(ix+#object.unknown18)
+	set	5,(ix+#object.flags)
 	ld	(ix+#object.width),$1e
 	ld	(ix+#object.height),$60
 	ld	hl,$0000
 	ld	($.TEMP6),hl
-	call	:_LABEL_3956_11
+	call	:detectCollisionWithSonic
 	jr	c,._2
 	ld	l,(ix+#object.X.lo)
 	ld	h,(ix+#object.X.hi)

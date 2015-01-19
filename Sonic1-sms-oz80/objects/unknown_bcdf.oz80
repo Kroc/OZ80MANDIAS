@@ -3,11 +3,11 @@
 
 PROC    :_bcdf                                  SECTION ::objects
 {
-	set	5,(ix+#object.unknown18)
+	set	5,(ix+#object.flags)
 	set	5,(iy+#vars.unknown0)
 	ld	hl,$0202
 	ld	($.TEMP6),hl
-	call	:_LABEL_3956_11
+	call	:detectCollisionWithSonic
 	jr	c,._1
 	bit	0,(iy+#vars.scrollRingFlags)
 	call	z,:_35fd

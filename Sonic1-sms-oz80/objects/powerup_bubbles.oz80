@@ -3,7 +3,7 @@
 
 PROC    :doObjectCode_powerUp_bubbles           SECTION ::objects
 {
-	set	5,(ix+#object.unknown18)
+	set	5,(ix+#object.flags)
 	ld	a,(ix+$12)
 	and	$7f
 	jr	nz,._1

@@ -3,7 +3,7 @@
 
 PROC    :doObjectCode_platform_weight           SECTION ::objects {
 	
-        set	5,(ix+#object.unknown18)
+        set	5,(ix+#object.flags)
 	ld	a,(ix+#object.unknown16)
 	add	a,(ix+#object.unknown17)
 	ld	(ix+#object.unknown17),a
@@ -27,7 +27,7 @@ PROC    :doObjectCode_platform_weight           SECTION ::objects {
 	
 	ld	hl,$0806
 	ld	($.TEMP6),hl
-	call	:_LABEL_3956_11
+	call	:detectCollisionWithSonic
 	jr	c,._2
 	ld	(ix+#object.unknown16),$01
 	ld	bc,$0010

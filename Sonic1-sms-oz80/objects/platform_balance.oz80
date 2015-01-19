@@ -3,8 +3,8 @@
 
 PROC    :doObjectCode_platform_balance          SECTION ::objects
 {
-	set	5,(ix+#object.unknown18)
-	bit	0,(ix+#object.unknown18)
+	set	5,(ix+#object.flags)
+	bit	0,(ix+#object.flags)
 	jr	nz,._1
 	ld	(ix+#object.unknown11),$1c
 	ld	l,(ix+#object.X.lo)
@@ -13,7 +13,7 @@ PROC    :doObjectCode_platform_balance          SECTION ::objects
 	add	hl,de
 	ld	(ix+#object.X.lo),l
 	ld	(ix+#object.X.hi),h
-	set	0,(ix+#object.unknown18)
+	set	0,(ix+#object.flags)
 ._1	ld	l,(ix+#object.unknown14)
 	ld	h,(ix+#object.unknown15)
 	ld	a,(ix+#object.unknown16)
@@ -41,7 +41,7 @@ PROC    :doObjectCode_platform_balance          SECTION ::objects
 	ld	a,(ix+#object.unknown11)
 	and	a
 	jr	z,._6
-	bit	1,(ix+#object.unknown18)
+	bit	1,(ix+#object.flags)
 	jr	z,._4
 	ld	a,l
 	or	h
@@ -71,7 +71,7 @@ PROC    :doObjectCode_platform_balance          SECTION ::objects
 	ld	(ix+#object.unknown11),a
 	jr	z,._5
 	jr	nc,._7
-._5	bit	1,(ix+#object.unknown18)
+._5	bit	1,(ix+#object.flags)
 	jr	z,._6
 	ld	a,$04
 	rst	:rst_playSFX
@@ -114,7 +114,7 @@ PROC    :doObjectCode_platform_balance          SECTION ::objects
 	ld	($.TEMP6),hl
 	ld	hl,._8834
 	call	._881a
-	res	1,(ix+#object.unknown18)
+	res	1,(ix+#object.flags)
 	ld	(ix+#object.width),$14
 	ld	a,$02
 	ld	($.TEMP6),a
@@ -125,7 +125,7 @@ PROC    :doObjectCode_platform_balance          SECTION ::objects
 	ld	a,c
 	add	a,$04
 	ld	($.TEMP7),a
-	call	:_LABEL_3956_11
+	call	:detectCollisionWithSonic
 	jr	nc,._8
 	
 	ld	a,($.SONIC.Ydirection)
@@ -143,11 +143,11 @@ PROC    :doObjectCode_platform_balance          SECTION ::objects
 	sub	(ix+#object.unknown11)
 	add	a,$04
 	ld	($.TEMP7),a
-	call	:_LABEL_3956_11
+	call	:detectCollisionWithSonic
 	jr	nc,._9
 	ret
 	
-._8	set	1,(ix+#object.unknown18)
+._8	set	1,(ix+#object.flags)
 	
 	ld	a,($.SONIC.Ydirection)
 	and	a
@@ -189,7 +189,7 @@ PROC    :doObjectCode_platform_balance          SECTION ::objects
 	xor	a;zero
 	sbc	hl,bc
 	ld	($.SONIC.Y),hl
-	ld	hl,$.SONIC.unknown18
+	ld	hl,$.SONIC.flags
 	set	7,(hl)
 	ret
         

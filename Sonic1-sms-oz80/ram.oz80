@@ -55,7 +55,16 @@ HASH    #object                 `26 bytes
 .unknown15		        BYTE    
 .unknown16		        BYTE    
 .unknown17		        BYTE    
-.unknown18		        BYTE    
+.flags		                HASH [  `various object flags
+        .unknown0               BOOL
+        .unknown1               BOOL
+        .unknown2               BOOL
+        .unknown3               BOOL
+        .unknown4               BOOL
+        .unknown5               BOOL
+        .unknown6               BOOL
+        .unknown7               BOOL
+                                ]
 .unknown19		        BYTE    `unused?
 ]
 
@@ -151,7 +160,7 @@ RAM     $
 .FLOORLAYOUT                    BYTE x 4 KB                                     `$C000
 
 `X/Y/I data for the 64 sprites
-.SPRITES                        BYTE x 64*3                                     `$D000
+.SPRITETABLE                    BYTE x 64*3                                     `$D000
 
 ``when the screen scrolls and new tiles need to be filled in, they are pulled
   from these caches which have the necessary tiles already in horizontal
@@ -222,7 +231,7 @@ RAM     $
 .LEVEL_FLOORWIDTH               WORD `width of the floor layout in blocks       `$D238
 .LEVEL_FLOORHEIGHT              WORD `height of the floor layout in blocks      `$D23A
 
-.SPRITES_CURRENT                WORD `pointer to which sprite table to use      `$D23C
+.SPRITETABLE_ADDR               WORD `pointer to which sprite table to use      `$D23C
 
 .CURRENT_LEVEL                  BYTE                                            `$D23E
 
@@ -334,14 +343,13 @@ RAM     $
 .D2B7                           WORD `UNKNOWN                                   `$D2B7
 .D2B9                           BYTE `UNKNOWN                                   `$D2B9
 .D2BA                           WORD `UNKNOWN                                   `$D2BA
-
 .D2BC                           BYTE                                            `UNUSED
-
 .D2BD                           BYTE `UNKNOWN ($D2BD/E)                         `$D2BD
+
 .D2BE                           BYTE `UNKNOWN ($D2BE/F)                         `$D2BE
 .D2BF                           WORD `UNKNOWN                                   `$D2BF
 .D2C1                           BYTE `UNKNOWN                                   `$D2C1
-.D2C2                           BYTE `probably part of above                    `UNUSED
+.D2C2                           BYTE `probably part of above                    `$D2C2
 
 `UNKNOWN - probably text in RAM
 .D2C3                           BYTE x 11                                       `$D2C3
@@ -484,7 +492,7 @@ RAM     $
                                 `.unknown15                                     `$D411
                                 `.unknown16                                     `$D412
                                 `.unknown17                                     `$D413
-                                `.unknown18                                     `$D414
+                                `.flags                                         `$D414
                                 `.unknown19                                     `$D415
                         
 `remaining 31 objects are here

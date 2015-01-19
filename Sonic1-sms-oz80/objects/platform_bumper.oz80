@@ -3,7 +3,7 @@
 
 PROC    :doObjectCode_platform_bumper           SECTION ::objects
 {
-	set	5,(ix+#object.unknown18)
+	set	5,(ix+#object.flags)
 	ld	(ix+#object.width),$1c
 	ld	(ix+#object.height),$06
 	ld	(ix+#object.spriteLayout.lo),._9b6e.lo
@@ -26,7 +26,7 @@ PROC    :doObjectCode_platform_bumper           SECTION ::objects
 	jr	nz,._3
 	ld	hl,$0602
 	ld	($.TEMP6),hl
-	call	:_LABEL_3956_11
+	call	:detectCollisionWithSonic
 	ret	c
 	ld	a,($.D2E8)
 	ld	de,($.D2E6)

@@ -8,7 +8,7 @@
 
 PROC    :doObjectCode_platform_swinging         SECTION ::objects {
         
-	set	5,(ix+#object.unknown18)
+	set	5,(ix+#object.flags)
 	ld	hl,$0020
 	ld	($.D267),hl
 	ld	hl,$0048
@@ -17,7 +17,7 @@ PROC    :doObjectCode_platform_swinging         SECTION ::objects {
 	ld	($.D26B),hl
 	ld	hl,$0030
 	ld	($.D26D),hl
-	bit	0,(ix+#object.unknown18)
+	bit	0,(ix+#object.flags)
 	jr	nz,._1
 	ld	l,(ix+#object.X.lo)
 	ld	h,(ix+#object.X.hi)
@@ -28,8 +28,8 @@ PROC    :doObjectCode_platform_swinging         SECTION ::objects {
 	ld	(ix+#object.unknown14),l
 	ld	(ix+#object.unknown15),h
 	ld	(ix+#object.unknown11),$e0
-	set	0,(ix+#object.unknown18)
-	set	1,(ix+#object.unknown18)
+	set	0,(ix+#object.flags)
+	set	1,(ix+#object.flags)
 ._1	ld	(ix+#object.width),$1a
 	ld	(ix+#object.height),$10
 	ld	l,(ix+#object.X.lo)
@@ -74,7 +74,7 @@ PROC    :doObjectCode_platform_swinging         SECTION ::objects {
 	
 	ld	hl,$0806
 	ld	($.TEMP6),hl
-	call	:_LABEL_3956_11
+	call	:detectCollisionWithSonic
 	jr	c,._4
 	ld	hl,($.SONIC.X)
 	ld	de,($.TEMP1)
@@ -90,7 +90,7 @@ PROC    :doObjectCode_platform_swinging         SECTION ::objects {
 	ld	hl,:object_platform_spriteLayouts._6923
 ._5	ld	(ix+#object.spriteLayout.lo),l
 	ld	(ix+#object.spriteLayout.hi),h
-	bit	1,(ix+#object.unknown18)
+	bit	1,(ix+#object.flags)
 	jr	nz,._6
 	ld	a,(ix+#object.unknown11)
 	inc	a
@@ -98,7 +98,7 @@ PROC    :doObjectCode_platform_swinging         SECTION ::objects {
 	ld	(ix+#object.unknown11),a
 	cp	$e0
 	ret	c
-	set	1,(ix+#object.unknown18)
+	set	1,(ix+#object.flags)
 	ret
 	
 ._6	ld	a,(ix+#object.unknown11)
@@ -106,7 +106,7 @@ PROC    :doObjectCode_platform_swinging         SECTION ::objects {
 	dec	a
 	ld	(ix+#object.unknown11),a
 	ret	nz
-	res	1,(ix+#object.unknown18)
+	res	1,(ix+#object.flags)
 	ret
         
 ._682f  `this is swinging position data

@@ -2,7 +2,7 @@
 `OBJECT: boss (Green Hill)
 
 PROC    :doObjectCode_boss_greenHill            SECTION ::objects {
-	set	5,(ix+#object.unknown18)
+	set	5,(ix+#object.flags)
 	ld	(ix+#object.width), 32
 	ld	(ix+#object.height),28
 	call	:_7ca6
@@ -233,10 +233,10 @@ PROC    :doObjectCode_boss_greenHill            SECTION ::objects {
 	jr	z,._10
 	ld	hl,._730a
 ._10	ld	e,a
-	ld	a,(ix+#object.unknown18)
+	ld	a,(ix+#object.flags)
 	and	$fd
 	or	e
-	ld	(ix+#object.unknown18),a
+	ld	(ix+#object.flags),a
 	ld	(ix+#object.spriteLayout.lo),l
 	ld	(ix+#object.spriteLayout.hi),h
 	ld	hl,$0012

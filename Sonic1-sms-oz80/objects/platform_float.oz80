@@ -3,12 +3,12 @@
 
 PROC    :doObjectCode_platform_float            SECTION ::objects
 {
-	set	5,(ix+#object.unknown18)
+	set	5,(ix+#object.flags)
 	ld	(ix+#object.width), 30
 	ld	(ix+#object.height),28
 	ld	(ix+#object.spriteLayout.lo),._91de.lo
 	ld	(ix+#object.spriteLayout.hi),._91de.hi
-	bit	1,(ix+#object.unknown18)
+	bit	1,(ix+#object.flags)
 	jr	nz,._1
 	ld	l,(ix+#object.X.lo)
 	ld	h,(ix+#object.X.hi)
@@ -22,7 +22,7 @@ PROC    :doObjectCode_platform_float            SECTION ::objects
 	ld	(ix+#object.Y.hi),h
 	ld	(ix+#object.unknown13),l
 	ld	(ix+#object.unknown14),h
-	set	1,(ix+#object.unknown18)
+	set	1,(ix+#object.flags)
 ._1	ld	bc,$0010
 	ld	de,$0020
 	call	:getFloorLayoutRAMPositionForObject
@@ -46,7 +46,7 @@ PROC    :doObjectCode_platform_float            SECTION ::objects
 	ld	h,c
 	cp	$1e
 	jr	z,._2
-	bit	0,(ix+#object.unknown18)
+	bit	0,(ix+#object.flags)
 	jr	z,._3
 	ld	l,(ix+#object.Yspeed.lo)
 	ld	h,(ix+#object.Yspeed.hi)
@@ -106,16 +106,16 @@ PROC    :doObjectCode_platform_float            SECTION ::objects
 	ld	(ix+#object.Yspeed.lo),a;zero
 	ld	(ix+#object.Yspeed.hi),a;zero
 	ld	(ix+#object.Ydirection),a;zero
-	res	0,(ix+#object.unknown18)
+	res	0,(ix+#object.flags)
 	ret
 	
         `------------------------------------------------------------------------------
         
 ._5	ld	hl,$0e02
 	ld	($.TEMP6),hl
-	call	:_LABEL_3956_11
+	call	:detectCollisionWithSonic
 	ret	c
-	set	0,(ix+#object.unknown18)
+	set	0,(ix+#object.flags)
 	ld	a,($.SONIC.Yspeed.hi)
 	and	a
 	jp	p,._6

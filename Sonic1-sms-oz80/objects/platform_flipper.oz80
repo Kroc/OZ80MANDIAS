@@ -3,7 +3,7 @@
 
 PROC    :doObjectCode_platform_flipper          SECTION ::objects
 {
-	set	5,(ix+#object.unknown18)
+	set	5,(ix+#object.flags)
 	ld	(ix+#object.spriteLayout.lo),._9a7e.lo
 	ld	(ix+#object.spriteLayout.hi),._9a7e.hi
 	bit	5,(iy+#vars.joypad)
@@ -27,7 +27,7 @@ PROC    :doObjectCode_platform_flipper          SECTION ::objects
 	ld	($.TEMP6),hl
 	ld	(ix+#object.width),$1e
 	ld	(ix+#object.height),$16
-	call	:_LABEL_3956_11
+	call	:detectCollisionWithSonic
 	ret	c
 	ld	bc,._999e
 	call	._9aaf
@@ -53,7 +53,7 @@ PROC    :doObjectCode_platform_flipper          SECTION ::objects
 	ld	($.TEMP6),hl
 	ld	(ix+#object.width),$1e
 	ld	(ix+#object.height),$16
-	call	:_LABEL_3956_11
+	call	:detectCollisionWithSonic
 	ret	c
 	ld	bc,._99be
 	call	._9aaf
@@ -118,7 +118,7 @@ PROC    :doObjectCode_platform_flipper          SECTION ::objects
 	ld	($.TEMP6),hl
 	ld	(ix+#object.width),$1e
 	ld	(ix+#object.height),$16
-	call	:_LABEL_3956_11
+	call	:detectCollisionWithSonic
 	ret	c
 	ld	bc,._99de
 	call	._9aaf

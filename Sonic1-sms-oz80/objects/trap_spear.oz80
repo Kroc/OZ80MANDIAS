@@ -3,8 +3,8 @@
 
 PROC    :doObjectCode_trap_spear                SECTION ::objects
 {
-	set	5,(ix+#object.unknown18)
-	bit	0,(ix+#object.unknown18)
+	set	5,(ix+#object.flags)
+	bit	0,(ix+#object.flags)
 	jr	nz,._1
 	ld	l,(ix+#object.X.lo)
 	ld	h,(ix+#object.X.hi)
@@ -12,7 +12,7 @@ PROC    :doObjectCode_trap_spear                SECTION ::objects
 	add	hl,de
 	ld	(ix+#object.X.lo),l
 	ld	(ix+#object.X.hi),h
-	set	0,(ix+#object.unknown18)
+	set	0,(ix+#object.flags)
 ._1	ld	l,(ix+#object.X.lo)
 	ld	h,(ix+#object.X.hi)
 	ld	($.TEMP1),hl
@@ -91,7 +91,7 @@ PROC    :doObjectCode_trap_spear                SECTION ::objects
 	ld	a,(hl)
 	ld	(ix+#object.width),$01
 	ld	(ix+#object.height),a
-	call	:_LABEL_3956_11
+	call	:detectCollisionWithSonic
 	call	nc,:_35fd
 	ld	a,($.FRAMECOUNT)
 	cp	$80

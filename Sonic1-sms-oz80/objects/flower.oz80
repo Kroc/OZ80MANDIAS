@@ -2,12 +2,12 @@
 `OBJECT: flower (Green Hill)
 
 PROC    :doObjectCode_flower                    SECTION ::objects {
-	set	5,(ix+#object.unknown18)
-	bit	0,(ix+#object.unknown18)
+	set	5,(ix+#object.flags)
+	bit	0,(ix+#object.flags)
 	jr	nz,._1
 	ld	(ix+#object.unknown11),$32
 	ld	(ix+$12),$00
-	set	0,(ix+#object.unknown18)
+	set	0,(ix+#object.flags)
 ._1	ld	bc,$0000
 	ld	l,(ix+#object.X.lo)
 	ld	h,(ix+#object.X.hi)

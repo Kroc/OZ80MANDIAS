@@ -1,9 +1,10 @@
 `____________________________________________________________________________[$732C]___
 `OBJECT: capsule
 
-PROC    :doObjectCode_boss_capsule              SECTION ::objects {
-	set	5,(ix+#object.unknown18)
-	bit	0,(ix+#object.unknown18)
+PROC    :doObjectCode_boss_capsule              SECTION ::objects
+{
+	set	5,(ix+#object.flags)
+	bit	0,(ix+#object.flags)
 	jr	nz,._1
 	ld	l,(ix+#object.Y.lo)
 	ld	h,(ix+#object.Y.hi)
@@ -11,11 +12,11 @@ PROC    :doObjectCode_boss_capsule              SECTION ::objects {
 	add	hl,de
 	ld	(ix+#object.Y.lo),l
 	ld	(ix+#object.Y.hi),h
-	set	0,(ix+#object.unknown18)
+	set	0,(ix+#object.flags)
 ._1	ld	(ix+#object.width), 28
 	ld	(ix+#object.height),64
 	ld	hl,._7564
-	bit	1,(ix+#object.unknown18)
+	bit	1,(ix+#object.flags)
 	jr	z,._2
 	ld	hl,._757c
 ._2	ld	a,($.FRAMECOUNT)
@@ -61,7 +62,7 @@ PROC    :doObjectCode_boss_capsule              SECTION ::objects {
 	
 	ld	hl,$0002
 	ld	($.TEMP6),hl
-	call	:_LABEL_3956_11
+	call	:detectCollisionWithSonic
 	jp	c,._8
 	
 	ld	a,($.SONIC.Ydirection)
@@ -123,7 +124,7 @@ PROC    :doObjectCode_boss_capsule              SECTION ::objects {
 	ld	hl,($.D2E6)
 	ld	($.SONIC.Yspeed),hl
 	ld	($.SONIC.Ydirection),a
-	ld	hl,$.SONIC.unknown18
+	ld	hl,$.SONIC.flags
 	set	7,(hl)
 	ld	a,c
 	cp	$03
@@ -155,7 +156,7 @@ PROC    :doObjectCode_boss_capsule              SECTION ::objects {
 	inc	(ix+$12)
 	ret
 	
-._10	bit	1,(ix+#object.unknown18)
+._10	bit	1,(ix+#object.flags)
 	jr	nz,._11
 	ld	a,$a0
 	ld	($.D289),a
@@ -163,7 +164,7 @@ PROC    :doObjectCode_boss_capsule              SECTION ::objects {
 	ld	a,#index_music_actComplete
 	rst	:rst_playMusic
 	
-	set	1,(ix+#object.unknown18)
+	set	1,(ix+#object.flags)
 ._11	xor	a;zero
 	ld	(ix+#object.spriteLayout.lo),a;zero
 	ld	(ix+#object.spriteLayout.hi),a;zero

@@ -2,12 +2,12 @@
 `OBJECT: UNKNOWN
 
 PROC    :_8218                                  SECTION ::objects {
-	res	5,(ix+#object.unknown18)
+	res	5,(ix+#object.flags)
 	ld	(ix+#object.width),$0c
 	ld	(ix+#object.height),$10
 	ld	hl,$0202
 	ld	($.TEMP6),hl
-	call	:_LABEL_3956_11
+	call	:detectCollisionWithSonic
 	call	nc,:_35fd
 	ld	l,(ix+#object.Xspeed.lo)
 	ld	h,(ix+#object.Xspeed.hi)

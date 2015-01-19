@@ -3,8 +3,8 @@
 
 PROC    :doObjectCode_badnick_buzzBomber        SECTION ::objects {
         
-	set	5,(ix+#object.unknown18)
-	bit	0,(ix+#object.unknown18)
+	set	5,(ix+#object.flags)
+	bit	0,(ix+#object.flags)
 	jr	nz,._1
 	ld	e,(ix+#object.X.lo)
 	ld	d,(ix+#object.X.hi)
@@ -24,7 +24,7 @@ PROC    :doObjectCode_badnick_buzzBomber        SECTION ::objects {
 	add	hl,bc
 	sbc	hl,de
 	ret	nc
-	set	0,(ix+#object.unknown18)
+	set	0,(ix+#object.flags)
 ._1	ld	(ix+#object.width), 20
 	ld	(ix+#object.height),32
 	ld	l,(ix+#object.X.lo)
@@ -69,7 +69,7 @@ PROC    :doObjectCode_badnick_buzzBomber        SECTION ::objects {
 	ld	(ix+#object.X.lo),a
 	ld	a,(ix+#object.unknown15)
 	ld	(ix+#object.X.hi),a
-	res	0,(ix+#object.unknown18)
+	res	0,(ix+#object.flags)
 	ret
 	
 ._5	ld	c,$ff
@@ -149,7 +149,7 @@ PROC    :doObjectCode_badnick_buzzBomber        SECTION ::objects {
 	call	:_7c41
 	ld	hl,$1000
 	ld	($.TEMP6),hl
-	call	:_LABEL_3956_11
+	call	:detectCollisionWithSonic
 	ld	hl,$1004
 	ld	($.TEMP1),hl
 	call	nc,:_35e5

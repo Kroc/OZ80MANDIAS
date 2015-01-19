@@ -545,9 +545,12 @@ Public Function Tokenise( _
         
         'If the token consititutes an Expression (a calculable Value)
         '..............................................................................
-        ElseIf (t = TOKEN_CONST) Or _
+        ElseIf (t = TOKEN_CHUNK_OPEN) Or _
+               (t = TOKEN_CONST) Or _
                (t = TOKEN_HASH) Or _
+               (t = TOKEN_KEYWORD_HI) Or _
                (t = TOKEN_LABEL) Or _
+               (t = TOKEN_KEYWORD_LO) Or _
                (t = TOKEN_NUMBER) Or _
                (t = TOKEN_OPERATOR_SUB) Or _
                (t = TOKEN_PROPERTY_USE) Or _
@@ -564,8 +567,8 @@ Public Function Tokenise( _
         ElseIf (t = TOKEN_TEXT) Then
             Let My_IsList(t) = True
         
-        'Z80 parameters are Expressions, with the addition of Z80 register / memory _
-         references, e.g. `(ix+$FF)`
+        'Z80 parameters are Expressions, with the addition of _
+         Z80 register / memory references, e.g. `(ix+$FF)`
         '..............................................................................
         ElseIf (t = TOKEN_Z80MEM_OPEN) Then
             Let My_IsParameter(t) = True
@@ -625,7 +628,7 @@ Public Function Tokenise( _
     Let Word.Buffer = BUFFER_1K
     
     'These will track the "mode" of the text as we go
-    Dim IsQuote As Long
+    Dim IsText As Long, TextMode As Long
     Dim IsComment As Long, IsCommentMulti As Long
     
     'These are used whilst converting words into real numbers
@@ -642,8 +645,8 @@ Public Function Tokenise( _
     Dim Line As Long, Col As Long
     Let Line = 1: Let PrevLine = 1
     
-    'Read a single word: _
-     ..................................................................................
+    'Read a single word:
+    '----------------------------------------------------------------------------------
 ReadWord:
     '*** TIMER BEGIN ***
     Call oz80.Profiler.EventBegin(EVENT_TOKENISE_READWORD)
@@ -719,7 +722,7 @@ ReadChar:
         
     'Parsable Text: ...................................................................
     '(NOTE: Falsey checks are slightly faster)
-    ElseIf IsQuote = 0 Then
+    ElseIf IsText = 0 Then
         'Special handling for the beginning of a word
         If Word.IsNull Then
             'Skip whitespace before the word begins
@@ -745,26 +748,32 @@ ReadChar:
             If Char = SYNTAX_OPERATOR_OR Then GoTo Punctuation
             If Char = SYNTAX_OPERATOR_AND Then GoTo Punctuation
             If Char = SYNTAX_OPERATOR_XOR Then GoTo Punctuation
+            
+            'Is this text? (in which case, ignore wordbreaks until text end). _
+             the opening quote is included so that we can recognise it for tokenising
+            If Char = SYNTAX_TEXT Then
+                Let IsText = True: Let TextMode = 0: GoTo NextChar
+                'TODO
+            End If
+            
+            If Char = SYNTAX_COMMENT Then
+                Let IsComment = True: GoTo NextChar
+            End If
         Else
             'A word is underway, check for end of line
-            If Char = ASC_LF Then
-                'The end of a line ends a single-line comment:
-                If Not IsCommentMulti Then
-                    If IsComment Then Let IsComment = False: GoTo ReadWord
-                End If
-                'End of the line ends the word
-                GoTo TokenWord
-            End If
+            If Char = ASC_LF Then GoTo TokenWord
             
             'End the word on a space
             If Source.CharIsSpace(SourcePos) Then GoTo TokenWord
             
             'Symbols that can break a word in the middle without spaces to separate
             If Char = SYNTAX_NEXT Then GoTo WordBreak
-            If Char = SYNTAX_Z80MEM_OPEN Then GoTo WordBreak
-            If Char = SYNTAX_Z80MEM_CLOSE Then GoTo WordBreak
             If Char = SYNTAX_CHUNK_OPEN Then GoTo WordBreak
             If Char = SYNTAX_CHUNK_CLOSE Then GoTo WordBreak
+            If Char = SYNTAX_HASH_OPEN Then GoTo WordBreak
+            If Char = SYNTAX_HASH_CLOSE Then GoTo WordBreak
+            If Char = SYNTAX_Z80MEM_OPEN Then GoTo WordBreak
+            If Char = SYNTAX_Z80MEM_CLOSE Then GoTo WordBreak
             
             If Char = SYNTAX_OPERATOR_ADD Then GoTo WordBreak
             If Char = SYNTAX_OPERATOR_SUB Then GoTo WordBreak
@@ -775,27 +784,44 @@ ReadChar:
             If Char = SYNTAX_OPERATOR_OR Then GoTo WordBreak
             If Char = SYNTAX_OPERATOR_AND Then GoTo WordBreak
             If Char = SYNTAX_OPERATOR_XOR Then GoTo WordBreak
-        End If
-        
-        'Is this text? (in which case, ignore wordbreaks until text end). _
-         the opening quote is included so that we can recognise it for tokenising
-        If Char = SYNTAX_TEXT Then Let IsQuote = True: GoTo NextChar
-        
-        'Check for comment marker
-        If Char = SYNTAX_COMMENT Then
-            Let IsComment = True
+            
+            If Char = SYNTAX_TEXT Then GoTo WordBreak
+            
             'If a comment begins at the end of a word without any space to separate, _
              we need to first keep the word before switching to comment parsing
-            If Word.IsNull Then GoTo NextChar
-            'Split the word away from the comment
-            GoTo WordBreak
-            
+            If Char = SYNTAX_COMMENT Then
+                Let IsComment = True: GoTo WordBreak
+            End If
         End If
         
-    'Strings: .........................................................................
-    Else
+    'Text: ............................................................................
+    ElseIf TextMode = 0 Then
+        'Check for multiple opening quotes
+        If Word.Length = 1 And Char = SYNTAX_TEXT Then
+            Let TextMode = TextMode + 1: GoTo SkipChar
+        End If
         'Skip over the closing quote so that it doesn't get tokenised
-        If Char = SYNTAX_TEXT Then Let IsQuote = False: GoTo TokenWord
+        If Char = SYNTAX_TEXT Then Let IsText = False: GoTo TokenWord
+    
+    ElseIf TextMode = 1 Then
+        'Check for multiple opening quotes
+        If Word.Length = 1 And Char = SYNTAX_TEXT Then
+            Let TextMode = TextMode + 1: GoTo SkipChar
+        End If
+        'End of line ends the text
+        If Char = ASC_LF Then Let IsText = False: GoTo TokenWord
+        
+    ElseIf TextMode = 2 Then
+        'Three quotes ends the text
+        If Char = SYNTAX_TEXT Then Let TextMode = TextMode + 1: GoTo SkipChar
+        
+    ElseIf TextMode < 5 Then
+        If Char = SYNTAX_TEXT Then Let TextMode = TextMode + 1: GoTo SkipChar
+        Stop
+    
+    ElseIf TextMode = 5 Then
+        'Triple text mode has ended
+        Let IsText = False: GoTo TokenWord
     End If
     
 NextChar:
@@ -826,8 +852,11 @@ TokenWord:
     '*** TIMER BEGIN ***
     Call oz80.Profiler.EventBegin(EVENT_TOKENISE_TOKENWORD)
     
+    'Just a loop counter
+    Dim i As Long
+    
     'Create an upper-case copy of the word for easy ASCII-code comparisons
-    Dim WordUCase As bluString: Set WordUCase = Nothing
+    Dim WordUCase As bluString
     Set WordUCase = Word.Clone.UCase
     'Extract the 1st, 2nd, 3rd & 4th letters of the word as these make up most _
      comparisons and can be done quickly without resorting to Strings
@@ -837,9 +866,6 @@ TokenWord:
     If Word.Length > 3 Then Let Asc4 = WordUCase.Char(3) Else Let Asc4 = ASC_NUL
     If Word.Length > 2 Then Let Asc3 = WordUCase.Char(2) Else Let Asc3 = ASC_NUL
     If Word.Length > 1 Then Let Asc2 = WordUCase.Char(1) Else Let Asc2 = ASC_NUL
-    
-    'Just a loop counter
-    Dim i As Long
     
     'Comma (very common!) _
      .......................................................................... `,` ...
@@ -1035,7 +1061,7 @@ TokenWord:
         If Word.Equals(STR_CPIR) Then Call Add(TOKEN_Z80_CPIR): GoTo NextWord
         If Word.Equals(STR_CPL) Then Call Add(TOKEN_Z80_CPL): GoTo NextWord
         'Z80 flag condition
-        If Asc2 = 0 Then Call Add(TOKEN_Z80_C): GoTo NextWord
+        If Asc2 = ASC_NUL Then Call Add(TOKEN_Z80_C): GoTo NextWord
         
     ElseIf Asc1 = ASC_D Then '................................................. `d` ...
         'Z80 instructions

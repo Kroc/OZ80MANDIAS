@@ -41,6 +41,7 @@ Public Enum OZ80_ERROR
     OZ80_ERROR_DUPLICATE                'A name has been defined twice
     OZ80_ERROR_DUPLICATE_CONSTANT       '- Constant already defined
     OZ80_ERROR_DUPLICATE_LABEL          '- Duplicate Label
+    OZ80_ERROR_DUPLICATE_PROC_HELP      '- Duplicate `HELP` parameter
     OZ80_ERROR_DUPLICATE_PROC_INTERRUPT '- Duplicate `INTERRUPT` parameter
     OZ80_ERROR_DUPLICATE_PROC_PARAMS    '- Duplicate `PARAMS` parameter
     OZ80_ERROR_DUPLICATE_PROC_RETURN    '- Duplicate `RETURN` parameter
@@ -78,6 +79,7 @@ Public Enum OZ80_ERROR
     OZ80_ERROR_INVALID_WORD             'Couldn't parse a word
     OZ80_ERROR_INVALID_Z80PARAMS        'Not the right parameters for a Z80 instruction
     OZ80_ERROR_OVERFLOW                 'A number overflowed the maximum
+    OZ80_ERROR_OVERFLOW_HILO            '- HI & LO functions limited to 16-bit inputs
     OZ80_ERROR_OVERFLOW_LINE            '- Line too long
     OZ80_ERROR_OVERFLOW_FILE            '- File too long / large
     OZ80_ERROR_OVERFLOW_Z80             '- 16-bit number used with an 8-bit instruction

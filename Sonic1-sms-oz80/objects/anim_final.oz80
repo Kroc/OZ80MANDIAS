@@ -2,9 +2,9 @@
 `OBJECT: final animation
 
 PROC :doObjectCode_anim_final {
-	set	5,(ix+#object.unknown18)
+	set	5,(ix+#object.flags)
 	ld	(iy+#vars.joypad),$ff
-	bit	1,(ix+#object.unknown18)
+	bit	1,(ix+#object.flags)
 	jr	nz,._1
 	ld	hl,:S1_BossPalette
 	ld	a,%00000010
@@ -15,7 +15,7 @@ PROC :doObjectCode_anim_final {
 	ld	($.SONIC.Y),hl
 	ld	(ix+$12),$ff
 	set	6,(iy+#vars.timeLightningFlags)
-	set	1,(ix+#object.unknown18)
+	set	1,(ix+#object.flags)
 ._1	ld	a,($.FRAMECOUNT)
 	rrca	
 	jr	c,._2
@@ -62,11 +62,11 @@ PROC :doObjectCode_anim_final {
 	ld	($.CAMERA_X),de
 ._3	ld	(ix+#object.spriteLayout.lo),._bf21.lo
 	ld	(ix+#object.spriteLayout.hi),._bf21.hi
-	bit	0,(ix+#object.unknown18)
+	bit	0,(ix+#object.flags)
 	jr	nz,._4
 	ld	hl,$1008
 	ld	($.TEMP6),hl
-	call	:_LABEL_3956_11
+	call	:detectCollisionWithSonic
 	jr	c,._4
 	ld	de,$0001
 	ld	hl,($.SONIC.Yspeed)
@@ -83,12 +83,12 @@ PROC :doObjectCode_anim_final {
 	ld	($.SONIC.Yspeed),hl
 	ld	($.SONIC.Ydirection),a
 	res	6,(iy+#vars.timeLightningFlags)
-	set	0,(ix+#object.unknown18)
+	set	0,(ix+#object.flags)
 	ld	(ix+#object.unknown11),$01
 	ld	a,$01
 	rst	:rst_playSFX
 ._4	call	:_79fa
-	bit	0,(ix+#object.unknown18)
+	bit	0,(ix+#object.flags)
 	ret	z
 	xor	a;zero
 	ld	(ix+#object.Yspeed.lo),$40

@@ -3,7 +3,7 @@
 
 PROC    :doObjectCode_badnick_jaws              SECTION ::objects
 {
-	set	5,(ix+#object.unknown18)
+	set	5,(ix+#object.flags)
 	ld	a,(ix+#object.unknown11)
 	cp	$80
 	jr	nc,._1
@@ -14,7 +14,7 @@ PROC    :doObjectCode_badnick_jaws              SECTION ::objects
 	ld	(ix+#object.height),12
 	ld	hl,$0a02
 	ld	($.TEMP6),hl
-	call	:_LABEL_3956_11
+	call	:detectCollisionWithSonic
 	ld	hl,$0008
 	ld	($.TEMP1),hl
 	call	nc,:_35e5
@@ -30,7 +30,7 @@ PROC    :doObjectCode_badnick_jaws              SECTION ::objects
 	ld	(ix+#object.height),$0c
 	ld	hl,$0202
 	ld	($.TEMP6),hl
-	call	:_LABEL_3956_11
+	call	:detectCollisionWithSonic
 	ld	hl,$0000
 	ld	($.TEMP1),hl
 	call	nc,:_35e5

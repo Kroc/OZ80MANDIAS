@@ -3,8 +3,8 @@
    for MaSS1VE: The Master System Sonic 1 Visual Editor <github.com/Kroc/MaSS1VE>
    ================================================================================= ``
 
-PROC    :decompressArt                          SECTION ::main
-        `====================================================================[$0405]===
+PROC    :decompressArt                          SECTION ::main                  `$0405
+        `==============================================================================
 PARAMS	hl	        `relative address from the beginning of the intended bank (A)
 	de	        `VDP register number (D) and value byte (E) to send to the VDP
 	a;bank          `bank number for the relative address HL
@@ -294,8 +294,8 @@ PARAMS	hl	        `relative address from the beginning of the intended bank (A)
                 %10000000
 }
 
-PROC    :decompressScreen                       SECTION ::main
-        `====================================================================[$0501]===
+PROC    :decompressScreen                       SECTION ::main                  `$0501
+        `==============================================================================
         ``a screen layout is compressed using RLE (run-length-encoding). any byte that
           there are multiple of in a row are listed as two repeating bytes, followed
           by another byte specifying the remaining number of times to repeat``
@@ -407,8 +407,8 @@ PARAMS	bc              `length of the compressed data
 	jp	._5
 }
 
-PROC    :loadPalette                            SECTION ::main
-        `====================================================================[$0566]===
+PROC    :loadPalette                            SECTION ::main                  `$0566
+        `==============================================================================
 PARAMS	a;flags	        `which palette(s) to set
                          `bit 0 - tile palette (0-15)
                          `bit 1 - sprite palette (16-31)
@@ -458,8 +458,8 @@ RETURN	$.LOADPALETTE_TILE,
 	ret
 }
 
-PROC    :clearVRAM                              SECTION ::main
-        `====================================================================[$0595]===
+PROC    :clearVRAM                              SECTION ::main                  `$0595
+        `==============================================================================
         `called only by `::interrupts:init`
         
 PARAMS	hl;addr 	`VRAM address
@@ -483,8 +483,8 @@ PARAMS	hl;addr 	`VRAM address
 	ret
 }
 
-PROC    :readJoypad                             SECTION ::main
-        `====================================================================[$05A7]===
+PROC    :readJoypad                             SECTION ::main                  `$05A7
+        `==============================================================================
 RETURN	$.VARS.joypad
 {       
 	in	a, ($.SMS.JOYPADA)	        `read the joypad port
@@ -494,11 +494,11 @@ RETURN	$.VARS.joypad
 	ret
 }
 
-PROC    :print                                  SECTION ::main
-        `====================================================================[$05AF]===
-PARAMS	hl              `address to memory with column & row numbers,
-{                       `then data terminated with $FF
-
+PROC    :print                                  SECTION ::main                  `$05AF
+        `==============================================================================
+PARAMS	hl;addr         HELP ""Address to memory with column & row numbers,
+                             ""then text data terminated with $FF
+{
 	`get the column number
 	ld	c, (hl)
 	inc	hl
@@ -556,21 +556,22 @@ PARAMS	hl              `address to memory with column & row numbers,
 	ret
 }
 
-PROC    :hideSprites                            SECTION ::main
-        `====================================================================[$05E2]===
-{        
-	ld	hl, $.SPRITES
-	ld	e, l
-	ld	d, h
-	ld	bc, 3 * 63		        `three bytes (X/Y/I) for each sprite
+PROC    :hideSprites                            SECTION ::main                  `$05E2
+        `==============================================================================
+{       
+        `get the address of the game's main sprite table
+	ld	hl;table, $.SPRITETABLE
+	ld	e;table, l;table                `copy to DE
+	ld	d;table, h;table
+	ld	bc, 3 * 63		        `= size of $.SPRITETABLE
 	`set the first two bytes as 224 (X&Y position)
-	ld	a, 224
-	ld	(de), a
-	inc	de
-	ld	(de), a
+	ld	a;pos, 224
+	ld	(de;table), a;pos
+	inc	de;table
+	ld	(de;table), a;pos
 	`then move forward another two bytes (skips the sprite index number)
-	inc	de
-	inc	de
+	inc	de;table
+	inc	de;table
 	`copy 189 bytes from $D000 to $D003+ (up to $D0C0)
 	ldir
 	
@@ -585,8 +586,8 @@ PROC    :hideSprites                            SECTION ::main
 	ret
 }
 
-PROC    :decimalMultiplyBy10                    SECTION ::main
-        `====================================================================[$05FC]===
+PROC    :decimalMultiplyBy10                    SECTION ::main                  `$05FC
+        `==============================================================================
         `does a decimal multiplication by 10. e.g. 3 > 30
         
 PARAMS	hl	        `input number, e.g. RAM_LIVES
@@ -611,12 +612,12 @@ PARAMS	hl	        `input number, e.g. RAM_LIVES
 	ret
 }
 
-PROC    :_LABEL_60F_111                         SECTION ::main
-        `====================================================================[$060F]===
+PROC    :_LABEL_60F_111                         SECTION ::main                  `$060F
+        `==============================================================================
         `convert to decimal? (used by Map & Act Complete screens for the lives number)
-PARAMS	c	        `10
+PARAMS	c	        `10 - base?
 	hl	        `number of lives
-{        
+{       
 	xor	a;zero			        `set A to 0
 	ld	b, 16
 	
@@ -645,8 +646,8 @@ PARAMS	c	        `10
 	ret
 }
 
-PROC    :_LABEL_625_57                          SECTION ::main
-        `====================================================================[$0625]===
+PROC    :_LABEL_625_57                          SECTION ::main                  `$0625
+        `==============================================================================
         `random number generator?
 {        
 	push	hl, de
@@ -672,8 +673,8 @@ PROC    :_LABEL_625_57                          SECTION ::main
 	ret
 }
 
-PROC    :updateCamera                           SECTION ::main
-        `====================================================================[$063E]===
+PROC    :updateCamera                           SECTION ::main                  `$063E
+        `==============================================================================
         `calculate the VDP scroll offset according to the camera position?
 {        
 	`fill B with vertical and C with horizontal VDP scroll values
@@ -771,8 +772,8 @@ PROC    :updateCamera                           SECTION ::main
 	ret
 }
 
-PROC    :fillOverscrollCache                    SECTION ::main
-        `====================================================================[$06BD]===
+PROC    :fillOverscrollCache                    SECTION ::main                  `$06BD
+        `==============================================================================
         ``this fills in the cache of the overscroll area so that when the screen
           scrolls onto new tiles, they can be copied across in a fast and
           straight-forward fashion``
@@ -993,8 +994,8 @@ PROC    :fillOverscrollCache                    SECTION ::main
 .exit	ret
 }
 
-PROC    :fillScrollTiles                        SECTION ::main
-        `====================================================================[$07DB]===
+PROC    :fillScrollTiles                        SECTION ::main                  `$07DB
+        `==============================================================================
         `fill in new tiles when the screen has scrolled
 {        
 	bit	0, (iy+#vars.flags2)
@@ -1173,8 +1174,8 @@ PROC    :fillScrollTiles                        SECTION ::main
 	jp	._3
 }
 
-PROC    :getFloorLayoutRAMPosition              SECTION ::main
-        `====================================================================[$07D5]===
+PROC    :getFloorLayoutRAMPosition              SECTION ::main                  `$07D5
+        `==============================================================================
         `convert block X & Y co-ords into a location in the Floor Layout in RAM
         
 PARAMS  bc	        `a flag, $0000 or $0001 depending on callee
@@ -1283,11 +1284,11 @@ PARAMS  bc	        `a flag, $0000 or $0001 depending on callee
 	ret
 }
 
-PROC    :fillScreenWithFloorLayout              SECTION ::main
-        `====================================================================[$0966]===
+PROC    :fillScreenWithFloorLayout              SECTION ::main                  `$0966
+        `==============================================================================
         ``this routine is only called during level loading to populate the screen with
-          the visible portion of the Floor Layout. Scrolling fills in the new tiles so
-          a full refresh of the screen is not required``
+          the visible portion of the Floor Layout. Scrolling fills in only the new
+          tiles, so a full refresh of the screen is not required``
 {       
         `interrupts are disabled during this routine due to it writing to the display
         di
@@ -1333,10 +1334,10 @@ PROC    :fillScreenWithFloorLayout              SECTION ::main
 	add	hl,de			        `offset block index into solidity data
 	ld	a,(hl)			        `and get the solidity value
 	
-	`in the solidity data, bit 7 determines that the tile should appear in front
-	 `of sprites. rotate the byte three times to position bit 7 at bit 4. 
-	 `this byte will form the high-byte of the 16-bit value for the name table
-	 `entry (bit 4 will therefore become bit 12)
+	``in the solidity data, bit 7 determines that the tile should appear in front
+	  of sprites. rotate the byte three times to position bit 7 at bit 4. 
+	  this byte will form the high-byte of the 16-bit value for the name table
+	  entry (bit 4 will therefore become bit 12)``
 	rrca
 	rrca
 	rrca
@@ -1438,8 +1439,8 @@ PROC    :fillScreenWithFloorLayout              SECTION ::main
 	ret
 }
 
-PROC    :loadFloorLayout                        SECTION ::main
-        `====================================================================[$0A10]===
+PROC    :loadFloorLayout                        SECTION ::main                  `$0A10
+        `==============================================================================
 PARAMS	hl;addr         `address of Floor Layout data
 	bc;size	        `length of compressed data
 {        
@@ -1493,8 +1494,8 @@ PARAMS	hl;addr         `address of Floor Layout data
 	ret
 }
 
-PROC    :fadeOut                                SECTION ::main
-        `====================================================================[$0A40]===
+PROC    :fadeOut                                SECTION ::main                  `$0A40
+        `==============================================================================
 {        
 	ld	a, 1
 	ld	($.SMS.SLOT1), a
@@ -1546,8 +1547,8 @@ PROC    :fadeOut                                SECTION ::main
 	ret
 }
 
-PROC    :darkenPalette                          SECTION ::main
-        `--------------------------------------------------------------------[$0A90]---
+PROC    :darkenPalette                          SECTION ::main                  `$0A90
+        `------------------------------------------------------------------------------
         `fades a palette one step darker
         
 PARAMS	hl	        `source palette address
@@ -1585,8 +1586,8 @@ PARAMS	hl	        `source palette address
 	ret
 }
 
-PROC    :_aae                                   SECTION ::main
-        `====================================================================[$0AAE]===
+PROC    :_aae                                   SECTION ::main                  `$0AAE
+        `==============================================================================
 PARAMS  hl
 {
         ld	($.TEMP6),hl
@@ -1692,8 +1693,8 @@ PARAMS  hl
 	ret
 }
 
-PROC    :_b50                                   SECTION ::main
-        `====================================================================[$0B50]===
+PROC    :_b50                                   SECTION ::main                  `$0B50
+        `==============================================================================
         `erase RAM_PALETTE?
 {        
 	ld	($.TEMP6),hl
@@ -1707,8 +1708,8 @@ PROC    :_b50                                   SECTION ::main
 	jp	:_b60._1
 }
 
-PROC    :_b60                                   SECTION ::main
-        `--------------------------------------------------------------------[$0B60]---
+PROC    :_b60                                   SECTION ::main                  `$0B60
+        `------------------------------------------------------------------------------
 {                
 	ld	($.TEMP6),hl
 	
@@ -1803,8 +1804,8 @@ PROC    :_b60                                   SECTION ::main
 	ret
 }
 
-PROC    :getLevelBitFlag                        SECTION ::main
-        `====================================================================[$0C02]===
+PROC    :getLevelBitFlag                        SECTION ::main                  `$0C02
+        `==============================================================================
 PARAMS  hl	        `an address to a series of 19 bits, one for each level
                          `$.D305+: set by life monitor
                          `$.D30B+: set by emerald
@@ -1840,8 +1841,8 @@ PARAMS  hl	        `an address to a series of 19 bits, one for each level
 	ret
 }
 
-PROC    :loadPowerUpIcon                        SECTION ::main
-        `====================================================================[$0C1D]===
+PROC    :loadPowerUpIcon                        SECTION ::main                  `$0C1D
+        `==============================================================================
         `copy power-up icon into sprite VRAM
         
 PARAMS	hl	        `absolute address to uncompressed art data for the icons,

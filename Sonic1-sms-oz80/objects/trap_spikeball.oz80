@@ -3,10 +3,10 @@
 
 PROC    :doObjectCode_trap_spikeBall            SECTION ::objects
 {
-	set	5,(ix+#object.unknown18)
+	set	5,(ix+#object.flags)
 	ld	(ix+#object.width), 8
 	ld	(ix+#object.height),12
-	bit	0,(ix+#object.unknown18)
+	bit	0,(ix+#object.flags)
 	jr	nz,._1
 	ld	l,(ix+#object.X.lo)
 	ld	h,(ix+#object.X.hi)
@@ -20,7 +20,7 @@ PROC    :doObjectCode_trap_spikeBall            SECTION ::objects
 	add	hl,de
 	ld	(ix+#object.unknown14),l
 	ld	(ix+#object.unknown15),h
-	set	0,(ix+#object.unknown18)
+	set	0,(ix+#object.flags)
 ._1	ld	l,(ix+#object.unknown11)
 	ld	h,$00
 	add	hl,hl
@@ -49,7 +49,7 @@ PROC    :doObjectCode_trap_spikeBall            SECTION ::objects
 	ld	(ix+#object.Y.hi),h
 	ld	hl,$0204
 	ld	($.TEMP6),hl
-	call	:_LABEL_3956_11
+	call	:detectCollisionWithSonic
 	call	nc,:_35fd
 	ld	(ix+#object.spriteLayout.lo),._8987.lo
 	ld	(ix+#object.spriteLayout.hi),._8987.hi

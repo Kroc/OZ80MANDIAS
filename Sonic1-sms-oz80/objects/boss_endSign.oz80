@@ -45,13 +45,13 @@ PROC    :doObjectCode_boss_endSign              SECTION ::objects
 	ld	($.D26D),hl
 	
 	ld	c,(ix+#object.unknown13)
-	ld	a,($.SONIC.unknown18)
+	ld	a,($.SONIC.flags)
 	and	$80
 	ld	(ix+#object.unknown13),a
 	jr	z,._3
 	cp	c
 	jr	z,._3
-	bit	7,(ix+#object.unknown18)
+	bit	7,(ix+#object.flags)
 	jr	z,._3
 	ld	e,(ix+#object.X.lo)
 	ld	d,(ix+#object.X.hi)
@@ -87,7 +87,7 @@ PROC    :doObjectCode_boss_endSign              SECTION ::objects
 	jr	nz,._7
 	bit	2,(ix+#object.unknown11)
 	jr	z,._4
-	bit	7,(ix+#object.unknown18)
+	bit	7,(ix+#object.flags)
 	jr	z,._7
 	
 	ld	a,#index_music_actComplete
@@ -104,7 +104,7 @@ PROC    :doObjectCode_boss_endSign              SECTION ::objects
 	
 ._4	ld	hl,$0a0a
 	ld	($.TEMP6),hl
-	call	:_LABEL_3956_11
+	call	:detectCollisionWithSonic
 	jr	c,._7
 	bit	7,(ix+#object.Ydirection)
 	jr	nz,._7

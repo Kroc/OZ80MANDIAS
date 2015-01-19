@@ -2,17 +2,17 @@
 `OBJECT: boss (Jungle)
 
 PROC    :doObjectCode_boss_jungle               SECTION ::objects {
-	set	5,(ix+#object.unknown18)
+	set	5,(ix+#object.flags)
 	ld	(ix+#object.width), 32
 	ld	(ix+#object.height),28
-	bit	0,(ix+#object.unknown18)
+	bit	0,(ix+#object.flags)
 	jr	nz,._1
 	ld	hl,($.SONIC.Y)
 	ld	de,$00e0
 	and	a
 	sbc	hl,de
 	ret	nc
-	ld	a,($.SONIC.unknown18)
+	ld	a,($.SONIC.flags)
 	rlca	
 	ret	nc
 	`boss sprite set
@@ -45,7 +45,7 @@ PROC    :doObjectCode_boss_jungle               SECTION ::objects {
 	ld	hl,$0048
 	ld	($.CAMERA_Y_GOTO),hl
 	
-	set	0,(ix+#object.unknown18)
+	set	0,(ix+#object.flags)
 	
 ._1	call	:_7ca6
 	bit	0,(ix+#object.unknown11)
@@ -74,7 +74,7 @@ PROC    :doObjectCode_boss_jungle               SECTION ::objects {
 	jr	nz,._3
 	ld	(ix+#object.spriteLayout.lo),._81f4.lo
 	ld	(ix+#object.spriteLayout.hi),._81f4.hi
-	res	1,(ix+#object.unknown18)
+	res	1,(ix+#object.flags)
 	ld	(ix+#object.Xspeed.lo),$00
 	ld	(ix+#object.Xspeed.hi),$ff
 	ld	(ix+#object.Xdirection),$ff
@@ -87,7 +87,7 @@ PROC    :doObjectCode_boss_jungle               SECTION ::objects {
 	
 ._3	ld	(ix+#object.spriteLayout.lo),._8206.lo
 	ld	(ix+#object.spriteLayout.hi),._8206.hi
-	set	1,(ix+#object.unknown18)
+	set	1,(ix+#object.flags)
 	ld	(ix+#object.Xspeed.lo),$00
 	ld	(ix+#object.Xspeed.hi),$01
 	ld	(ix+#object.Xdirection),$00

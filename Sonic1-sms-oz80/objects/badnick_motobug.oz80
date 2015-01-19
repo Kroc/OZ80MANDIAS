@@ -2,7 +2,7 @@
 `OBJECT: badnick - motobug
 
 PROC    :doObjectCode_badnick_motobug           SECTION ::objects {
-	res	5,(ix+#object.unknown18)
+	res	5,(ix+#object.flags)
 	ld	(ix+#object.width), 10
 	ld	(ix+#object.height),16
 	ld	e,(ix+$12)
@@ -57,7 +57,7 @@ PROC    :doObjectCode_badnick_motobug           SECTION ::objects {
 	call	:_7c41
 	ld	hl,$0203
 	ld	($.TEMP6),hl
-	call	:_LABEL_3956_11
+	call	:detectCollisionWithSonic
 	ld	hl,$0000
 	ld	($.TEMP1),hl
 	call	nc,:_35e5

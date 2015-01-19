@@ -3,10 +3,10 @@
 
 PROC    :doObjectCode_trap_fireball             SECTION ::objects
 {
-	res	5,(ix+#object.unknown18)
+	res	5,(ix+#object.flags)
 	ld	(ix+#object.width), 4
 	ld	(ix+#object.height),10
-	bit	0,(ix+#object.unknown18)
+	bit	0,(ix+#object.flags)
 	jr	nz,._1
 	ld	l,(ix+#object.X.lo)
 	ld	h,(ix+#object.X.hi)
@@ -25,14 +25,14 @@ PROC    :doObjectCode_trap_fireball             SECTION ::objects
 	ld	(ix+#object.unknown14),l
 	ld	(ix+#object.unknown15),h
 	ld	(ix+#object.unknown11),$96
-	set	0,(ix+#object.unknown18)
+	set	0,(ix+#object.flags)
 	ld	bc,$0000
 	ld	de,$0000
 	call	:getFloorLayoutRAMPositionForObject
 	ld	a,(hl)
 	cp	$52
 	jr	z,._3
-	set	1,(ix+#object.unknown18)
+	set	1,(ix+#object.flags)
 ._1	ld	a,(ix+#object.unknown11)
 	and	a
 	jr	z,._4
@@ -52,7 +52,7 @@ PROC    :doObjectCode_trap_fireball             SECTION ::objects
 ._3	ld	a,$18
 	rst	:rst_playSFX
 ._4	xor	a;zero
-	bit	1,(ix+#object.unknown18)
+	bit	1,(ix+#object.flags)
 	jr	nz,._5
 	ld	(ix+#object.Xspeed.lo),$00
 	ld	(ix+#object.Xspeed.hi),$ff
@@ -69,13 +69,13 @@ PROC    :doObjectCode_trap_fireball             SECTION ::objects
 ._6	ld	(ix+#object.Yspeed.lo),a
 	ld	(ix+#object.Yspeed.hi),a
 	ld	(ix+#object.Ydirection),a
-	bit	6,(ix+#object.unknown18)
+	bit	6,(ix+#object.flags)
 	jr	nz,._7
-	bit	7,(ix+#object.unknown18)
+	bit	7,(ix+#object.flags)
 	jr	nz,._7
 	ld	hl,$0402
 	ld	($.TEMP6),hl
-	call	:_LABEL_3956_11
+	call	:detectCollisionWithSonic
 	call	nc,:_35fd
 	ld	e,(ix+#object.X.lo)
 	ld	d,(ix+#object.X.hi)

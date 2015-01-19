@@ -70,8 +70,8 @@ PROC    :pause                                  INTERRUPT $66
 	ret
 }
 
-PROC    :interruptHandler                       SECTION ::interrupts
-        `====================================================================[$0073]===
+PROC    :interruptHandler                       SECTION ::interrupts            `$0073
+        `==============================================================================
 {	
 	di				        `disable interrupts during interrupt!
 	
@@ -181,15 +181,15 @@ PROC    :interruptHandler                       SECTION ::interrupts
 	ret
 }
 
-PROC    :setJoypadButtonB                       SECTION ::interrupts
-        `--------------------------------------------------------------------[$00F2]---
+PROC    :setJoypadButtonB                       SECTION ::interrupts            `$00F2
+        `------------------------------------------------------------------------------
 {
 	res	5, (iy+#vars.joypad)	        `set joypad button 2 as on
 	ret
 }
 
-PROC    :_LABEL_F7_25                           SECTION ::interrupts
-        `--------------------------------------------------------------------[$00F7]---
+PROC    :_LABEL_F7_25                           SECTION ::interrupts            `$00F7
+        `------------------------------------------------------------------------------
 {       
 	`blank the screen (remove bit 6 of VDP register 1)
 	ld	a, ($.VDPREGISTER_1)	        `get our cache value from RAM
@@ -260,8 +260,8 @@ PROC    :_LABEL_F7_25                           SECTION ::interrupts
 	ret
 }
 	
-PROC	:loadPaletteFromInterrupt               SECTION ::interrupts
-        `--------------------------------------------------------------------[$0174]---
+PROC	:loadPaletteFromInterrupt               SECTION ::interrupts            `$0174
+        `------------------------------------------------------------------------------
         `load a palette using the parameters set by ':loadPaletteOnInterrupt'
         
 PARAMS	$.LOADPALETTE_ADDRESS   `address to the palette data
@@ -295,8 +295,8 @@ PARAMS	$.LOADPALETTE_ADDRESS   `address to the palette data
 	ret
 }
 
-PROC	:_LABEL_1A0_18                          SECTION ::interrupts
-        `--------------------------------------------------------------------[$01A0]---
+PROC	:_LABEL_1A0_18                          SECTION ::interrupts            `$10AD
+        `------------------------------------------------------------------------------
 {	
 	bit	7, (iy+#vars.flags6)	        `check the underwater flag
 	ret	z			        `if off, leave now
@@ -318,8 +318,8 @@ PROC	:_LABEL_1A0_18                          SECTION ::interrupts
         `NOTE: fall through the procedure below...
 }
 
-PROC	:loadPaletteFromInterrupt_water         SECTION ::interrupts
-        `--------------------------------------------------------------------[$01BA]---
+PROC	:loadPaletteFromInterrupt_water         SECTION ::interrupts            `$01BA
+        `------------------------------------------------------------------------------
         `called only from `loadPaletteFromInterrupt`
 {	
         `get the position of the water line on screen
@@ -367,8 +367,8 @@ PROC	:loadPaletteFromInterrupt_water         SECTION ::interrupts
 	ret
 }
 
-PROC	:doRasterSplit                          SECTION ::interrupts
-        `--------------------------------------------------------------------[$01F2]---
+PROC	:doRasterSplit                          SECTION ::interrupts            `$01F2
+        `------------------------------------------------------------------------------
 PARAMS 	a;step	                `the raster split step number (counts down from 3)
 {	
 	`step 1?
@@ -442,19 +442,19 @@ PARAMS 	a;step	                `the raster split step number (counts down from 3
 
 }
 
-TABLE   :S1_UnderwaterPalette                   SECTION ::interrupts        `[$024B]
+TABLE   :S1_UnderwaterPalette                   SECTION ::interrupts            `$024B
 {
 .tile   BYTE    $10 $14 $14 $18 $35 $34 $2C $39 $21 $20 $1E $09 $04 $1E $10 $3F
 .sprite BYTE    $00 $20 $35 $2E $29 $3A $00 $3F $14 $29 $3A $14 $3E $3A $19 $25
 }
-TABLE   :S1_UnderwaterPalette_Boss              SECTION ::interrupts        `[$026B]
+TABLE   :S1_UnderwaterPalette_Boss              SECTION ::interrupts            `$026B
 {
 .tile   BYTE    $10 $14 $14 $18 $35 $34 $2C $39 $21 $20 $1E $09 $04 $1E $10 $3F
 .sprite BYTE    $10 $20 $35 $2E $29 $3A $00 $3F $24 $3D $1F $17 $14 $3A $19 $00
 }
 
-PROC	:init                                   SECTION ::interrupts
-        `====================================================================[$028B]===
+PROC	:init                                   SECTION ::interrupts            `$028B
+        `==============================================================================
 {	
 	`tell the SMS the cartridge has no RAM and to use ROM banking
 	ld	a, %10000000
@@ -509,8 +509,8 @@ PROC	:init                                   SECTION ::interrupts
 	jp	:_LABEL_1C49_62
 }
 
-PROC 	:playMusic                              SECTION ::interrupts
-        `====================================================================[$02D7]===
+PROC 	:playMusic                              SECTION ::interrupts            `$02D7
+        `==============================================================================
         `the `rst $18` instruction ends up here
         
 PARAMS	a;songIndex	``index number of song to play
@@ -534,8 +534,8 @@ PARAMS	a;songIndex	``index number of song to play
 	ret
 }
 
-PROC	:muteSound                              SECTION ::interrupts
-        `====================================================================[$02ED]===
+PROC	:muteSound                              SECTION ::interrupts            `$02ED
+        `==============================================================================
         `the `rst $20` instruction ends up here
 {
 	di				        `disable interrupts
@@ -551,8 +551,8 @@ PROC	:muteSound                              SECTION ::interrupts
 	ret
 }
 
-PROC	:playSFX                                SECTION ::interrupts
-        `====================================================================[$02FE]===
+PROC	:playSFX                                SECTION ::interrupts            `$02FE
+        `==============================================================================
         `the `rst $28` instruction ends up here
 PARAMS	a;SFXIndex
 {
@@ -571,33 +571,33 @@ PARAMS	a;SFXIndex
 	ret
 }
 
-TABLE   :initVDPRegisterValues                  SECTION ::interrupts
-        `====================================================================[$031B]===
-{		                                                        `	cache:
-        BYTE %00100110   `VDP Reg#0:	        				$D218
+TABLE   :initVDPRegisterValues                  SECTION ::interrupts            `$031B
+        `==============================================================================
+{		                                                        `	`cache:
+        BYTE %00100110   `VDP Reg#0:	        				`$D218
             `......x.    stretch screen (33 columns)
             `.....x..    unknown
             `..x.....    hide left column (for scrolling)
 
-        BYTE %10100010	`VDP Reg#1: (original ROM)				$D219
+        BYTE %10100010	`VDP Reg#1: (original ROM)				`$D219
             `......x.    enable 8x16 sprites
             `..x.....    enable vsync interrupt
             `.x......	 disable screen (no display)                    
             `x.......    unknown                                        `these caches
                                                                         `are not used
-        BYTE $FF	`VDP Reg#2: place screen at VRAM:$3800		        $D21A
-        BYTE $FF	`VDP Reg#3: unused					$D21B
-        BYTE $FF	`VDP Reg#4: unused					$D21C
-        BYTE $FF	`VDP Reg#5: set sprites at VRAM:$3F00		        $D21D
-        BYTE $FF	`VDP Reg#6: set sprites to use tiles from VRAM:$2000	$D21E
-        BYTE $00	`VDP Reg#7: set border colour from the sprite palette	$D21F
-        BYTE $00	`VDP Reg#8: horizontal scroll offset			$D220
-        BYTE $00	`VDP Reg#9: vertical scroll offset			$D221
-        BYTE $FF	`VDP Reg#10: disable line interrupts			$D222
+        BYTE $FF	`VDP Reg#2: place screen at VRAM:$3800		        `$D21A
+        BYTE $FF	`VDP Reg#3: unused					`$D21B
+        BYTE $FF	`VDP Reg#4: unused					`$D21C
+        BYTE $FF	`VDP Reg#5: set sprites at VRAM:$3F00		        `$D21D
+        BYTE $FF	`VDP Reg#6: set sprites to use tiles from VRAM:$2000	`$D21E
+        BYTE $00	`VDP Reg#7: set border colour from the sprite palette	`$D21F
+        BYTE $00	`VDP Reg#8: horizontal scroll offset			`$D220
+        BYTE $00	`VDP Reg#9: vertical scroll offset			`$D221
+        BYTE $FF	`VDP Reg#10: disable line interrupts			`$D222
 }
 
-PROC	:waitForInterrupt                       SECTION ::interrupts
-        `====================================================================[$031C]===
+PROC	:waitForInterrupt                       SECTION ::interrupts            `$031C
+        `==============================================================================
         ``a commonly used routine to essentially 'refresh the screen' by halting main
           execution until the interrupt handler has done its work``
 {
@@ -608,8 +608,8 @@ PROC	:waitForInterrupt                       SECTION ::interrupts
 	ret
 }
 
-PROC    :unused_0323                            SECTION ::interrupts
-        `====================================================================[$0323]===
+PROC    :unused_0323                            SECTION ::interrupts            `$0323
+        `==============================================================================
 {        
 	set	2,(iy+#vars.flags0)
 	ld	($.UNUSED_D225),hl              `unused RAM location!
@@ -618,8 +618,8 @@ PROC    :unused_0323                            SECTION ::interrupts
 	ret
 }
 
-PROC	:loadPaletteOnInterrupt                 SECTION ::interrupts    
-        `====================================================================[$0333]===
+PROC	:loadPaletteOnInterrupt                 SECTION ::interrupts            `$0333
+        `==============================================================================
 PARAMS	a;flags, hl;addr
 {	
 	set	3, (iy+#vars.flags0)	        `set the flag for the interrupt handler
@@ -629,20 +629,20 @@ PARAMS	a;flags, hl;addr
 	ret
 }
 
-PROC	:updateVDPSprites                       SECTION ::interrupts
-        `====================================================================[$033E]===
+PROC	:updateVDPSprites                       SECTION ::interrupts            `$033E
+        `==============================================================================
 {	
 	`--- sprite Y positions -------------------------------------------------------
 	
 	`set the VDP address to $3F00 (sprite info table, Y-positions)
-	ld	a, $00
+	ld	a, LO $3F00
 	out	($.VDP.CONTROL), a
-	ld	a, $3F
+	ld	a, HI $3F00
 	or	%01000000		`add bit 6 to mark an address being given
 	out	($.VDP.CONTROL), a
 	
 	ld	b, (iy+#vars.spriteUpdateCount)
-	ld	hl, $.SPRITES+1	`Y-position of the first sprite
+	ld	hl, $.SPRITETABLE+1	`Y-position of the first sprite
 	ld	de, 3			`sprite table is 3 bytes per sprite
 	
 	ld	a, b
@@ -681,13 +681,13 @@ PROC	:updateVDPSprites                       SECTION ::interrupts
 	and	a
 	ret	z
 	
-	ld	hl, $.SPRITES	                `first X-position in the sprite table
+	ld	hl, $.SPRITETABLE	        `first X-position in the sprite table
 	ld	b, (iy+#vars.spriteUpdateCount)
 	
 	`set the VDP address to $3F80 (sprite info table, X-positions & indexes)
-	ld	a, $80
+	ld	a, LO $3F80
 	out	($.VDP.CONTROL), a
-	ld	a, $3F
+	ld	a, HI $3F80
 	or	%01000000		        `add bit 6 to mark an address is given
 	out	($.VDP.CONTROL), a
 	
@@ -708,8 +708,8 @@ PROC	:updateVDPSprites                       SECTION ::interrupts
 	ret
 }
 
-PROC    :unused_0397                            SECTION ::interrupts
-        `====================================================================[$0397]===
+PROC    :unused_0397                            SECTION ::interrupts            `$0397
+        `==============================================================================
         `fill VRAM from memory?
         
 PARAMS  bc      `number of bytes to copy
@@ -736,8 +736,8 @@ PARAMS  bc      `number of bytes to copy
 	ret
 }
 	
-PROC    :unused_03ac                            SECTION ::interrupts
-        `====================================================================[$03AC]===
+PROC    :unused_03ac                            SECTION ::interrupts            `$03AC
+        `==============================================================================
 PARAMS  a       `bank number for page 1, A+1 will be used as the bank number for page 2
         de      `VDP address
         hl      `?

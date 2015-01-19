@@ -8,8 +8,8 @@ PROC    :_9be8                                  SECTION ::objects
 	ld	(ix+#object.Xdirection),$00
 	ld	(ix+#object.spriteLayout.lo),._9c69.lo
 	ld	(ix+#object.spriteLayout.hi),._9c69.hi
-._9bfc	set	5,(ix+#object.unknown18)
-	bit	0,(ix+#object.unknown18)
+._9bfc	set	5,(ix+#object.flags)
+	bit	0,(ix+#object.flags)
 	jr	nz,._1
 	ld	a,(ix+#object.X.lo)
 	ld	(ix+#object.unknown11),a
@@ -17,7 +17,7 @@ PROC    :_9be8                                  SECTION ::objects
 	ld	(ix+$12),a
 	ld	a,$18
 	rst	:rst_playSFX
-	set	0,(ix+#object.unknown18)
+	set	0,(ix+#object.flags)
 ._1	ld	(ix+#object.width),$06
 	ld	(ix+#object.height),$08
 	ld	a,(ix+#object.unknown13)
@@ -25,7 +25,7 @@ PROC    :_9be8                                  SECTION ::objects
 	jr	nc,._2
 	ld	hl,$0400
 	ld	($.TEMP6),hl
-	call	:_LABEL_3956_11
+	call	:detectCollisionWithSonic
 	call	nc,:_35fd
 ._2	inc	(ix+#object.unknown13)
 	ld	a,(ix+#object.unknown13)

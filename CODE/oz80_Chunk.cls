@@ -20,7 +20,7 @@ Option Explicit
 'CLASS :: oz80_Chunk
 
 'Dependencies       oz80.bas _
-                    bluString.bas [bluArrayStrings.bas, bluArray.bas]
+                    bluString.bas [bluArrayStrings.bas, <bluArray.bas>]
 
 '--------------------------------------------------------------------------------------
 
@@ -65,13 +65,6 @@ Private My_Size As Long
 Private Const BUFFER_SIZE As Long = 1024
 Private BufferSize As Long
 
-'These are used for building the disassembly string quickly
-Private Const FORMAT_TEMPLATE As String = "{$} {$} {$} {$} {$} {$}"
-Private Const FORMAT_SKIP As String = "··"
-Private Const FORMAT_ED As String = "ED"
-Private Const FORMAT_CB As String = "CB"
-Private Template As bluString
-
 'CLASS Initialize
 '======================================================================================
 Private Sub Class_Initialize()
@@ -82,18 +75,12 @@ Private Sub Class_Initialize()
     
     'The ROM address of the Chunk can of course be 0, so default to indefinite
     Let Me.Address = -1
-    
-    'Initialise the template used for returning a string disassembly of the opcodes
-    Set Template = New bluString
-    Let Template.Text = FORMAT_TEMPLATE
-    Call Template.ReduceBuffer
 End Sub
 
 'CLASS Terminate
 '======================================================================================
 Private Sub Class_Terminate()
     Erase Data
-    Set Template = Nothing
 End Sub
 
 '/// PUBLIC INTERFACE /////////////////////////////////////////////////////////////////
@@ -134,9 +121,8 @@ End Sub
 'AddInstruction : Adds a Z80 instruction and parameters to the Chunk
 '======================================================================================
 'Prefix         | $DD for IX Register, $FD for IY Register, $ED for some opcodes
-'Opcode         | Z80 Instruction opcode, or $CB for $CB double opcodes
+'Opcode         | Z80 Instruction opcode
 'Offset         | 8-Bit Index for IX & IY memory references, e.g. "(IX+$FF)"
-'OpcodeCB       | The actual opcode when using $CB double opcodes
 'ValueLo        | 8-Bit value or the Low-byte of a 16-bit value
 'ValueHi        | High-byte of a 16-bit value
 '======================================================================================

@@ -3,7 +3,7 @@
 `OBJECT: wooden platform (Green Hill)
 
 PROC    :doObjectCode_platform                  SECTION ::objects {
-	set	5,(ix+#object.unknown18)
+	set	5,(ix+#object.flags)
 	
 	ld	(ix+#object.width), 26
 	ld	(ix+#object.height),16
@@ -16,7 +16,7 @@ PROC    :doObjectCode_platform                  SECTION ::objects {
 	
 	ld	hl,$0806
 	ld	($.TEMP6),hl
-	call	:_LABEL_3956_11
+	call	:detectCollisionWithSonic
 	jr	c,._2
 	
 	ld	de,$0000

@@ -2,7 +2,7 @@
 `OBJECT: badnick - chopper
 
 PROC    :doObjectCode_badnick_chopper           SECTION ::objects {
-	set	5,(ix+#object.unknown18)
+	set	5,(ix+#object.flags)
 	ld	(ix+#object.width),$08
 	ld	(ix+#object.height),$0c
 	ld	a,(ix+#object.unknown14)
@@ -14,9 +14,9 @@ PROC    :doObjectCode_badnick_chopper           SECTION ::objects {
 	ld	(ix+#object.spriteLayout.hi),a;zero
 	ret
 	
-._1	bit	0,(ix+#object.unknown18)
+._1	bit	0,(ix+#object.flags)
 	jr	nz,._3
-	bit	1,(ix+#object.unknown18)
+	bit	1,(ix+#object.flags)
 	jr	nz,._2
 	ld	l,(ix+#object.Y.lo)
 	ld	h,(ix+#object.Y.hi)
@@ -30,11 +30,11 @@ PROC    :doObjectCode_badnick_chopper           SECTION ::objects {
 	add	hl,de
 	ld	(ix+#object.X.lo),l
 	ld	(ix+#object.X.hi),h
-	set	1,(ix+#object.unknown18)
+	set	1,(ix+#object.flags)
 ._2	ld	(ix+#object.Yspeed.lo),$00
 	ld	(ix+#object.Yspeed.hi),$fc
 	ld	(ix+#object.Ydirection),$ff
-	set	0,(ix+#object.unknown18)
+	set	0,(ix+#object.flags)
 	ld	a,$12
 	rst	:rst_playSFX
 	ld	(ix+#object.unknown11),$03
@@ -71,7 +71,7 @@ PROC    :doObjectCode_badnick_chopper           SECTION ::objects {
 	ld	(ix+#object.Yspeed.hi),a
 	ld	(ix+#object.Ydirection),a
 	ld	(ix+#object.unknown14),$1e
-	res	0,(ix+#object.unknown18)
+	res	0,(ix+#object.flags)
 ._5	ld	de,._7de1
 	ld	bc,._7ddc
 	call	:_7c41
@@ -83,7 +83,7 @@ PROC    :doObjectCode_badnick_chopper           SECTION ::objects {
 	ld	(ix+#object.spriteLayout.hi),._7df7.hi
 ._6	ld	hl,$0204
 	ld	($.TEMP6),hl
-	call	:_LABEL_3956_11
+	call	:detectCollisionWithSonic
 	ld	hl,$0000
 	ld	($.TEMP1),hl
 	call	nc,:_35e5

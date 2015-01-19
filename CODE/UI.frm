@@ -55,10 +55,21 @@ Private Declare Function LockWindowUpdate Lib "user32" (ByVal hWnd As Long) As L
 Private WithEvents Assembler As oz80_Assembler
 Attribute Assembler.VB_VarHelpID = -1
 
-Private StrLog As String
+Private LogText As bluArrayStrings
 
-'FORM Load _
- ======================================================================================
+'/// EVENTS ///////////////////////////////////////////////////////////////////////////
+
+Private Sub Form_Initialize()
+    Set LogText = New bluArrayStrings
+    Let LogText.AllowDuplicates = True
+End Sub
+
+Private Sub Form_Terminate()
+    Set LogText = Nothing
+End Sub
+
+'FORM Load
+'======================================================================================
 Private Sub Form_Load()
     Call Me.Show
     
@@ -66,8 +77,9 @@ Private Sub Form_Load()
     Let StartTime = Timer
 
 '    Dim i As Long
-'    Dim Test As New bluString
-'    Let Test.Text = "ABCDÉF"
+    Dim Test As New bluString
+    Let Test.Text = "ABCDÉF"
+    Debug.Print Test.Left(10, ASTERISK).Text
     
 '    Debug.Print Test.Join(Test.Clone.LCase).Text
 '    Debug.Print Test.Append("!").Text
@@ -113,7 +125,7 @@ Err_True:
     
     Call SendMessageString( _
         Me.txtLog.hWnd, EM_REPLACESEL, _
-        ByVal 0, StrLog _
+        ByVal 0, LogText.Concatenate() _
     )
     
     Call SendMessage( _
@@ -174,7 +186,8 @@ Private Sub Log( _
 '    Debug.Print Text
     
 '    If LogLevel >= OZ80_LOG_DEBUG Then Exit Sub
-    Let StrLog = StrLog & (Text & vbCrLf)
+
+    Call LogText.Add(Text & vbCrLf)
     
 '    'http://weblogs.asp.net/jdanforth/88458
 '    Call SendMessage( _

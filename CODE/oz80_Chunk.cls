@@ -20,7 +20,7 @@ Option Explicit
 'CLASS :: oz80_Chunk
 
 'Dependencies       oz80.bas _
-                    bluString.bas [bluArrayStrings.bas, <bluArray.bas>]
+                    bluLog.bas [bluString.bas, bluArrayStrings.bas, <bluArray.bas>]
 
 '--------------------------------------------------------------------------------------
 
@@ -65,6 +65,9 @@ Private My_Size As Long
 Private Const BUFFER_SIZE As Long = 1024
 Private BufferSize As Long
 
+'A disassembly log is generated to let you peek into what's being assembled
+Public LogASM As bluLog
+
 'CLASS Initialize
 '======================================================================================
 Private Sub Class_Initialize()
@@ -75,12 +78,16 @@ Private Sub Class_Initialize()
     
     'The ROM address of the Chunk can of course be 0, so default to indefinite
     Let Me.Address = -1
+    
+    'Initialise the disassembly log
+    Set LogASM = New bluLog
 End Sub
 
 'CLASS Terminate
 '======================================================================================
 Private Sub Class_Terminate()
     Erase Data
+    Set LogASM = Nothing
 End Sub
 
 '/// PUBLIC INTERFACE /////////////////////////////////////////////////////////////////

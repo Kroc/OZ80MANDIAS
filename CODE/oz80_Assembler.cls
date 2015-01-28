@@ -67,6 +67,7 @@ Private Const LOG_Z80           As String = "{$} | {$} {$} {$} {$} {$} {$} | {$}
 Private Const LOG_Z80_CB        As String = "{$} | {$} CB {$} {$} ·· ·· | {$} " & vbTab & "{$}{$}{$}"
 Private Const LOG_Z80_VAL8      As String = "{$} | {$} {$} {$} ·· {$} ·· | {$} " & vbTab & "{$}{$}{$}"
 Private Const LOG_Z80_VAL16     As String = "{$} | {$} {$} ·· ·· {$} {$} | {$} " & vbTab & "{$}{$}"
+Private Const LOG_DATA          As String = "{$} | {$} {$} {$} {$} {$} {$} {$} {$} {$} {$} {$} {$} {$} {$} {$} {$} | {$}{$}{$}{$}{$}{$}{$}{$}{$}{$}{$}{$}{$}{$}{$}{$}"
 Private Const LOG_SECTION       As String = "SECTION {$}"
 
 'String constants to save these being temporarily created and destroyed multiple times
@@ -76,6 +77,23 @@ Private Const STR_START         As String = "START"
 'To save having to create and destroy short strings all the time, _
  we'll keep this one around for formatting log messages
 Private LogMsg As bluString
+
+'Which type of data the Chunk is recording (Z80 assembly or Data). _
+ This is used to produce the disassembly log
+Private ChunkMode As CHUNK_MODE
+Private Enum CHUNK_MODE
+    MODE_UNSET
+    MODE_Z80                            'When adding Z80 instructions
+    MODE_DATA                           'When adding data
+End Enum
+
+'When generating the disassembly log, we don't show data as 1-byte per line, _
+ but render it in typical bin-hex format of 16 hex-bytes followed by ASCII. _
+ We therefore need to remember up to 16 bytes as we go before we can output this
+Private ChunkData(0 To 15) As String
+Private ChunkDataIndex As Long
+'The address of where the line of data begins
+Private ChunkDataAddr As String * 4
 
 'Parsing: _
  --------------------------------------------------------------------------------------
@@ -286,16 +304,26 @@ End Enum
 'Output: _
  --------------------------------------------------------------------------------------
 
-'Each chunk of code / data is assembled separately from the others and with no final _
- position in the ROM in mind until all source has been parsed. Once all source is _
- parsed, the banks are chosen for the Chunks and the assembly copied into the ROM
-Private Chunks As Scripting.Dictionary
-'The current chunk being assembled into
+Private Chunks() As oz80_Chunk
+Private ChunkCount As Long
+
+'The current chunk being assembled into. This is a reference into the Chunks array _
+ so that we can speak to the current Chunk in scope consistently
 Private Chunk As oz80_Chunk
 
-'As we layout Chunks in the ROM, we need to keep track of the start addresses and _
- their lengths so that we can avoid conflicts and find empty space
-Private Layout As Scripting.Dictionary
+'These will be references to the special Chunks at fixed positions within the ROM _
+ (when laying out the ROM, we'll need to position these first)
+Private Chunk_Header As oz80_Chunk
+Private Chunk_Interrupt00 As oz80_Chunk
+Private Chunk_Interrupt08 As oz80_Chunk
+Private Chunk_Interrupt10 As oz80_Chunk
+Private Chunk_Interrupt18 As oz80_Chunk
+Private Chunk_Interrupt20 As oz80_Chunk
+Private Chunk_Interrupt28 As oz80_Chunk
+Private Chunk_Interrupt30 As oz80_Chunk
+Private Chunk_Interrupt38 As oz80_Chunk
+Private Chunk_Interrupt66 As oz80_Chunk
+Private Chunk_Start As oz80_Chunk
 
 '/// EVENTS ///////////////////////////////////////////////////////////////////////////
 
@@ -347,13 +375,6 @@ Private Sub Class_Initialize()
     
     'This is a re-usable temporary String for logging
     Set LogMsg = New bluString
-    
-    Set SectionSlots = New Scripting.Dictionary
-    
-    Set Values = New Scripting.Dictionary
-    Set Labels = New Scripting.Dictionary
-    Set Chunks = New Scripting.Dictionary
-    Set Layout = New Scripting.Dictionary
     
     '----------------------------------------------------------------------------------
     
@@ -456,8 +477,7 @@ End Sub
 'CLASS Terminate
 '======================================================================================
 Private Sub Class_Terminate()
-    'Clear the Section meta
-    Set SectionSlots = Nothing
+    Call Reset
     
     'Free the look-up tables for opcode building
     Erase OpcodeP_RegisterPair, OpcodeY_Bit, OpcodeY_Condition, _
@@ -465,6 +485,34 @@ Private Sub Class_Terminate()
     Erase TokenRegister
     
     Set LogMsg = Nothing
+End Sub
+
+Private Sub Reset()
+    'Dereference the currently attached Chunk
+    Set Chunk = Nothing
+    'Dereference the fixed Chunks so that the array can be emptied without _
+     keeping these ones alive
+    Set Chunk_Header = Nothing
+    Set Chunk_Interrupt00 = Nothing
+    Set Chunk_Interrupt08 = Nothing
+    Set Chunk_Interrupt10 = Nothing
+    Set Chunk_Interrupt18 = Nothing
+    Set Chunk_Interrupt20 = Nothing
+    Set Chunk_Interrupt28 = Nothing
+    Set Chunk_Interrupt30 = Nothing
+    Set Chunk_Interrupt38 = Nothing
+    Set Chunk_Interrupt66 = Nothing
+    Set Chunk_Start = Nothing
+    'Now erase the list of Chunks
+    Erase Chunks
+    
+    'Reset the value stores
+    Set SectionSlots = Nothing: Set SectionSlots = New Scripting.Dictionary
+    Set Values = Nothing:       Set Values = New Scripting.Dictionary
+    Set Labels = Nothing:       Set Labels = New Scripting.Dictionary
+    
+    Set File = Nothing
+    Erase Files
 End Sub
 
 'EVENT <File>_Error : Detailed error message from a File object
@@ -524,12 +572,7 @@ Public Function Assemble( _
     )
     
     'Clean up stuff from any previous assemble
-    Set File = Nothing: Erase Files
-    Set Chunk = Nothing: Call Chunks.RemoveAll
-    Call Values.RemoveAll
-    Call Labels.RemoveAll
-    Call SectionSlots.RemoveAll
-    Call Layout.RemoveAll
+    Call Reset
     
     '----------------------------------------------------------------------------------
     'Phase 1: First Pass & Assemble _
@@ -548,8 +591,9 @@ Public Function Assemble( _
     'Phase 2: Layout the ROM _
      ----------------------------------------------------------------------------------
     Call RaiseMessage(OZ80_LOG_ACTION, LOG_PHASE2)
-    'TODO: Error return
-    If LayoutROM Then GoTo Finish
+    'Now that the size of each Chunk is known, we can arrange the Chunks in the ROM _
+     space and determine each Label location
+    If Layout() Then GoTo Finish
     
     '----------------------------------------------------------------------------------
     'Phase 3: Second Parse & Assemble (now with ROM Addresses) _
@@ -573,12 +617,8 @@ Public Function Assemble( _
     Call RaiseMessage(OZ80_LOG_INFO, LOG_TIME, Format$(Timer - Begin, "0.000"))
     
 Finish:
-    'Clean up:
-    Set File = Nothing: Erase Files
-    Set Values = Nothing
-    Set Chunks = Nothing
-    Set Labels = Nothing
-    Set Layout = Nothing
+    'Clean up
+    Call Reset
     
     'Return the error code (also available in the `Error` property)
     Let Assemble = My_Error
@@ -1234,12 +1274,13 @@ ReadParams:
     Let FullLabelName = CurrentSection & CurrentLabel
     
     'You can't name two Chunks the same thing
-    If Chunks.Exists(FullLabelName) Then Call RaiseError(OZ80_ERROR_DUPLICATE_LABEL): GoTo ErrOut
+    If ChunkExists(FullLabelName) _
+        Then Call RaiseError(OZ80_ERROR_DUPLICATE_LABEL): GoTo ErrOut
     
     'Create the Chunk
     If Interrupt = INDEFINITE _
         Then Call BeginChunk(FullLabelName) _
-        Else Call BeginChunk(FullLabelName, CLng(Interrupt))
+        Else Call BeginChunk(FullLabelName, Interrupt)
     
 '    Dim LogMsg As String
 '    Let LogMsg = "PROC " & LabelName
@@ -1247,8 +1288,27 @@ ReadParams:
 '        Then Let LogMsg = LogMsg & " INTERRUPT $" & oz80.HexStr8(CLng(Interrupt))
 '    RaiseEvent Message(OZ80_LOG_STATUS, LogMsg)
     
+    'Log a header for the disassembly
+    Call Chunk.LogASM.Add("PROC {$}", LabelName)
+    Call Chunk.LogASM.Add("=========================================================================")
+    Let ChunkMode = MODE_UNSET
+    
     'Enter the Procedure Chunk to process its innards
     Call ScopeChunk
+    
+    'Finalise the disassembly log
+    If ChunkMode = MODE_DATA Then
+        Call Chunk.LogASM.Add( _
+            LOG_DATA, _
+            ChunkDataAddr, ChunkData, _
+            "·", "·", "·", "·", "·", "·", "·", "·", _
+            "·", "·", "·", "·", "·", "·", "·", "·" _
+        )
+    End If
+    Call Chunk.LogASM.Add( _
+        "=========================================================================" _
+    )
+    Call RaiseMessage(OZ80_LOG_DEBUG, Chunk.LogASM.Concatenate)
     
 ErrOut:
     'Leave this scope
@@ -1416,7 +1476,8 @@ Private Sub DefineStart()
     If Not File.NextToken() Then Call RaiseError(OZ80_ERROR_FILE_END): Exit Sub
     
     'You can't define the START procedure twice
-    If Chunks.Exists(STR_START) Then Call RaiseError(OZ80_ERROR_DUPLICATE_START): Exit Sub
+    If ChunkExists(STR_START) Then _
+        Call RaiseError(OZ80_ERROR_DUPLICATE_START): Exit Sub
     
     'Create the Chunk
     'TODO: Check that the System has been defined
@@ -1539,7 +1600,8 @@ ReadParams:
     Let FullLabelName = CurrentSection & CurrentLabel
     
     'You can't name two Chunks the same thing
-    If Chunks.Exists(FullLabelName) Then Call RaiseError(OZ80_ERROR_DUPLICATE_LABEL): GoTo ErrOut
+    If ChunkExists(FullLabelName) Then _
+        Call RaiseError(OZ80_ERROR_DUPLICATE_LABEL): GoTo ErrOut
     
     'Create the Chunk
     Call BeginChunk(FullLabelName)
@@ -1550,8 +1612,27 @@ ReadParams:
 '        Then Let LogMsg = LogMsg & " INTERRUPT $" & oz80.HexStr8(CLng(Interrupt))
 '    RaiseEvent Message(OZ80_LOG_STATUS, LogMsg)
     
-    'Enter the Procedure Chunk to process its innards
+    'Log a header for the disassembly
+    Call Chunk.LogASM.Add("TABLE {$}", LabelName)
+    Call Chunk.LogASM.Add("=========================================================================")
+    Let ChunkMode = MODE_UNSET
+    
+    'Enter the Table Chunk to process its innards
     Call ScopeChunk
+    
+    'Finalise the disassembly log
+    If ChunkMode = MODE_DATA Then
+        Call Chunk.LogASM.Add( _
+            LOG_DATA, _
+            ChunkDataAddr, ChunkData, _
+            "·", "·", "·", "·", "·", "·", "·", "·", _
+            "·", "·", "·", "·", "·", "·", "·", "·" _
+        )
+    End If
+    Call Chunk.LogASM.Add( _
+        "=========================================================================" _
+    )
+    Call RaiseMessage(OZ80_LOG_DEBUG, Chunk.LogASM.Concatenate)
     
 ErrOut:
     'Leave this scope
@@ -1559,9 +1640,10 @@ ErrOut:
     Let CurrentLabel = vbNullString
 End Sub
 
-'ScopeChunk: Within a code/data chunk, i.e. `PROC`, `TABLE`
+'ScopeChunk: Within a code/data Chunk, i.e. `PROC`, `TABLE`
 '======================================================================================
 Private Sub ScopeChunk()
+    Dim Value As Double
     'Within a code/data chunk we can have local labels, data statements and Z80 code
     
 Continue:
@@ -1569,14 +1651,74 @@ Continue:
     If File.TokenIsInstruction Then
         '*** TIMER BEGIN ***
         Call oz80.Profiler.EventBegin(EVENT_PROCESSZ80)
-        
         Call ProcessZ80
-        
         Call oz80.Profiler.EventEnd(EVENT_PROCESSZ80)
         '*** TIMER END ***
         
         If My_Error Then Exit Sub
         GoTo Continue
+    
+    '----------------------------------------------------------------------------------
+    'Byte Data
+    '----------------------------------------------------------------------------------
+'    ElseIf File.TokenKind = TOKEN_KEYWORD_BYTE Then
+'        'Move past the `BYTE` keyword
+'        If Not File.NextToken() Then Call RaiseError(OZ80_ERROR_FILE_END): Exit Sub
+'
+'        'There MUST be at least one list item after the keyword
+'        'TODO: Add error here
+'        If Not File.TokenIsList Then Stop
+'
+'        'Start walking the list
+'        Do
+'            If File.TokenIsExpression Then
+'                If ParseExpression(Value) Then Stop
+'
+'                If ChunkMode <> MODE_DATA Then
+'                    Dim i As Long
+'                    For i = 0 To 15
+'                        Let ChunkData(i) = oz80.HexStr8(-1)
+'                    Next
+'                    Let ChunkDataIndex = Chunk.Size Mod 16
+'                    Let ChunkDataAddr = oz80.HexStr16(Chunk.Size)
+'
+'                    If ChunkMode <> MODE_UNSET Then Call Chunk.LogASM.Add( _
+'                        "-----+-------------------+-----------------------------+-----------------" _
+'                    )
+'                    Call Chunk.LogASM.Add( _
+'                        "ADDR | 00 01 02 03 04 05 06 07 08 09 0A 0B 0C 0D 0E 0F | 0123456789ABCDEF" _
+'                    )
+'                    Call Chunk.LogASM.Add( _
+'                        "-----|-------------------------------------------------|-----------------" _
+'                    )
+'                    Let ChunkMode = MODE_DATA
+'                End If
+'
+'                If Value = INDEFINITE Then
+'                    Call Chunk.AddByte(0)
+'                    Let ChunkData(ChunkDataIndex) = oz80.HexStr8(-1)
+'                Else
+'                    Call Chunk.AddByte(CLng(Value))
+'                    Let ChunkData(ChunkDataIndex) = oz80.HexStr8(CLng(Value))
+'                End If
+'
+'                Let ChunkDataIndex = ChunkDataIndex + 1
+'                If ChunkDataIndex = 16 Then
+'                    Call Chunk.LogASM.Add( _
+'                        LOG_DATA, _
+'                        ChunkDataAddr, ChunkData, _
+'                        "·", "·", "·", "·", "·", "·", "·", "·", _
+'                        "·", "·", "·", "·", "·", "·", "·", "·" _
+'                    )
+'                    Erase ChunkData
+'                    Let ChunkDataIndex = 0
+'                End If
+'            ElseIf Not File.TokenIsList Then
+'                Exit Do
+'            End If
+'
+'            Call File.NextToken
+'        Loop
     End If
     
     'The chunk might be empty `{}`, in which case we don't want to walk it
@@ -1593,6 +1735,20 @@ Continue:
     ElseIf File.TokenKind <> TOKEN_BRACES_CLOSE Then
         GoTo Continue
     End If
+    
+'    'Finalise the disassembly log
+'    If ChunkMode = MODE_DATA Then
+'        Call RaiseMessage( _
+'            OZ80_LOG_DEBUG, LOG_DATA, _
+'            ChunkDataAddr, ChunkData, _
+'            "·", "·", "·", "·", "·", "·", "·", "·", _
+'            "·", "·", "·", "·", "·", "·", "·", "·" _
+'        )
+'    End If
+'    Call RaiseMessage(OZ80_LOG_DEBUG, _
+'        "=========================================================================" _
+'    )
+'    Let ChunkMode = MODE_UNSET
     
 Finish:
     'Move onto the next token ready for the root scope to process. _
@@ -1899,19 +2055,41 @@ Private Function AssembleZ80( _
         If (ParamIXY.Mask And MASK_MEM_IXY) <> 0 Then Let Offset = ParamIXY.Value
     End If
     
-'    Dim Param1Str As String, Param2Str As String, Param3Str As String
-'    If Z80Param1.Mask <> 0 Then
-'        Let LogMsg.Text = ParamToString(Z80Param1)
-'        Let Param1Str = LogMsg.Left(10).Text
-'    End If
-'    If Z80Param2.Mask <> 0 Then
-'        Let LogMsg.Text = ParamToString(Z80Param2)
-'        Let Param2Str = LogMsg.Left(10).Text
-'    End If
-'    If Z80Param3.Mask <> 0 Then
-'        Let LogMsg.Text = ParamToString(Z80Param3)
-'        Let Param3Str = LogMsg.Left(10).Text
-'    End If
+    Dim Param1Str As String, Param2Str As String, Param3Str As String
+    If Z80Param1.Mask <> 0 Then
+        Let LogMsg.Text = ParamToString(Z80Param1)
+        Let Param1Str = LogMsg.Left(10).Text
+    End If
+    If Z80Param2.Mask <> 0 Then
+        Let LogMsg.Text = ParamToString(Z80Param2)
+        Let Param2Str = LogMsg.Left(10).Text
+    End If
+    If Z80Param3.Mask <> 0 Then
+        Let LogMsg.Text = ParamToString(Z80Param3)
+        Let Param3Str = LogMsg.Left(10).Text
+    End If
+    
+    If ChunkMode <> MODE_Z80 Then
+        If ChunkMode = MODE_DATA Then
+            Call Chunk.LogASM.Add( _
+                LOG_DATA, _
+                ChunkDataAddr, ChunkData, _
+                "·", "·", "·", "·", "·", "·", "·", "·", _
+                "·", "·", "·", "·", "·", "·", "·", "·" _
+            )
+        End If
+        
+        If ChunkMode <> MODE_UNSET Then Call Chunk.LogASM.Add( _
+            "-----+-------------------+-----------------------------+-----------------" _
+        )
+        Call Chunk.LogASM.Add( _
+            "ADDR | PX OP OF CB LO HI | MNEMONIC   PARAM1    PARAM2    PARAM3" _
+        )
+        Call Chunk.LogASM.Add( _
+            "-----|-------------------|-----------------------------------------------" _
+        )
+        Let ChunkMode = MODE_Z80
+    End If
     
     'OPCODE MAP: _
      Here's a complete list of the Z80 instruction set and the opcodes used for each _
@@ -2968,17 +3146,17 @@ Output:
         Prefix, Opcode, Offset, Value _
     )
     
-'    '*** TIMER BEGIN ***
-'    Call oz80.Profiler.EventBegin(EVENT_PROCESSZ80_LOG)
-'    Call RaiseMessage(OZ80_LOG_DEBUG, LOG_Z80_VAL8, _
-'        LogAdr, _
-'        oz80.HexStr8(Prefix), oz80.HexStr8(Opcode), oz80.HexStr8(Offset), _
-'        oz80.HexStr8(Value), _
-'        oz80.TokenName(Instruction), _
-'        Param1Str, Param2Str, Param3Str _
-'    )
-'    Call oz80.Profiler.EventEnd(EVENT_PROCESSZ80_LOG)
-'    '*** TIMER END ***
+    '*** TIMER BEGIN ***
+    Call oz80.Profiler.EventBegin(EVENT_PROCESSZ80_LOG)
+    Call Chunk.LogASM.Add(LOG_Z80_VAL8, _
+        LogAdr, _
+        oz80.HexStr8(Prefix), oz80.HexStr8(Opcode), oz80.HexStr8(Offset), _
+        oz80.HexStr8(Value), _
+        oz80.TokenName(Instruction), _
+        Param1Str, Param2Str, Param3Str _
+    )
+    Call oz80.Profiler.EventEnd(EVENT_PROCESSZ80_LOG)
+    '*** TIMER END ***
     
     GoTo Finish
     
@@ -2991,18 +3169,18 @@ Output16:
         (Value And &HFF&), ((Value \ &H100&) And &HFF&) _
     )
     
-'    '*** TIMER BEGIN ***
-'    Call oz80.Profiler.EventBegin(EVENT_PROCESSZ80_LOG)
-'    Call RaiseMessage(OZ80_LOG_DEBUG, LOG_Z80_VAL16, _
-'        LogAdr, _
-'        oz80.HexStr8(Prefix), oz80.HexStr8(Opcode), _
-'        oz80.HexStr8(Value And &HFF&), _
-'        oz80.HexStr8((Value And &HFF00&) \ &H100&), _
-'        oz80.TokenName(Instruction), _
-'        Param1Str, Param2Str _
-'    )
-'    Call oz80.Profiler.EventEnd(EVENT_PROCESSZ80_LOG)
-'    '*** TIMER END ***
+    '*** TIMER BEGIN ***
+    Call oz80.Profiler.EventBegin(EVENT_PROCESSZ80_LOG)
+    Call Chunk.LogASM.Add(LOG_Z80_VAL16, _
+        LogAdr, _
+        oz80.HexStr8(Prefix), oz80.HexStr8(Opcode), _
+        oz80.HexStr8(Value And &HFF&), _
+        oz80.HexStr8((Value And &HFF00&) \ &H100&), _
+        oz80.TokenName(Instruction), _
+        Param1Str, Param2Str _
+    )
+    Call oz80.Profiler.EventEnd(EVENT_PROCESSZ80_LOG)
+    '*** TIMER END ***
     
     GoTo Finish
     
@@ -3012,16 +3190,16 @@ OutputCB:
      the offset byte. It's fastest to handle and log this special case specifically
     Call Chunk.AddInstructionCB(Prefix, Opcode, Offset)
     
-'    '*** TIMER BEGIN ***
-'    Call oz80.Profiler.EventBegin(EVENT_PROCESSZ80_LOG)
-'    Call RaiseMessage(OZ80_LOG_DEBUG, LOG_Z80_CB, _
-'        LogAdr, _
-'        oz80.HexStr8(Prefix), oz80.HexStr8(Offset), oz80.HexStr8(Opcode), _
-'        oz80.TokenName(Instruction), _
-'        Param1Str, Param2Str, Param3Str _
-'    )
-'    Call oz80.Profiler.EventEnd(EVENT_PROCESSZ80_LOG)
-'    '*** TIMER END ***
+    '*** TIMER BEGIN ***
+    Call oz80.Profiler.EventBegin(EVENT_PROCESSZ80_LOG)
+    Call Chunk.LogASM.Add(LOG_Z80_CB, _
+        LogAdr, _
+        oz80.HexStr8(Prefix), oz80.HexStr8(Offset), oz80.HexStr8(Opcode), _
+        oz80.TokenName(Instruction), _
+        Param1Str, Param2Str, Param3Str _
+    )
+    Call oz80.Profiler.EventEnd(EVENT_PROCESSZ80_LOG)
+    '*** TIMER END ***
     GoTo Finish
     
 InvalidParams:
@@ -3491,36 +3669,25 @@ End Function
 '======================================================================================
 Private Sub BeginChunk( _
              ByRef LabelName As String, _
-    Optional ByRef Address As Long = -1 _
+    Optional ByRef Address As Double = -1 _
 )
     'Register the Label name in the database
     Call AddUpdateLabel(LabelName, Address)
     'Does the Chunk already exist? On the first pass we want to ensure that the user _
      doesn't try and define two Chunks with the same name, and this is handled by the _
      `PROC` handler. On the second pass the Chunks will already have been defined
-    If Chunks.Exists(LabelName) Then
+    If ChunkExists(LabelName) Then
         'Attach the existing Chunk
-        Set Chunk = Chunks.Item(LabelName)
+        Set Chunk = GetChunk(LabelName)
     Else
         'Create and attach the new chunk
         Set Chunk = New oz80_Chunk
-        'Set the LabelName, for easier logging
         Let Chunk.LabelName = LabelName
-        'Add it to the collection
-        Call Chunks.Add(LabelName, Chunk)
+        Let Chunk.Address = CLng(Address)
         
-        'Log a header for the disassembly
-        Call RaiseMessage(OZ80_LOG_DEBUG, vbNullString)
-        Call RaiseMessage(OZ80_LOG_DEBUG, LabelName)
-        Call RaiseMessage(OZ80_LOG_DEBUG, _
-            "=====================================================================" _
-        )
-        Call RaiseMessage(OZ80_LOG_DEBUG, _
-            "ADDR | PX OP OF CB LO HI | MNEMONIC   PARAM1    PARAM2    PARAM3" _
-        )
-        Call RaiseMessage(OZ80_LOG_DEBUG, _
-            "-----+-------------------+-------------------------------------------" _
-        )
+        Let ChunkCount = ChunkCount + 1
+        ReDim Preserve Chunks(1 To ChunkCount) As oz80_Chunk
+        Set Chunks(ChunkCount) = Chunk
     End If
 End Sub
 
@@ -3531,7 +3698,7 @@ End Sub
 '======================================================================================
 Private Sub AddUpdateLabel( _
              ByRef LabelName As String, _
-    Optional ByRef Value As Long = 0 _
+    Optional ByRef Value As Double = 0 _
 )
     'Add a new label or update an existing label value?
     If Not Labels.Exists(LabelName) _
@@ -3539,67 +3706,47 @@ Private Sub AddUpdateLabel( _
         Else Let Labels.Item(LabelName) = Value
 End Sub
 
-'LayoutROM : Pack the Chunks, assigning Label locations in the ROM
+'Layout
 '======================================================================================
-'Returns        | The error number
-'======================================================================================
-Private Function LayoutROM( _
+Private Function Layout( _
 ) As OZ80_ERROR
-    'For dereferencing the list of Chunks. This is slow, but will have to do until _
-     the Chunk list can be converted to a traditional array
-    Dim Item As Variant
-    
-    'Place already addressed Chunks into the ROM _
-     ----------------------------------------------------------------------------------
-    For Each Item In Chunks.Items()
-        'Derefernce the Chunk for slight speed gain over using a Variant
-        Set Chunk = Item
-        
-        'Finalise the size of the Chunk -- _
-         this will trim the buffer down to fit the byte array
-        Call Chunk.Trim
-        
-        'Does the Chunk already have an address in ROM? _
-         On the first pass this will be the Interrupt Procedures only, _
-         on the second pass it should be everything
-'        If Chunk.Address >= 0 Then
-'            'Copy the Chunk into the ROM
-'            If Chunk.Size > 0 Then Call Chunk.CopyInto(ROM)
-'        End If
-        
-'        Dim LogMsg As String
-'        Let LogMsg = Left$(Chunk.LabelName, 32)
-'        Let LogMsg = Left$(Left$(Chunk.LabelName, 32) & Space$(31), 32)
-'
-'        RaiseEvent Message(OZ80_LOG_INFO, _
-'            LogMsg & Right$("      " & Format$(Chunk.Size, "#,#"), 6) & " B " & _
-'            "$" & Right$("000000" & Hex(Chunk.Address), 6) _
-'        )
-        
-        'TODO: If Interrupt $38/$66 are not provided then add them
-        'TODO: Check that one Chunk does not run into another, _
-               or that one Chunk is not placed within another
-        
-        'TODO: If every Chunk has been placed, then we won't need to go any further
-    Next
-    
-    'TODO: Layout the protected SEGA 1 KB Slot _
-     ----------------------------------------------------------------------------------
     '
-    
-    'TODO: Layout the Sectionless code
-    'TODO: Layout the Sections
-     
-    Call RaiseMessage(OZ80_LOG_INFO, "Chunks: {$}", Chunks.Count)
-     
-    'For easier tail-recursion, return the error number
-    Let LayoutROM = My_Error
 End Function
-
-
 
 '/// GENERIC //////////////////////////////////////////////////////////////////////////
 '/// Functions used anywhere throughout the clas
+
+'ChunkExists : Test if a Chunk is in the array by the Label name
+'======================================================================================
+Private Property Get ChunkExists( _
+    ByRef LabelName As String _
+) As Boolean
+    'If there are no Chunks, just return False
+    If ChunkCount = 0 Then Exit Property
+    'Go over each Chunk and check the name
+    Dim i As Long
+    For i = 1 To ChunkCount
+        If Chunks(i).LabelName = LabelName Then
+            Let ChunkExists = True
+            Exit Property
+        End If
+    Next i
+End Property
+
+'GetChunk : Retrieves a Chunk in the array by its Label Name
+'======================================================================================
+Private Function GetChunk( _
+    ByRef LabelName As String _
+) As oz80_Chunk
+    'Go over each Chunk and check the name
+    Dim i As Long
+    For i = 1 To ChunkCount
+        If Chunks(i).LabelName = LabelName Then
+            Set GetChunk = Chunks(i)
+            Exit Function
+        End If
+    Next i
+End Function
 
 'ParamToString : Get a textual representation of a Z80 instruction parameter
 '======================================================================================

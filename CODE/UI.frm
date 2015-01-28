@@ -173,7 +173,7 @@ Private Sub Assembler_Message( _
         Let Prefix = vbCrLf & Prefix
     End If
     
-    Call Log(Prefix & " " & LogText.Text, LogLevel)
+    Call Log(Prefix & " " & Replace(LogText.Text, vbCrLf, vbCrLf & "  "), LogLevel)
     Let PrevLog = LogLevel
 End Sub
 
@@ -187,7 +187,9 @@ Private Sub Log( _
     
 '    If LogLevel >= OZ80_LOG_DEBUG Then Exit Sub
 
-    Call LogText.Add(Text & vbCrLf)
+    Call LogText.Add( _
+        Text & vbCrLf _
+    )
     
 '    'http://weblogs.asp.net/jdanforth/88458
 '    Call SendMessage( _

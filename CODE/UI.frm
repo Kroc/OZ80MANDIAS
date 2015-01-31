@@ -52,7 +52,7 @@ Private Const WM_VSCROLL As Long = &H115
 
 Private Declare Function LockWindowUpdate Lib "user32" (ByVal hWnd As Long) As Long
 
-Private WithEvents Assembler As oz80_Assembler
+Private WithEvents Assembler As OZ80
 Attribute Assembler.VB_VarHelpID = -1
 
 Private LogText As bluArrayStrings
@@ -104,7 +104,7 @@ Private Sub Form_Load()
 '    MsgBox Format$(Timer - StartTime, "0.000")
 '    End
     
-    Set Assembler = New oz80_Assembler
+    Set Assembler = New OZ80
 
     'TODO: This will obviously be converted to use the command arguments
     Call Assembler.Assemble(App.Path & "\Sonic1-sms-oz80\sonic1-sms.oz80")

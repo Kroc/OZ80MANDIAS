@@ -1,0 +1,109 @@
+`badnick - newtron
+
+PROC    :mob_badnick_newtron                    SECTION ::mobs                  `$6F08
+        `==============================================================================
+PARAMS  IX;mob          HELP ""Address of the current mob being processed
+{
+	set	5,[ix+#mob.flags]
+	ld	[ix+#mob.width], 12
+	ld	[ix+#mob.height],20
+	ld	a,[ix+#mob.unknown11]
+	cp	$02
+	jr	z,._1
+	and	a
+	jr	nz,._4
+._1	ld	a,[$.FRAMECOUNT]
+	and	$01
+	jr	z,._2
+	ld	bc,$0000
+	jr	._3
+._2	ld	bc,._6fed
+._3	inc	[ix+#mob.unknown17]
+	ld	a,[ix+#mob.unknown17]
+	cp	$3c
+	jp	c,._7
+	ld	[ix+#mob.unknown17],$00
+	inc	[ix+#mob.unknown11]
+	jp	._7
+	
+._4	cp	$01
+	jp	nz,._6
+	inc	[ix+#mob.unknown17]
+	ld	a,[ix+#mob.unknown17]
+	cp	$64
+	jr	nz,._5
+	call	:findEmptyMob
+	jp	c,._5
+	push	bc
+	ld	e,[ix+#mob.X.lo]
+	ld	d,[ix+#mob.X.hi]
+	ld	c,[ix+#mob.Y.lo]
+	ld	b,[ix+#mob.Y.hi]
+	push	ix
+	push	hl
+	pop	ix
+        
+	xor	a;zero  			`set A to 0
+	ld	[ix+#mob.type],$0D	        `unknown object
+	ld	[ix+#mob.Xsubpixel],a;zero
+	ld	[ix+#mob.X.lo],e
+	ld	[ix+#mob.X.hi],d
+	ld	[ix+#mob.Ysubpixel],a;zero
+	ld	hl,$0006
+	add	hl,bc
+	ld	[ix+#mob.Y.lo],l
+	ld	[ix+#mob.Y.hi],h
+	ld	[ix+#mob.unknown11],a;zero
+	ld	[ix+#mob.unknown13],a;zero
+	ld	[ix+#mob.unknown14],a;zero
+	ld	[ix+#mob.unknown15],a;zero
+	ld	[ix+#mob.unknown16],a;zero
+	ld	[ix+#mob.unknown17],a;zero
+	ld	[ix+#mob.Xspeed.lo],$00
+	ld	[ix+#mob.Xspeed.hi],$fe
+	ld	[ix+#mob.Xdirection],$ff
+	ld	[ix+#mob.Yspeed.lo],a;zero
+	ld	[ix+#mob.Yspeed.hi],a;zero
+	ld	[ix+#mob.Ydirection],a;zero
+	
+        pop	ix, bc
+	ld	a,$0a
+	rst	:rst_playSFX
+._5	ld	bc,._6fed
+	cp	$78
+	jr	c,._7
+	ld	[ix+#mob.unknown17],$00
+	inc	[ix+#mob.unknown11]
+	jr	._7
+	
+._6	cp	$03
+	jr	nz,._7
+	ld	bc,$0000
+	inc	[ix+#mob.unknown17]
+	ld	a,[ix+#mob.unknown17]
+	and	a
+	jr	nz,._7
+	ld	[ix+#mob.unknown11],c
+	
+._7	ld	[ix+#mob.spriteLayout.lo],c
+	ld	[ix+#mob.spriteLayout.hi],b
+	ld	hl,$0202
+	ld	[$.TEMP6],hl
+	call	:detectCollisionWithSonic
+	ld	hl,$0000
+	ld	[$.TEMP1],hl
+	call	nc,:_35e5
+	ret	
+        
+`sprite layout
+._6fed  BYTE $1C, $1E, $FF, $FF, $FF, $FF
+        BYTE $FE, $3E, $FF, $FF, $FF, $FF
+        BYTE $FF, $FF, $FF, $FF, $FF, $FF
+        BYTE $40					`odd?
+}
+
+TABLE   :_7000                                  SECTION ::mobs   
+{
+        BYTE $42, $FF, $FF, $FF, $FF, $FE
+        BYTE $62, $FF, $FF, $FF, $FF, $FF
+}

@@ -1,0 +1,32 @@
+PROC    :mob_meta_trip                          SECTION ::mobs                  `$7AA7
+        `==============================================================================
+PARAMS  IX;mob          HELP ""Address of the current mob being processed
+{
+	set	5,[ix+#mob.flags]
+	ld	[ix+#mob.width], 64
+	ld	[ix+#mob.height],64
+	ld	hl,$0000
+	ld	[$.TEMP6],hl
+	call	:detectCollisionWithSonic
+	ret	c
+	bit	6,[iy+#vars.flags6]
+	ret	nz
+	ld	a,[$.SONIC.flags]
+	and	$80
+	ret	z
+	ld	hl,$fffb
+	xor	a;zero
+	ld	[$.SONIC.Yspeed.lo],a;zero
+	ld	[$.SONIC.Yspeed.hi],hl
+	ld	hl,$0003
+	xor	a;zero
+	ld	[$.SONIC.Xspeed.lo],a;zero
+	ld	[$.SONIC.Xspeed.hi],hl
+	ld	hl,$.SONIC.flags
+	res	1,[hl]
+	set	6,[iy+#vars.flags6]
+	ld	[iy+#vars.joypad],$ff
+	ld	a,$11
+	rst	:rst_playSFX
+	ret
+}

@@ -1,0 +1,76 @@
+PROC    :mob_trap_propeller                     SECTION ::mobs                  `$AA6A
+        `==============================================================================
+PARAMS  IX;mob          HELP ""Address of the current mob being processed
+{
+	set	5,[ix+#mob.flags]
+	ld	[ix+#mob.width],$05
+	ld	[ix+#mob.height],$14
+	bit	0,[ix+#mob.flags]
+	jr	nz,._1
+	ld	l,[ix+#mob.X.lo]
+	ld	h,[ix+#mob.X.hi]
+	ld	de,$000f
+	add	hl,de
+	ld	[ix+#mob.X.lo],l
+	ld	[ix+#mob.X.hi],h
+	ld	l,[ix+#mob.Y.lo]
+	ld	h,[ix+#mob.Y.hi]
+	ld	de,$fffa
+	add	hl,de
+	ld	[ix+#mob.Y.lo],l
+	ld	[ix+#mob.Y.hi],h
+	set	0,[ix+#mob.flags]
+._1	ld	l,[ix+#mob.X.lo]
+	ld	h,[ix+#mob.X.hi]
+	ld	[$.TEMP1],hl
+	ld	l,[ix+#mob.Y.lo]
+	ld	h,[ix+#mob.Y.hi]
+	ld	[$.TEMP3],hl
+	ld	e,[ix+#mob.unknown11]
+	ld	d,$00
+	ld	hl,._ab01
+	add	hl,de
+	ld	e,[hl]
+	inc	hl
+	ld	d,[hl]
+	ld	b,$02
+	
+.loop	push	bc
+	ld	a,[de]
+	ld	l,a
+	ld	h,$00
+	ld	[$.TEMP4],hl
+	inc	de
+	ld	a,[de]
+	ld	l,a
+	ld	[$.TEMP6],hl
+	inc	de
+	ld	a,[de]
+	inc	de
+	and	a
+	jp	m,._2
+	push	de
+	call	:_3581
+	pop	de
+._2	pop	bc
+	djnz	.loop
+	
+	ld	hl,$0202
+	ld	[$.TEMP6],hl
+	call	:detectCollisionWithSonic
+	call	nc,:_35fd
+	ld	[ix+#mob.spriteLayout.lo],$00
+	ld	[ix+#mob.spriteLayout.hi],$00
+	ld	a,[ix+#mob.unknown11]
+	inc	a
+	inc	a
+	cp	$08
+	ld	[ix+#mob.unknown11],a
+	ret	c
+	ld	[ix+#mob.unknown11],$00
+	ret
+        
+._ab01                                                                          `$AB01
+        BYTE    $09 $AB $0F $AB $15 $AB $1B $AB $00 $00 $1C $00 $18 $3C $00 $00
+        BYTE    $1E $00 $18 $3E $00 $00 $38 $00 $18 $3A $00 $08 $1A $00 $00 $FF
+}

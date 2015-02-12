@@ -1,7 +1,6 @@
 *
 !.gitignore
 
-!objects
-!screens
+!mobs
 
 !*.oz80

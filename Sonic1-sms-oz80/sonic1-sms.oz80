@@ -90,11 +90,15 @@ DEF !SCREENHEIGHT_PX            192
 DEF !SCREENWIDTH_BLOCKS         !SCREENWIDTH_PX / 32
 DEF !SCREENHEIGHT_BLOCKS        !SCREENHEIGHT_PX / 32
 
+
+`number of thousands of pts to get an extra life
+DEF !SCORE_1UP                  5
+
 `======================================================================================
 
 DEF SECTION     ::interrupts    SLOT 0
 DEF SECTION     ::main          SLOT 0
-DEF SECTION     ::objects       SLOT 1, 2
+DEF SECTION     ::mobs          SLOT 1, 2
 DEF SECTION     ::sound         SLOT 2
 
 `======================================================================================
@@ -107,9 +111,9 @@ INCLUDE "interrupts.oz80"
 
 INCLUDE "main.oz80"
 
-INCLUDE "screens\map.oz80"
+INCLUDE "screens.oz80"
 
-INCLUDE "objects\objects.oz80"
+INCLUDE "mobs.oz80"
 
 `======================================================================================
 `music code and song data

@@ -1,0 +1,128 @@
+`fireball head (Labyrinth)
+
+PROC    :mob_trap_fireball                      SECTION ::mobs                  `$8C16
+        `==============================================================================
+PARAMS  IX;mob          HELP ""Address of the current mob being processed
+{
+	res	5,[ix+#mob.flags]
+	ld	[ix+#mob.width], 4
+	ld	[ix+#mob.height],10
+	bit	0,[ix+#mob.flags]
+	jr	nz,._1
+	ld	l,[ix+#mob.X.lo]
+	ld	h,[ix+#mob.X.hi]
+	ld	de,$000a
+	add	hl,de
+	ld	[ix+#mob.X.lo],l
+	ld	[ix+#mob.X.hi],h
+	ld	[ix+$12],l
+	ld	[ix+#mob.unknown13],h
+	ld	l,[ix+#mob.Y.lo]
+	ld	h,[ix+#mob.Y.hi]
+	ld	de,$0008
+	add	hl,de
+	ld	[ix+#mob.Y.lo],l
+	ld	[ix+#mob.Y.hi],h
+	ld	[ix+#mob.unknown14],l
+	ld	[ix+#mob.unknown15],h
+	ld	[ix+#mob.unknown11],$96
+	set	0,[ix+#mob.flags]
+	ld	bc,$0000
+	ld	de,$0000
+	call	:getFloorLayoutRAMAddressForMob
+	ld	a,[hl]
+	cp	$52
+	jr	z,._3
+	set	1,[ix+#mob.flags]
+._1	ld	a,[ix+#mob.unknown11]
+	and	a
+	jr	z,._4
+	dec	[ix+#mob.unknown11]
+	jr	z,._3
+        
+._2	xor	a;zero
+	ld	[ix+#mob.spriteLayout.lo],a;zero
+	ld	[ix+#mob.spriteLayout.hi],a;zero
+	ld	[ix+#mob.Xspeed.lo],a;zero
+	ld	[ix+#mob.Xspeed.hi],a;zero
+	ld	[ix+#mob.Xdirection],a;zero
+	ret
+	
+        `------------------------------------------------------------------------------
+        
+._3	ld	a,$18
+	rst	:rst_playSFX
+._4	xor	a;zero
+	bit	1,[ix+#mob.flags]
+	jr	nz,._5
+	ld	[ix+#mob.Xspeed.lo],$00
+	ld	[ix+#mob.Xspeed.hi],$ff
+	ld	[ix+#mob.Xdirection],$ff
+	ld	[ix+#mob.spriteLayout.lo],._8d39.lo
+	ld	[ix+#mob.spriteLayout.hi],._8d39.hi
+	jr	._6
+	
+._5	ld	[ix+#mob.Xspeed.lo],a
+	ld	[ix+#mob.Xspeed.hi],$01
+	ld	[ix+#mob.Xdirection],a
+	ld	[ix+#mob.spriteLayout.lo],._8d41.lo
+	ld	[ix+#mob.spriteLayout.hi],._8d41.hi
+._6	ld	[ix+#mob.Yspeed.lo],a
+	ld	[ix+#mob.Yspeed.hi],a
+	ld	[ix+#mob.Ydirection],a
+	bit	6,[ix+#mob.flags]
+	jr	nz,._7
+	bit	7,[ix+#mob.flags]
+	jr	nz,._7
+	ld	hl,$0402
+	ld	[$.TEMP6],hl
+	call	:detectCollisionWithSonic
+	call	nc,:_35fd
+	ld	e,[ix+#mob.X.lo]
+	ld	d,[ix+#mob.X.hi]
+	ld	hl,[$.CAMERA_X]
+	ld	bc,$fff0
+	add	hl,bc
+	and	a
+	sbc	hl,de
+	jr	nc,._7
+	ld	hl,[$.CAMERA_X]
+	ld	bc,$0110
+	add	hl,bc
+	and	a
+	sbc	hl,de
+	jr	c,._7
+	ld	e,[ix+#mob.Y.lo]
+	ld	d,[ix+#mob.Y.hi]
+	ld	hl,[$.CAMERA_Y]
+	ld	bc,$fff0
+	add	hl,bc
+	and	a
+	sbc	hl,de
+	jr	nc,._7
+	ld	hl,[$.CAMERA_Y]
+	ld	bc,$00d0
+	add	hl,bc
+	and	a
+	sbc	hl,de
+	jr	c,._7
+	ret
+	
+._7	ld	l,[ix+$12]
+	ld	h,[ix+#mob.unknown13]
+	ld	[ix+#mob.X.lo],l
+	ld	[ix+#mob.X.hi],h
+	ld	l,[ix+#mob.unknown14]
+	ld	h,[ix+#mob.unknown15]
+	ld	[ix+#mob.Y.lo],l
+	ld	[ix+#mob.Y.hi],h
+	ld	[ix+#mob.unknown11],$96
+	jp	._2
+        
+        `------------------------------------------------------------------------------
+        `sprite layout
+._8d39  BYTE $2E, $FF, $FF, $FF, $FF, $FF
+        BYTE $FF, $FF
+._8d41  BYTE $30, $FF, $FF, $FF, $FF, $FF
+        BYTE $FF
+}

@@ -34,7 +34,7 @@ HASH    #levelHeader
 
 `--------------------------------------------------------------------------------------
 
-HASH    #object                 `26 bytes
+HASH    #mob                 `26 bytes
 [
 .type			        BYTE    `IX+$00    - the object type index number
 .Xsubpixel		        BYTE    `IX+$01    - sub-pixel accuracy of X position
@@ -43,8 +43,8 @@ HASH    #object                 `26 bytes
 .Y			        WORD    `IX+$05/06 - in px
 .Xspeed			        WORD    `IX+$07/08 - in px, signed (i.e. $F??? = left)
 .Xdirection		        BYTE    `IX+$09    - $FF for left, else $00
-.Yspeed			        WORD    `IX+$0A/0B - in px, signed  (i.e. $F??? = left)
-.Ydirection		        BYTE    `IX+$0C    - $FF for left, else $00
+.Yspeed			        WORD    `IX+$0A/0B - in px, signed  (i.e. $F??? = up)
+.Ydirection		        BYTE    `IX+$0C    - $FF for up, else $00
 .width			        BYTE    `IX+$0D    - in px
 .height			        BYTE    `IX+$0E    - in px
 .spriteLayout		        WORD    `IX+$0F/10 - address to current sprite layout
@@ -106,7 +106,7 @@ HASH    #vars                           `$D200:
 `taken from the level header, this controls screen scrolling and the
  `presence of the "rings" count on the HUD
 .scrollRingFlags	        BYTE    `IY+$05
-        `bit 0 - unknown, but causes Sonic to immediately die
+        `bit 0 - death flag
         `bit 1 - demo mode
         `bit 2 - ring count displayed in HUD, rings visible in the level
         `bit 3 - automatic scrolling to the right
@@ -140,6 +140,7 @@ HASH    #vars                           `$D200:
 .flags9			        BYTE    `IY+$09
         `bit 0 - unknown
         `bit 1 - enables interrupts during `decompressArt`
+        `bit 2 - set when special stage timer reaches zero
 
 .spriteUpdateCount	        BYTE    `IY+$0A, # sprites requiring updates
 .origScrollRingFlags	        BYTE    `IY+$0B, copy made during level loading UNUSED
@@ -202,7 +203,7 @@ RAM     $
 .VDPREGISTER_9                  BYTE                                            `$D221
 .VDPREGISTER_10                 BYTE                                            `$D222
 
-.FRAMECOUNT	                WORD                                            `$D223
+.FRAMECOUNT	                WORD `a 16-bit continual frame count            `$D223
 
 `referenced only by unused function ":unused_0323"
 .UNUSED_D225                    WORD                                            `$D225
@@ -256,8 +257,8 @@ RAM     $
 
 .D253                           BYTE x 4                                        `UNUSED
 
-.BLOCK_X		        BYTE    `number of blocks across the camera is  `$D257
-.BLOCK_Y		        BYTE    `number of blocks down the camera is    `$D258
+.BLOCK_X		        BYTE `number of blocks across the camera is     `$D257
+.BLOCK_Y		        BYTE `number of blocks down the camera is       `$D258
 
 .D259                           BYTE                                            `UNUSED
 
@@ -298,7 +299,7 @@ RAM     $
 .D286                           BYTE `UNKNOWN                                   `$D286 
 .D287                           BYTE `UNKNOWN ($D287/8)                         `$D287
 .D288                           BYTE `UNKNOWN                                   `$D288
-.D289                           BYTE `UNKNOWN                                   `$D289
+.D289                           BYTE `UNKNOWN - looks like flags                `$D289
 .D28A                           BYTE `UNKNOWN                                   `$D28A
 .D28B                           BYTE `UNKNOWN                                   `$D28B
 .D28C                           BYTE `UNKNOWN                                   `$D28C
@@ -342,19 +343,20 @@ RAM     $
 .D2B5                           WORD `UNKNOWN                                   `$D2B5
 .D2B7                           WORD `UNKNOWN                                   `$D2B7
 .D2B9                           BYTE `UNKNOWN                                   `$D2B9
-.D2BA                           WORD `UNKNOWN                                   `$D2BA
-.D2BC                           BYTE                                            `UNUSED
-.D2BD                           BYTE `UNKNOWN ($D2BD/E)                         `$D2BD
 
-.D2BE                           BYTE `UNKNOWN ($D2BE/F)                         `$D2BE
-.D2BF                           WORD `UNKNOWN                                   `$D2BF
-.D2C1                           BYTE `UNKNOWN                                   `$D2C1
-.D2C2                           BYTE `probably part of above                    `$D2C2
+.SCORE_MILLIONS                 BYTE                                            `$D2BA
+.SCORE_THOUSANDS                BYTE                                            `$D2BB
+.SCORE_HUNDREDS                 BYTE                                            `$D2BC
+.SCORE_TENS                     BYTE                                            `$D2BD
+
+.LAYOUT_BUFFER                  BYTE x 5                                        `$D2BE
 
 `UNKNOWN - probably text in RAM
 .D2C3                           BYTE x 11                                       `$D2C3
-.D2CE                           WORD `UNKNOWN                                   `$D2CE
-.D2D0                           WORD `UNKNOWN                                   `$D2D0
+
+.TIME_MINUTES                   BYTE `level timer - minutes                     `$D2CE
+.TIME_SECONDS                   BYTE `level timer - seconds                     `$D2CF
+.TIME_FRAMES                    BYTE `level timer - frames                      `$D2D0
 
 ``the previous song played is checked during level load to avoid starting
   the same song again (for example, when teleporting in Scrap Brain)``
@@ -401,7 +403,7 @@ RAM     $
 ``a copy of the level music index is kept so that the music can be started
   again (?) after other sound events like invincibility``
 .LEVEL_MUSIC                    BYTE                                            `$D2FC
-.D2FD                           BYTE                                            `$D2FD
+.SCORE_1UP                      BYTE `number of thousands of pts for exta life  `$D2FD
 .D2FE                           BYTE                                            `$D2FE
 .D2FF                           BYTE                                            `$D2FF
 
@@ -468,11 +470,11 @@ RAM     $
 
 .D3DC                           BYTE x 32                                       `UNUSED
 
-`objects: the 32 objects in the level begin here:
-`------------------------------------------------------------------------------
+`mobs: the 32 mobs in the level begin here:
+`--------------------------------------------------------------------------------------
 
-`the player is an object like any other and has reserved parameters in memory
-.SONIC                          HASH #object                                    `$D3FC
+`the player is a mob like any other and has reserved parameters in memory
+.SONIC                          HASH #mob                                    `$D3FC
                                 `.type			                        `$D3FC
                                 `.Xsubpixel		                        `$D3FD
                                 `.X			                        `$D3FE
@@ -495,8 +497,8 @@ RAM     $
                                 `.flags                                         `$D414
                                 `.unknown19                                     `$D415
                         
-`remaining 31 objects are here
-.OBJECTS                        BYTE x {#object.size * 31}                      `$D416
+`remaining 31 mobs are here
+.MOBS                           BYTE x (#mob.size * 31)                         `$D416
 
                                                                                 `$D73C
 ]

@@ -1,0 +1,61 @@
+PROC    :_9b75                                  SECTION ::mobs                  `$9B75
+        `==============================================================================
+PARAMS  IX;mob          HELP ""Address of the current mob being processed
+{
+	set	5,[ix+#mob.flags]
+	ld	[ix+#mob.width],$1e
+	ld	[ix+#mob.height],$60
+	ld	hl,$0000
+	ld	[$.TEMP6],hl
+	call	:detectCollisionWithSonic
+	jr	c,._2
+	ld	l,[ix+#mob.X.lo]
+	ld	h,[ix+#mob.X.hi]
+	ld	a,l
+	add	a,a
+	rl	h
+	add	a,a
+	rl	h
+	add	a,a
+	rl	h
+	ld	e,h
+	ld	l,[ix+#mob.Y.lo]
+	ld	h,[ix+#mob.Y.hi]
+	ld	a,l
+	add	a,a
+	rl	h
+	add	a,a
+	rl	h
+	add	a,a
+	rl	h
+	ld	d,h
+	ld	hl,._9bd9
+	ld	b,$05
+	
+.loop	ld	a,[hl]
+	inc	hl
+	cp	e
+	jr	nz,._1
+	ld	a,[hl]
+	cp	d
+	jr	nz,._1
+	inc	hl
+	ld	a,[hl]
+	ld	[$.D2D3],a
+	ld	a,$01
+	ld	[$.D289],a
+	set	4,[iy+#vars.flags6]
+	jp	._2
+	
+._1	inc	hl
+	inc	hl
+	djnz	.loop
+	
+._2	xor	a;zero
+	ld	[ix+#mob.spriteLayout.lo],a;zero
+	ld	[ix+#mob.spriteLayout.hi],a;zero
+	ret
+
+._9bd9  BYTE $7D, $1A, $15, $7D, $01, $14, $01, $3C, $18, $01, $02
+        BYTE $19, $14, $0F, $1A
+}

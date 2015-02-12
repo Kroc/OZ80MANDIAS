@@ -5,31 +5,33 @@
 
 PROC    :decompressArt                          SECTION ::main                  `$0405
         `==============================================================================
-PARAMS	hl	        `relative address from the beginning of the intended bank (A)
-	de	        `VDP register number (D) and value byte (E) to send to the VDP
-	a;bank          `bank number for the relative address HL
+PARAMS	HL;dataAddr     HELP ""Relative address from the beginning of the intended bank
+                             ""(A) to the art data
+	DE;vdpAddr      `VDP register number (D) and value byte (E) to send to the VDP
+	A;bank          HELP ""Bank number for the relative address HL
 {
 	di				        `disable interrupts
-._1	push	af;bank			        `remember the A parameter
-	
-	`--- determine bank number ----------------------------------------------------
+        
+.calculateBank
+        `--- determine bank number ----------------------------------------------------
+        push	AF;bank			        `put aside the current bank number
 	
 	`is the HL parameter address below the $40xx range?
 	 `--that is, does the relative address extend into the second page?
-	ld	a;addr, h;addr
+	ld	A;dataAddr      H;dataAddr
 	cp	HI $4000
 	jr	c, ._2
 	
-	`remove #$40xx (e.g. so $562B becomes $162B)
+	`remove $40xx (e.g. so $562B becomes $162B)
 	sub	HI $4000
-	ld	h;addr, a;addr
+	ld	H;dataAddr      A;dataAddr
 	
 	`restore the A parameter (the starting bank number) and increase it so that
 	 `HL now represents a relative address from the next bank up. this would mean
 	 `that instead of paging in, for example, banks 9 & 10, we would get 10 & 11
-	pop	af;bank
-	inc	a;bank
-	jp	._1
+	pop	AF;bank
+	inc	A;bank
+	jp	.calculateBank
 	
 	`--- configure the VDP --------------------------------------------------------
 	
@@ -563,7 +565,7 @@ PROC    :hideSprites                            SECTION ::main                  
 	ld	hl;table, $.SPRITETABLE
 	ld	e;table, l;table                `copy to DE
 	ld	d;table, h;table
-	ld	bc, 3 * 63		        `= size of $.SPRITETABLE
+	ld	bc, $.SPRITETABLE.size
 	`set the first two bytes as 224 (X&Y position)
 	ld	a;pos, 224
 	ld	[de;table], a;pos
@@ -801,7 +803,7 @@ PROC    :fillOverscrollCache                    SECTION ::main                  
 	ld	b,$00
 	
 	`look up the index in the solidity pointer table
-	ld	hl,:S1_SolidityPointers
+	ld	hl,:S1_Solidity_Blocks
 	add	hl,bc
 	
 	`load an address at the table
@@ -1294,12 +1296,12 @@ PROC    :fillScreenWithFloorLayout              SECTION ::main                  
         di
         
 	`page in the Block Mappings
-	ld	a;bank,:S1_BlockMappings.bank
-	ld	[$.SMS.SLOT1],a;bank
-	ld	[$.SLOT1],a;bank
-	ld	a;bank,:S1_BlockMappings.bank + 1
-	ld	[$.SMS.SLOT2],a;bank
-	ld	[$.SLOT2],a;bank
+	ld	A;bank          :S1_BlockMappings.bank
+	ld	[$.SMS.SLOT1]   A;bank
+	ld	[$.SLOT1]       A;bank
+	ld	A;bank          :S1_BlockMappings.bank + 1
+	ld	[$.SMS.SLOT2]   A;bank
+	ld	[$.SLOT2]       A;bank
 	
 	ld	bc,$0000
 	call	:getFloorLayoutRAMPosition
@@ -1324,7 +1326,7 @@ PROC    :fillScreenWithFloorLayout              SECTION ::main                  
 	add	a,a			        `double it (i.e. for a 16-bit pointer)
 	ld	c,a			        `put it into BC'
 	ld	b,$00
-	ld	hl,:S1_SolidityPointers	        `get address of solidity pointer list
+	ld	hl,:S1_Solidity_Blocks	        `get address of solidity pointer list
 	add	hl,bc			        `offset solidity index into the list
 	ld	a,[hl]			        `read the data pointer into HL'
 	inc	hl

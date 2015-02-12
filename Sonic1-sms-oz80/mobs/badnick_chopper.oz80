@@ -1,0 +1,104 @@
+`badnick - chopper
+
+PROC    :mob_badnick_chopper                    SECTION ::mobs                  `$7CF6
+        `==============================================================================
+PARAMS  IX;mob          HELP ""Address of the current mob being processed
+{
+	set	5,[ix+#mob.flags]
+	ld	[ix+#mob.width],$08
+	ld	[ix+#mob.height],$0c
+	ld	a,[ix+#mob.unknown14]
+	and	a
+	jr	z,._1
+	dec	[ix+#mob.unknown14]
+	xor	a;zero
+	ld	[ix+#mob.spriteLayout.lo],a;zero
+	ld	[ix+#mob.spriteLayout.hi],a;zero
+	ret
+	
+._1	bit	0,[ix+#mob.flags]
+	jr	nz,._3
+	bit	1,[ix+#mob.flags]
+	jr	nz,._2
+	ld	l,[ix+#mob.Y.lo]
+	ld	h,[ix+#mob.Y.hi]
+	ld	de,$fff4
+	add	hl,de
+	ld	[ix+$12],l
+	ld	[ix+#mob.unknown13],h
+	ld	l,[ix+#mob.X.lo]
+	ld	h,[ix+#mob.X.hi]
+	ld	de,$0008
+	add	hl,de
+	ld	[ix+#mob.X.lo],l
+	ld	[ix+#mob.X.hi],h
+	set	1,[ix+#mob.flags]
+._2	ld	[ix+#mob.Yspeed.lo],$00
+	ld	[ix+#mob.Yspeed.hi],$fc
+	ld	[ix+#mob.Ydirection],$ff
+	set	0,[ix+#mob.flags]
+	ld	a,$12
+	rst	:rst_playSFX
+	ld	[ix+#mob.unknown11],$03
+	jr	._5
+	
+._3	ld	l,[ix+#mob.Yspeed.lo]
+	ld	h,[ix+#mob.Yspeed.hi]
+	ld	a,[ix+#mob.Ydirection]
+	ld	de,$0010
+	add	hl,de
+	adc	a,$00
+	ex	de,hl
+	and	a
+	jp	m,._4
+	ld	hl,$0400
+	and	a
+	sbc	hl,de
+	jr	nc,._4
+	ld	de,$0400
+._4	ld	[ix+#mob.Yspeed.lo],e
+	ld	[ix+#mob.Yspeed.hi],d
+	ld	[ix+#mob.Ydirection],a
+	ld	e,[ix+$12]
+	ld	d,[ix+#mob.unknown13]
+	ld	l,[ix+#mob.Y.lo]
+	ld	h,[ix+#mob.Y.hi]
+	xor	a
+	sbc	hl,de
+	jr	c,._5
+	ld	[ix+#mob.Ysubpixel],a
+	ld	[ix+#mob.Y.lo],e
+	ld	[ix+#mob.Y.hi],d
+	ld	[ix+#mob.Yspeed.lo],a
+	ld	[ix+#mob.Yspeed.hi],a
+	ld	[ix+#mob.Ydirection],a
+	ld	[ix+#mob.unknown14],$1e
+	res	0,[ix+#mob.flags]
+._5	ld	de,._7de1
+	ld	bc,._7ddc
+	call	:_7c41
+	ld	a,[ix+#mob.unknown11]
+	and	a
+	jr	z,._6
+	dec	[ix+#mob.unknown11]
+	ld	[ix+#mob.spriteLayout.lo],._7df7.lo
+	ld	[ix+#mob.spriteLayout.hi],._7df7.hi
+._6	ld	hl,$0204
+	ld	[$.TEMP6],hl
+	call	:detectCollisionWithSonic
+	ld	hl,$0000
+	ld	[$.TEMP1],hl
+	call	nc,:_35e5
+	ret
+
+._7ddc  BYTE $00, $04, $01, $04, $FF
+
+        `this looks like sprite layout data, but isn't quite normal
+._7de1  BYTE $60, $62, $FF, $FF, $FF, $FF
+        BYTE $FF, $FF, $FF, $FF, $FF, $FF
+        BYTE $FF, $FF, $FF, $FF, $FF, $FF
+        BYTE $64, $66, $FF, $FF
+._7df7  BYTE $FF, $FF, $FF, $FF, $68, $6A
+        BYTE $FF, $FF, $FF, $FF, $FF
+
+}

@@ -1,0 +1,76 @@
+`badnick - Yadrin (Bridge)
+
+PROC    :mob_badnick_yadrin                     SECTION ::mobs                  `$82E6
+        `==============================================================================
+PARAMS  IX;mob          HELP ""Address of the current mob being processed
+{
+	ld	[ix+#mob.width], 16
+	ld	[ix+#mob.height],15
+	ld	hl,$0408
+	ld	[$.TEMP6],hl
+	call	:detectCollisionWithSonic
+	call	nc,:_35fd
+	ld	[ix+#mob.width], 20
+	ld	[ix+#mob.height],32
+	ld	hl,$1006
+	ld	[$.TEMP6],hl
+	call	:detectCollisionWithSonic
+	ld	hl,$0404
+	ld	[$.TEMP1],hl
+	call	nc,:_35e5
+	ld	l,[ix+#mob.Yspeed.lo]
+	ld	h,[ix+#mob.Yspeed.hi]
+	ld	a,[ix+#mob.Ydirection]
+	ld	de,$0020
+	add	hl,de
+	adc	a,$00
+	ld	[ix+#mob.Yspeed.lo],l
+	ld	[ix+#mob.Yspeed.hi],h
+	ld	[ix+#mob.Ydirection],a
+	ld	a,[ix+#mob.unknown11]
+	cp	$50
+	jr	c,._1
+	ld	[ix+#mob.Xspeed.lo],$40
+	ld	[ix+#mob.Xspeed.hi],$00
+	ld	[ix+#mob.Xdirection],$00
+	ld	de,._837e
+	ld	bc,._8379
+	call	:_7c41
+	jp	._2
+	
+._1	ld	[ix+#mob.Xspeed.lo],$c0
+	ld	[ix+#mob.Xspeed.hi],$ff
+	ld	[ix+#mob.Xdirection],$ff
+	ld	de,._837e
+	ld	bc,._8374
+	call	:_7c41
+._2	ld	a,[$.FRAMECOUNT]
+	and	$07
+	ret	nz
+	inc	[ix+#mob.unknown11]
+	ld	a,[ix+#mob.unknown11]
+	cp	$a0
+	ret	c
+	ld	[ix+#mob.unknown11],$00
+	ret
+        
+._8374  BYTE $00, $06, $01, $06, $FF
+._8379  BYTE $02, $06, $03, $06, $FF
+
+        `sprite layout
+._837e  BYTE $FE, $00, $02, $FF, $FF, $FF
+        BYTE $20, $22, $24, $FF, $FF, $FF
+        BYTE $FF, $FF, $FF, $FF, $FF, $FF
+
+        BYTE $FE, $00, $02, $FF, $FF, $FF
+        BYTE $26, $28, $2A, $FF, $FF, $FF
+        BYTE $FF, $FF, $FF, $FF, $FF, $FF
+
+        BYTE $40, $42, $FF, $FF, $FF, $FF
+        BYTE $4A, $4C, $4E, $FF, $FF, $FF
+        BYTE $FF, $FF, $FF, $FF, $FF, $FF
+
+        BYTE $40, $42, $FF, $FF, $FF, $FF
+        BYTE $44, $46, $48, $FF, $FF, $FF
+        BYTE $FF
+}

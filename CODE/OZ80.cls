@@ -39,7 +39,6 @@ Private Enum PROFILER_EVENTS
     EVENT_TOKENISE_TOKENWORD            '- Tokenise a single word
     EVENT_FORMATTOKEN                   '- Format token data for logging
     EVENT_PROCESSZ80                    'ProcessZ80
-    EVENT_PROCESSZ80_LOG                '- Output the disassembly
 End Enum
 
 '/// API //////////////////////////////////////////////////////////////////////////////
@@ -950,8 +949,6 @@ Private Enum PARAMTEXT_OFFSETS
     PARAMTEXT_MEM_VAL16 = PARAMTEXT_MEM_IY_VAL + [_PARAMTEXT_MEM_IY_VAL] + 1
     [_PARAMTEXT_MEM_VAL16] = &HFFFF&
     
-    'TODO: ...
-    
     [_PARAMTEXT_TOTAL] = PARAMTEXT_MEM_VAL16 + [_PARAMTEXT_MEM_VAL16]
 End Enum
 
@@ -1112,12 +1109,11 @@ Private Sub Class_Initialize()
     'Register the events we'll be timing with the profiler
     With Profiler
         Call .RegisterEvent(EVENT_INITIALIZE, "Initialize")
-        Call .RegisterEvent(EVENT_TOKENISE, "Tokenise")
-        Call .RegisterEvent(EVENT_TOKENISE_READWORD, "Tokenise;ReadWord")
-        Call .RegisterEvent(EVENT_TOKENISE_TOKENWORD, "Tokenise;TokenWord")
-        Call .RegisterEvent(EVENT_FORMATTOKEN, "File;FormatToken")
-        Call .RegisterEvent(EVENT_PROCESSZ80, "Assembler.ProcessZ80")
-        Call .RegisterEvent(EVENT_PROCESSZ80_LOG, "Assembler.ProcessZ80;Log")
+        Call .RegisterEvent(EVENT_TOKENISE, "File_Tokenise")
+        Call .RegisterEvent(EVENT_TOKENISE_READWORD, "File_Tokenise;ReadWord")
+        Call .RegisterEvent(EVENT_TOKENISE_TOKENWORD, "File_Tokenise;TokenWord")
+        Call .RegisterEvent(EVENT_FORMATTOKEN, "FormatToken")
+        Call .RegisterEvent(EVENT_PROCESSZ80, "Z80_Process")
     End With
     
     '*** TIMER BEGIN ***
@@ -1741,6 +1737,7 @@ Public Function Assemble( _
     'Phase 2: Layout the ROM _
      ----------------------------------------------------------------------------------
     Call RaiseMessage(OZ80_LOG_ACTION, LOG_PHASE2)
+    
     'Now that the size of each Chunk is known, we can arrange the Chunks in the ROM _
      space and determine each Label location
     If LayoutROM() Then GoTo Finish
@@ -1749,12 +1746,14 @@ Public Function Assemble( _
     'Phase 3: Second Parse & Assemble (now with ROM Addresses) _
      ----------------------------------------------------------------------------------
     Call RaiseMessage(OZ80_LOG_ACTION, LOG_PHASE3)
+    
     'TODO
     
     '----------------------------------------------------------------------------------
     'Phase 4: Post Processing, e.g. Checksum _
      ----------------------------------------------------------------------------------
     Call RaiseMessage(OZ80_LOG_ACTION, LOG_PHASE4)
+    
     'TODO
     
     'Finally, write the ROM to disk
@@ -1769,7 +1768,6 @@ Public Function Assemble( _
 Finish:
     'Clean up
     Call Reset
-    
     'Return the error code (also available in the `Error` property)
     Let Assemble = My_Error
 End Function
@@ -1945,7 +1943,6 @@ Private Function File_Tokenise( _
 ) As OZ80_ERROR
     'This function is tuned for speed -- it does not conform to "best practices", _
      or even structured code; GOTOs are fast, deal with it
-    Let My_Error = OZ80_ERROR_NONE
     
     '----------------------------------------------------------------------------------
     'Read the whole file into a single string
@@ -1986,7 +1983,8 @@ Private Function File_Tokenise( _
     Set Word = New bluString
     Let Word.Buffer = BUFFER_1K
     
-    'These will track the "mode" of the text as we go
+    'These will track the "mode" of the text as we go _
+     (including single, double, and triple quote)
     Dim IsText As Long, TextMode As Long
     Dim IsComment As Long, IsCommentMulti As Long
     
@@ -2003,6 +2001,13 @@ Private Function File_Tokenise( _
      original file of each word for producing helpful error messages. 1-based
     Dim Line As Long, Col As Long
     Let Line = 1: Let PrevLine = 1
+    
+    
+    
+    Dim Token As OZ80_TOKEN
+    Dim Value As Double
+    
+    
     
     'Read a single word:
     '----------------------------------------------------------------------------------
@@ -2231,7 +2236,7 @@ TokenWord:
          so we cannot know when a list has started, and even if the grammer is valid _
          at all (could have a number in completely the wrong place). For that reason, _
          all commas are optional and simply skipped by the tokeniser
-        GoTo NextWord
+        GoTo SkipWord
         
     'A decimal number? _
      ........................................................................ `0-9` ...
@@ -2258,7 +2263,8 @@ TokenWord:
             End If
         Next i
         'Add the token with the number value
-        Call Token_Add(TOKEN_NUMBER, Number)
+        Let Token = TOKEN_NUMBER
+        Let Value = Number
         GoTo NextWord
     
     'Constant? _
@@ -2271,7 +2277,10 @@ TokenWord:
         End If
         
         'TODO: Define constant name
-        Call Token_AddString(TOKEN_CONST)
+        'Add the index key to the token so that we can retrieve the string later
+        Let Token = TOKEN_CONST
+        Let Value = TokenStrings.Add(Word.Text)
+        
         GoTo NextWord
     
     'Binary number? _
@@ -2290,7 +2299,8 @@ TokenWord:
             Let Multiplier = Multiplier + 1
         Next i
         'Tokenise number
-        Call Token_Add(TOKEN_NUMBER, Number)
+        Let Token = TOKEN_NUMBER
+        Let Value = Number
         GoTo NextWord
         
     'Hash name? _
@@ -2303,7 +2313,9 @@ TokenWord:
         End If
         
         'TODO: Define hash name
-        Call Token_AddString(TOKEN_HASH)
+        'Add the index key to the token so that we can retrieve the string later
+        Let Token = TOKEN_HASH
+        Let Value = TokenStrings.Add(Word.Text)
         GoTo NextWord
     
     'RAM name, e.g. `$.gamevar`, `$#RAM_BANK.gamevar` _
@@ -2317,7 +2329,9 @@ TokenWord:
         End If
         
         'TODO: Define RAM constant
-        Call Token_AddString(TOKEN_RAM)
+        Let Token = TOKEN_RAM
+        'Add the index key to the token so that we can retrieve the string later
+        Let Value = TokenStrings.Add(Word.Text)
         GoTo NextWord
         
     'Hexadecimal number _
@@ -2340,14 +2354,16 @@ TokenWord:
         On Error GoTo 0
         
         'Add the token for the number
-        Call Token_Add(TOKEN_NUMBER, Number)
+        Let Token = TOKEN_NUMBER
+        Let Value = Number
         GoTo NextWord
         
     '.......................................................................... `:` ...
     ElseIf Asc1 = SYNTAX_LABEL Then
         'A label can be `:` only, without a name (when used within a PROC)
         If Asc2 = ASC_NUL Then
-            Call Token_AddString(TOKEN_LABEL)
+            Let Token = TOKEN_LABEL
+            Let Value = TokenStrings.Add(Word.Text)
         
         'A label cannot begin with a number but must otherwise be A-Z, 0-9 and "_"
         ElseIf Not IsValidName() Then
@@ -2356,9 +2372,10 @@ TokenWord:
             GoTo Finish
         Else
             'Is this a section name (`::section`) or regular label (`:label`)?
-            If Asc2 = SYNTAX_LABEL Then _
-                Call Token_AddString(TOKEN_SECTION) Else _
-                Call Token_AddString(TOKEN_LABEL)
+            If Asc2 = SYNTAX_LABEL _
+                Then Let Token = TOKEN_SECTION _
+                Else Let Token = TOKEN_LABEL
+            Let Value = TokenStrings.Add(Word.Text)
         End If
         GoTo NextWord
     
@@ -2371,7 +2388,8 @@ TokenWord:
         
         'A property can be `.` only, without a name
         If Asc2 = ASC_NUL Then
-            Call Token_AddString(TOKEN_PROPERTY_NEW)
+            Let Token = TOKEN_PROPERTY_NEW
+            Let Value = TokenStrings.Add(Word.Text)
             GoTo NextWord
         
         'A property cannot begin with a number but must otherwise be A-Z, 0-9 and "_"
@@ -2382,58 +2400,60 @@ TokenWord:
         Else
             'If the property appears on a new line, it's a label-property definition _
              i.e. it defines a new sub-label of a chunk
-            If TokenLine <> PrevLine Then _
-                Call Token_AddString(TOKEN_PROPERTY_NEW) Else _
-                Call Token_AddString(TOKEN_PROPERTY_USE)
+            If TokenLine <> PrevLine _
+                Then Let Token = TOKEN_PROPERTY_NEW _
+                Else Let Token = TOKEN_PROPERTY_USE
+            Let Value = TokenStrings.Add(Word.Text)
         End If
         GoTo NextWord
         
     'Text _
      .......................................................................... `"` ...
     ElseIf Asc1 = SYNTAX_TEXT Then
-        Call Token_AddString(TOKEN_TEXT)
+        Let Token = TOKEN_TEXT
+        Let Value = TokenStrings.Add(Word.Mid(1).Text)
         GoTo NextWord
         
     ElseIf Asc1 = ASC_A Then '................................................. `a` ...
         'Z80 instructions
-        If Word.Equals(STR_ADC) Then Call Token_Add(TOKEN_Z80_ADC): GoTo NextWord
-        If Word.Equals(STR_ADD) Then Call Token_Add(TOKEN_Z80_ADD): GoTo NextWord
-        If Word.Equals(STR_AND) Then Call Token_Add(TOKEN_Z80_AND): GoTo NextWord
+        If Word.Equals(STR_ADC) Then Let Token = TOKEN_Z80_ADC: GoTo NextWord
+        If Word.Equals(STR_ADD) Then Let Token = TOKEN_Z80_ADD: GoTo NextWord
+        If Word.Equals(STR_AND) Then Let Token = TOKEN_Z80_AND: GoTo NextWord
          
     ElseIf Asc1 = ASC_B Then '................................................. `b` ...
         'Z80 instructions
-        If Word.Equals(STR_BIT) Then Call Token_Add(TOKEN_Z80_BIT): GoTo NextWord
+        If Word.Equals(STR_BIT) Then Let Token = TOKEN_Z80_BIT: GoTo NextWord
         'Keywords
-        If Word.Equals(STR_BOOL) Then Call Token_Add(TOKEN_KEYWORD_BOOL): GoTo NextWord
-        If Word.Equals(STR_BYTE) Then Call Token_Add(TOKEN_KEYWORD_BYTE): GoTo NextWord
+        If Word.Equals(STR_BOOL) Then Let Token = TOKEN_KEYWORD_BOOL: GoTo NextWord
+        If Word.Equals(STR_BYTE) Then Let Token = TOKEN_KEYWORD_BYTE: GoTo NextWord
         
     ElseIf Asc1 = ASC_C Then '................................................. `c` ...
         'Z80 instructions
-        If Word.Equals(STR_CALL) Then Call Token_Add(TOKEN_Z80_CALL): GoTo NextWord
-        If Word.Equals(STR_CCF) Then Call Token_Add(TOKEN_Z80_CCF): GoTo NextWord
-        If Word.Equals(STR_CP) Then Call Token_Add(TOKEN_Z80_CP): GoTo NextWord
-        If Word.Equals(STR_CPD) Then Call Token_Add(TOKEN_Z80_CPD): GoTo NextWord
-        If Word.Equals(STR_CPDR) Then Call Token_Add(TOKEN_Z80_CPDR): GoTo NextWord
-        If Word.Equals(STR_CPI) Then Call Token_Add(TOKEN_Z80_CPI): GoTo NextWord
-        If Word.Equals(STR_CPIR) Then Call Token_Add(TOKEN_Z80_CPIR): GoTo NextWord
-        If Word.Equals(STR_CPL) Then Call Token_Add(TOKEN_Z80_CPL): GoTo NextWord
+        If Word.Equals(STR_CALL) Then Let Token = TOKEN_Z80_CALL: GoTo NextWord
+        If Word.Equals(STR_CCF) Then Let Token = TOKEN_Z80_CCF: GoTo NextWord
+        If Word.Equals(STR_CP) Then Let Token = TOKEN_Z80_CP: GoTo NextWord
+        If Word.Equals(STR_CPD) Then Let Token = TOKEN_Z80_CPD: GoTo NextWord
+        If Word.Equals(STR_CPDR) Then Let Token = TOKEN_Z80_CPDR: GoTo NextWord
+        If Word.Equals(STR_CPI) Then Let Token = TOKEN_Z80_CPI: GoTo NextWord
+        If Word.Equals(STR_CPIR) Then Let Token = TOKEN_Z80_CPIR: GoTo NextWord
+        If Word.Equals(STR_CPL) Then Let Token = TOKEN_Z80_CPL: GoTo NextWord
         'Z80 flag condition
-        If Asc2 = ASC_NUL Then Call Token_Add(TOKEN_Z80_C): GoTo NextWord
+        If Asc2 = ASC_NUL Then Let Token = TOKEN_Z80_C: GoTo NextWord
         
     ElseIf Asc1 = ASC_D Then '................................................. `d` ...
         'Z80 instructions
-        If Word.Equals(STR_DAA) Then Call Token_Add(TOKEN_Z80_DAA): GoTo NextWord
-        If Word.Equals(STR_DEC) Then Call Token_Add(TOKEN_Z80_DEC): GoTo NextWord
-        If Word.Equals(STR_DI) Then Call Token_Add(TOKEN_Z80_DI): GoTo NextWord
-        If Word.Equals(STR_DJNZ) Then Call Token_Add(TOKEN_Z80_DJNZ): GoTo NextWord
+        If Word.Equals(STR_DAA) Then Let Token = TOKEN_Z80_DAA: GoTo NextWord
+        If Word.Equals(STR_DEC) Then Let Token = TOKEN_Z80_DEC: GoTo NextWord
+        If Word.Equals(STR_DI) Then Let Token = TOKEN_Z80_DI: GoTo NextWord
+        If Word.Equals(STR_DJNZ) Then Let Token = TOKEN_Z80_DJNZ: GoTo NextWord
         'Keywords
-        If Word.Equals(STR_DEF) Then Call Token_Add(TOKEN_KEYWORD_DEF): GoTo NextWord
+        If Word.Equals(STR_DEF) Then Let Token = TOKEN_KEYWORD_DEF: GoTo NextWord
         
     ElseIf Asc1 = ASC_E Then '................................................. `e` ...
         'Z80 instructions
-        If Word.Equals(STR_EI) Then Call Token_Add(TOKEN_Z80_EI): GoTo NextWord
-        If Word.Equals(STR_EX) Then Call Token_Add(TOKEN_Z80_EX): GoTo NextWord
-        If Word.Equals(STR_EXX) Then Call Token_Add(TOKEN_Z80_EXX): GoTo NextWord
+        If Word.Equals(STR_EI) Then Let Token = TOKEN_Z80_EI: GoTo NextWord
+        If Word.Equals(STR_EX) Then Let Token = TOKEN_Z80_EX: GoTo NextWord
+        If Word.Equals(STR_EXX) Then Let Token = TOKEN_Z80_EXX: GoTo NextWord
         
     ElseIf Asc1 = ASC_F Then '................................................. `f` ...
         'You can't refer to the `f` register directly (only `af`)
@@ -2445,31 +2465,31 @@ TokenWord:
         
     ElseIf Asc1 = ASC_H Then '................................................. `h` ...
         'Z80 instructions
-        If Word.Equals(STR_HLT) Then Call Token_Add(TOKEN_Z80_HALT): GoTo NextWord
-        If Word.Equals(STR_HALT) Then Call Token_Add(TOKEN_Z80_HALT): GoTo NextWord
+        If Word.Equals(STR_HLT) Then Let Token = TOKEN_Z80_HALT: GoTo NextWord
+        If Word.Equals(STR_HALT) Then Let Token = TOKEN_Z80_HALT: GoTo NextWord
         'Keywords
-        If Word.Equals(STR_HASH) Then Call Token_Add(TOKEN_KEYWORD_HASH): GoTo NextWord
-        If Word.Equals(STR_HELP) Then Call Token_Add(TOKEN_KEYWORD_HELP): GoTo NextWord
-        If Word.Equals(STR_HI) Then Call Token_Add(TOKEN_KEYWORD_HI): GoTo NextWord
+        If Word.Equals(STR_HASH) Then Let Token = TOKEN_KEYWORD_HASH: GoTo NextWord
+        If Word.Equals(STR_HELP) Then Let Token = TOKEN_KEYWORD_HELP: GoTo NextWord
+        If Word.Equals(STR_HI) Then Let Token = TOKEN_KEYWORD_HI: GoTo NextWord
         
     ElseIf Asc1 = ASC_I Then '................................................. `i` ...
         'Z80 instructions
-        If Word.Equals(STR_IM) Then Call Token_Add(TOKEN_Z80_IM): GoTo NextWord
-        If Word.Equals(STR_IN) Then Call Token_Add(TOKEN_Z80_IN): GoTo NextWord
-        If Word.Equals(STR_INC) Then Call Token_Add(TOKEN_Z80_INC): GoTo NextWord
-        If Word.Equals(STR_IND) Then Call Token_Add(TOKEN_Z80_IND): GoTo NextWord
-        If Word.Equals(STR_INDR) Then Call Token_Add(TOKEN_Z80_INDR): GoTo NextWord
-        If Word.Equals(STR_INI) Then Call Token_Add(TOKEN_Z80_INI): GoTo NextWord
-        If Word.Equals(STR_INIR) Then Call Token_Add(TOKEN_Z80_INIR): GoTo NextWord
+        If Word.Equals(STR_IM) Then Let Token = TOKEN_Z80_IM: GoTo NextWord
+        If Word.Equals(STR_IN) Then Let Token = TOKEN_Z80_IN: GoTo NextWord
+        If Word.Equals(STR_INC) Then Let Token = TOKEN_Z80_INC: GoTo NextWord
+        If Word.Equals(STR_IND) Then Let Token = TOKEN_Z80_IND: GoTo NextWord
+        If Word.Equals(STR_INDR) Then Let Token = TOKEN_Z80_INDR: GoTo NextWord
+        If Word.Equals(STR_INI) Then Let Token = TOKEN_Z80_INI: GoTo NextWord
+        If Word.Equals(STR_INIR) Then Let Token = TOKEN_Z80_INIR: GoTo NextWord
         'keywords
-        If Word.Equals(STR_INCLUDE) Then Call Token_Add(TOKEN_KEYWORD_INCLUDE): GoTo NextWord
-        If Word.Equals(STR_INDEX) Then Call Token_Add(TOKEN_KEYWORD_INDEX): GoTo NextWord
-        If Word.Equals(STR_INTERRUPT) Then Call Token_Add(TOKEN_KEYWORD_INTERRUPT): GoTo NextWord
+        If Word.Equals(STR_INCLUDE) Then Let Token = TOKEN_KEYWORD_INCLUDE: GoTo NextWord
+        If Word.Equals(STR_INDEX) Then Let Token = TOKEN_KEYWORD_INDEX: GoTo NextWord
+        If Word.Equals(STR_INTERRUPT) Then Let Token = TOKEN_KEYWORD_INTERRUPT: GoTo NextWord
         
     ElseIf Asc1 = ASC_J Then '................................................. `j` ...
         'Z80 instructions
-        If Word.Equals(STR_JP) Then Call Token_Add(TOKEN_Z80_JP): GoTo NextWord
-        If Word.Equals(STR_JR) Then Call Token_Add(TOKEN_Z80_JR): GoTo NextWord
+        If Word.Equals(STR_JP) Then Let Token = TOKEN_Z80_JP: GoTo NextWord
+        If Word.Equals(STR_JR) Then Let Token = TOKEN_Z80_JR: GoTo NextWord
         'There are no `j` registers
         GoTo WordError
         
@@ -2477,11 +2497,11 @@ TokenWord:
         'Number suffixes K & KB
         If Asc2 = ASC_NUL Then
             'Just `K`
-            Call Token_Add(TOKEN_PREFIX_K): GoTo NextWord
+            Let Token = TOKEN_PREFIX_K: GoTo NextWord
         
         'B must be next for `KB`
         ElseIf Asc2 = ASC_B And Asc3 = ASC_NUL Then
-            Call Token_Add(TOKEN_PREFIX_KB): GoTo NextWord
+            Let Token = TOKEN_PREFIX_KB: GoTo NextWord
             
         End If
         'There are no `k` registers
@@ -2489,59 +2509,59 @@ TokenWord:
         
     ElseIf Asc1 = ASC_L Then '................................................. `l` ...
         'Z80 instructions
-        If Word.Equals(STR_LD) Then Call Token_Add(TOKEN_Z80_LD): GoTo NextWord
-        If Word.Equals(STR_LDD) Then Call Token_Add(TOKEN_Z80_LDD): GoTo NextWord
-        If Word.Equals(STR_LDDR) Then Call Token_Add(TOKEN_Z80_LDDR): GoTo NextWord
-        If Word.Equals(STR_LDI) Then Call Token_Add(TOKEN_Z80_LDI): GoTo NextWord
-        If Word.Equals(STR_LDIR) Then Call Token_Add(TOKEN_Z80_LDIR): GoTo NextWord
+        If Word.Equals(STR_LD) Then Let Token = TOKEN_Z80_LD: GoTo NextWord
+        If Word.Equals(STR_LDD) Then Let Token = TOKEN_Z80_LDD: GoTo NextWord
+        If Word.Equals(STR_LDDR) Then Let Token = TOKEN_Z80_LDDR: GoTo NextWord
+        If Word.Equals(STR_LDI) Then Let Token = TOKEN_Z80_LDI: GoTo NextWord
+        If Word.Equals(STR_LDIR) Then Let Token = TOKEN_Z80_LDIR: GoTo NextWord
         'Keywords
-        If Word.Equals(STR_LO) Then Call Token_Add(TOKEN_KEYWORD_LO): GoTo NextWord
-        If Word.Equals(STR_LONG) Then Call Token_Add(TOKEN_KEYWORD_LONG): GoTo NextWord
+        If Word.Equals(STR_LO) Then Let Token = TOKEN_KEYWORD_LO: GoTo NextWord
+        If Word.Equals(STR_LONG) Then Let Token = TOKEN_KEYWORD_LONG: GoTo NextWord
     
     ElseIf Asc1 = ASC_M Then '................................................. `m` ...
         'Z80 flag conditions
-        If Asc2 = ASC_NUL Then Call Token_Add(TOKEN_Z80_M): GoTo NextWord
+        If Asc2 = ASC_NUL Then Let Token = TOKEN_Z80_M: GoTo NextWord
         'There is no `m` register
         GoTo WordError
         
     ElseIf Asc1 = ASC_N Then '................................................. `n` ...
         'Z80 instructions
-        If Word.Equals(STR_NEG) Then Call Token_Add(TOKEN_Z80_NEG): GoTo NextWord
-        If Word.Equals(STR_NOP) Then Call Token_Add(TOKEN_Z80_NOP): GoTo NextWord
+        If Word.Equals(STR_NEG) Then Let Token = TOKEN_Z80_NEG: GoTo NextWord
+        If Word.Equals(STR_NOP) Then Let Token = TOKEN_Z80_NOP: GoTo NextWord
         'Keywords
-        If Word.Equals(STR_NYBL) Then Call Token_Add(TOKEN_KEYWORD_NYBL): GoTo NextWord
+        If Word.Equals(STR_NYBL) Then Let Token = TOKEN_KEYWORD_NYBL: GoTo NextWord
         'Z80 flag conditions
         If Asc3 = ASC_NUL Then
-            If Asc2 = ASC_C Then Call Token_Add(TOKEN_Z80_NC): GoTo NextWord
-            If Asc2 = ASC_Z Then Call Token_Add(TOKEN_Z80_NZ): GoTo NextWord
+            If Asc2 = ASC_C Then Let Token = TOKEN_Z80_NC: GoTo NextWord
+            If Asc2 = ASC_Z Then Let Token = TOKEN_Z80_NZ: GoTo NextWord
         End If
         'There are no `n` registers
         GoTo WordError
         
     ElseIf Asc1 = ASC_O Then '................................................. `o` ...
         'Z80 instructions
-        If Word.Equals(STR_OR) Then Call Token_Add(TOKEN_Z80_OR): GoTo NextWord
-        If Word.Equals(STR_OUT) Then Call Token_Add(TOKEN_Z80_OUT): GoTo NextWord
-        If Word.Equals(STR_OUTD) Then Call Token_Add(TOKEN_Z80_OUTD): GoTo NextWord
-        If Word.Equals(STR_OTDR) Then Call Token_Add(TOKEN_Z80_OTDR): GoTo NextWord
-        If Word.Equals(STR_OUTI) Then Call Token_Add(TOKEN_Z80_OUTI): GoTo NextWord
-        If Word.Equals(STR_OTIR) Then Call Token_Add(TOKEN_Z80_OTIR): GoTo NextWord
+        If Word.Equals(STR_OR) Then Let Token = TOKEN_Z80_OR: GoTo NextWord
+        If Word.Equals(STR_OUT) Then Let Token = TOKEN_Z80_OUT: GoTo NextWord
+        If Word.Equals(STR_OUTD) Then Let Token = TOKEN_Z80_OUTD: GoTo NextWord
+        If Word.Equals(STR_OTDR) Then Let Token = TOKEN_Z80_OTDR: GoTo NextWord
+        If Word.Equals(STR_OUTI) Then Let Token = TOKEN_Z80_OUTI: GoTo NextWord
+        If Word.Equals(STR_OTIR) Then Let Token = TOKEN_Z80_OTIR: GoTo NextWord
         'There are no `o` registers
         GoTo WordError
         
     ElseIf Asc1 = ASC_P Then '................................................. `p` ...
         'Z80 instructions
-        If Word.Equals(STR_POP) Then Call Token_Add(TOKEN_Z80_POP): GoTo NextWord
-        If Word.Equals(STR_PUSH) Then Call Token_Add(TOKEN_Z80_PUSH): GoTo NextWord
+        If Word.Equals(STR_POP) Then Let Token = TOKEN_Z80_POP: GoTo NextWord
+        If Word.Equals(STR_PUSH) Then Let Token = TOKEN_Z80_PUSH: GoTo NextWord
         'Z80 flag conditions
-        If Asc2 = ASC_NUL Then Call Token_Add(TOKEN_Z80_P): GoTo NextWord
+        If Asc2 = ASC_NUL Then Let Token = TOKEN_Z80_P: GoTo NextWord
         If Asc3 = ASC_NUL Then
-            If Asc2 = ASC_E Then Call Token_Add(TOKEN_Z80_PE): GoTo NextWord
-            If Asc2 = ASC_O Then Call Token_Add(TOKEN_Z80_PO): GoTo NextWord
+            If Asc2 = ASC_E Then Let Token = TOKEN_Z80_PE: GoTo NextWord
+            If Asc2 = ASC_O Then Let Token = TOKEN_Z80_PO: GoTo NextWord
         End If
         'Keywords
-        If Word.Equals(STR_PARAMS) Then Call Token_Add(TOKEN_KEYWORD_PARAMS): GoTo NextWord
-        If Word.Equals(STR_PROC) Then Call Token_Add(TOKEN_KEYWORD_PROC): GoTo NextWord
+        If Word.Equals(STR_PARAMS) Then Let Token = TOKEN_KEYWORD_PARAMS: GoTo NextWord
+        If Word.Equals(STR_PROC) Then Let Token = TOKEN_KEYWORD_PROC: GoTo NextWord
     
     ElseIf Asc1 = ASC_Q Then '................................................. `q` ...
         'There's nothing that begins with Q
@@ -2549,45 +2569,45 @@ TokenWord:
         
     ElseIf Asc1 = ASC_R Then '................................................. `r` ...
         'Z80 instructions
-        If Word.Equals(STR_RES) Then Call Token_Add(TOKEN_Z80_RES): GoTo NextWord
-        If Word.Equals(STR_RET) Then Call Token_Add(TOKEN_Z80_RET): GoTo NextWord
-        If Word.Equals(STR_RETI) Then Call Token_Add(TOKEN_Z80_RETI): GoTo NextWord
-        If Word.Equals(STR_RETN) Then Call Token_Add(TOKEN_Z80_RETN): GoTo NextWord
-        If Word.Equals(STR_RL) Then Call Token_Add(TOKEN_Z80_RL): GoTo NextWord
-        If Word.Equals(STR_RLA) Then Call Token_Add(TOKEN_Z80_RLA): GoTo NextWord
-        If Word.Equals(STR_RLC) Then Call Token_Add(TOKEN_Z80_RLC): GoTo NextWord
-        If Word.Equals(STR_RLCA) Then Call Token_Add(TOKEN_Z80_RLCA): GoTo NextWord
-        If Word.Equals(STR_RLD) Then Call Token_Add(TOKEN_Z80_RLD): GoTo NextWord
-        If Word.Equals(STR_RR) Then Call Token_Add(TOKEN_Z80_RR): GoTo NextWord
-        If Word.Equals(STR_RRA) Then Call Token_Add(TOKEN_Z80_RRA): GoTo NextWord
-        If Word.Equals(STR_RRC) Then Call Token_Add(TOKEN_Z80_RRC): GoTo NextWord
-        If Word.Equals(STR_RRCA) Then Call Token_Add(TOKEN_Z80_RRCA): GoTo NextWord
-        If Word.Equals(STR_RRD) Then Call Token_Add(TOKEN_Z80_RRD): GoTo NextWord
-        If Word.Equals(STR_RST) Then Call Token_Add(TOKEN_Z80_RST): GoTo NextWord
+        If Word.Equals(STR_RES) Then Let Token = TOKEN_Z80_RES: GoTo NextWord
+        If Word.Equals(STR_RET) Then Let Token = TOKEN_Z80_RET: GoTo NextWord
+        If Word.Equals(STR_RETI) Then Let Token = TOKEN_Z80_RETI: GoTo NextWord
+        If Word.Equals(STR_RETN) Then Let Token = TOKEN_Z80_RETN: GoTo NextWord
+        If Word.Equals(STR_RL) Then Let Token = TOKEN_Z80_RL: GoTo NextWord
+        If Word.Equals(STR_RLA) Then Let Token = TOKEN_Z80_RLA: GoTo NextWord
+        If Word.Equals(STR_RLC) Then Let Token = TOKEN_Z80_RLC: GoTo NextWord
+        If Word.Equals(STR_RLCA) Then Let Token = TOKEN_Z80_RLCA: GoTo NextWord
+        If Word.Equals(STR_RLD) Then Let Token = TOKEN_Z80_RLD: GoTo NextWord
+        If Word.Equals(STR_RR) Then Let Token = TOKEN_Z80_RR: GoTo NextWord
+        If Word.Equals(STR_RRA) Then Let Token = TOKEN_Z80_RRA: GoTo NextWord
+        If Word.Equals(STR_RRC) Then Let Token = TOKEN_Z80_RRC: GoTo NextWord
+        If Word.Equals(STR_RRCA) Then Let Token = TOKEN_Z80_RRCA: GoTo NextWord
+        If Word.Equals(STR_RRD) Then Let Token = TOKEN_Z80_RRD: GoTo NextWord
+        If Word.Equals(STR_RST) Then Let Token = TOKEN_Z80_RST: GoTo NextWord
         'Keywords
-        If Word.Equals(STR_RAM) Then Call Token_Add(TOKEN_KEYWORD_RAM): GoTo NextWord
-        If Word.Equals(STR_RETURN) Then Call Token_Add(TOKEN_KEYWORD_RETURN): GoTo NextWord
+        If Word.Equals(STR_RAM) Then Let Token = TOKEN_KEYWORD_RAM: GoTo NextWord
+        If Word.Equals(STR_RETURN) Then Let Token = TOKEN_KEYWORD_RETURN: GoTo NextWord
         
     ElseIf Asc1 = ASC_S Then '................................................. `s` ...
         'Z80 instructions
-        If Word.Equals(STR_SBC) Then Call Token_Add(TOKEN_Z80_SBC): GoTo NextWord
-        If Word.Equals(STR_SCF) Then Call Token_Add(TOKEN_Z80_SCF): GoTo NextWord
-        If Word.Equals(STR_SET) Then Call Token_Add(TOKEN_Z80_SET): GoTo NextWord
-        If Word.Equals(STR_SLA) Then Call Token_Add(TOKEN_Z80_SLA): GoTo NextWord
-        If Word.Equals(STR_SLL) Then Call Token_Add(TOKEN_Z80_SLL): GoTo NextWord
-        If Word.Equals(STR_SRA) Then Call Token_Add(TOKEN_Z80_SRA): GoTo NextWord
-        If Word.Equals(STR_SRL) Then Call Token_Add(TOKEN_Z80_SRL): GoTo NextWord
-        If Word.Equals(STR_SUB) Then Call Token_Add(TOKEN_Z80_SUB): GoTo NextWord
+        If Word.Equals(STR_SBC) Then Let Token = TOKEN_Z80_SBC: GoTo NextWord
+        If Word.Equals(STR_SCF) Then Let Token = TOKEN_Z80_SCF: GoTo NextWord
+        If Word.Equals(STR_SET) Then Let Token = TOKEN_Z80_SET: GoTo NextWord
+        If Word.Equals(STR_SLA) Then Let Token = TOKEN_Z80_SLA: GoTo NextWord
+        If Word.Equals(STR_SLL) Then Let Token = TOKEN_Z80_SLL: GoTo NextWord
+        If Word.Equals(STR_SRA) Then Let Token = TOKEN_Z80_SRA: GoTo NextWord
+        If Word.Equals(STR_SRL) Then Let Token = TOKEN_Z80_SRL: GoTo NextWord
+        If Word.Equals(STR_SUB) Then Let Token = TOKEN_Z80_SUB: GoTo NextWord
         'Keywords
-        If Word.Equals(STR_SECTION) Then Call Token_Add(TOKEN_KEYWORD_SECTION): GoTo NextWord
-        If Word.Equals(STR_SLOT) Then Call Token_Add(TOKEN_KEYWORD_SLOT): GoTo NextWord
-        If Word.Equals(STR_START) Then Call Token_Add(TOKEN_KEYWORD_START): GoTo NextWord
-        If Word.Equals(STR_SYSTEM) Then Call Token_Add(TOKEN_KEYWORD_SYSTEM): GoTo NextWord
+        If Word.Equals(STR_SECTION) Then Let Token = TOKEN_KEYWORD_SECTION: GoTo NextWord
+        If Word.Equals(STR_SLOT) Then Let Token = TOKEN_KEYWORD_SLOT: GoTo NextWord
+        If Word.Equals(STR_START) Then Let Token = TOKEN_KEYWORD_START: GoTo NextWord
+        If Word.Equals(STR_SYSTEM) Then Let Token = TOKEN_KEYWORD_SYSTEM: GoTo NextWord
         
     ElseIf Asc1 = ASC_T Then '................................................. `t` ...
         'Keywords
-        If Word.Equals(STR_TABLE) Then Call Token_Add(TOKEN_KEYWORD_TABLE): GoTo NextWord
-        If Word.Equals(STR_TRIP) Then Call Token_Add(TOKEN_KEYWORD_TRIP): GoTo NextWord
+        If Word.Equals(STR_TABLE) Then Let Token = TOKEN_KEYWORD_TABLE: GoTo NextWord
+        If Word.Equals(STR_TRIP) Then Let Token = TOKEN_KEYWORD_TRIP: GoTo NextWord
         'There is no `t` register
         GoTo WordError
     
@@ -2601,15 +2621,15 @@ TokenWord:
         
     ElseIf Asc1 = ASC_W Then '................................................. `w` ...
         'Keywords
-        If Word.Equals(STR_WORD) Then Call Token_Add(TOKEN_KEYWORD_WORD): GoTo NextWord
+        If Word.Equals(STR_WORD) Then Let Token = TOKEN_KEYWORD_WORD: GoTo NextWord
         'There is no `w` register
         GoTo WordError
         
     ElseIf Asc1 = ASC_X Then '................................................. `x` ...
         'If only `x`, then it's the repeat operator
-        If Asc2 = ASC_NUL Then Call Token_Add(TOKEN_OPERATOR_REP): GoTo NextWord
+        If Asc2 = ASC_NUL Then Let Token = TOKEN_OPERATOR_REP: GoTo NextWord
         'Z80 instructions
-        If Word.Equals(STR_XOR) Then Call Token_Add(TOKEN_Z80_XOR): GoTo NextWord
+        If Word.Equals(STR_XOR) Then Let Token = TOKEN_Z80_XOR: GoTo NextWord
         'There is no `x` register
         GoTo WordError
     
@@ -2619,58 +2639,61 @@ TokenWord:
     
     ElseIf Asc1 = ASC_Z Then '................................................. `z` ...
         'Z80 flag conditions
-        If Asc2 = ASC_NUL Then Call Token_Add(TOKEN_Z80_Z): GoTo NextWord
+        If Asc2 = ASC_NUL Then Let Token = TOKEN_Z80_Z: GoTo NextWord
         'There is no 'z' register
         GoTo WordError
         
     ElseIf Asc1 = SYNTAX_BRACES_OPEN Then '.................................... `{` ...
         'Open another nesting level (if there was an error, stop parsing)
         If NestIn(TOKEN_BRACES_OPEN) Then GoTo Finish
-        GoTo NextWord
+        Let Token = TOKEN_BRACES_OPEN: GoTo NextWord
         
     ElseIf Asc1 = SYNTAX_BRACES_CLOSE Then  '.................................. `}` ...
         'Close the current nesting level, error if incorrect bracket-matching
+        Let Token = TOKEN_BRACES_CLOSE: Let Value = Nesting(NestingDepth).Index
         If NestOut(TOKEN_BRACES_OPEN, TOKEN_BRACES_CLOSE) Then GoTo Finish
         GoTo NextWord
         
     ElseIf Asc1 = SYNTAX_PARENS_OPEN Then '.................................... `(` ...
         'Open another nesting level (if there was an error, stop parsing)
         If NestIn(TOKEN_PARENS_OPEN) Then GoTo Finish
-        GoTo NextWord
+        Let Token = TOKEN_PARENS_OPEN: GoTo NextWord
         
     ElseIf Asc1 = SYNTAX_PARENS_CLOSE Then '................................... `)` ...
         'Close the current nesting level, error if incorrect bracket-matching
+        Let Token = TOKEN_PARENS_CLOSE: Let Value = Nesting(NestingDepth).Index
         If NestOut(TOKEN_PARENS_OPEN, TOKEN_PARENS_CLOSE) Then GoTo Finish
         GoTo NextWord
         
     ElseIf Asc1 = SYNTAX_SQUARE_OPEN Then '.................................... `[` ...
         'Open another nesting level (if there was an error, stop parsing)
         If NestIn(TOKEN_SQUARE_OPEN) Then GoTo Finish
-        GoTo NextWord
+        Let Token = TOKEN_SQUARE_OPEN: GoTo NextWord
         
     ElseIf Asc1 = SYNTAX_SQUARE_CLOSE Then '................................... `]` ...
         'Close the current nesting level, error if incorrect bracket-matching
+        Let Token = TOKEN_SQUARE_CLOSE: Let Value = Nesting(NestingDepth).Index
         If NestOut(TOKEN_SQUARE_OPEN, TOKEN_SQUARE_CLOSE) Then GoTo Finish
         GoTo NextWord
         
     ElseIf Asc1 = SYNTAX_OPERATOR_ADD Then '................................... `+` ...
-        Call Token_Add(TOKEN_OPERATOR_ADD): GoTo NextWord
+        Let Token = TOKEN_OPERATOR_ADD: GoTo NextWord
     ElseIf Asc1 = SYNTAX_OPERATOR_SUB Then '................................... `-` ...
-        Call Token_Add(TOKEN_OPERATOR_SUB): GoTo NextWord
+        Let Token = TOKEN_OPERATOR_SUB: GoTo NextWord
     ElseIf Asc1 = SYNTAX_OPERATOR_MUL Then '................................... `*` ...
-        Call Token_Add(TOKEN_OPERATOR_MUL): GoTo NextWord
+        Let Token = TOKEN_OPERATOR_MUL: GoTo NextWord
     ElseIf Asc1 = SYNTAX_OPERATOR_DIV Then '................................... `/` ...
-        Call Token_Add(TOKEN_OPERATOR_DIV): GoTo NextWord
+        Let Token = TOKEN_OPERATOR_DIV: GoTo NextWord
     ElseIf Asc1 = SYNTAX_OPERATOR_POW Then '................................... `^` ...
-        Call Token_Add(TOKEN_OPERATOR_POW): GoTo NextWord
+        Let Token = TOKEN_OPERATOR_POW: GoTo NextWord
     ElseIf Asc1 = SYNTAX_OPERATOR_MOD Then '................................... `\` ...
-        Call Token_Add(TOKEN_OPERATOR_MOD): GoTo NextWord
+        Let Token = TOKEN_OPERATOR_MOD: GoTo NextWord
     ElseIf Asc1 = SYNTAX_OPERATOR_OR Then  '................................... `|` ...
-        Call Token_Add(TOKEN_OPERATOR_OR): GoTo NextWord
+        Let Token = TOKEN_OPERATOR_OR: GoTo NextWord
     ElseIf Asc1 = SYNTAX_OPERATOR_AND Then '................................... `&` ...
-        Call Token_Add(TOKEN_OPERATOR_AND): GoTo NextWord
+        Let Token = TOKEN_OPERATOR_AND: GoTo NextWord
     ElseIf Asc1 = SYNTAX_OPERATOR_XOR Then '................................... `~` ...
-        Call Token_Add(TOKEN_OPERATOR_XOR): GoTo NextWord
+        Let Token = TOKEN_OPERATOR_XOR: GoTo NextWord
     End If
     
     'Z80 Registers: _
@@ -2702,50 +2725,86 @@ Registers:
     GoTo WordError
 
 OneLetter:
-    If Asc1 = ASC_A Then Call Token_Add(TOKEN_Z80_A): GoTo NextWord
-    If Asc1 = ASC_B Then Call Token_Add(TOKEN_Z80_B): GoTo NextWord
-    If Asc1 = ASC_C Then Call Token_Add(TOKEN_Z80_C): GoTo NextWord
-    If Asc1 = ASC_D Then Call Token_Add(TOKEN_Z80_D): GoTo NextWord
-    If Asc1 = ASC_E Then Call Token_Add(TOKEN_Z80_E): GoTo NextWord
-    If Asc1 = ASC_H Then Call Token_Add(TOKEN_Z80_H): GoTo NextWord
-    If Asc1 = ASC_I Then Call Token_Add(TOKEN_Z80_I): GoTo NextWord
-    If Asc1 = ASC_L Then Call Token_Add(TOKEN_Z80_L): GoTo NextWord
-    If Asc1 = ASC_R Then Call Token_Add(TOKEN_Z80_R): GoTo NextWord
+    If Asc1 = ASC_A Then Let Token = TOKEN_Z80_A: GoTo NextWord
+    If Asc1 = ASC_B Then Let Token = TOKEN_Z80_B: GoTo NextWord
+    If Asc1 = ASC_C Then Let Token = TOKEN_Z80_C: GoTo NextWord
+    If Asc1 = ASC_D Then Let Token = TOKEN_Z80_D: GoTo NextWord
+    If Asc1 = ASC_E Then Let Token = TOKEN_Z80_E: GoTo NextWord
+    If Asc1 = ASC_H Then Let Token = TOKEN_Z80_H: GoTo NextWord
+    If Asc1 = ASC_I Then Let Token = TOKEN_Z80_I: GoTo NextWord
+    If Asc1 = ASC_L Then Let Token = TOKEN_Z80_L: GoTo NextWord
+    If Asc1 = ASC_R Then Let Token = TOKEN_Z80_R: GoTo NextWord
     GoTo WordError
 
 TwoLetters:
     If Asc1 = ASC_A Then                '"af"
-        If Asc2 = ASC_F Then Call Token_Add(TOKEN_Z80_AF): GoTo NextWord
+        If Asc2 = ASC_F Then Let Token = TOKEN_Z80_AF: GoTo NextWord
     ElseIf Asc1 = ASC_B Then            '"bc"
-        If Asc2 = ASC_C Then Call Token_Add(TOKEN_Z80_BC): GoTo NextWord
+        If Asc2 = ASC_C Then Let Token = TOKEN_Z80_BC: GoTo NextWord
     ElseIf Asc1 = ASC_D Then            '"de"
-        If Asc2 = ASC_E Then Call Token_Add(TOKEN_Z80_DE): GoTo NextWord
+        If Asc2 = ASC_E Then Let Token = TOKEN_Z80_DE: GoTo NextWord
     ElseIf Asc1 = ASC_H Then            '"hl"
-        If Asc2 = ASC_L Then Call Token_Add(TOKEN_Z80_HL): GoTo NextWord
+        If Asc2 = ASC_L Then Let Token = TOKEN_Z80_HL: GoTo NextWord
     ElseIf Asc1 = ASC_I Then            '"ix"/"iy"
-        If Asc2 = ASC_X Then Call Token_Add(TOKEN_Z80_IX): GoTo NextWord
-        If Asc2 = ASC_Y Then Call Token_Add(TOKEN_Z80_IY): GoTo NextWord
+        If Asc2 = ASC_X Then Let Token = TOKEN_Z80_IX: GoTo NextWord
+        If Asc2 = ASC_Y Then Let Token = TOKEN_Z80_IY: GoTo NextWord
     ElseIf Asc1 = ASC_P Then            '"pc"
-        If Asc2 = ASC_C Then Call Token_Add(TOKEN_Z80_PC): GoTo NextWord
+        If Asc2 = ASC_C Then Let Token = TOKEN_Z80_PC: GoTo NextWord
     ElseIf Asc1 = ASC_S Then            '"sp"
-        If Asc2 = ASC_P Then Call Token_Add(TOKEN_Z80_SP): GoTo NextWord
+        If Asc2 = ASC_P Then Let Token = TOKEN_Z80_SP: GoTo NextWord
     End If
     GoTo WordError
     
 ThreeLetters:
     If Asc1 = ASC_I Then
         If Asc2 = ASC_X Then
-            If Asc3 = ASC_H Then Call Token_Add(TOKEN_Z80_IXH): GoTo NextWord
-            If Asc3 = ASC_L Then Call Token_Add(TOKEN_Z80_IXL): GoTo NextWord
+            If Asc3 = ASC_H Then Let Token = TOKEN_Z80_IXH: GoTo NextWord
+            If Asc3 = ASC_L Then Let Token = TOKEN_Z80_IXL: GoTo NextWord
         ElseIf Asc2 = ASC_Y Then
-            If Asc3 = ASC_H Then Call Token_Add(TOKEN_Z80_IYH): GoTo NextWord
-            If Asc3 = ASC_L Then Call Token_Add(TOKEN_Z80_IYL): GoTo NextWord
+            If Asc3 = ASC_H Then Let Token = TOKEN_Z80_IYH: GoTo NextWord
+            If Asc3 = ASC_L Then Let Token = TOKEN_Z80_IYL: GoTo NextWord
         End If
     End If
     GoTo WordError
     
     '----------------------------------------------------------------------------------
 NextWord:
+    With Files(File)
+        'Add the information gleaned to the current token and move to the next empty slot
+        With .Tokens(TokenIndex)
+            Let .Kind = Token
+            Let .Line = TokenLine
+            Let .Col = TokenCol
+            Let .Value = Value
+        End With
+        
+        'Remember the line number used for this token to check for properties occuring _
+         on a new line -- this constitutes a property definition in a Chunk
+        Let PrevLine = TokenLine
+        
+'        'TODO: Not necessary here?
+'        Call CacheToken
+        
+        'Move to the next token number
+        Let TokenIndex = TokenIndex + 1
+
+        'This will also likely increase the total number of tokens
+        Let .TokensLength = TokenIndex
+
+        'Note that the tokens array is given a large size to begin with as ReDimming _
+         it with every token added is *incredibly* slow. If we go over this buffer _
+         size, we need to increase it by a large chunk. Once parsing is complete the _
+         buffer will be trimmed down to the final size
+        If .TokensLength > .TokensBuffer Then
+            Let .TokensBuffer = .TokensBuffer + TOKEN_BUFFER
+            ReDim Preserve .Tokens(0 To .TokensBuffer) As oz80Token
+        End If
+    End With
+
+'    'Generate a debug message
+'    RaiseEvent Message(OZ80_LOG_DEBUG, FormatToken())
+        
+SkipWord:
     Call Profiler.EventEnd(EVENT_TOKENISE_TOKENWORD)
     '*** TIMER END ***
     GoTo ReadWord
@@ -2757,7 +2816,6 @@ ErrorOverflow: '................................................................
     
 WordError: '...........................................................................
     Call RaiseError(OZ80_ERROR_INVALID_WORD)
-    GoTo Finish
     
     '----------------------------------------------------------------------------------
 Finish:
@@ -2791,70 +2849,6 @@ Finish:
 End Function
 
 '/// PRIVATE PROCEDURES ///////////////////////////////////////////////////////////////
-
-'Token_Add : Add a token to the current token stream representation of a source file
-'======================================================================================
-'Token          | `OZ80_TOKEN` number representing the source code word
-'[Value]        | An optional associared value
-'======================================================================================
-Private Sub Token_Add( _
-             ByRef Token As OZ80_TOKEN, _
-    Optional ByRef Value As Double = 0 _
-)
-    'The `Token` param MUST be 0-255, but is given as long for speed reasons; _
-     the rest of this class will ensure that this is never out of bounds
-    With Files(File).Tokens(TokenIndex)
-        Let .Kind = Token And &HFF
-        Let .Value = Value
-        'Note that the line and column numbers are global to this class to avoid _
-         having to use them in calls hundreds of times over
-        Let .Line = TokenLine
-        Let .Col = TokenCol
-    End With
-    
-'    'Generate a debug message
-'    Call CacheToken
-'    RaiseEvent Message(OZ80_LOG_DEBUG, FormatToken())
-    
-    'Remember the line number used for this token to check for properties occuring _
-     on a new line -- this constitutes a property definition in a chunk
-    Let PrevLine = TokenLine
-    
-    'Move to the next token number
-    Let TokenIndex = TokenIndex + 1
-    'This will also likely increase the total number of tokens
-    'TODO: This isn't optimal?
-    If TokenIndex > Files(File).TokensLength _
-        Then Let Files(File).TokensLength = TokenIndex
-    
-    'Note that the tokens array is given a large size to begin with as ReDimming it _
-     with every token added is *incredibly* slow. If we go over this buffer size, _
-     we need to increase it by a large chunk. Once parsing is complete the buffer _
-     will be trimmed down to the final size
-    If Files(File).TokensLength > Files(File).TokensBuffer Then
-        Let Files(File).TokensBuffer = Files(File).TokensBuffer + TOKEN_BUFFER
-        ReDim Preserve Files(File).Tokens(0 To Files(File).TokensBuffer) As oz80Token
-    End If
-    
-    Call CacheToken
-End Sub
-
-'Token_AddString : Strings are stored separately and referenced by number
-'======================================================================================
-'Token          | `OZ80_TOKEN` number representing the source code word
-'======================================================================================
-Private Sub Token_AddString( _
-    ByRef Token As OZ80_TOKEN _
-)
-    'Note Line & Col numbers are global variables to this class to save having to _
-     use them in calls hundreds of times over. Again, speed over properness
-    
-    'Ignore the quote mark that is left on the front of OZ80 strings
-    If Token = TOKEN_TEXT Then Call Word.Mid(1)
-    
-    'Add the index key to the token so that we can retrieve the string later
-    Call Token_Add(Token, TokenStrings.Add(Word.Text))
-End Sub
 
 'CacheToken : Cache the current token info
 '======================================================================================
@@ -3093,7 +3087,6 @@ Private Function NestIn( _
     Let NestingDepth = NestingDepth + 1
     Let Nesting(NestingDepth).Token = BracketType
     Let Nesting(NestingDepth).Index = TokenIndex
-    Call Token_Add(BracketType, -1)
 End Function
 
 'NestOut : Finish a level of bracket nesting, folding up to the previous level
@@ -3116,8 +3109,6 @@ Private Function NestOut( _
         End If
         'Update the opening brace to reference the closing brace
         Let Files(File).Tokens(.Index).Value = TokenIndex
-        'Add the closing brace referencing the opening brace
-        Call Token_Add(BracketClose, CDbl(.Index))
     End With
     'Reduce the nesting level
     Let NestingDepth = NestingDepth - 1
@@ -5339,12 +5330,9 @@ Output:
 Output16:
     '..................................................................................
     'TODO: Validate 16-bit Value
-    'TODO: 16-bit Value opcodes never have an offset
     
     Let Bytes(ByteCount) = Opcode: Let ByteCount = ByteCount + 1
     Call api_RtlMoveMemory(LogPtr + 20, StrPtr(Cache_HexStr8(Opcode)), 4)
-    
-'    If Offset <> -1 Then Let Bytes(ByteCount) = Offset: Let ByteCount = ByteCount + 1
     
     If Value <> -1 Then
         Let Bytes(ByteCount) = (Value And &HFF&): Let ByteCount = ByteCount + 1
@@ -6129,13 +6117,13 @@ End Sub
 'RiaseError : Provide error details through an event
 '======================================================================================
 'Number         | Error number to set on the Class and raise via Event
-'[Line]         | Line number of the source file the error occurred on
-'[Col]          | Column number of the source file the error occurred on
+'Message        | A context-specific error message
+'[FormatValues] | A list of values to replace string markers "{$}"in the error message
 '---------------+----------------------------------------------------------------------
 'Returns        | The same error number, for simple tail recursion
 '======================================================================================
 Private Function RaiseError( _
-    ByRef Number As OZ80_ERROR _
+         ByRef Number As OZ80_ERROR _
 ) As OZ80_ERROR
     'Set the error number on this class
     Let My_Error = Number
@@ -6329,6 +6317,6 @@ Private Sub GetOZ80Error( _
             "Ensure that early on in your source code you define the Constant " & _
             "Value: " & vbCrLf & vbCrLf & "DEF !CONSTANT 123"
     Case Else
-        Stop
+'        Stop
     End Select
 End Sub

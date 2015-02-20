@@ -110,8 +110,8 @@ Private Sub Form_Load()
     Set Assembler = New OZ80
 
     'TODO: This will obviously be converted to use the command arguments
-'    Call Assembler.Assemble(App.Path & "\Sonic1-sms-oz80\sonic1-sms.oz80")
-    Call Assembler.Assemble(App.Path & "\TEST\test.oz80")
+    Call Assembler.Assemble(App.Path & "\Sonic1-sms-oz80\sonic1-sms.oz80")
+'    Call Assembler.Assemble(App.Path & "\TEST\test.oz80")
     
     'Do something that only faults in the IDE
     On Error GoTo Err_True

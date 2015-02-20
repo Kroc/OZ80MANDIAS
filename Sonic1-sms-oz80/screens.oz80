@@ -3318,9 +3318,9 @@ PARAMS  hl      `address of an object layout
 PROC    :loadObject                                                             `$235E
         `------------------------------------------------------------------------------
 PARAMS  IX;mob          HELP ""Address of the current mob being processed
-PARAMS	a	`object type
-	de	`?
-	hl	`address with the X & Y positions of the object
+        a	        `object type
+	de	        `?
+	hl	        `address with the X & Y positions of the object
 {        
 	ld	[ix+#mob.type],a	        `set the object type
 	

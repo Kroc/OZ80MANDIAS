@@ -78,8 +78,11 @@ Private Sub Form_Load()
 
 '    Dim i As Long
     Dim Test As New bluString
-    Let Test.Text = "ABCDÉF"
-    Debug.Print Test.Left(10, ASTERISK).Text
+'    Let Test.Text = "ABCDÉF"
+'    Debug.Print Test.Insert("The Quick Brown Fox", 0).Truncate(12).Text
+'    End
+    
+'    Debug.Print Test.Left(10, ASTERISK).Text
     
 '    Debug.Print Test.Join(Test.Clone.LCase).Text
 '    Debug.Print Test.Append("!").Text
@@ -107,15 +110,15 @@ Private Sub Form_Load()
     Set Assembler = New OZ80
 
     'TODO: This will obviously be converted to use the command arguments
-    Call Assembler.Assemble(App.Path & "\Sonic1-sms-oz80\sonic1-sms.oz80")
-'    Call Assembler.Assemble(App.Path & "\TEST\test.oz80")
+'    Call Assembler.Assemble(App.Path & "\Sonic1-sms-oz80\sonic1-sms.oz80")
+    Call Assembler.Assemble(App.Path & "\TEST\test.oz80")
     
     'Do something that only faults in the IDE
     On Error GoTo Err_True
     Debug.Print 1 \ 0
     MsgBox Format$(Timer - StartTime, "0.000")
 Err_True:
-
+    
     Set Assembler = Nothing
     
     Call SendMessage( _
@@ -173,7 +176,11 @@ Private Sub Assembler_Message( _
         Let Prefix = vbCrLf & Prefix
     End If
     
-    Call Log(Prefix & " " & Replace(LogText.Text, vbCrLf, vbCrLf & "  "), LogLevel)
+    Dim Msg As String
+    Let Msg = Prefix & " " & Replace(LogText.Text, vbCrLf, vbCrLf & "  ")
+'    Debug.Print Msg
+    Call Log(Msg, LogLevel)
+    
     Let PrevLog = LogLevel
 End Sub
 

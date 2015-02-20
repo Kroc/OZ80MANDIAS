@@ -1448,7 +1448,7 @@ PARAMS  IY;vars         HELP ""Address of the common variables (used throughout)
 	ret	nz
         
 	bit	5,[iy+#vars.flags6]
-	jr	nz,:3644._367e
+	jr	nz,:_3644._367e
         
 	ld	a,[$.RINGS]
 	and	a
@@ -2060,7 +2060,7 @@ PARAMS  IX;mob          HELP ""Address of the current mob being processed
         IY;vars         HELP ""Address of the common variables (used throughout)
         $.TEMP6         HELP ""Left indent of the mob, in pixels
         $.TEMP7         HELP ""Top indent of the mob, in pixels
-RETURN  F;carry         HELP ""Carry flag is clear if collision, otherwise set
+RETURN  AF;carry        HELP ""Carry flag is clear if collision, otherwise set
 {
         `is Sonic dead? (no collision detection)
 	bit	0,[IY+#vars.scrollRingFlags]
@@ -4466,7 +4466,7 @@ TABLE   :_a0b1                                  SECTION ::mobs                  
         BYTE $FF
 }
 
-INCLUDE "mobs\trap_electic.oz80"
+INCLUDE "mobs\trap_electric.oz80"
 
 PROC    :mob_badnick_ballHog                    SECTION ::mobs                  `$A1AA
         `==============================================================================

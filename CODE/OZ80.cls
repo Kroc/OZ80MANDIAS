@@ -167,54 +167,73 @@ End Enum
 Public Enum OZ80_ERROR
     OZ80_ERROR_NONE                     'Assembly completed successfully
     OZ80_ERROR_DUPLICATE                'A name has been defined twice
-    OZ80_ERROR_DUPLICATE_CONSTANT       '- Constant already defined
-    OZ80_ERROR_DUPLICATE_LABEL          '- Duplicate Label
-    OZ80_ERROR_DUPLICATE_PROC_HELP      '- Duplicate `HELP` parameter
-    OZ80_ERROR_DUPLICATE_PROC_INTERRUPT '- Duplicate `INTERRUPT` parameter
-    OZ80_ERROR_DUPLICATE_PROC_PARAMS    '- Duplicate `PARAMS` parameter
-    OZ80_ERROR_DUPLICATE_PROC_RETURN    '- Duplicate `RETURN` parameter
-    OZ80_ERROR_DUPLICATE_PROC_SECTION   '- Duplicate `SECTION` parameter
-    OZ80_ERROR_DUPLICATE_SECTION        '- Can't define a Section twice
-    OZ80_ERROR_DUPLICATE_START          '- Duplicate `START` Procedure
-    OZ80_ERROR_DUPLICATE_TABLE_SECTION  '- Duplicate `SECTION` parameter
     OZ80_ERROR_EXPECTED                 'Incorrect content at the current scope
-    OZ80_ERROR_EXPECTED_BRACKET         '- Close bracket ("}","]",")") without open
-    OZ80_ERROR_EXPECTED_EXPRESSION      '- Expression required here
-    OZ80_ERROR_EXPECTED_PROC_NAME       '- A label name must follow `PROC`
-    OZ80_ERROR_EXPECTED_PROC_PARAMS     '- Invalid stuff in the `PARAMS` list
-    OZ80_ERROR_EXPECTED_PROC_RETURN     '- Invalid stuff in the `RETURN` list
-    OZ80_ERROR_EXPECTED_ROOT            '- Only certain keywords allowed at root
-    OZ80_ERROR_EXPECTED_SECTION_NAME    '- A section name must follow `SECTION`
-    OZ80_ERROR_EXPECTED_SYSTEM_NAME     '- A system name must follow `SYSTEM`
-    OZ80_ERROR_EXPECTED_TABLE_NAME      '- A label name must follow `TABLE`
     OZ80_ERROR_EXPRESSION               'Not a valid expression
-    OZ80_ERROR_EXPRESSION_Z80           '- Not a valid Z80 instruction parameter
     OZ80_ERROR_FILE_END                 'Unexpected end of file
     OZ80_ERROR_FILE_NOTFOUND            'Requested file does not exist
     OZ80_ERROR_FILE_READ                'Some kind of problem while file handle open
     OZ80_ERROR_INDEFINITE               'Indefinite value cannot be used here
-    OZ80_ERROR_INVALID_INTERRUPT        'Invalid Interrupt address
-    OZ80_ERROR_INVALID_NAME             'Invalid label/property/variable name
-    OZ80_ERROR_INVALID_NAME_RAM         '- Invalid RAM name, i.e. `$.name`
-    OZ80_ERROR_INVALID_NAME_HASH        '- Invalid hash name, i.e. `#hash`
-    OZ80_ERROR_INVALID_NUMBER           'Not a valid number
-    OZ80_ERROR_INVALID_NUMBER_DEC       '- Invalid decimal number
-    OZ80_ERROR_INVALID_NUMBER_HEX       '- Invalid hexadecimal number
-    OZ80_ERROR_INVALID_NUMBER_BIN       '- Invalid binary number
-    OZ80_ERROR_INVALID_PROC_INTERRUPT   'SECTION & INTERRUPT params cannot co-exist
-    OZ80_ERROR_INVALID_SECTION          'Section used, but not defined
-    OZ80_ERROR_INVALID_SLOT             'Incorrect use of the Slot parameter
-    OZ80_ERROR_INVALID_WORD             'Couldn't parse a word
-    OZ80_ERROR_INVALID_Z80PARAMS        'Not the right parameters for a Z80 instruction
+    OZ80_ERROR_INVALID
     OZ80_ERROR_OVERFLOW                 'A number overflowed the maximum
-    OZ80_ERROR_OVERFLOW_HILO            '- HI & LO functions limited to 16-bit inputs
-    OZ80_ERROR_OVERFLOW_LINE            '- Line too long
-    OZ80_ERROR_OVERFLOW_FILE            '- File too long / large
-    OZ80_ERROR_OVERFLOW_Z80             '- 16-bit number used with an 8-bit instruction
-    OZ80_ERROR_TEXT_CHAR                'Character code out of range
     OZ80_ERROR_UNDEFINED                'Named item is used, but undefined
-    OZ80_ERROR_UNDEFINED_CONST          '- A Constant has been used before definition
 End Enum
+
+Private Const STR_ERR_EXPECTED_BRACKET As String = _
+    "Bracket expected. A bracket -- either Braces '{ }', Parentheses '( )' or " & _
+    "Square brackets '[ ]' -- once opened, must be closed in like order."
+
+Private Const STR_ERR_EXPECTED_DEF As String = _
+    "Unexpected word following 'DEF'!"
+
+Private Const STR_ERR_FILE_END As String = _
+    "Unexpected end of file!"
+
+Private Const STR_ERR_INVALID_NAME As String = _
+    "A valid name must meet the following requirements: " & vbCrLf & _
+    vbCrLf & _
+    "* Begin with its prefix: " & vbCrLf & _
+    vbCrLf & _
+    vbTab & "!  - Constant, e.g. '!CONSTANT'" & vbCrLf & _
+    vbTab & ":  - Label, e.g. ':Procedure'" & vbCrLf & _
+    vbTab & ":: - Section, e.g. '::Section'" & vbCrLf & _
+    vbTab & "#  - Hash, e.g. '#Hash'" & vbCrLf & _
+    vbTab & ".  - Subroutine/property, e.g. '.loop'" & vbCrLf & _
+    vbCrLf & _
+    "* The name may contain A-Z, 0-9 and Underscores, with the exceptions below" & vbCrLf & _
+    "* The character following the prefix must be A-Z only"
+    
+Private Const STR_ERR_INVALID_CONSTANT As String = _
+    "Not a valid Constant name." & vbCrLf & vbCrLf & "{$}"
+
+Private Const STR_ERR_INVALID_HASH As String = _
+    "Not a valid Hash name." & vbCrLf & vbCrLf & "{$}"
+
+Private Const STR_ERR_INVALID_LABEL As String = _
+    "Not a valid Label name." & vbCrLf & vbCrLf & "{$}"
+
+Private Const STR_ERR_INVALID_PROPERTY As String = _
+    "Not a valid Property name." & vbCrLf & vbCrLf & "{$}"
+
+Private Const STR_ERR_INVALID_RAM As String = _
+    "Not a valid RAM name." & vbCrLf & vbCrLf & "{$}"
+
+Private Const STR_ERR_INVALID_NUMBER_DEC As String = _
+    "Not a valid decimal number." & vbCrLf & vbCrLf & _
+    "Any word that begins with a number is treated as a decimal number and must " & _
+    "contain numeric characters (0-9) and optionally one decimal point. " & _
+    "For numbers with a decimal point, there must always be at least one number " & _
+    "preceeding the decimal point and another proceeding it, i.e. '9.9'."
+
+Private Const STR_ERR_INVALID_NUMBER_HEX As String = _
+    "Not a valid hexadecimal number." & vbCrLf & vbCrLf & _
+    "A hexadecimal number begins with '$' followed by 1-8 hexadecimal digits " & _
+    "(0-9, A-F)."
+
+Private Const STR_ERR_INVALID_WORD As String = _
+    "Unknown word. Is it a typo? Check the documentation for supported words."
+    
+Private Const STR_ERR_OVERFLOW As String = _
+    "Overflow."
 
 'Logging: _
  --------------------------------------------------------------------------------------
@@ -1822,7 +1841,10 @@ Private Function File_Assemble( _
      ----------------------------------------------------------------------------------
     If Not FSO.FileExists(TestPath.Text) Then
         'ERROR: File Not Found
-        Call RaiseError(OZ80_ERROR_FILE_NOTFOUND)
+        Call RaiseError(OZ80_ERROR_FILE_NOTFOUND, _
+            "The following file could not be found:" & vbCrLf & vbCrLf & "{$}", _
+            TestPath.Text _
+        )
         GoTo Finish
     End If
     
@@ -1914,7 +1936,8 @@ End Property
 '======================================================================================
 'Returns        | False if the token stream hit the end
 '======================================================================================
-Private Function NextToken() As Boolean
+Private Function NextToken( _
+) As Boolean
 '    'Generate a debug message with the details of the current token
 '    RaiseEvent Message(OZ80_LOG_DEBUG, FormatToken())
     
@@ -1923,6 +1946,26 @@ Private Function NextToken() As Boolean
     
     If TokenIndex >= Files(File).TokensLength Then Exit Function
     Let NextToken = True
+End Function
+
+'NextTokenError : Move onto the next token and error if the file ended
+'======================================================================================
+'Returns        | The error number
+'======================================================================================
+Private Function NextTokenError( _
+) As OZ80_ERROR
+'    'Generate a debug message with the details of the current token
+'    RaiseEvent Message(OZ80_LOG_DEBUG, FormatToken())
+    
+    Let TokenIndex = TokenIndex + 1
+    Call CacheToken
+    
+    If TokenIndex >= Files(File).TokensLength Then
+        'Raise an error message
+        Call RaiseError(OZ80_ERROR_FILE_END, STR_ERR_FILE_END)
+        'Return the error number for easy tail-recursion
+        Let NextTokenError = My_Error
+    End If
 End Function
 
 'File_Rewind : Go back to the start of the token stream
@@ -1947,9 +1990,8 @@ Private Function File_Tokenise( _
     '----------------------------------------------------------------------------------
     'Read the whole file into a single string
     '----------------------------------------------------------------------------------
-    'Check the file even exists first...
-    If Not FileExists(FilePath) _
-        Then Call RaiseError(OZ80_ERROR_FILE_NOTFOUND): GoTo Finish
+    'This function will be called by `File_Assemble`, so the file path will already _
+     have been normalised and file existance checked
     
     'Read the file into our fast string handler (though we won't be doing any string- _
      manipulation, we will be relying on the various methods available to us)
@@ -2244,23 +2286,18 @@ TokenWord:
         'Validate the number
         Let Number = 0: Let Multiplier = 1
         For i = Word.Length - 1 To 0 Step -1
-            'If not a 0-9 digit then this is not a decimal number!
-            If Not Word.CharIsNumeric(i, True) Then
-                Debug.Print Word.Text
-                Stop
-                
-                'ERROR: Invalid number!
-                Call RaiseError(OZ80_ERROR_INVALID_NUMBER_DEC)
-                GoTo Finish
-            Else
-                'Convert the number from ASCII codes into a value
-                On Error GoTo ErrorOverflow
-                'I've tried a lookup table here and it's exactly the same speed
-                Let Number = Number + (Word.Char(i) - ASC_0) * Multiplier
-                'Don't allow the multiplier to overflow when the number doesn't
-                If i > 0 Then Let Multiplier = Multiplier * 10
-                On Error GoTo 0
-            End If
+            'ERROR: If not a 0-9 digit then this is not a decimal number!
+            If Not Word.CharIsNumeric(i, True) Then Call RaiseError( _
+                OZ80_ERROR_INVALID, STR_ERR_INVALID_NUMBER_DEC _
+            ): GoTo Finish
+            
+            'Convert the number from ASCII codes into a value
+            On Error GoTo ErrorOverflow
+            'I've tried a lookup table here and it's exactly the same speed
+            Let Number = Number + (Word.Char(i) - ASC_0) * Multiplier
+            'Don't allow the multiplier to overflow when the number doesn't
+            If i > 0 Then Let Multiplier = Multiplier * 10
+            On Error GoTo 0
         Next i
         'Add the token with the number value
         Let Token = TOKEN_NUMBER
@@ -2270,11 +2307,10 @@ TokenWord:
     'Constant? _
      .......................................................................... `!` ...
     ElseIf Asc1 = SYNTAX_CONSTANT Then
-        'ERROR: Invalid hash name?
-        If Not IsValidName() Then
-            Call RaiseError(OZ80_ERROR_INVALID_NAME_HASH)
-            GoTo Finish
-        End If
+        'ERROR: Invalid Constant name?
+        If Not IsValidName() Then Call RaiseError( _
+            OZ80_ERROR_INVALID, STR_ERR_INVALID_CONSTANT, STR_ERR_INVALID_NAME _
+        ): GoTo Finish
         
         'TODO: Define constant name
         'Add the index key to the token so that we can retrieve the string later
@@ -2307,10 +2343,9 @@ TokenWord:
      .......................................................................... `#` ...
     ElseIf Asc1 = SYNTAX_HASH Then
         'ERROR: Invalid hash name?
-        If Not IsValidName() Then
-            Call RaiseError(OZ80_ERROR_INVALID_NAME_HASH)
-            GoTo Finish
-        End If
+        If Not IsValidName() Then Call RaiseError( _
+            OZ80_ERROR_INVALID, STR_ERR_INVALID_HASH, STR_ERR_INVALID_NAME _
+        ): GoTo Finish
         
         'TODO: Define hash name
         'Add the index key to the token so that we can retrieve the string later
@@ -2323,10 +2358,9 @@ TokenWord:
     ElseIf Asc1 = SYNTAX_RAM _
     And (Asc2 = ASC_NUL Or Asc2 = SYNTAX_PROPERTY Or Asc2 = SYNTAX_HASH) Then
         'ERROR: Invalid RAM name?
-        If Not IsValidName() Then
-            Call RaiseError(OZ80_ERROR_INVALID_NAME_RAM)
-            GoTo Finish
-        End If
+        If Not IsValidName() Then Call RaiseError( _
+            OZ80_ERROR_INVALID, STR_ERR_INVALID_RAM, STR_ERR_INVALID_NAME _
+        ): GoTo Finish
         
         'TODO: Define RAM constant
         Let Token = TOKEN_RAM
@@ -2343,7 +2377,7 @@ TokenWord:
         For i = 1 To Word.Length - 1
             'ERROR: Invalid hexadecimal number!
             If Not Word.CharIsHex(i) Then Call RaiseError( _
-                OZ80_ERROR_INVALID_NUMBER_HEX _
+                OZ80_ERROR_INVALID, STR_ERR_INVALID_NUMBER_HEX _
             ): GoTo Finish
         Next i
         
@@ -2367,9 +2401,10 @@ TokenWord:
         
         'A label cannot begin with a number but must otherwise be A-Z, 0-9 and "_"
         ElseIf Not IsValidName() Then
-            'TODO: Label specific error message
-            Call RaiseError(OZ80_ERROR_INVALID_NAME)
-            GoTo Finish
+            'ERROR: Not a valid Label name
+            Call RaiseError( _
+                OZ80_ERROR_INVALID, STR_ERR_INVALID_LABEL, STR_ERR_INVALID_NAME _
+            ): GoTo Finish
         Else
             'Is this a section name (`::section`) or regular label (`:label`)?
             If Asc2 = SYNTAX_LABEL _
@@ -2394,9 +2429,10 @@ TokenWord:
         
         'A property cannot begin with a number but must otherwise be A-Z, 0-9 and "_"
         ElseIf Not IsValidName() Then
-            'TODO: Property specific error message
-            Call RaiseError(OZ80_ERROR_INVALID_NAME)
-            GoTo Finish
+            'ERROR: Invalid Property name
+            Call RaiseError( _
+                OZ80_ERROR_INVALID, STR_ERR_INVALID_PROPERTY, STR_ERR_INVALID_NAME _
+            ): GoTo Finish
         Else
             'If the property appears on a new line, it's a label-property definition _
              i.e. it defines a new sub-label of a chunk
@@ -2811,11 +2847,11 @@ SkipWord:
 
 ErrorOverflow: '.......................................................................
     On Error GoTo 0
-    Call RaiseError(OZ80_ERROR_OVERFLOW)
+    Call RaiseError(OZ80_ERROR_OVERFLOW, STR_ERR_OVERFLOW)
     GoTo Finish
     
 WordError: '...........................................................................
-    Call RaiseError(OZ80_ERROR_INVALID_WORD)
+    Call RaiseError(OZ80_ERROR_INVALID, STR_ERR_INVALID_WORD)
     
     '----------------------------------------------------------------------------------
 Finish:
@@ -3104,7 +3140,7 @@ Private Function NestOut( _
         'Check that the nesting is correct; you cannot close a bracket without an _
          open one before, nor can you close a bracket when a different one is open
         If .Token <> BracketOpen Then
-            Let NestOut = RaiseError(OZ80_ERROR_EXPECTED_BRACKET)
+            Let NestOut = RaiseError(OZ80_ERROR_EXPECTED, STR_ERR_EXPECTED_BRACKET)
             Exit Function
         End If
         'Update the opening brace to reference the closing brace
@@ -3199,12 +3235,13 @@ Private Sub ScopeRoot()
      allowed here. Once all nested scopes are exhausted, we return here
     
 Continue:
+    '----------------------------------------------------------------------------------
     'Define Constant / RAM Bank / Section / System:
     '----------------------------------------------------------------------------------
     If TokenKind = TOKEN_KEYWORD_DEF Then
         'Pass over the `DEF` keyword
-        'ERROR: The file ended before the first parameter
-        If Not NextToken() Then Call RaiseError(OZ80_ERROR_FILE_END): Exit Sub
+        'TODO: DEF specific error
+        If NextTokenError() Then Exit Sub
         
         'What kind of definition is this?
         If TokenKind = TOKEN_CONST Then
@@ -3229,7 +3266,7 @@ Continue:
         Else
             'ERROR: Unexpected definition
             'TODO: More specific error number/description
-            Call RaiseError(OZ80_ERROR_EXPECTED_ROOT)
+            Call RaiseError(OZ80_ERROR_EXPECTED, "")
         End If
     
     'Define a Hash:
@@ -3283,7 +3320,7 @@ Continue:
     'ERROR: Not a valid keyword at this scope! _
      ----------------------------------------------------------------------------------
     Else
-        Call RaiseError(OZ80_ERROR_EXPECTED_ROOT)
+        Call RaiseError(OZ80_ERROR_EXPECTED, "")
     End If
     
     If My_Error Then Exit Sub
@@ -3303,7 +3340,7 @@ Private Sub DefineConst()
      check if the Constant has already been defined
     If Values.Exists(TokenText) Then
         'ERROR: You can't redefine Constants
-        Call RaiseError(OZ80_ERROR_DUPLICATE_CONSTANT)
+        Call RaiseError(OZ80_ERROR_DUPLICATE, "")
         Exit Sub
     End If
     
@@ -3322,7 +3359,7 @@ Private Sub DefineConst()
     'Check that this is an Expression
     If Not TokenIsExpression(TokenKind) Then
         'ERROR: Expected an Expression to define the Constant
-        Call RaiseError(OZ80_ERROR_EXPECTED_EXPRESSION)
+        Call RaiseError(OZ80_ERROR_EXPECTED, "")
         Exit Sub
     End If
     
@@ -3342,7 +3379,7 @@ End Sub
 '======================================================================================
 Private Sub ProcessHash()
     'ERROR: The file ended before the first parameter
-    If Not NextToken() Then Call RaiseError(OZ80_ERROR_FILE_END): Exit Sub
+    If NextTokenError() Then Exit Sub
     
     Call NextToken
     
@@ -3358,7 +3395,7 @@ End Sub
 '======================================================================================
 Private Sub ProcessInclude()
     'ERROR: The file ended before the first parameter
-    If Not NextToken() Then Call RaiseError(OZ80_ERROR_FILE_END): Exit Sub
+    If NextTokenError() Then Exit Sub
     
     'Fetch the file path _
      (if there's an error doing this, fold upwards)
@@ -3395,11 +3432,11 @@ End Sub
 '======================================================================================
 Private Sub DefineProc()
     'ERROR: The file ended before the first parameter
-    If Not NextToken() Then Call RaiseError(OZ80_ERROR_FILE_END): GoTo ErrOut
+    If NextTokenError() Then GoTo ErrOut
     
     'ERROR: No Label name for Procedure
     If TokenKind <> TOKEN_LABEL Then Call RaiseError( _
-        OZ80_ERROR_EXPECTED_PROC_NAME _
+        OZ80_ERROR_EXPECTED, "TODO" _
     ): GoTo ErrOut
     
     'Remember the String of the Label name, _
@@ -3408,7 +3445,7 @@ Private Sub DefineProc()
     Let LabelName = TokenText
     
     'ERROR: The file cannot end until the Chunk has been opened and closed
-    If Not NextToken() Then Call RaiseError(OZ80_ERROR_FILE_END): GoTo ErrOut
+    If NextTokenError() Then GoTo ErrOut
     
     'The `INTERRUPT` parameter is optional, but can be zero, so use 'undefined'
     Dim Interrupt As Double
@@ -3428,23 +3465,25 @@ ReadParams:
     If TokenKind = TOKEN_KEYWORD_SECTION Then
         'ERROR: The Section parameter has already been specified
         If IsSectionDefined Then Call RaiseError( _
-            OZ80_ERROR_DUPLICATE_PROC_SECTION _
+            OZ80_ERROR_DUPLICATE, "TODO" _
         ): GoTo ErrOut
         
         'ERROR: Cannot co-exist with the `INTERRUPT` parameter
-        If IsInterruptDefined Then Call RaiseError(OZ80_ERROR_INVALID_PROC_INTERRUPT): GoTo ErrOut
+        If IsInterruptDefined Then Call RaiseError( _
+            OZ80_ERROR_INVALID, "TODO" _
+        ): GoTo ErrOut
         
         'ERROR: File ended before the Section name?
-        If Not NextToken() Then Call RaiseError(OZ80_ERROR_FILE_END): GoTo ErrOut
+        If NextTokenError() Then GoTo ErrOut
         
         'ERROR: Not a Section name following the Section keyword
         If TokenKind <> TOKEN_SECTION Then Call RaiseError( _
-            OZ80_ERROR_EXPECTED_SECTION_NAME _
+            OZ80_ERROR_EXPECTED, "TODO" _
         ): GoTo ErrOut
         
         'ERROR: Section has not been defined
         If Not Labels.Exists(TokenText) Then Call RaiseError( _
-            OZ80_ERROR_INVALID_SECTION _
+            OZ80_ERROR_INVALID, "TODO" _
         ): GoTo ErrOut
         
         'Record the Section name
@@ -3453,7 +3492,7 @@ ReadParams:
         Let IsSectionDefined = True
         
         'Pass over the Section name
-        If Not NextToken() Then Call RaiseError(OZ80_ERROR_FILE_END): GoTo ErrOut
+        If NextTokenError() Then GoTo ErrOut
         
         GoTo ReadParams
     
@@ -3463,11 +3502,11 @@ ReadParams:
     ElseIf TokenKind = TOKEN_KEYWORD_HELP Then
         'ERROR: The `HELP` parameter has already been specified
         If IsParamsDefined Then Call RaiseError( _
-            OZ80_ERROR_DUPLICATE_PROC_HELP _
+            OZ80_ERROR_DUPLICATE, "TODO" _
         ): GoTo ErrOut
          
         'Pass over the `HELP` keyword, the file cannot end here
-        If Not NextToken() Then Call RaiseError(OZ80_ERROR_FILE_END): GoTo ErrOut
+        If NextTokenError() Then GoTo ErrOut
         
         'Fetch the text description (ignored for now)
         'For now, just read and discard only text tokens
@@ -3475,7 +3514,7 @@ ReadParams:
             'If not a text token, then continue
             If TokenKind <> TOKEN_TEXT Then Exit Do
             'Move over the token, the file ending is an error
-            If Not NextToken() Then Call RaiseError(OZ80_ERROR_FILE_END): GoTo ErrOut
+            If NextTokenError() Then GoTo ErrOut
         Loop
         
         Let IsHelpDefined = True
@@ -3491,11 +3530,11 @@ ReadParams:
          
         'ERROR: The `PARAMS` parameter has already been specified
         If IsParamsDefined Then Call RaiseError( _
-            OZ80_ERROR_DUPLICATE_PROC_PARAMS _
+            OZ80_ERROR_DUPLICATE, "TODO" _
         ): GoTo ErrOut
          
         'Pass over the `PARAMS` keyword, the file cannot end here
-        If Not NextToken() Then Call RaiseError(OZ80_ERROR_FILE_END): GoTo ErrOut
+        If NextTokenError() Then GoTo ErrOut
         
         Do
             'Check for a valid `PARAMS` item
@@ -3505,19 +3544,20 @@ ReadParams:
                 'Skip over the list item, these are not recorded just yet _
                  but will be in the future (for auto-documentation)
                 'ERROR: File cannot end in the midst of the List
-                If Not NextToken() Then Call RaiseError(OZ80_ERROR_FILE_END): GoTo ErrOut
+                If NextTokenError() Then GoTo ErrOut
                 
                 'Check for a `HELP` description for the list item
                 If TokenKind = TOKEN_KEYWORD_HELP Then
                     'Pass over the `HELP` keyword, the file cannot end here
-                    If Not NextToken() Then Call RaiseError(OZ80_ERROR_FILE_END): GoTo ErrOut
+                    If NextTokenError() Then GoTo ErrOut
+                    
                     'Fetch the text description (ignored for now)
                     'For now, just read and discard only text tokens
                     Do
                         'If not a text token, then continue
                         If TokenKind <> TOKEN_TEXT Then Exit Do
                         'Move over the token, the file ending is an error
-                        If Not NextToken() Then Call RaiseError(OZ80_ERROR_FILE_END): GoTo ErrOut
+                        If NextTokenError() Then GoTo ErrOut
                     Loop
                 End If
                 
@@ -3534,7 +3574,7 @@ ReadParams:
                 GoTo ReadParams
             Else
                 'ERROR: Only Registers and RAM Names are allowed at the moment
-                Call RaiseError(OZ80_ERROR_EXPECTED_PROC_PARAMS)
+                Call RaiseError(OZ80_ERROR_EXPECTED, "TODO")
                 GoTo ErrOut
             End If
         Loop
@@ -3548,11 +3588,11 @@ ReadParams:
          
         'ERROR: The `RETURN` parameter has already been specified
         If IsReturnDefined Then Call RaiseError( _
-            OZ80_ERROR_DUPLICATE_PROC_PARAMS _
+            OZ80_ERROR_DUPLICATE, "TODO" _
         ): GoTo ErrOut
          
         'Pass over the `RETURN` keyword, the file cannot end here
-        If Not NextToken() Then Call RaiseError(OZ80_ERROR_FILE_END): GoTo ErrOut
+        If NextTokenError() Then GoTo ErrOut
         
         Do
             'Check for a valid `RETURN` item
@@ -3562,19 +3602,20 @@ ReadParams:
                 'Skip over the list item, these are not recorded just yet _
                  but will be in the future (for auto-documentation)
                 'ERROR: File cannot end in the midst of the List
-                If Not NextToken() Then Call RaiseError(OZ80_ERROR_FILE_END): GoTo ErrOut
+                If NextTokenError() Then GoTo ErrOut
                 
                 'Check for a `HELP` description for the list item
                 If TokenKind = TOKEN_KEYWORD_HELP Then
                     'Pass over the `HELP` keyword, the file cannot end here
-                    If Not NextToken() Then Call RaiseError(OZ80_ERROR_FILE_END): GoTo ErrOut
+                    If NextTokenError() Then GoTo ErrOut
+                    
                     'Fetch the text description (ignored for now)
                     'For now, just read and discard only text tokens
                     Do
                         'If not a text token, then continue
                         If TokenKind <> TOKEN_TEXT Then Exit Do
                         'Move over the token, the file ending is an error
-                        If Not NextToken() Then Call RaiseError(OZ80_ERROR_FILE_END): GoTo ErrOut
+                        If NextTokenError() Then GoTo ErrOut
                     Loop
                 End If
                 
@@ -3591,7 +3632,7 @@ ReadParams:
                 GoTo ReadParams
             Else
                 'ERROR: Only Registers and RAM Names are allowed at the moment
-                Call RaiseError(OZ80_ERROR_EXPECTED_PROC_RETURN)
+                Call RaiseError(OZ80_ERROR_EXPECTED, "TODO")
                 GoTo ErrOut
             End If
         Loop
@@ -3606,20 +3647,21 @@ ReadParams:
         
         'ERROR: The `INTERRUPT` parameter has already been specified
         If IsInterruptDefined Then Call RaiseError( _
-            OZ80_ERROR_DUPLICATE_PROC_INTERRUPT _
+            OZ80_ERROR_DUPLICATE, "TODO" _
         ): GoTo ErrOut
         
         'ERROR: Cannot co-exist with the `SECTION` parameter
-        If IsSectionDefined _
-            Then Call RaiseError(OZ80_ERROR_INVALID_PROC_INTERRUPT): GoTo ErrOut
+        If IsSectionDefined Then Call RaiseError( _
+            OZ80_ERROR_INVALID, "TODO" _
+        ): GoTo ErrOut
         
         'ERROR: File cannot end before the parameter Expression!
-        If Not NextToken() _
-            Then Call RaiseError(OZ80_ERROR_FILE_END): GoTo ErrOut
+        If NextTokenError() Then GoTo ErrOut
         
         'Is this an Expression at all?
-        If Not TokenIsExpression(TokenKind) _
-            Then Call RaiseError(OZ80_ERROR_EXPECTED): GoTo ErrOut
+        If Not TokenIsExpression(TokenKind) Then Call RaiseError( _
+            OZ80_ERROR_EXPECTED, "TODO" _
+        ): GoTo ErrOut
         
         'Calculate the Expression:
         '(If there was an error in the Expression, the error event _
@@ -3629,13 +3671,17 @@ ReadParams:
         'An indefinite Value cannot be used for an Interrupt address, we will only be _
          able to define the indefinite Values (i.e. Label locations in ROM) once _
          the whole code is parsed and we use the Sections to layout the ROM
-        If Interrupt = INDEFINITE Then Call RaiseError(OZ80_ERROR_INDEFINITE): GoTo ErrOut
+        If Interrupt = INDEFINITE Then Call RaiseError( _
+            OZ80_ERROR_INDEFINITE, "TODO" _
+        ): GoTo ErrOut
         
         'Validate the Value, only certain Interrupt addresses are allowed
         If Not ((Interrupt = &H0) Or (Interrupt = &H8) Or (Interrupt = &H10) _
             Or (Interrupt = &H18) Or (Interrupt = &H20) Or (Interrupt = &H28) _
             Or (Interrupt = &H30) Or (Interrupt = &H38) Or (Interrupt = &H66)) _
-        Then Call RaiseError(OZ80_ERROR_INVALID_INTERRUPT): GoTo ErrOut
+        Then Call RaiseError( _
+            OZ80_ERROR_INVALID, "TODO" _
+        ): GoTo ErrOut
         
         Let IsInterruptDefined = True
         GoTo ReadParams
@@ -3645,11 +3691,11 @@ ReadParams:
     
     'With the parameters read, the only allowed token is the opening of the Chunk
     If TokenKind <> TOKEN_BRACES_OPEN Then Call RaiseError( _
-        OZ80_ERROR_EXPECTED _
+        OZ80_ERROR_EXPECTED, "TODO" _
     ): GoTo ErrOut
     
     'The chunk cannot be left open
-    If Not NextToken() Then Call RaiseError(OZ80_ERROR_FILE_END): GoTo ErrOut
+    If NextTokenError() Then GoTo ErrOut
     
     'When we assemble the Procedure, we need to be able to normalise _
      the Property names to their Section+Label
@@ -3661,8 +3707,9 @@ ReadParams:
     Let FullLabelName = CurrentSection & CurrentLabel
     
     'You can't name two Chunks the same thing
-    If ChunkExists(FullLabelName) _
-        Then Call RaiseError(OZ80_ERROR_DUPLICATE_LABEL): GoTo ErrOut
+    If ChunkExists(FullLabelName) Then Call RaiseError( _
+        OZ80_ERROR_DUPLICATE, "TODO" _
+    ): GoTo ErrOut
     
     'Create the Chunk
     If Interrupt = INDEFINITE Then
@@ -3724,7 +3771,7 @@ End Sub
 '======================================================================================
 Private Sub DefineRAMBank()
     'ERROR: The file ended before the first parameter
-    If Not NextToken() Then Call RaiseError(OZ80_ERROR_FILE_END): Exit Sub
+    If NextTokenError() Then Exit Sub
     
     'TODO: Implementation
     Call NextToken
@@ -3738,7 +3785,7 @@ End Sub
 '======================================================================================
 Private Sub DefineRAMHash()
     'ERROR: The file ended before the first parameter
-    If Not NextToken() Then Call RaiseError(OZ80_ERROR_FILE_END): Exit Sub
+    If NextTokenError() Then Exit Sub
     
     'TODO: Implementation
     Call NextToken
@@ -3754,11 +3801,11 @@ End Sub
 '======================================================================================
 Private Sub DefineSection()
     'ERROR: The file ended before the first parameter
-    If Not NextToken() Then Call RaiseError(OZ80_ERROR_FILE_END): Exit Sub
+    If NextTokenError() Then Exit Sub
     
     'ERROR: Not a section name following the section keyword
     If TokenKind <> TOKEN_SECTION Then Call RaiseError( _
-        OZ80_ERROR_EXPECTED_SECTION_NAME _
+        OZ80_ERROR_EXPECTED, "TODO" _
     ): Exit Sub
     
     'Keep ahold of the Section identifier
@@ -3767,7 +3814,7 @@ Private Sub DefineSection()
     
     'Has this Section already been defined?
     If Labels.Exists(TokenText) Then Call RaiseError( _
-        OZ80_ERROR_DUPLICATE_SECTION _
+        OZ80_ERROR_DUPLICATE, "TODO" _
     ): Exit Sub
     
     Call Labels.Add(SectionName, INDEFINITE)
@@ -3786,18 +3833,21 @@ Private Sub DefineSection()
     'The only parameter is the Slot List
     If TokenKind = TOKEN_KEYWORD_SLOT Then
         'ERROR: File ending before we have the value
-        If Not NextToken() Then Call RaiseError(OZ80_ERROR_FILE_END): Exit Sub
+        If NextTokenError() Then Exit Sub
         
         'ERROR: There needs to be at least one item in the List
-        If Not TokenIsExpression(TokenKind) _
-            Then Call RaiseError(OZ80_ERROR_EXPECTED): Exit Sub
+        If Not TokenIsExpression(TokenKind) Then Call RaiseError( _
+            OZ80_ERROR_EXPECTED, "TODO" _
+        ): Exit Sub
         
         'Get the list of Slots assigned to the Section
         Dim List As Scripting.Dictionary
         Set List = GetListAsDictionary()
         
         'Can't be more than three -- "0, 1, 2"
-        If List.Count > 3 Then Call RaiseError(OZ80_ERROR_INVALID_SLOT): Exit Sub
+        If List.Count > 3 Then Call RaiseError( _
+            OZ80_ERROR_INVALID, "TODO" _
+        ): Exit Sub
         
         'An indefinite value cannot be used for the Slot
         If List.Item(0) = INDEFINITE Then GoTo ErrIndefinite
@@ -3850,14 +3900,14 @@ Finish:
     '----------------------------------------------------------------------------------
 ErrInvalid:
     'Only a specific Slot pattern can be used
-    Call RaiseError(OZ80_ERROR_INVALID_SLOT)
+    Call RaiseError(OZ80_ERROR_INVALID, "TODO")
     Exit Sub
 
 ErrIndefinite:
     'An indefinite Value cannot be used for a Slot number, we will only be _
      able to define the indefinite Values (i.e. Label locations in ROM) once _
      the whole code is parsed and we use the Sections to layout the ROM
-    Call RaiseError(OZ80_ERROR_INDEFINITE)
+    Call RaiseError(OZ80_ERROR_INDEFINITE, "TODO")
 End Sub
 
 'DefineStart : Define the System's boot Procedure
@@ -3866,19 +3916,20 @@ End Sub
 '======================================================================================
 Private Sub DefineStart()
     'ERROR: The file cannot end until the Chunk has been opened and closed
-    If Not NextToken() Then Call RaiseError(OZ80_ERROR_FILE_END): Exit Sub
+    If NextTokenError() Then Exit Sub
     
     'The only allowed token is the opening of the Chunk
     If TokenKind <> TOKEN_BRACES_OPEN Then Call RaiseError( _
-        OZ80_ERROR_EXPECTED _
+        OZ80_ERROR_EXPECTED, "TODO" _
     ): Exit Sub
     
     'The chunk cannot be left open
-    If Not NextToken() Then Call RaiseError(OZ80_ERROR_FILE_END): Exit Sub
+    If NextTokenError() Then Exit Sub
     
     'You can't define the START procedure twice
-    If ChunkExists(STR_START) Then _
-        Call RaiseError(OZ80_ERROR_DUPLICATE_START): Exit Sub
+    If ChunkExists(STR_START) Then Call RaiseError( _
+        OZ80_ERROR_DUPLICATE, "TODO" _
+    ): Exit Sub
     
     'Create the Chunk
     'TODO: Check that the System has been defined
@@ -3903,11 +3954,12 @@ End Sub
 '======================================================================================
 Private Sub DefineSystem()
     'ERROR: The file ended before the first parameter
-    If Not NextToken() Then Call RaiseError(OZ80_ERROR_FILE_END): Exit Sub
+    If NextTokenError() Then Exit Sub
     
     'Check that the parameter is a list (or at least the start of one)
-    If Not TokenIsList(TokenKind) _
-        Then Call RaiseError(OZ80_ERROR_EXPECTED_SYSTEM_NAME): Exit Sub
+    If Not TokenIsList(TokenKind) Then Call RaiseError( _
+        OZ80_ERROR_EXPECTED, "TODO" _
+    ): Exit Sub
     
     'Fetch the System name string from the proceeding list _
      (if there was any error during that, fold upwards)
@@ -3920,7 +3972,7 @@ Private Sub DefineSystem()
         Let My_System = SYSTEM_SMS
     Else
         'Not a valid system name
-        Call RaiseError(OZ80_ERROR_EXPECTED_SYSTEM_NAME)
+        Call RaiseError(OZ80_ERROR_EXPECTED, "TODO")
     End If
 End Sub
 
@@ -3933,11 +3985,11 @@ End Sub
 '======================================================================================
 Private Sub DefineTable()
     'ERROR: The file ended before the first parameter
-    If Not NextToken() Then Call RaiseError(OZ80_ERROR_FILE_END): GoTo ErrOut
+    If NextTokenError() Then GoTo ErrOut
     
     'ERROR: No Label name for Table
     If TokenKind <> TOKEN_LABEL Then Call RaiseError( _
-        OZ80_ERROR_EXPECTED_TABLE_NAME _
+        OZ80_ERROR_EXPECTED, "TODO" _
     ): GoTo ErrOut
     
     'Remember the String of the Label name, _
@@ -3946,7 +3998,7 @@ Private Sub DefineTable()
     Let LabelName = TokenText
     
     'ERROR: The file cannot end until the Chunk has been opened and closed
-    If Not NextToken() Then Call RaiseError(OZ80_ERROR_FILE_END): GoTo ErrOut
+    If NextTokenError() Then GoTo ErrOut
     
 ReadParams:
     'Keep track of which params have been included or not
@@ -3958,20 +4010,20 @@ ReadParams:
     If TokenKind = TOKEN_KEYWORD_SECTION Then
         'ERROR: The Section parameter has already been specified
         If IsSectionDefined Then Call RaiseError( _
-            OZ80_ERROR_DUPLICATE_TABLE_SECTION _
+            OZ80_ERROR_DUPLICATE, "TODO" _
         ): GoTo ErrOut
         
         'ERROR: File ended before the Section name?
-        If Not NextToken() Then Call RaiseError(OZ80_ERROR_FILE_END): GoTo ErrOut
+        If NextTokenError() Then GoTo ErrOut
         
         'ERROR: Not a Section name following the Section keyword
         If TokenKind <> TOKEN_SECTION Then Call RaiseError( _
-            OZ80_ERROR_EXPECTED_SECTION_NAME _
+            OZ80_ERROR_EXPECTED, "TODO" _
         ): GoTo ErrOut
         
         'ERROR: Section has not been defined
         If Not Labels.Exists(TokenText) Then Call RaiseError( _
-            OZ80_ERROR_INVALID_SECTION _
+            OZ80_ERROR_INVALID, "TODO" _
         ): GoTo ErrOut
         
         'Record the Section name
@@ -3980,7 +4032,7 @@ ReadParams:
         Let IsSectionDefined = True
         
         'Pass over the Section name
-        If Not NextToken() Then Call RaiseError(OZ80_ERROR_FILE_END): GoTo ErrOut
+        If NextTokenError() Then GoTo ErrOut
         
         GoTo ReadParams
     End If
@@ -3989,11 +4041,11 @@ ReadParams:
     
     'With the parameters read, the only allowed token is the opening of the Chunk
     If TokenKind <> TOKEN_BRACES_OPEN Then Call RaiseError( _
-        OZ80_ERROR_EXPECTED _
+        OZ80_ERROR_EXPECTED, "TODO" _
     ): GoTo ErrOut
     
     'The chunk cannot be left open
-    If Not NextToken() Then Call RaiseError(OZ80_ERROR_FILE_END): GoTo ErrOut
+    If NextTokenError() Then GoTo ErrOut
     
     'When we assemble the Table, we need to be able to normalise _
      the Property names to their Section+Label
@@ -4005,8 +4057,9 @@ ReadParams:
     Let FullLabelName = CurrentSection & CurrentLabel
     
     'You can't name two Chunks the same thing
-    If ChunkExists(FullLabelName) Then _
-        Call RaiseError(OZ80_ERROR_DUPLICATE_LABEL): GoTo ErrOut
+    If ChunkExists(FullLabelName) Then Call RaiseError( _
+        OZ80_ERROR_DUPLICATE, "TODO" _
+    ): GoTo ErrOut
     
     'Create the Chunk
     Call Chunk_Begin(FullLabelName)
@@ -4066,7 +4119,7 @@ Continue:
     '----------------------------------------------------------------------------------
 '    ElseIf TokenKind = TOKEN_KEYWORD_BYTE Then
 '        'Move past the `BYTE` keyword
-'        If Not NextToken() Then Call RaiseError(OZ80_ERROR_FILE_END): Exit Sub
+'        If NextTokenError() Then Exit Sub
 '
 '        'There MUST be at least one list item after the keyword
 '        'TODO: Add error here
@@ -4131,13 +4184,10 @@ Continue:
     
     'Move to the next token. If the file ends unexpectedly, the chunk has not been _
      closed properly (closing brace is expected)
-    If Not NextToken() Then
-        Call RaiseError(OZ80_ERROR_FILE_END)
+    If NextTokenError() Then GoTo Finish
     
     'When the closing brace is encountered, we'll drop out of the scope
-    ElseIf TokenKind <> TOKEN_BRACES_CLOSE Then
-        GoTo Continue
-    End If
+    If TokenKind <> TOKEN_BRACES_CLOSE Then GoTo Continue
     
 '    'Finalise the disassembly log
 '    If ChunkMode = MODE_DATA Then
@@ -4177,7 +4227,7 @@ Private Function Z80_GetParameter( _
      ----------------------------------------------------------------------------------
     If TokenKind = TOKEN_SQUARE_OPEN Then
         'ERROR: File ends just as the memory expression is opened
-        If Not NextToken() Then Call RaiseError(OZ80_ERROR_FILE_END): GoTo ErrOut
+        If NextTokenError() Then GoTo ErrOut
         
         'The first item in the memory expression can be a register _
          ..............................................................................
@@ -4223,20 +4273,23 @@ Private Function Z80_GetParameter( _
             End If
             
             'ERROR: File ends before the memory expression is closed
-            If Not NextToken() _
-                Then Call RaiseError(OZ80_ERROR_FILE_END): GoTo ErrOut
+            If Not NextToken() Then Call RaiseError( _
+                OZ80_ERROR_FILE_END, STR_ERR_FILE_END _
+            ): GoTo ErrOut
             
             GoTo EndScope
             
 AddExpr:    'Look for the `+` following the register name
-            If Not NextToken() _
-                Then Call RaiseError(OZ80_ERROR_FILE_END): GoTo ErrOut
+            If Not NextToken() Then Call RaiseError( _
+                OZ80_ERROR_FILE_END, STR_ERR_FILE_END _
+            ): GoTo ErrOut
             
             'If present, skip over it and check for an expression
             If TokenKind = TOKEN_OPERATOR_ADD Then
                 'ERROR: Something must follow the "+"!
-                If Not NextToken() _
-                    Then Call RaiseError(OZ80_ERROR_FILE_END): GoTo ErrOut
+                If Not NextToken() Then Call RaiseError( _
+                    OZ80_ERROR_FILE_END, STR_ERR_FILE_END _
+                ): GoTo ErrOut
                 
                 'Try and calculate the Expression
                 '(If there was an error in the Expression, the error event _
@@ -4362,8 +4415,7 @@ GetValue:
     '----------------------------------------------------------------------------------
     Else
         'ERROR: Not a Z80 parameter
-        'TODO: parameter specific error number
-        Call RaiseError(OZ80_ERROR_EXPRESSION_Z80)
+        Call RaiseError(OZ80_ERROR_EXPRESSION, "TODO")
     End If
 
 ErrOut:
@@ -4381,7 +4433,9 @@ Private Sub Z80_Process()
     Let Instruction = TokenKind
     'Skip over the Z80 instruction token now that we know it. _
      If the file ends it's an error because the chunk has not been closed
-    If Not NextToken() Then Call RaiseError(OZ80_ERROR_FILE_END): Exit Sub
+    If Not NextToken() Then Call RaiseError( _
+        OZ80_ERROR_FILE_END, STR_ERR_FILE_END _
+    ): Exit Sub
     
     '----------------------------------------------------------------------------------
     
@@ -4391,8 +4445,9 @@ Private Sub Z80_Process()
     Or (Instruction = TOKEN_Z80_POP) _
     Then
         'Is there any parameters to begin with?
-        If Not TokenIsParameter(TokenKind) _
-            Then Call RaiseError(OZ80_ERROR_INVALID_Z80PARAMS): Exit Sub
+        If Not TokenIsParameter(TokenKind) Then Call RaiseError( _
+            OZ80_ERROR_INVALID, "TODO" _
+        ): Exit Sub
         
         'Clear any 2nd/3rd parameters set from the last time
         LSet Z80Param2 = Z80ParamEmpty
@@ -4406,7 +4461,7 @@ Private Sub Z80_Process()
             
             'If it's not a register, then it's invalid
             If (Z80Param1.Mask And MASK_REGS_AF_BC_DE_HL_IXY) = 0 Then
-                Call RaiseError(OZ80_ERROR_INVALID_Z80PARAMS)
+                Call RaiseError(OZ80_ERROR_INVALID, "TODO")
                 Exit Sub
             End If
             
@@ -5443,7 +5498,7 @@ AddBytes:
 InvalidParams:
     '----------------------------------------------------------------------------------
     'ERROR: Wrong parameters for Z80 instruction
-    Call RaiseError(OZ80_ERROR_INVALID_Z80PARAMS)
+    Call RaiseError(OZ80_ERROR_INVALID, "TODO")
     
 Finish:
     'Return the error number
@@ -5564,7 +5619,7 @@ Private Function GetText( _
             'Any UCS-2 value is allowed, it's up to the caller _
              to do text-mapping and validation
             If (Value < 0) Or (Value > 65535) Then
-                Call RaiseError(OZ80_ERROR_TEXT_CHAR)
+                Call RaiseError(OZ80_ERROR_INVALID, "TOOD")
                 GoTo ErrOut
             End If
         End If
@@ -5717,14 +5772,17 @@ Private Function ParseValue( _
     '----------------------------------------------------------------------------------
     If TokenKind = TOKEN_PARENS_OPEN Then
         'Move over the open parentheses. If the file ends here, it's an error
-        If Not NextToken() Then Call RaiseError(OZ80_ERROR_FILE_END): GoTo ErrOut
+        If Not NextToken() Then Call RaiseError( _
+            OZ80_ERROR_FILE_END, STR_ERR_FILE_END _
+        ): GoTo ErrOut
         
         'Parse the nested Expression and return its Value as our own
         If ParseExpression(ReturnValue) Then GoTo ErrOut
         
         'The nested Expression has to be closed
-        If TokenKind <> TOKEN_PARENS_CLOSE _
-            Then Call RaiseError(OZ80_ERROR_EXPECTED_BRACKET): GoTo ErrOut
+        If TokenKind <> TOKEN_PARENS_CLOSE Then Call RaiseError( _
+            OZ80_ERROR_EXPECTED, "TODO" _
+        ): GoTo ErrOut
         
         'Move over the closing parentehses. The Expression can end here, so it's not _
          necessarily an error if the file suddenly ends. The parent can check for _
@@ -5740,7 +5798,9 @@ Private Function ParseValue( _
     '----------------------------------------------------------------------------------
     ElseIf TokenKind = TOKEN_KEYWORD_HI Then
         'Move over the `HI` keyword. If the file ends here, it's an error
-        If Not NextToken() Then Call RaiseError(OZ80_ERROR_FILE_END): GoTo ErrOut
+        If Not NextToken() Then Call RaiseError( _
+            OZ80_ERROR_FILE_END, STR_ERR_FILE_END _
+        ): GoTo ErrOut
         
         'Fetch the parameter to the `HI` function
         If ParseExpression(ReturnValue) Then GoTo ErrOut
@@ -5748,7 +5808,11 @@ Private Function ParseValue( _
         If ReturnValue = INDEFINITE Then Exit Function
         
         'Check that this is no more than a 16-bit number
-        If ReturnValue > 65535 Then Call RaiseError(OZ80_ERROR_OVERFLOW_HILO): GoTo ErrOut
+        'TODO: Z80/16-bit specific error message
+        If ReturnValue > 65535 Then Call RaiseError( _
+            OZ80_ERROR_OVERFLOW, STR_ERR_OVERFLOW _
+        ): GoTo ErrOut
+        
         'Extract the high-byte
         Let ReturnValue = (ReturnValue And &HFF00&) \ &H100&
         'The token pointer will already be at the next token to read, _
@@ -5760,7 +5824,9 @@ Private Function ParseValue( _
     '----------------------------------------------------------------------------------
     ElseIf TokenKind = TOKEN_KEYWORD_LO Then
         'Move over the `LO` keyword. If the file ends here, it's an error
-        If Not NextToken() Then Call RaiseError(OZ80_ERROR_FILE_END): GoTo ErrOut
+        If Not NextToken() Then Call RaiseError( _
+            OZ80_ERROR_FILE_END, STR_ERR_FILE_END _
+        ): GoTo ErrOut
         
         'Fetch the parameter to the `LO` function
         If ParseExpression(ReturnValue) Then GoTo ErrOut
@@ -5770,7 +5836,11 @@ Private Function ParseValue( _
         'Check that this is no more than a 16-bit number _
          (despite this not being an issue to the low 8-bits, we prevent numbers _
           higher than 16-bit to protect against unintended behaviour)
-        If ReturnValue > 65535 Then Call RaiseError(OZ80_ERROR_OVERFLOW_HILO): GoTo ErrOut
+        'TODO: Z80/16-bit specific error message
+        If ReturnValue > 65535 Then Call RaiseError( _
+            OZ80_ERROR_OVERFLOW, STR_ERR_OVERFLOW _
+        ): GoTo ErrOut
+        
         'Extract the low-byte
         Let ReturnValue = ReturnValue And &HFF&
         'The token pointer will already be at the next token to read, _
@@ -5786,7 +5856,9 @@ Private Function ParseValue( _
          hexadecimal/binary numbers or named-items (Constants, RAM names, Labels etc.)
         Dim IsNegative As Boolean: Let IsNegative = True
         'Move forward past the negative sign. If the file ends here, it's an error
-        If Not NextToken() Then Call RaiseError(OZ80_ERROR_FILE_END): GoTo ErrOut
+        If Not NextToken() Then Call RaiseError( _
+            OZ80_ERROR_FILE_END, STR_ERR_FILE_END _
+        ): GoTo ErrOut
         'Continue parsing the number...
         GoTo GetNumber
         
@@ -5809,7 +5881,7 @@ GetNumber:
             If TokenKind = TOKEN_PREFIX_K Then
                 'Check for min/max number you can multiply by 1'000 without overflowing
                 If (ReturnValue < NUMBER_MIN_K) Or (ReturnValue > NUMBER_MAX_K) Then
-                    Call RaiseError(OZ80_ERROR_OVERFLOW)
+                    Call RaiseError(OZ80_ERROR_OVERFLOW, STR_ERR_OVERFLOW)
                     GoTo ErrOut
                 End If
                 'Multiply by 1'000
@@ -5821,7 +5893,7 @@ GetNumber:
             ElseIf TokenKind = TOKEN_PREFIX_KB Then
                 'Check for min/max number you can multiply by 1'024 without overflowing
                 If (ReturnValue < NUMBER_MIN_KB) Or (ReturnValue > NUMBER_MAX_KB) Then
-                    Call RaiseError(OZ80_ERROR_OVERFLOW)
+                    Call RaiseError(OZ80_ERROR_OVERFLOW, STR_ERR_OVERFLOW)
                     GoTo ErrOut
                 End If
                 'Multiply by 1'024
@@ -5840,7 +5912,7 @@ GetNumber:
         'Has the constant been defined?
         If Not Values.Exists(TokenText) Then
             'ERROR: Constant not yet defined. Constants cannot be indefinite
-            Call RaiseError(OZ80_ERROR_UNDEFINED_CONST)
+            Call RaiseError(OZ80_ERROR_UNDEFINED, "TODO")
             GoTo ErrOut
         End If
         'Retrieve the Constant value
@@ -6114,6 +6186,34 @@ Private Sub RaiseMessage( _
     End If
 End Sub
 
+''RiaseError : Provide error details through an event
+''======================================================================================
+''Number         | Error number to set on the Class and raise via Event
+''---------------+----------------------------------------------------------------------
+''Returns        | The same error number, for simple tail recursion
+''======================================================================================
+'Private Function RaiseError( _
+'    ByRef Number As OZ80_ERROR _
+') As OZ80_ERROR
+'    'Set the error number on this class
+'    Let My_Error = Number
+'
+'    'Fetch the detailed error text
+'    Dim Title As String, Description As String
+'    Call GetOZ80Error(Number, Title, Description)
+'
+'    'Pass the error up to the controller
+'    'TODO: Error before parsing the File?
+'    RaiseEvent Error( _
+'        Files(File).Path, _
+'        Number, Title, Description, _
+'        TokenLine, TokenCol _
+'    )
+'
+'    'We return the error number, purely for nicer looking tail-recursion
+'    Let RaiseError = Number
+'End Function
+
 'RiaseError : Provide error details through an event
 '======================================================================================
 'Number         | Error number to set on the Class and raise via Event
@@ -6123,200 +6223,35 @@ End Sub
 'Returns        | The same error number, for simple tail recursion
 '======================================================================================
 Private Function RaiseError( _
-         ByRef Number As OZ80_ERROR _
+         ByRef Number As OZ80_ERROR, _
+         ByRef Message As String, _
+    ParamArray FormatValues() As Variant _
 ) As OZ80_ERROR
     'Set the error number on this class
     Let My_Error = Number
-    
-    'Fetch the detailed error text
-    Dim Title As String, Description As String
-    Call GetOZ80Error(Number, Title, Description)
-    
+
+    If UBound(FormatValues) > LBound(FormatValues) Then
+        'We're going to use a bluString for the handy formatting
+        Dim StrError As bluString
+        Set StrError = New bluString
+
+        'Apply the given values to the error message
+        Let StrError.Text = Message
+        Call StrError.Format(FormatValues)
+        Let Message = StrError.Text
+
+        'Clear the bluString used for formatting
+        Set StrError = Nothing
+    End If
+
     'Pass the error up to the controller
     'TODO: Error before parsing the File?
     RaiseEvent Error( _
         Files(File).Path, _
-        Number, Title, Description, _
+        Number, "TODO", Message, _
         TokenLine, TokenCol _
     )
     
     'We return the error number, purely for nicer looking tail-recursion
     Let RaiseError = Number
 End Function
-
-'GetOZ80Error : Return an error description for a given error number
-'======================================================================================
-Private Sub GetOZ80Error( _
-    ByRef ErrorNumber As OZ80_ERROR, _
-    ByRef ReturnTitle As String, _
-    ByRef ReturnDescription As String _
-)
-    Select Case ErrorNumber
-    
-    Case OZ80_ERROR_DUPLICATE
-        '..............................................................................
-        Let ReturnTitle = "Duplicate Definition"
-        'TODO
-        Let ReturnDescription = ""
-        
-    Case OZ80_ERROR_DUPLICATE_SECTION
-        '..............................................................................
-        Let ReturnTitle = "Duplicate Definition"
-        Let ReturnDescription = _
-            "You cannot define a section name twice. There should be only one " & _
-            "`SECTION` statement for each section in use."
-        
-    Case OZ80_ERROR_FILE_END
-        '..............................................................................
-        Let ReturnTitle = "Unexpected End of File"
-        'TODO
-        Let ReturnDescription = "The file ended "
-        
-    Case OZ80_ERROR_EXPECTED
-        '..............................................................................
-        Let ReturnTitle = "Unexpected Content"
-        'TODO
-        Let ReturnDescription = _
-            ""
-        
-    Case OZ80_ERROR_EXPECTED_PROC_NAME
-        '..............................................................................
-        Let ReturnTitle = "Unexpected Content"
-        Let ReturnDescription = _
-            "A label name must follow the `PROC` statement. " & _
-            "E.g. `PROC :myProcedure`"
-    
-    Case OZ80_ERROR_EXPECTED_ROOT
-        '..............................................................................
-        Let ReturnTitle = "Keyword expected"
-        Let ReturnDescription = _
-            "Expected `DEF`, `IF`, `INCLUDE`, `PROC, `SECTION`, `SYSTEM` or `TABLE` " & _
-            "keywords at this scope. Have you correctly closed any brackets that were " & _
-            "open?"
-    
-    Case OZ80_ERROR_EXPECTED_SECTION_NAME
-        '..............................................................................
-        Let ReturnTitle = "Unexpected Content"
-        Let ReturnDescription = _
-            "A section name must follow the `SECTION` statement. " & _
-            "E.g. `SECTION ::graphics`"
-    
-    Case OZ80_ERROR_EXPECTED_SYSTEM_NAME
-        '..............................................................................
-        Let ReturnTitle = "Expected Valid System Name"
-        Let ReturnDescription = _
-            "A valid System name must follow the `SYSTEM` statement. " & _
-            "E.g. `SYSTEM ""SMS""`."
-        
-    Case OZ80_ERROR_EXPRESSION
-        '..............................................................................
-        Let ReturnTitle = "Invalid Expression"
-        Let ReturnDescription = _
-            "An expression can be any Number, Label, Property, RAM Name or " & _
-            "calculation (via operators) of these."
-        
-    Case OZ80_ERROR_EXPRESSION_Z80
-        '..............................................................................
-        Let ReturnTitle = "Invalid Z80 Instruction Parameter"
-        Let ReturnDescription = _
-            "Parameters following a Z80 instruction must be either a Z80 Register " & _
-            "(`a`, `b`, `c` etc.), a Z80 memory expression `[ix+$FF]` or a valid " & _
-            "numerical expression, i.e. a calculation, a label name or RAM name."
-            
-    Case OZ80_ERROR_FILE_NOTFOUND
-        '..............................................................................
-        Let ReturnTitle = "File Not Found"
-        'TODO
-        Let ReturnDescription = ""
-        
-    Case OZ80_ERROR_FILE_READ
-        '..............................................................................
-        Let ReturnTitle = "Cannot Read File"
-        'TODO
-        Let ReturnDescription = ""
-    
-    Case OZ80_ERROR_INDEFINITE
-        '..............................................................................
-        Let ReturnTitle = "Cannot Use Indefinite Value"
-        Let ReturnDescription = _
-            "A variable cannot be defined with an indefinite value, that is, " & _
-            "an expression containing a yet-unknown value, such as a label. " & _
-            "label addresses are not set until after assembly."
-    
-    Case OZ80_ERROR_INVALID_NAME
-        '..............................................................................
-        Let ReturnTitle = "Invalid Name"
-        Let ReturnDescription = _
-            "Variable, label and property names can contain A-Z, 0-9 underscore " & _
-            "and dot with the following exceptions: " & _
-            "1. the first letter cannot be a number or a dot, " & _
-            "2. two dots cannot occur in a row " & _
-            "3. a number cannot follow a dot, and " & _
-            "4. the name cannot end in a dot" _
-    
-    Case OZ80_ERROR_INVALID_NAME_RAM
-        '..............................................................................
-        Let ReturnTitle = "Invalid Name"
-        Let ReturnDescription = _
-            "RAM names must begin with '$.' and follow standard naming rules " & _
-            "beyond that, i.e." & _
-            "1. the first letter cannot be a number or a dot " & _
-              "(this does not include the dot that follows the dollar sign)" & _
-            "2. two dots cannot occur in a row " & _
-            "3. a number cannot follow a dot, and " & _
-            "4. the name cannot end in a dot" _
-        
-    Case OZ80_ERROR_INVALID_NUMBER
-        '..............................................................................
-        Let ReturnTitle = "Invalid Number"
-        'TODO
-        Let ReturnDescription = ""
-        
-    Case OZ80_ERROR_INVALID_NUMBER_DEC
-        '..............................................................................
-        Let ReturnTitle = "Invalid Number"
-        'TODO
-        Let ReturnDescription = ""
-        
-    Case OZ80_ERROR_INVALID_NUMBER_HEX
-        '..............................................................................
-        Let ReturnTitle = "Invalid Number"
-        Let ReturnDescription = _
-            "Hexadecimal numbers must begin with '$' and must contain 0-9 & A-F " & _
-            "letters only. E.g. `$1234ABCD`"
-    
-    Case OZ80_ERROR_INVALID_NUMBER_BIN
-        '..............................................................................
-        Let ReturnTitle = "Invalid Number"
-        'TODO
-        Let ReturnDescription = ""
-    
-    Case OZ80_ERROR_INVALID_WORD
-        '..............................................................................
-        Let ReturnTitle = "Invalid Word"
-        'TODO
-        Let ReturnDescription = ""
-    
-    Case OZ80_ERROR_INVALID_Z80PARAMS
-        '..............................................................................
-        Let ReturnTitle = "Invalid Parameters For Z80 Instruction"
-        'TODO
-        Let ReturnDescription = ""
-    
-    Case OZ80_ERROR_OVERFLOW
-        '..............................................................................
-        Let ReturnTitle = "Overflow"
-        'TODO
-        Let ReturnDescription = ""
-        
-    Case OZ80_ERROR_UNDEFINED_CONST
-        '..............................................................................
-        Let ReturnTitle = "Undefined Constant Used"
-        Let ReturnDescription = _
-            "You've used a Constant name which has not been defined yet. " & _
-            "Ensure that early on in your source code you define the Constant " & _
-            "Value: " & vbCrLf & vbCrLf & "DEF !CONSTANT 123"
-    Case Else
-'        Stop
-    End Select
-End Sub

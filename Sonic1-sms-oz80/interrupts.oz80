@@ -57,15 +57,15 @@ PROC    :pause                                  INTERRUPT $66
         `pressing the pause button causes an interrupt and jumps to $0066
 {
 	di				        `disable interrupts
-	push	af;stack
+	push	AF;stack
 	
 	`level time HUD / lightning flags
-	ld	a;pauseStatus, [iy+#vars.timeLightningFlags]
+	ld	A;pauseStatus, [IY+#vars.timeLightningFlags]
 	xor	%00001000		        `flip bit 3 (the pause bit)
 	`save it back
-	ld	[iy+#vars.timeLightningFlags], a;pauseStatus
+	ld	[IY+#vars.timeLightningFlags], A;pauseStatus
 	
-	pop	af;stack
+	pop	AF;stack
 	ei				        `enable interrupts
 	ret
 }

@@ -1640,6 +1640,11 @@ Private Sub Class_Initialize()
     Let OpcodeZ_Register(MASK_MEM_IY) = Z6
     Let OpcodeZ_Register(MASK_REG_A) = Z7
     
+    'Set the buffer for capturing the word to 1024 chars to avoid lots of memory _
+     re-allocations if larger strings in the source are encountered
+    Set Word = New bluString
+    Let Word.Buffer = BUFFER_1K
+    
     Call Profiler.EventEnd(EVENT_INITIALIZE)
     '*** TIMER END ***
 End Sub
@@ -1668,6 +1673,7 @@ Private Sub Class_Terminate()
           OpcodeY_Register, OpcodeY_RST, OpcodeZ_Register
     Erase TokenRegister
     
+    Set Word = Nothing
     Set LogMsg = Nothing
 End Sub
 
@@ -2020,14 +2026,10 @@ Private Function File_Tokenise( _
     '(call this after ReDimming, as it will cache the first token info)
     Call File_Rewind
     
-    'Set the buffer for capturing the word to 1024 chars to avoid lots of memory _
-     re-allocations if larger strings in the source are encountered
-    Set Word = New bluString
-    Let Word.Buffer = BUFFER_1K
-    
-    'These will track the "mode" of the text as we go _
-     (including single, double, and triple quote)
+    'These will track the "mode" of the text as we go. _
+     First, if we're within quotes (including single, double, and triple quote)
     Dim IsText As Long, TextMode As Long
+    'If we're in a comment, and if it's multi-line
     Dim IsComment As Long, IsCommentMulti As Long
     
     'These are used whilst converting words into real numbers
@@ -2166,6 +2168,13 @@ ReadChar:
                 Let IsComment = True: GoTo NextChar
             End If
         Else
+            'If the word is interrupted by apostrophe or semi-colon, _
+             we've hit a register hint. We can ignore the rest of the word
+            If (Char = SYNTAX_HINT1) Or (Char = SYNTAX_HINT2) Then
+                'Break and process the current word
+                GoTo WordBreak
+            End If
+            
             'A word is underway, check for end of line
             If Char = ASC_LF Then GoTo TokenWord
             
@@ -2280,6 +2289,9 @@ TokenWord:
          all commas are optional and simply skipped by the tokeniser
         GoTo SkipWord
         
+    ElseIf (Asc1 = SYNTAX_HINT1) Or (Asc1 = SYNTAX_HINT2) Then
+        GoTo SkipWord
+        
     'A decimal number? _
      ........................................................................ `0-9` ...
     ElseIf Word.CharIsNumeric(0, True) Then
@@ -2302,7 +2314,6 @@ TokenWord:
         'Add the token with the number value
         Let Token = TOKEN_NUMBER
         Let Value = Number
-        GoTo NextWord
     
     'Constant? _
      .......................................................................... `!` ...
@@ -2316,8 +2327,6 @@ TokenWord:
         'Add the index key to the token so that we can retrieve the string later
         Let Token = TOKEN_CONST
         Let Value = TokenStrings.Add(Word.Text)
-        
-        GoTo NextWord
     
     'Binary number? _
      .......................................................................... `%` ...
@@ -2337,7 +2346,6 @@ TokenWord:
         'Tokenise number
         Let Token = TOKEN_NUMBER
         Let Value = Number
-        GoTo NextWord
         
     'Hash name? _
      .......................................................................... `#` ...
@@ -2351,7 +2359,6 @@ TokenWord:
         'Add the index key to the token so that we can retrieve the string later
         Let Token = TOKEN_HASH
         Let Value = TokenStrings.Add(Word.Text)
-        GoTo NextWord
     
     'RAM name, e.g. `$.gamevar`, `$#RAM_BANK.gamevar` _
      .......................................................................... `$` ...
@@ -2366,7 +2373,6 @@ TokenWord:
         Let Token = TOKEN_RAM
         'Add the index key to the token so that we can retrieve the string later
         Let Value = TokenStrings.Add(Word.Text)
-        GoTo NextWord
         
     'Hexadecimal number _
      .......................................................................... `$` ...
@@ -2390,7 +2396,6 @@ TokenWord:
         'Add the token for the number
         Let Token = TOKEN_NUMBER
         Let Value = Number
-        GoTo NextWord
         
     '.......................................................................... `:` ...
     ElseIf Asc1 = SYNTAX_LABEL Then
@@ -2412,7 +2417,6 @@ TokenWord:
                 Else Let Token = TOKEN_LABEL
             Let Value = TokenStrings.Add(Word.Text)
         End If
-        GoTo NextWord
     
     '.......................................................................... `.` ...
     ElseIf Asc1 = SYNTAX_PROPERTY Then
@@ -2425,7 +2429,6 @@ TokenWord:
         If Asc2 = ASC_NUL Then
             Let Token = TOKEN_PROPERTY_NEW
             Let Value = TokenStrings.Add(Word.Text)
-            GoTo NextWord
         
         'A property cannot begin with a number but must otherwise be A-Z, 0-9 and "_"
         ElseIf Not IsValidName() Then
@@ -2441,367 +2444,320 @@ TokenWord:
                 Else Let Token = TOKEN_PROPERTY_USE
             Let Value = TokenStrings.Add(Word.Text)
         End If
-        GoTo NextWord
         
     'Text _
      .......................................................................... `"` ...
     ElseIf Asc1 = SYNTAX_TEXT Then
         Let Token = TOKEN_TEXT
         Let Value = TokenStrings.Add(Word.Mid(1).Text)
-        GoTo NextWord
         
-    ElseIf Asc1 = ASC_A Then '................................................. `a` ...
+    ElseIf Asc1 = ASC_A Then '................................................. `A` ...
         'Z80 instructions
-        If Word.Equals(STR_ADC) Then Let Token = TOKEN_Z80_ADC: GoTo NextWord
-        If Word.Equals(STR_ADD) Then Let Token = TOKEN_Z80_ADD: GoTo NextWord
-        If Word.Equals(STR_AND) Then Let Token = TOKEN_Z80_AND: GoTo NextWord
-         
-    ElseIf Asc1 = ASC_B Then '................................................. `b` ...
+        If Word.Equals(STR_ADC) Then
+            Let Token = TOKEN_Z80_ADC
+        ElseIf Word.Equals(STR_ADD) Then Let Token = TOKEN_Z80_ADD
+        ElseIf Word.Equals(STR_AND) Then Let Token = TOKEN_Z80_AND
+        'Registers
+        ElseIf (Asc2 = ASC_NUL) Then Let Token = TOKEN_Z80_A
+        ElseIf (Asc3 = ASC_NUL) And (Asc2 = ASC_F) Then Let Token = TOKEN_Z80_AF
+        Else: GoTo WordError: End If
+        
+    ElseIf Asc1 = ASC_B Then '................................................. `B` ...
         'Z80 instructions
-        If Word.Equals(STR_BIT) Then Let Token = TOKEN_Z80_BIT: GoTo NextWord
+        If Word.Equals(STR_BIT) Then
+            Let Token = TOKEN_Z80_BIT
         'Keywords
-        If Word.Equals(STR_BOOL) Then Let Token = TOKEN_KEYWORD_BOOL: GoTo NextWord
-        If Word.Equals(STR_BYTE) Then Let Token = TOKEN_KEYWORD_BYTE: GoTo NextWord
+        ElseIf Word.Equals(STR_BOOL) Then Let Token = TOKEN_KEYWORD_BOOL
+        ElseIf Word.Equals(STR_BYTE) Then Let Token = TOKEN_KEYWORD_BYTE
+        'Registers
+        ElseIf (Asc2 = ASC_NUL) Then Let Token = TOKEN_Z80_B
+        ElseIf (Asc3 = ASC_NUL) And (Asc2 = ASC_C) Then Let Token = TOKEN_Z80_BC
+        Else: GoTo WordError: End If
         
-    ElseIf Asc1 = ASC_C Then '................................................. `c` ...
+    ElseIf Asc1 = ASC_C Then '................................................. `C` ...
         'Z80 instructions
-        If Word.Equals(STR_CALL) Then Let Token = TOKEN_Z80_CALL: GoTo NextWord
-        If Word.Equals(STR_CCF) Then Let Token = TOKEN_Z80_CCF: GoTo NextWord
-        If Word.Equals(STR_CP) Then Let Token = TOKEN_Z80_CP: GoTo NextWord
-        If Word.Equals(STR_CPD) Then Let Token = TOKEN_Z80_CPD: GoTo NextWord
-        If Word.Equals(STR_CPDR) Then Let Token = TOKEN_Z80_CPDR: GoTo NextWord
-        If Word.Equals(STR_CPI) Then Let Token = TOKEN_Z80_CPI: GoTo NextWord
-        If Word.Equals(STR_CPIR) Then Let Token = TOKEN_Z80_CPIR: GoTo NextWord
-        If Word.Equals(STR_CPL) Then Let Token = TOKEN_Z80_CPL: GoTo NextWord
-        'Z80 flag condition
-        If Asc2 = ASC_NUL Then Let Token = TOKEN_Z80_C: GoTo NextWord
+        If Word.Equals(STR_CALL) Then
+            Let Token = TOKEN_Z80_CALL
+        ElseIf Word.Equals(STR_CCF) Then Let Token = TOKEN_Z80_CCF
+        ElseIf Word.Equals(STR_CP) Then Let Token = TOKEN_Z80_CP
+        ElseIf Word.Equals(STR_CPD) Then Let Token = TOKEN_Z80_CPD
+        ElseIf Word.Equals(STR_CPDR) Then Let Token = TOKEN_Z80_CPDR
+        ElseIf Word.Equals(STR_CPI) Then Let Token = TOKEN_Z80_CPI
+        ElseIf Word.Equals(STR_CPIR) Then Let Token = TOKEN_Z80_CPIR
+        ElseIf Word.Equals(STR_CPL) Then Let Token = TOKEN_Z80_CPL
+        'Registers
+        ElseIf (Asc2 = ASC_NUL) Then Let Token = TOKEN_Z80_C
+        Else: GoTo WordError: End If
         
-    ElseIf Asc1 = ASC_D Then '................................................. `d` ...
+    ElseIf Asc1 = ASC_D Then '................................................. `D` ...
         'Z80 instructions
-        If Word.Equals(STR_DAA) Then Let Token = TOKEN_Z80_DAA: GoTo NextWord
-        If Word.Equals(STR_DEC) Then Let Token = TOKEN_Z80_DEC: GoTo NextWord
-        If Word.Equals(STR_DI) Then Let Token = TOKEN_Z80_DI: GoTo NextWord
-        If Word.Equals(STR_DJNZ) Then Let Token = TOKEN_Z80_DJNZ: GoTo NextWord
+        If Word.Equals(STR_DAA) Then
+            Let Token = TOKEN_Z80_DAA
+        ElseIf Word.Equals(STR_DEC) Then Let Token = TOKEN_Z80_DEC
+        ElseIf Word.Equals(STR_DI) Then Let Token = TOKEN_Z80_DI
+        ElseIf Word.Equals(STR_DJNZ) Then Let Token = TOKEN_Z80_DJNZ
         'Keywords
-        If Word.Equals(STR_DEF) Then Let Token = TOKEN_KEYWORD_DEF: GoTo NextWord
+        ElseIf Word.Equals(STR_DEF) Then Let Token = TOKEN_KEYWORD_DEF
+        'Registers
+        ElseIf (Asc2 = ASC_NUL) Then Let Token = TOKEN_Z80_D
+        ElseIf (Asc3 = ASC_NUL) And (Asc2 = ASC_E) Then Let Token = TOKEN_Z80_DE
+        Else: GoTo WordError: End If
         
-    ElseIf Asc1 = ASC_E Then '................................................. `e` ...
+    ElseIf Asc1 = ASC_E Then '................................................. `E` ...
         'Z80 instructions
-        If Word.Equals(STR_EI) Then Let Token = TOKEN_Z80_EI: GoTo NextWord
-        If Word.Equals(STR_EX) Then Let Token = TOKEN_Z80_EX: GoTo NextWord
-        If Word.Equals(STR_EXX) Then Let Token = TOKEN_Z80_EXX: GoTo NextWord
+        If Word.Equals(STR_EI) Then
+            Let Token = TOKEN_Z80_EI
+        ElseIf Word.Equals(STR_EX) Then Let Token = TOKEN_Z80_EX
+        ElseIf Word.Equals(STR_EXX) Then Let Token = TOKEN_Z80_EXX
+        'Registers
+        ElseIf (Asc2 = ASC_NUL) Then Let Token = TOKEN_Z80_E
+        Else: GoTo WordError: End If
         
-    ElseIf Asc1 = ASC_F Then '................................................. `f` ...
-        'You can't refer to the `f` register directly (only `af`)
-        GoTo WordError
-        
-    ElseIf Asc1 = ASC_G Then '................................................. `g` ...
-        'There's nothing that begins with G
-        GoTo WordError
-        
-    ElseIf Asc1 = ASC_H Then '................................................. `h` ...
+    ElseIf Asc1 = ASC_H Then '................................................. `H` ...
         'Z80 instructions
-        If Word.Equals(STR_HLT) Then Let Token = TOKEN_Z80_HALT: GoTo NextWord
-        If Word.Equals(STR_HALT) Then Let Token = TOKEN_Z80_HALT: GoTo NextWord
+        If Word.Equals(STR_HLT) Then
+            Let Token = TOKEN_Z80_HALT
+        ElseIf Word.Equals(STR_HALT) Then Let Token = TOKEN_Z80_HALT
         'Keywords
-        If Word.Equals(STR_HASH) Then Let Token = TOKEN_KEYWORD_HASH: GoTo NextWord
-        If Word.Equals(STR_HELP) Then Let Token = TOKEN_KEYWORD_HELP: GoTo NextWord
-        If Word.Equals(STR_HI) Then Let Token = TOKEN_KEYWORD_HI: GoTo NextWord
+        ElseIf Word.Equals(STR_HASH) Then Let Token = TOKEN_KEYWORD_HASH
+        ElseIf Word.Equals(STR_HELP) Then Let Token = TOKEN_KEYWORD_HELP
+        ElseIf Word.Equals(STR_HI) Then Let Token = TOKEN_KEYWORD_HI
+        'Registers
+        ElseIf (Asc2 = ASC_NUL) Then Let Token = TOKEN_Z80_H
+        ElseIf (Asc3 = ASC_NUL) And (Asc2 = ASC_L) Then Let Token = TOKEN_Z80_HL
+        Else: GoTo WordError: End If
         
-    ElseIf Asc1 = ASC_I Then '................................................. `i` ...
+    ElseIf Asc1 = ASC_I Then '................................................. `I` ...
         'Z80 instructions
-        If Word.Equals(STR_IM) Then Let Token = TOKEN_Z80_IM: GoTo NextWord
-        If Word.Equals(STR_IN) Then Let Token = TOKEN_Z80_IN: GoTo NextWord
-        If Word.Equals(STR_INC) Then Let Token = TOKEN_Z80_INC: GoTo NextWord
-        If Word.Equals(STR_IND) Then Let Token = TOKEN_Z80_IND: GoTo NextWord
-        If Word.Equals(STR_INDR) Then Let Token = TOKEN_Z80_INDR: GoTo NextWord
-        If Word.Equals(STR_INI) Then Let Token = TOKEN_Z80_INI: GoTo NextWord
-        If Word.Equals(STR_INIR) Then Let Token = TOKEN_Z80_INIR: GoTo NextWord
+        If Word.Equals(STR_IM) Then
+            Let Token = TOKEN_Z80_IM
+        ElseIf Word.Equals(STR_IN) Then Let Token = TOKEN_Z80_IN
+        ElseIf Word.Equals(STR_INC) Then Let Token = TOKEN_Z80_INC
+        ElseIf Word.Equals(STR_IND) Then Let Token = TOKEN_Z80_IND
+        ElseIf Word.Equals(STR_INDR) Then Let Token = TOKEN_Z80_INDR
+        ElseIf Word.Equals(STR_INI) Then Let Token = TOKEN_Z80_INI
+        ElseIf Word.Equals(STR_INIR) Then Let Token = TOKEN_Z80_INIR
         'keywords
-        If Word.Equals(STR_INCLUDE) Then Let Token = TOKEN_KEYWORD_INCLUDE: GoTo NextWord
-        If Word.Equals(STR_INDEX) Then Let Token = TOKEN_KEYWORD_INDEX: GoTo NextWord
-        If Word.Equals(STR_INTERRUPT) Then Let Token = TOKEN_KEYWORD_INTERRUPT: GoTo NextWord
+        ElseIf Word.Equals(STR_INCLUDE) Then Let Token = TOKEN_KEYWORD_INCLUDE
+        ElseIf Word.Equals(STR_INDEX) Then Let Token = TOKEN_KEYWORD_INDEX
+        ElseIf Word.Equals(STR_INTERRUPT) Then Let Token = TOKEN_KEYWORD_INTERRUPT
+        'Registers
+        ElseIf (Asc2 = ASC_NUL) Then Let Token = TOKEN_Z80_I
+        ElseIf Word.Equals(STR_IX) Then Let Token = TOKEN_Z80_IX
+        ElseIf Word.Equals(STR_IY) Then Let Token = TOKEN_Z80_IY
+        ElseIf Word.Equals(STR_IXH) Then Let Token = TOKEN_Z80_IXH
+        ElseIf Word.Equals(STR_IXL) Then Let Token = TOKEN_Z80_IXL
+        ElseIf Word.Equals(STR_IYH) Then Let Token = TOKEN_Z80_IYH
+        ElseIf Word.Equals(STR_IYL) Then Let Token = TOKEN_Z80_IYL
+        Else: GoTo WordError: End If
         
-    ElseIf Asc1 = ASC_J Then '................................................. `j` ...
+    ElseIf Asc1 = ASC_J Then '................................................. `J` ...
         'Z80 instructions
-        If Word.Equals(STR_JP) Then Let Token = TOKEN_Z80_JP: GoTo NextWord
-        If Word.Equals(STR_JR) Then Let Token = TOKEN_Z80_JR: GoTo NextWord
-        'There are no `j` registers
-        GoTo WordError
+        If Word.Equals(STR_JP) Then
+            Let Token = TOKEN_Z80_JP
+        ElseIf Word.Equals(STR_JR) Then Let Token = TOKEN_Z80_JR
+        'There are no `J` registers
+        Else: GoTo WordError: End If
         
-    ElseIf Asc1 = ASC_K Then '................................................. `k` ...
+    ElseIf Asc1 = ASC_K Then '................................................. `K` ...
         'Number suffixes K & KB
-        If Asc2 = ASC_NUL Then
+        If (Asc2 = ASC_NUL) Then
             'Just `K`
-            Let Token = TOKEN_PREFIX_K: GoTo NextWord
-        
+            Let Token = TOKEN_PREFIX_K
         'B must be next for `KB`
-        ElseIf Asc2 = ASC_B And Asc3 = ASC_NUL Then
-            Let Token = TOKEN_PREFIX_KB: GoTo NextWord
-            
-        End If
-        'There are no `k` registers
-        GoTo WordError
-        
-    ElseIf Asc1 = ASC_L Then '................................................. `l` ...
+        ElseIf (Asc2 = ASC_B) And (Asc3 = ASC_NUL) Then
+            Let Token = TOKEN_PREFIX_KB
+        'There are no `K` registers
+        Else: GoTo WordError: End If
+                
+    ElseIf Asc1 = ASC_L Then '................................................. `L` ...
         'Z80 instructions
-        If Word.Equals(STR_LD) Then Let Token = TOKEN_Z80_LD: GoTo NextWord
-        If Word.Equals(STR_LDD) Then Let Token = TOKEN_Z80_LDD: GoTo NextWord
-        If Word.Equals(STR_LDDR) Then Let Token = TOKEN_Z80_LDDR: GoTo NextWord
-        If Word.Equals(STR_LDI) Then Let Token = TOKEN_Z80_LDI: GoTo NextWord
-        If Word.Equals(STR_LDIR) Then Let Token = TOKEN_Z80_LDIR: GoTo NextWord
+        If Word.Equals(STR_LD) Then
+            Let Token = TOKEN_Z80_LD
+        ElseIf Word.Equals(STR_LDD) Then Let Token = TOKEN_Z80_LDD
+        ElseIf Word.Equals(STR_LDDR) Then Let Token = TOKEN_Z80_LDDR
+        ElseIf Word.Equals(STR_LDI) Then Let Token = TOKEN_Z80_LDI
+        ElseIf Word.Equals(STR_LDIR) Then Let Token = TOKEN_Z80_LDIR
         'Keywords
-        If Word.Equals(STR_LO) Then Let Token = TOKEN_KEYWORD_LO: GoTo NextWord
-        If Word.Equals(STR_LONG) Then Let Token = TOKEN_KEYWORD_LONG: GoTo NextWord
-    
-    ElseIf Asc1 = ASC_M Then '................................................. `m` ...
+        ElseIf Word.Equals(STR_LO) Then Let Token = TOKEN_KEYWORD_LO
+        ElseIf Word.Equals(STR_LONG) Then Let Token = TOKEN_KEYWORD_LONG
+        'Registers
+        ElseIf (Asc2 = ASC_NUL) Then Let Token = TOKEN_Z80_L
+        Else: GoTo WordError: End If
+        
+    ElseIf Asc1 = ASC_M Then '................................................. `M` ...
         'Z80 flag conditions
-        If Asc2 = ASC_NUL Then Let Token = TOKEN_Z80_M: GoTo NextWord
+        If (Asc2 = ASC_NUL) Then
+            Let Token = TOKEN_Z80_M
         'There is no `m` register
-        GoTo WordError
+        Else: GoTo WordError: End If
         
-    ElseIf Asc1 = ASC_N Then '................................................. `n` ...
+    ElseIf Asc1 = ASC_N Then '................................................. `N` ...
         'Z80 instructions
-        If Word.Equals(STR_NEG) Then Let Token = TOKEN_Z80_NEG: GoTo NextWord
-        If Word.Equals(STR_NOP) Then Let Token = TOKEN_Z80_NOP: GoTo NextWord
+        If Word.Equals(STR_NEG) Then
+            Let Token = TOKEN_Z80_NEG
+        ElseIf Word.Equals(STR_NOP) Then Let Token = TOKEN_Z80_NOP
         'Keywords
-        If Word.Equals(STR_NYBL) Then Let Token = TOKEN_KEYWORD_NYBL: GoTo NextWord
+        ElseIf Word.Equals(STR_NYBL) Then Let Token = TOKEN_KEYWORD_NYBL
         'Z80 flag conditions
-        If Asc3 = ASC_NUL Then
-            If Asc2 = ASC_C Then Let Token = TOKEN_Z80_NC: GoTo NextWord
-            If Asc2 = ASC_Z Then Let Token = TOKEN_Z80_NZ: GoTo NextWord
-        End If
+        ElseIf (Asc3 = ASC_NUL) And (Asc2 = ASC_C) Then Let Token = TOKEN_Z80_NC
+        ElseIf (Asc3 = ASC_NUL) And (Asc2 = ASC_Z) Then Let Token = TOKEN_Z80_NZ
         'There are no `n` registers
-        GoTo WordError
+        Else: GoTo WordError: End If
         
-    ElseIf Asc1 = ASC_O Then '................................................. `o` ...
+    ElseIf Asc1 = ASC_O Then '................................................. `O` ...
         'Z80 instructions
-        If Word.Equals(STR_OR) Then Let Token = TOKEN_Z80_OR: GoTo NextWord
-        If Word.Equals(STR_OUT) Then Let Token = TOKEN_Z80_OUT: GoTo NextWord
-        If Word.Equals(STR_OUTD) Then Let Token = TOKEN_Z80_OUTD: GoTo NextWord
-        If Word.Equals(STR_OTDR) Then Let Token = TOKEN_Z80_OTDR: GoTo NextWord
-        If Word.Equals(STR_OUTI) Then Let Token = TOKEN_Z80_OUTI: GoTo NextWord
-        If Word.Equals(STR_OTIR) Then Let Token = TOKEN_Z80_OTIR: GoTo NextWord
-        'There are no `o` registers
-        GoTo WordError
+        If Word.Equals(STR_OR) Then
+            Let Token = TOKEN_Z80_OR
+        ElseIf Word.Equals(STR_OUT) Then Let Token = TOKEN_Z80_OUT
+        ElseIf Word.Equals(STR_OUTD) Then Let Token = TOKEN_Z80_OUTD
+        ElseIf Word.Equals(STR_OTDR) Then Let Token = TOKEN_Z80_OTDR
+        ElseIf Word.Equals(STR_OUTI) Then Let Token = TOKEN_Z80_OUTI
+        ElseIf Word.Equals(STR_OTIR) Then Let Token = TOKEN_Z80_OTIR
+        'There are no `O` registers
+        Else: GoTo WordError: End If
         
-    ElseIf Asc1 = ASC_P Then '................................................. `p` ...
+    ElseIf Asc1 = ASC_P Then '................................................. `P` ...
         'Z80 instructions
-        If Word.Equals(STR_POP) Then Let Token = TOKEN_Z80_POP: GoTo NextWord
-        If Word.Equals(STR_PUSH) Then Let Token = TOKEN_Z80_PUSH: GoTo NextWord
+        If Word.Equals(STR_POP) Then
+            Let Token = TOKEN_Z80_POP
+        ElseIf Word.Equals(STR_PUSH) Then Let Token = TOKEN_Z80_PUSH: GoTo NextWord
         'Z80 flag conditions
-        If Asc2 = ASC_NUL Then Let Token = TOKEN_Z80_P: GoTo NextWord
-        If Asc3 = ASC_NUL Then
-            If Asc2 = ASC_E Then Let Token = TOKEN_Z80_PE: GoTo NextWord
-            If Asc2 = ASC_O Then Let Token = TOKEN_Z80_PO: GoTo NextWord
-        End If
+        ElseIf (Asc2 = ASC_NUL) Then Let Token = TOKEN_Z80_P: GoTo NextWord
+        ElseIf (Asc3 = ASC_NUL) And (Asc2 = ASC_E) Then Let Token = TOKEN_Z80_PE
+        ElseIf (Asc3 = ASC_NUL) And (Asc2 = ASC_O) Then Let Token = TOKEN_Z80_PO
         'Keywords
-        If Word.Equals(STR_PARAMS) Then Let Token = TOKEN_KEYWORD_PARAMS: GoTo NextWord
-        If Word.Equals(STR_PROC) Then Let Token = TOKEN_KEYWORD_PROC: GoTo NextWord
-    
-    ElseIf Asc1 = ASC_Q Then '................................................. `q` ...
-        'There's nothing that begins with Q
-        GoTo WordError
+        ElseIf Word.Equals(STR_PARAMS) Then Let Token = TOKEN_KEYWORD_PARAMS
+        ElseIf Word.Equals(STR_PROC) Then Let Token = TOKEN_KEYWORD_PROC
+        Else: GoTo WordError: End If
         
-    ElseIf Asc1 = ASC_R Then '................................................. `r` ...
+    ElseIf Asc1 = ASC_R Then '................................................. `R` ...
         'Z80 instructions
-        If Word.Equals(STR_RES) Then Let Token = TOKEN_Z80_RES: GoTo NextWord
-        If Word.Equals(STR_RET) Then Let Token = TOKEN_Z80_RET: GoTo NextWord
-        If Word.Equals(STR_RETI) Then Let Token = TOKEN_Z80_RETI: GoTo NextWord
-        If Word.Equals(STR_RETN) Then Let Token = TOKEN_Z80_RETN: GoTo NextWord
-        If Word.Equals(STR_RL) Then Let Token = TOKEN_Z80_RL: GoTo NextWord
-        If Word.Equals(STR_RLA) Then Let Token = TOKEN_Z80_RLA: GoTo NextWord
-        If Word.Equals(STR_RLC) Then Let Token = TOKEN_Z80_RLC: GoTo NextWord
-        If Word.Equals(STR_RLCA) Then Let Token = TOKEN_Z80_RLCA: GoTo NextWord
-        If Word.Equals(STR_RLD) Then Let Token = TOKEN_Z80_RLD: GoTo NextWord
-        If Word.Equals(STR_RR) Then Let Token = TOKEN_Z80_RR: GoTo NextWord
-        If Word.Equals(STR_RRA) Then Let Token = TOKEN_Z80_RRA: GoTo NextWord
-        If Word.Equals(STR_RRC) Then Let Token = TOKEN_Z80_RRC: GoTo NextWord
-        If Word.Equals(STR_RRCA) Then Let Token = TOKEN_Z80_RRCA: GoTo NextWord
-        If Word.Equals(STR_RRD) Then Let Token = TOKEN_Z80_RRD: GoTo NextWord
-        If Word.Equals(STR_RST) Then Let Token = TOKEN_Z80_RST: GoTo NextWord
+        If Word.Equals(STR_RES) Then
+            Let Token = TOKEN_Z80_RES
+        ElseIf Word.Equals(STR_RET) Then Let Token = TOKEN_Z80_RET
+        ElseIf Word.Equals(STR_RETI) Then Let Token = TOKEN_Z80_RETI
+        ElseIf Word.Equals(STR_RETN) Then Let Token = TOKEN_Z80_RETN
+        ElseIf Word.Equals(STR_RL) Then Let Token = TOKEN_Z80_RL
+        ElseIf Word.Equals(STR_RLA) Then Let Token = TOKEN_Z80_RLA
+        ElseIf Word.Equals(STR_RLC) Then Let Token = TOKEN_Z80_RLC
+        ElseIf Word.Equals(STR_RLCA) Then Let Token = TOKEN_Z80_RLCA
+        ElseIf Word.Equals(STR_RLD) Then Let Token = TOKEN_Z80_RLD
+        ElseIf Word.Equals(STR_RR) Then Let Token = TOKEN_Z80_RR
+        ElseIf Word.Equals(STR_RRA) Then Let Token = TOKEN_Z80_RRA
+        ElseIf Word.Equals(STR_RRC) Then Let Token = TOKEN_Z80_RRC
+        ElseIf Word.Equals(STR_RRCA) Then Let Token = TOKEN_Z80_RRCA
+        ElseIf Word.Equals(STR_RRD) Then Let Token = TOKEN_Z80_RRD
+        ElseIf Word.Equals(STR_RST) Then Let Token = TOKEN_Z80_RST
         'Keywords
-        If Word.Equals(STR_RAM) Then Let Token = TOKEN_KEYWORD_RAM: GoTo NextWord
-        If Word.Equals(STR_RETURN) Then Let Token = TOKEN_KEYWORD_RETURN: GoTo NextWord
+        ElseIf Word.Equals(STR_RAM) Then Let Token = TOKEN_KEYWORD_RAM
+        ElseIf Word.Equals(STR_RETURN) Then Let Token = TOKEN_KEYWORD_RETURN
+        'Registers
+        ElseIf (Asc2 = ASC_NUL) Then Let Token = TOKEN_Z80_R
+        Else: GoTo WordError: End If
         
-    ElseIf Asc1 = ASC_S Then '................................................. `s` ...
+    ElseIf Asc1 = ASC_S Then '................................................. `S` ...
         'Z80 instructions
-        If Word.Equals(STR_SBC) Then Let Token = TOKEN_Z80_SBC: GoTo NextWord
-        If Word.Equals(STR_SCF) Then Let Token = TOKEN_Z80_SCF: GoTo NextWord
-        If Word.Equals(STR_SET) Then Let Token = TOKEN_Z80_SET: GoTo NextWord
-        If Word.Equals(STR_SLA) Then Let Token = TOKEN_Z80_SLA: GoTo NextWord
-        If Word.Equals(STR_SLL) Then Let Token = TOKEN_Z80_SLL: GoTo NextWord
-        If Word.Equals(STR_SRA) Then Let Token = TOKEN_Z80_SRA: GoTo NextWord
-        If Word.Equals(STR_SRL) Then Let Token = TOKEN_Z80_SRL: GoTo NextWord
-        If Word.Equals(STR_SUB) Then Let Token = TOKEN_Z80_SUB: GoTo NextWord
+        If Word.Equals(STR_SBC) Then
+            Let Token = TOKEN_Z80_SBC
+        ElseIf Word.Equals(STR_SCF) Then Let Token = TOKEN_Z80_SCF
+        ElseIf Word.Equals(STR_SET) Then Let Token = TOKEN_Z80_SET
+        ElseIf Word.Equals(STR_SLA) Then Let Token = TOKEN_Z80_SLA
+        ElseIf Word.Equals(STR_SLL) Then Let Token = TOKEN_Z80_SLL
+        ElseIf Word.Equals(STR_SRA) Then Let Token = TOKEN_Z80_SRA
+        ElseIf Word.Equals(STR_SRL) Then Let Token = TOKEN_Z80_SRL
+        ElseIf Word.Equals(STR_SUB) Then Let Token = TOKEN_Z80_SUB
         'Keywords
-        If Word.Equals(STR_SECTION) Then Let Token = TOKEN_KEYWORD_SECTION: GoTo NextWord
-        If Word.Equals(STR_SLOT) Then Let Token = TOKEN_KEYWORD_SLOT: GoTo NextWord
-        If Word.Equals(STR_START) Then Let Token = TOKEN_KEYWORD_START: GoTo NextWord
-        If Word.Equals(STR_SYSTEM) Then Let Token = TOKEN_KEYWORD_SYSTEM: GoTo NextWord
+        ElseIf Word.Equals(STR_SECTION) Then Let Token = TOKEN_KEYWORD_SECTION
+        ElseIf Word.Equals(STR_SLOT) Then Let Token = TOKEN_KEYWORD_SLOT
+        ElseIf Word.Equals(STR_START) Then Let Token = TOKEN_KEYWORD_START
+        ElseIf Word.Equals(STR_SYSTEM) Then Let Token = TOKEN_KEYWORD_SYSTEM:
+        'Registers
+        ElseIf (Asc3 = ASC_NUL) And (Asc2 = ASC_P) Then Let Token = TOKEN_Z80_SP
+        Else: GoTo WordError: End If
         
-    ElseIf Asc1 = ASC_T Then '................................................. `t` ...
+    ElseIf Asc1 = ASC_T Then '................................................. `T` ...
         'Keywords
-        If Word.Equals(STR_TABLE) Then Let Token = TOKEN_KEYWORD_TABLE: GoTo NextWord
-        If Word.Equals(STR_TRIP) Then Let Token = TOKEN_KEYWORD_TRIP: GoTo NextWord
-        'There is no `t` register
-        GoTo WordError
-    
-    ElseIf Asc1 = ASC_U Then '................................................. `u` ...
-        'There's nothing that begins with U
-        GoTo WordError
-    
-    ElseIf Asc1 = ASC_V Then '................................................. `v` ...
-        'There's nothing that begins with V
-        GoTo WordError
+        If Word.Equals(STR_TABLE) Then
+            Let Token = TOKEN_KEYWORD_TABLE
+        ElseIf Word.Equals(STR_TRIP) Then Let Token = TOKEN_KEYWORD_TRIP
+        'There is no `T` register
+        Else: GoTo WordError: End If
         
-    ElseIf Asc1 = ASC_W Then '................................................. `w` ...
+    ElseIf Asc1 = ASC_W Then '................................................. `W` ...
         'Keywords
-        If Word.Equals(STR_WORD) Then Let Token = TOKEN_KEYWORD_WORD: GoTo NextWord
-        'There is no `w` register
-        GoTo WordError
+        If Word.Equals(STR_WORD) Then
+            Let Token = TOKEN_KEYWORD_WORD
+        'There is no `W` register
+        Else: GoTo WordError: End If
         
-    ElseIf Asc1 = ASC_X Then '................................................. `x` ...
+    ElseIf Asc1 = ASC_X Then '................................................. `X` ...
         'If only `x`, then it's the repeat operator
-        If Asc2 = ASC_NUL Then Let Token = TOKEN_OPERATOR_REP: GoTo NextWord
+        If (Asc2 = ASC_NUL) Then
+            Let Token = TOKEN_OPERATOR_REP
         'Z80 instructions
-        If Word.Equals(STR_XOR) Then Let Token = TOKEN_Z80_XOR: GoTo NextWord
-        'There is no `x` register
-        GoTo WordError
-    
-    ElseIf Asc1 = ASC_Y Then '................................................. `y` ...
-        'There's nothing that begins with Y
-        GoTo WordError
-    
-    ElseIf Asc1 = ASC_Z Then '................................................. `z` ...
+        ElseIf Word.Equals(STR_XOR) Then Let Token = TOKEN_Z80_XOR
+        'There is no `X` register
+        Else: GoTo WordError: End If
+        
+    ElseIf Asc1 = ASC_Z Then '................................................. `Z` ...
         'Z80 flag conditions
-        If Asc2 = ASC_NUL Then Let Token = TOKEN_Z80_Z: GoTo NextWord
+        If (Asc2 = ASC_NUL) Then
+            Let Token = TOKEN_Z80_Z
         'There is no 'z' register
-        GoTo WordError
+        Else: GoTo WordError: End If
         
     ElseIf Asc1 = SYNTAX_BRACES_OPEN Then '.................................... `{` ...
         'Open another nesting level (if there was an error, stop parsing)
         If NestIn(TOKEN_BRACES_OPEN) Then GoTo Finish
-        Let Token = TOKEN_BRACES_OPEN: GoTo NextWord
+        Let Token = TOKEN_BRACES_OPEN
         
     ElseIf Asc1 = SYNTAX_BRACES_CLOSE Then  '.................................. `}` ...
         'Close the current nesting level, error if incorrect bracket-matching
         Let Token = TOKEN_BRACES_CLOSE: Let Value = Nesting(NestingDepth).Index
         If NestOut(TOKEN_BRACES_OPEN, TOKEN_BRACES_CLOSE) Then GoTo Finish
-        GoTo NextWord
         
     ElseIf Asc1 = SYNTAX_PARENS_OPEN Then '.................................... `(` ...
         'Open another nesting level (if there was an error, stop parsing)
         If NestIn(TOKEN_PARENS_OPEN) Then GoTo Finish
-        Let Token = TOKEN_PARENS_OPEN: GoTo NextWord
+        Let Token = TOKEN_PARENS_OPEN
         
     ElseIf Asc1 = SYNTAX_PARENS_CLOSE Then '................................... `)` ...
         'Close the current nesting level, error if incorrect bracket-matching
         Let Token = TOKEN_PARENS_CLOSE: Let Value = Nesting(NestingDepth).Index
         If NestOut(TOKEN_PARENS_OPEN, TOKEN_PARENS_CLOSE) Then GoTo Finish
-        GoTo NextWord
         
     ElseIf Asc1 = SYNTAX_SQUARE_OPEN Then '.................................... `[` ...
         'Open another nesting level (if there was an error, stop parsing)
         If NestIn(TOKEN_SQUARE_OPEN) Then GoTo Finish
-        Let Token = TOKEN_SQUARE_OPEN: GoTo NextWord
+        Let Token = TOKEN_SQUARE_OPEN
         
     ElseIf Asc1 = SYNTAX_SQUARE_CLOSE Then '................................... `]` ...
         'Close the current nesting level, error if incorrect bracket-matching
         Let Token = TOKEN_SQUARE_CLOSE: Let Value = Nesting(NestingDepth).Index
         If NestOut(TOKEN_SQUARE_OPEN, TOKEN_SQUARE_CLOSE) Then GoTo Finish
-        GoTo NextWord
         
     ElseIf Asc1 = SYNTAX_OPERATOR_ADD Then '................................... `+` ...
-        Let Token = TOKEN_OPERATOR_ADD: GoTo NextWord
+        Let Token = TOKEN_OPERATOR_ADD
     ElseIf Asc1 = SYNTAX_OPERATOR_SUB Then '................................... `-` ...
-        Let Token = TOKEN_OPERATOR_SUB: GoTo NextWord
+        Let Token = TOKEN_OPERATOR_SUB
     ElseIf Asc1 = SYNTAX_OPERATOR_MUL Then '................................... `*` ...
-        Let Token = TOKEN_OPERATOR_MUL: GoTo NextWord
+        Let Token = TOKEN_OPERATOR_MUL
     ElseIf Asc1 = SYNTAX_OPERATOR_DIV Then '................................... `/` ...
-        Let Token = TOKEN_OPERATOR_DIV: GoTo NextWord
+        Let Token = TOKEN_OPERATOR_DIV
     ElseIf Asc1 = SYNTAX_OPERATOR_POW Then '................................... `^` ...
-        Let Token = TOKEN_OPERATOR_POW: GoTo NextWord
+        Let Token = TOKEN_OPERATOR_POW
     ElseIf Asc1 = SYNTAX_OPERATOR_MOD Then '................................... `\` ...
-        Let Token = TOKEN_OPERATOR_MOD: GoTo NextWord
+        Let Token = TOKEN_OPERATOR_MOD
     ElseIf Asc1 = SYNTAX_OPERATOR_OR Then  '................................... `|` ...
-        Let Token = TOKEN_OPERATOR_OR: GoTo NextWord
+        Let Token = TOKEN_OPERATOR_OR
     ElseIf Asc1 = SYNTAX_OPERATOR_AND Then '................................... `&` ...
-        Let Token = TOKEN_OPERATOR_AND: GoTo NextWord
+        Let Token = TOKEN_OPERATOR_AND
     ElseIf Asc1 = SYNTAX_OPERATOR_XOR Then '................................... `~` ...
-        Let Token = TOKEN_OPERATOR_XOR: GoTo NextWord
+        Let Token = TOKEN_OPERATOR_XOR
+    Else
+        GoTo WordError
     End If
-    
-    'Z80 Registers: _
-     ----------------------------------------------------------------------------------
-Registers:
-    'Ignore anything beginning with a letter before A
-    If Asc1 < ASC_A Then GoTo WordError
-    'No register has a first letter higher than S
-    If Asc1 > ASC_S Then GoTo WordError
-    'If there's only 1 letter total, then it's obviously a 1-letter register
-    If Asc2 = ASC_NUL Then GoTo OneLetter
-    'If a semi-colon occurs at the second letter, then the register must be 1 letter
-    If Asc2 = SYNTAX_HINT1 Then GoTo OneLetter
-    'Also an apostrophe (shadow register) is the same
-    If Asc2 = SYNTAX_HINT2 Then GoTo OneLetter
-    
-    'If there's only 2 letters in total, it has to be a two-letter register
-    If Asc3 = ASC_NUL Then GoTo TwoLetters
-    'If a semi-colon or apostrophe occurs at the third letter, _
-     it could be a two-letter register
-    If Asc3 = SYNTAX_HINT1 Then GoTo TwoLetters
-    If Asc3 = SYNTAX_HINT2 Then GoTo TwoLetters
-    
-    'with all else failing, is it three letters?
-    If Asc4 = ASC_NUL Then GoTo ThreeLetters
-    If Asc4 = SYNTAX_HINT1 Then GoTo ThreeLetters
-    If Asc4 = SYNTAX_HINT2 Then GoTo ThreeLetters
-    
-    GoTo WordError
-
-OneLetter:
-    If Asc1 = ASC_A Then Let Token = TOKEN_Z80_A: GoTo NextWord
-    If Asc1 = ASC_B Then Let Token = TOKEN_Z80_B: GoTo NextWord
-    If Asc1 = ASC_C Then Let Token = TOKEN_Z80_C: GoTo NextWord
-    If Asc1 = ASC_D Then Let Token = TOKEN_Z80_D: GoTo NextWord
-    If Asc1 = ASC_E Then Let Token = TOKEN_Z80_E: GoTo NextWord
-    If Asc1 = ASC_H Then Let Token = TOKEN_Z80_H: GoTo NextWord
-    If Asc1 = ASC_I Then Let Token = TOKEN_Z80_I: GoTo NextWord
-    If Asc1 = ASC_L Then Let Token = TOKEN_Z80_L: GoTo NextWord
-    If Asc1 = ASC_R Then Let Token = TOKEN_Z80_R: GoTo NextWord
-    GoTo WordError
-
-TwoLetters:
-    If Asc1 = ASC_A Then                '"af"
-        If Asc2 = ASC_F Then Let Token = TOKEN_Z80_AF: GoTo NextWord
-    ElseIf Asc1 = ASC_B Then            '"bc"
-        If Asc2 = ASC_C Then Let Token = TOKEN_Z80_BC: GoTo NextWord
-    ElseIf Asc1 = ASC_D Then            '"de"
-        If Asc2 = ASC_E Then Let Token = TOKEN_Z80_DE: GoTo NextWord
-    ElseIf Asc1 = ASC_H Then            '"hl"
-        If Asc2 = ASC_L Then Let Token = TOKEN_Z80_HL: GoTo NextWord
-    ElseIf Asc1 = ASC_I Then            '"ix"/"iy"
-        If Asc2 = ASC_X Then Let Token = TOKEN_Z80_IX: GoTo NextWord
-        If Asc2 = ASC_Y Then Let Token = TOKEN_Z80_IY: GoTo NextWord
-    ElseIf Asc1 = ASC_P Then            '"pc"
-        If Asc2 = ASC_C Then Let Token = TOKEN_Z80_PC: GoTo NextWord
-    ElseIf Asc1 = ASC_S Then            '"sp"
-        If Asc2 = ASC_P Then Let Token = TOKEN_Z80_SP: GoTo NextWord
-    End If
-    GoTo WordError
-    
-ThreeLetters:
-    If Asc1 = ASC_I Then
-        If Asc2 = ASC_X Then
-            If Asc3 = ASC_H Then Let Token = TOKEN_Z80_IXH: GoTo NextWord
-            If Asc3 = ASC_L Then Let Token = TOKEN_Z80_IXL: GoTo NextWord
-        ElseIf Asc2 = ASC_Y Then
-            If Asc3 = ASC_H Then Let Token = TOKEN_Z80_IYH: GoTo NextWord
-            If Asc3 = ASC_L Then Let Token = TOKEN_Z80_IYL: GoTo NextWord
-        End If
-    End If
-    GoTo WordError
     
     '----------------------------------------------------------------------------------
 NextWord:

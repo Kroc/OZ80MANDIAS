@@ -139,6 +139,43 @@ Private Enum LCMAP
     LCMAP_TRADITIONAL_CHINESE = &H4000000
 End Enum
 
+'Unicode character properties: _
+ --------------------------------------------------------------------------------------
+'Returns an array of Unicode character properties for a string _
+ <msdn.microsoft.com/en-us/library/windows/desktop/dd318119(v=vs.85).aspx>
+Private Declare Function api_GetStringTypeW Lib "kernel32" Alias "GetStringTypeW" ( _
+    ByVal InfoType As CT, _
+    ByVal SourceStringPointer As Long, _
+    ByVal SourceStringLength As Long, _
+    ByVal CharTypePointer As Long _
+) As BOOL
+
+Private Enum CT
+    CT_CTYPE1 = &H1                     'Character type info (unicode properties)
+    CT_CTYPE2 = &H2                     'Bi-directional layout information
+    CT_CTYPE3 = &H3                     'Text-processing information
+End Enum
+
+Private Enum C1
+    C1_UPPER = 2 ^ 0                    'Uppercase
+    C1_LOWER = 2 ^ 1                    'Lowercase
+    C1_DIGIT = 2 ^ 2                    'Decimal digit
+    C1_SPACE = 2 ^ 3                    'Space characters
+    C1_PUNCT = 2 ^ 4                    'Punctuation
+    C1_CNTRL = 2 ^ 5                    'Control characters
+    C1_BLANK = 2 ^ 6                    'Blank characters
+    C1_XDIGIT = 2 ^ 7                   'Hexadecimal digits
+    C1_ALPHA = 2 ^ 8                    'Any linguistic character
+    C1_DEFINED = 2 ^ 9                  'Defined, but not one of the other C1_* types
+    
+    'Shorthand for "alpha-numeric"
+    C1_ALPHANUM = C1_ALPHA Or C1_DIGIT
+    'All kinds of blank characters you would want to strip off the ends
+    C1_WHITESPACE = C1_SPACE Or C1_BLANK Or C1_CNTRL
+    'Visible ("Printable") characters, this includes spaces, tabs &c.
+    C1_VISIBLE = C1_SPACE Or C1_PUNCT Or C1_BLANK Or C1_ALPHANUM
+End Enum
+
 '/// CLASS ////////////////////////////////////////////////////////////////////////////
 
 'Error number!
@@ -373,6 +410,10 @@ Private Const TAB_WIDTH As Long = 8
  upper-casing the token word is one of the biggest bottlenecks in the process! _
  Therefore we build a lookup table for upper-casing individual characters
 Private ToUpperCase(0 To 65535) As Integer
+'A look-up table of Unicode characters that are considered white-space
+Private IsWhiteSpace(0 To 65535) As Long
+'A look-up table of Unicode characters considered 'visible' (have width)
+Private IsVisible(0 To 65535) As Long
 
 'String constants at class level so that these texts do not have to be temporarily _
  created and thrown away every time we use them
@@ -1168,10 +1209,9 @@ Private Sub Class_Initialize()
     'Upper-case look-up table:
     '----------------------------------------------------------------------------------
     'Begin with a straight forward list of all 2-byte UCS-2 code points
+    Dim Unicode(0 To &HFFFF&) As Integer
     For i = 0 To &HFFFF&
-        If i >= 32768 _
-            Then Let ToUpperCase(i) = i - 65536 _
-            Else Let ToUpperCase(i) = i
+        If i >= 32768 Then Let Unicode(i) = i - 65536 Else Let Unicode(i) = i
     Next i
     
     'Get the Windows version as Windows Vista and above use alternative APIs for _
@@ -1199,8 +1239,8 @@ Private Sub Class_Initialize()
         Call api_LCMapStringEx( _
                    LocaleNamePointer:=0&, _
                             MapFlags:=LCMAP_UPPERCASE Or LCMAP_LINGUISTIC_CASING, _
-                 SourceStringPointer:=VarPtr(ToUpperCase(0)), _
-                  SourceStringLength:=UBound(ToUpperCase) + 1, _
+                 SourceStringPointer:=VarPtr(Unicode(0)), _
+                  SourceStringLength:=UBound(Unicode) + 1, _
             DestinationStringPointer:=VarPtr(ToUpperCase(0)), _
              DestinationStringLength:=UBound(ToUpperCase) + 1, _
                   VersionInfoPointer:=0&, ReservedPointer:=0&, SortHandle:=0& _
@@ -1210,13 +1250,38 @@ Private Sub Class_Initialize()
         Call api_LCMapString( _
                             LocaleID:=api_GetThreadLocale(), _
                             MapFlags:=LCMAP_UPPERCASE Or LCMAP_LINGUISTIC_CASING, _
-                 SourceStringPointer:=VarPtr(ToUpperCase(0)), _
-                  SourceStringLength:=UBound(ToUpperCase) + 1, _
+                 SourceStringPointer:=VarPtr(Unicode(0)), _
+                  SourceStringLength:=UBound(Unicode) + 1, _
             DestinationStringPointer:=VarPtr(ToUpperCase(0)), _
              DestinationStringLength:=UBound(ToUpperCase) + 1 _
         )
     End If
     
+    '----------------------------------------------------------------------------------
+    'Unicode properties look-up tables:
+    '----------------------------------------------------------------------------------
+    'Use the Windows API to convert the list of Unicode points into their properties. _
+     This API doesn't allow overwriting the original array
+    Dim Properties(0 To &HFFFF&) As Integer
+    Call api_GetStringTypeW( _
+                   InfoType:=CT_CTYPE1, _
+        SourceStringPointer:=VarPtr(Unicode(0)), _
+         SourceStringLength:=UBound(Unicode) + 1, _
+            CharTypePointer:=VarPtr(Properties(0)) _
+    )
+    'We won't need the array of Unicode points any more
+    Erase Unicode
+    
+    'Walk the array of Unicode properties and populate the look-up tables for _
+     specfic properties...
+    For i = 0 To 65535
+        Let IsWhiteSpace(i) = ((Properties(i) And C1_SPACE) <> 0)
+        Let IsVisible(i) = ((Properties(i) And C1_VISIBLE) <> 0)
+    Next i
+    Erase Properties
+    
+    '----------------------------------------------------------------------------------
+    '8 & 16-bit hexadecimal numbers:
     '----------------------------------------------------------------------------------
     
     For i = 0 To &HF&:          Let Cache_HexStr8(i) = "0" & Hex$(i):       Next i
@@ -1655,7 +1720,7 @@ Private Sub Class_Terminate()
     Call Reset
         
     'Erase the caches
-    Erase ToUpperCase
+    Erase ToUpperCase, IsWhiteSpace, IsVisible
     Erase Cache_HexStr8, Cache_HexStr16
     Erase TokenNames, ParamText
     
@@ -1912,15 +1977,6 @@ Finish:
     Let File_Assemble = My_Error
 End Function
 
-'======================================================================================
-'======================================================================================
-'======================================================================================
-'======================================================================================
-'======================================================================================
-'======================================================================================
-'======================================================================================
-'======================================================================================
-
 'EOF : End Of File?
 '======================================================================================
 Private Property Get EOF() As Boolean
@@ -2068,7 +2124,7 @@ ReadChar:
     'If the file ends?
     If SourcePos >= SourceLen Then
         'If no word is currently underway then we are all done
-        If Word.IsNull Then GoTo Finish
+        If Word.Length = 0 Then GoTo Finish
         'Otherwise process this final word
         GoTo TokenWord
     End If
@@ -2095,7 +2151,7 @@ ReadChar:
         'Tab goes to the next tab stop boundary:
         Let Col = Col + TAB_WIDTH - (Col Mod TAB_WIDTH)
     
-    ElseIf Source.CharIsVisible(SourcePos) Then
+    ElseIf IsVisible(Char) Then
         Let Col = Col + 1
         
     Else
@@ -2134,7 +2190,7 @@ ReadChar:
         'Special handling for the beginning of a word
         If Word.IsNull Then
             'Skip whitespace before the word begins
-            If Source.CharIsSpace(SourcePos) Then GoTo SkipChar
+            If IsWhiteSpace(Char) Then GoTo SkipChar
             
             'Punctuation characters that are only one letter long: _
              When we hit one of these we need to end the word immediately, but parsing _
@@ -2179,7 +2235,7 @@ ReadChar:
             If Char = ASC_LF Then GoTo TokenWord
             
             'End the word on a space
-            If Source.CharIsSpace(SourcePos) Then GoTo TokenWord
+            If IsWhiteSpace(Char) Then GoTo TokenWord
             
             'Symbols that can break a word in the middle without spaces to separate
             If Char = SYNTAX_NEXT Then GoTo WordBreak
@@ -6141,34 +6197,6 @@ Private Sub RaiseMessage( _
         RaiseEvent Message(LogLevel, LogMsg.Format(FormatValues))
     End If
 End Sub
-
-''RiaseError : Provide error details through an event
-''======================================================================================
-''Number         | Error number to set on the Class and raise via Event
-''---------------+----------------------------------------------------------------------
-''Returns        | The same error number, for simple tail recursion
-''======================================================================================
-'Private Function RaiseError( _
-'    ByRef Number As OZ80_ERROR _
-') As OZ80_ERROR
-'    'Set the error number on this class
-'    Let My_Error = Number
-'
-'    'Fetch the detailed error text
-'    Dim Title As String, Description As String
-'    Call GetOZ80Error(Number, Title, Description)
-'
-'    'Pass the error up to the controller
-'    'TODO: Error before parsing the File?
-'    RaiseEvent Error( _
-'        Files(File).Path, _
-'        Number, Title, Description, _
-'        TokenLine, TokenCol _
-'    )
-'
-'    'We return the error number, purely for nicer looking tail-recursion
-'    Let RaiseError = Number
-'End Function
 
 'RiaseError : Provide error details through an event
 '======================================================================================

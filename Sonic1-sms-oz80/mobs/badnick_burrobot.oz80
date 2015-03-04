@@ -12,7 +12,7 @@ PARAMS  IX;mob          HELP ""Address of the current mob being processed
 	
         ld	hl,$0800
 	ld	[$.TEMP1],hl
-	call	nc,:_35e5
+	call	nc,:hitPlayer
 	
         ld	l,[ix+#mob.Yspeed.lo]
 	ld	h,[ix+#mob.Yspeed.hi]

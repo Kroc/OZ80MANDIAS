@@ -17,7 +17,7 @@ PARAMS  IX;mob          HELP ""Address of the current mob being processed
 	call	:detectCollisionWithSonic
 	ld	hl,$0404
 	ld	[$.TEMP1],hl
-	call	nc,:_35e5
+	call	nc,:hitPlayer
 	ld	l,[ix+#mob.Yspeed.lo]
 	ld	h,[ix+#mob.Yspeed.hi]
 	ld	a,[ix+#mob.Ydirection]

@@ -1697,14 +1697,15 @@ PARAMS  hl
 
 PROC    :_b50                                   SECTION ::main                  `$0B50
         `==============================================================================
-        `erase RAM_PALETTE?
+PARAMS  HL;addr         HELP ""Address of a palette
 {        
-	ld	[$.TEMP6],hl
-	ld	hl,$.PALETTE
-	ld	b,32
+	ld	[$.TEMP6]       HL              `put the palette parameter aside 
+	ld	HL              $.PALETTE       `RAM cache of current palette
 	
-.loop	ld	[hl],$00
-	inc	hl
+        `erase the current palette
+        ld	B               32              `32 colours
+.loop	ld	[HL]            $00             `set the palette colour to black
+	inc	HL
 	djnz	.loop
 	
 	jp	:_b60._1
@@ -1712,7 +1713,7 @@ PROC    :_b50                                   SECTION ::main                  
 
 PROC    :_b60                                   SECTION ::main                  `$0B60
         `------------------------------------------------------------------------------
-{                
+{
 	ld	[$.TEMP6],hl
 	
 	ld	hl,[$.LOADPALETTE_TILE]
@@ -1796,13 +1797,16 @@ PROC    :_b60                                   SECTION ::main                  
 	
 	ld	b,10
 ._8	ld	a,[iy+#vars.spriteUpdateCount]
-	res	0,[iy+#vars.flags0]
+	
+        res	0,[iy+#vars.flags0]
 	call	:waitForInterrupt
-	ld	[iy+#vars.spriteUpdateCount],a
+	
+        ld	[iy+#vars.spriteUpdateCount],a
 	djnz	._8
 	
 	pop	bc
 	djnz	._3
+        
 	ret
 }
 

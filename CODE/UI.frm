@@ -1,19 +1,19 @@
 VERSION 5.00
 Begin VB.Form UI 
    Caption         =   "OZ80MANDIAS"
-   ClientHeight    =   7005
-   ClientLeft      =   105
-   ClientTop       =   435
-   ClientWidth     =   9465
+   ClientHeight    =   7008
+   ClientLeft      =   108
+   ClientTop       =   432
+   ClientWidth     =   9468
    LinkTopic       =   "Form1"
-   ScaleHeight     =   7005
-   ScaleWidth      =   9465
+   ScaleHeight     =   7008
+   ScaleWidth      =   9468
    StartUpPosition =   3  'Windows Default
    Begin VB.TextBox txtLog 
       BorderStyle     =   0  'None
       BeginProperty Font 
          Name            =   "Courier New"
-         Size            =   9.75
+         Size            =   9.6
          Charset         =   0
          Weight          =   400
          Underline       =   0   'False
@@ -24,7 +24,7 @@ Begin VB.Form UI
       Left            =   0
       Locked          =   -1  'True
       MultiLine       =   -1  'True
-      ScrollBars      =   2  'Vertical
+      ScrollBars      =   3  'Both
       TabIndex        =   0
       Top             =   0
       Width           =   3372
@@ -119,6 +119,7 @@ Private Sub Form_Load()
     MsgBox Format$(Timer - StartTime, "0.000")
 Err_True:
     
+    Call Log(Assembler.Profiler.Report, OZ80_LOG_INFO)
     Set Assembler = Nothing
     
     Call SendMessage( _
@@ -136,27 +137,58 @@ Err_True:
     )
 End Sub
 
-'FORM Resize _
- ======================================================================================
+'FORM Resize
+'======================================================================================
 Private Sub Form_Resize()
     Call Me.txtLog.Move(0, 0, Me.ScaleWidth, Me.ScaleHeight)
 End Sub
 
-'EVENT <Assembler> Error _
- ======================================================================================
+'EVENT <Assembler> Error
+'======================================================================================
 Private Sub Assembler_Error( _
     ByRef FilePath As String, _
     ByVal Number As OZ80_ERROR, _
     ByRef Title As String, ByRef Description As String, _
     ByVal Line As Long, ByVal Col As Long _
 )
-    Call Log
-    Call Log("! ERROR: #" & Number & " " & Title, OZ80_LOG_ACTION)
-    Call Log("- File: """ & FilePath & """", OZ80_LOG_INFO)
+    Dim Message As String
+    Let Message = "ERROR #" & Number & " " & Title & vbNewLine
+    Let Message = Message & "File: """ & FilePath & """" & vbNewLine
     If Line > 0 And Col > 0 Then
-        Call Log("- Line: " & Format$(Line, "#,#") & " Col: " & Col, OZ80_LOG_INFO)
+        Let Message = Message & "Line: " & Format$(Line, "#,#") & " Col: " & Col & vbNewLine
     End If
-    Call Log("- " & Description, OZ80_LOG_INFO)
+    Let Message = Message & vbNewLine & Description & vbNewLine
+    
+    'Display the particular source code line
+    '------------------------------------------------------------------------------
+    If FilePath <> vbNullString Then
+        Dim Lines() As String
+        
+        Dim FileNumber As Integer
+        Let FileNumber = FreeFile
+        Open FilePath For Input Access Read Lock Write As #FileNumber
+    
+        Let Lines = Split( _
+            StrConv(InputB(LOF(FileNumber), FileNumber), vbUnicode), _
+            vbNewLine _
+        )
+        
+        Let Message = Message _
+            & vbNewLine _
+            & "¦     ¦" & vbNewLine
+        If Line > 2 Then Let Message = Message _
+            & "|" & Right$("     " & Str$(Line - 2), 5) & "| " & Lines(Line - 3) & vbNewLine
+        If Line > 1 Then Let Message = Message _
+            & "|" & Right$("     " & Str$(Line - 1), 5) & "| " & Lines(Line - 2) & vbNewLine
+        Let Message = Message _
+            & "|" & Right$("     " & Str$(Line), 5) & "| " & Lines(Line - 1) & vbNewLine _
+            & "`-----'-" & String$(Col - 1, "-") & "^" & vbNewLine
+        
+        Close #FileNumber
+    End If
+    
+    Debug.Print Message
+    Call Log(Message, OZ80_LOG_ERROR)
 End Sub
 
 'EVENT <Assembler>_Message
@@ -164,24 +196,7 @@ End Sub
 Private Sub Assembler_Message( _
     ByRef LogLevel As OZ80_LOG, ByRef LogText As bluString _
 )
-    Static PrevLog As OZ80_LOG
-    
-    Dim Prefix As String
-    If LogLevel = OZ80_LOG_ACTION Then Let Prefix = Prefix & "*"
-    If LogLevel = OZ80_LOG_INFO Then Let Prefix = Prefix & "-"
-    If LogLevel = OZ80_LOG_STATUS Then Let Prefix = Prefix & "="
-    If LogLevel = OZ80_LOG_DEBUG Then Let Prefix = Prefix & "."
-    
-    If (LogLevel = OZ80_LOG_ACTION) And (PrevLog <> OZ80_LOG_ACTION) Then
-        Let Prefix = vbCrLf & Prefix
-    End If
-    
-    Dim Msg As String
-    Let Msg = Prefix & " " & Replace(LogText.Text, vbCrLf, vbCrLf & "  ")
-'    Debug.Print Msg
-    Call Log(Msg, LogLevel)
-    
-    Let PrevLog = LogLevel
+    Call Log(LogText.Text, LogLevel)
 End Sub
 
 'Log : Add a message to the log
@@ -190,14 +205,31 @@ Private Sub Log( _
     Optional ByRef Text As String = vbNullString, _
     Optional ByRef LogLevel As OZ80_LOG = OZ80_LOG_ACTION _
 )
-'    Debug.Print Text
+    Static PrevLog As OZ80_LOG
+   
+    Dim Prefix As String
+    If LogLevel = OZ80_LOG_ERROR Then
+        Let Prefix = "!"
+    ElseIf LogLevel = OZ80_LOG_ACTION Then Let Prefix = "*"
+    ElseIf LogLevel = OZ80_LOG_INFO Then Let Prefix = "-"
+    ElseIf LogLevel = OZ80_LOG_STATUS Then Let Prefix = "="
+    ElseIf LogLevel = OZ80_LOG_DEBUG Then Let Prefix = "."
+    End If
     
-'    If LogLevel >= OZ80_LOG_DEBUG Then Exit Sub
-
-    Call LogText.Add( _
-        Text & vbCrLf _
-    )
+    If (LogLevel <= OZ80_LOG_ACTION) And (PrevLog > OZ80_LOG_ACTION) Then
+        Let Prefix = vbNewLine & Prefix
+    End If
     
+    Dim Msg As String
+    Let Msg = Prefix & " " & Replace(Text, vbNewLine, vbNewLine & "  ") & vbNewLine
+    
+'    Debug.Print Msg
+    Call LogText.Add(Msg)
+    
+    Let PrevLog = LogLevel
+ 
+'    '----------------------------------------------------------------------------------
+'
 '    'http://weblogs.asp.net/jdanforth/88458
 '    Call SendMessage( _
 '        Me.txtLog.hWnd, WM_SETREDRAW, 0, ByVal 0 _

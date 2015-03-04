@@ -62,7 +62,7 @@ PARAMS  IX;mob          HELP ""Address of the current mob being processed
 	call	:detectCollisionWithSonic
 	ld	hl,$0000
 	ld	[$.TEMP1],hl
-	call	nc,:_35e5
+	call	nc,:hitPlayer
 	ret
 
 ._6e96  BYTE $01, $01, $01, $01, $01, $01, $01, $01, $01

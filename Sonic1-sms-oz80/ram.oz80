@@ -34,7 +34,7 @@ HASH    #levelHeader
 
 `--------------------------------------------------------------------------------------
 
-HASH    #mob                 `26 bytes
+HASH    #mob                    `26 bytes
 [
 .type			        BYTE    `IX+$00    - the object type index number
 .Xsubpixel		        BYTE    `IX+$01    - sub-pixel accuracy of X position
@@ -474,7 +474,7 @@ RAM     $
 `--------------------------------------------------------------------------------------
 
 `the player is a mob like any other and has reserved parameters in memory
-.SONIC                          HASH #mob                                    `$D3FC
+.SONIC                          HASH #mob                                       `$D3FC
                                 `.type			                        `$D3FC
                                 `.Xsubpixel		                        `$D3FD
                                 `.X			                        `$D3FE

@@ -3,11 +3,11 @@
    for MaSS1VE: The Master System Sonic 1 Visual Editor <github.com/Kroc/MaSS1VE>
    ================================================================================= ``
 
-TABLE :S1_Object_Pointers                       SECTION ::mobs                  `$2AF6
+TABLE :mobPointers                              SECTION ::mobs                  `$2AF6
 {
-.sonic	
+INDEX   .sonic	
         WORD    :mob_Sonic		        `#00: Sonic
-.powerUp_ring
+INDEX   .powerUp_ring
         WORD    :mob_powerUp_ring		`#01: monitor - ring
         WORD    :mob_powerUp_speed              `#02: monitor - speed shoes
         WORD    :mob_powerUp_life		`#03: monitor - life
@@ -66,7 +66,7 @@ TABLE :S1_Object_Pointers                       SECTION ::mobs                  
         WORD    :mob_platform_flyingRight	`#38: flying platform (Sky Base)
         WORD    :_b398				`#39: moving spiked wall (Sky Base)
         WORD    :mob_trap_turretFixed	        `#3A: fixed turret (Sky Base)
-.platform_flyingUpDown
+INDEX   .platform_flyingUpDown
         WORD    :mob_platform_flyingUpDown      `#3B: flying platform - up/down (Sky Base)
         WORD    :mob_badnick_jaws		`#3C: badnick - jaws (Labyrinth)
         WORD    :mob_trap_spikeBall	        `#3D: spike ball (Labyrinth)
@@ -187,7 +187,7 @@ PARAMS  IY;vars         HELP ""Address of the common variables (used throughout)
 	
 	`show rings?
 	bit	2,[iy+#vars.scrollRingFlags]
-	call	nz,:_2ee6
+	call	nz,:displayRings
 	
 	`show time?
 	bit	5,[iy+#vars.timeLightningFlags]
@@ -236,13 +236,13 @@ PARAMS  IY;vars         HELP ""Address of the common variables (used throughout)
 	call	:_31e6
 	
 	`run the code for all the different mobs in the level (including the player)
-	call	:doObjects
+	call	:doMobs
 	ret
 }
 
-PROC    :_2ee6                                  SECTION ::mobs                  `$2EE6
+PROC    :displayRings                           SECTION ::mobs                  `$2EE6
         `==============================================================================
-        `display ring count on screen?
+HELP   ""Update the player's ring-count on the screen
 {        
 	ld	A;rings         [$.RINGS]
 	ld	C;rings         A;rings
@@ -250,29 +250,30 @@ PROC    :_2ee6                                  SECTION ::mobs                  
 	rrca	
 	rrca	
 	rrca	
-	and	$0f
-	add	a,a
-	add	a,$80
-	ld	[$.LAYOUT_BUFFER],a
-	ld	a,c
-	and	$0f
-	add	a,a
-	add	a,$80
-	ld	[$.LAYOUT_BUFFER+1],a
-	ld	a,$ff
-	ld	[$.LAYOUT_BUFFER+2],a
+	and	$0F
+	add	A,A
+	add	A,$80
+	ld	[$.LAYOUT_BUFFER],A
+	ld	A,C
+	and	$0F
+	add	A,A
+	add	A,$80
+	ld	[$.LAYOUT_BUFFER+1],A
+	ld	A,$ff
+	ld	[$.LAYOUT_BUFFER+2],A
         
-	ld	c;xpos,20
-	ld	b;ypos,0
-	ld	hl,[$.SPRITETABLE_ADDR]
-	ld	de,:_2e52
+	ld	C;xpos          20
+	ld	B;ypos          0
+	ld	HL              [$.SPRITETABLE_ADDR]
+	ld	DE              :_2e52
 	call	:layoutSpritesHorizontal
 	
         ld	C;xpos          40
 	ld	B;ypos          0
 	ld	DE              $.LAYOUT_BUFFER
 	call	:layoutSpritesHorizontal
-	ld	[$.SPRITETABLE_ADDR],hl
+	
+        ld	[$.SPRITETABLE_ADDR] HL
 	
         ret
 }
@@ -698,9 +699,11 @@ PARAMS  IY;vars         HELP ""Address of the common variables (used throughout)
 {        
 	bit	6,[iy+#vars.scrollRingFlags]
 	ret	nz
+        
 	ld	bc,[$.D2B7]
 	add	hl,bc
-	ret
+	
+        ret
 }
 
 PROC    :_31e6                                  SECTION ::mobs                  `$31E6
@@ -814,7 +817,7 @@ PARAMS  IX;mob          HELP ""Address of the current mob being processed
 	ret
 }
 
-PROC    :doObjects                              SECTION ::mobs                  `$392B
+PROC    :doMobs                                 SECTION ::mobs                  `$392B
         `==============================================================================
         `runs the code for each of the mobs in memory
         
@@ -833,7 +836,7 @@ PARAMS  IY;vars         HELP ""Address of the common variables (used throughout)
 	`is the value greater than zero?
 	ld	a,e
 	or	d
-	call	nz,:mob
+	call	nz,:doMob
 	
 	`keep reading memory until either something non-zero is found or we hit $D3BC
 	djnz	.loop
@@ -858,7 +861,7 @@ PARAMS  IY;vars         HELP ""Address of the common variables (used throughout)
 	ret
 }
 
-PROC    :mob                                    SECTION ::mobs                  `$32C8
+PROC    :doM                                    SECTION ::mobs                  `$32C8
         `------------------------------------------------------------------------------
 PARAMS  de
 {        
@@ -878,7 +881,7 @@ PARAMS  de
 	ld	d,$00
 	
 	`offset into the mob pointers table
-	ld	hl,:S1_Object_Pointers
+	ld	hl,:mobPointers
 	add	hl,de
 	
 	`get the mob's pointer address into HL
@@ -1392,41 +1395,43 @@ PARAMS  IY;vars         HELP ""Address of the common variables (used throughout)
         HL;addr         `($.SPRITETABLE_ADDR)  
         DE;data         `$.LAYOUT_BUFFER	: $A0, $A2, $A4, ($80 + $.LIVES * 2), $FF
 {       
-	ld	a, [de;data]                    `check the current byte in the list
+	ld	A;tileIndex, [DE;data]          `check the current byte in the list
 	cp	$FF                             `is it an end marker? ($FF)
 	ret	z                               `if so, return
 	
 	cp	$FE                             `special case for $FE command
 	jr	z, .skip                        `(skip ahead)
 	
-	ld	[hl;addr], c;xpos
-	inc	l;addr
-	ld	[hl;addr], b;ypos
-	inc	l;addr
-	ld	[hl;addr], a
-	inc	l;addr
-	inc	[iy+#vars.spriteUpdateCount]
+	ld	[HL;addr], C;xpos
+	inc	L;addr
+	ld	[HL;addr], B;ypos
+	inc	L;addr
+	ld	[HL;addr], A;tileIndex
+	inc	L;addr
         
-.skip	inc	de;data
-	ld	a;xpos, c;xpos
-	add	a;xpos, 8                       `move right 8 pixels
-	ld	c;xpos, a;xpos
+	inc	[IY+#vars.spriteUpdateCount]
+        
+.skip	inc	DE;data                         `move to the next data byte
+	`move right 8 pixels
+        ld	A;xpos, C;xpos
+	add	A;xpos, 8                       
+	ld	C;xpos, A;xpos
 	jp	:                               `process more sprites in the list
 }
 
-PROC    :_35e5                                  SECTION ::mobs                  `$35E5
+PROC    :hitPlayer                              SECTION ::mobs                  `$35E5
         `==============================================================================
 PARAMS  IY;vars         HELP ""Address of the common variables (used throughout)
 {
-	bit	0,[iy+#vars.scrollRingFlags]    `is the player already dead?
+	bit	0,[IY+#vars.scrollRingFlags]    `is the player already dead?
 	ret	nz                              `if so, leave now
         
-	bit	0,[iy+#vars.unknown0]
+	bit	0,[IY+#vars.unknown0]
 	jp	nz,:_36be
 	
-        ld	a,[$.SONIC.flags]
+        ld	A,[$.SONIC.flags]
 	rrca	
-	jp	c,:_36be
+	jp	C,:_36be
 	
         and	$02
 	jp	nz,:_36be
@@ -1438,21 +1443,22 @@ PROC    :_35fd                                  SECTION ::mobs                  
         `------------------------------------------------------------------------------
 PARAMS  IY;vars         HELP ""Address of the common variables (used throughout)
 {        
-	bit	0,[iy+#vars.flags9]
+	bit	0,[IY+#vars.flags9]
 	ret	nz
         
-	bit	6,[iy+#vars.flags6]             `is player in damage-state?
+	bit	6,[IY+#vars.flags6]             `is player in damage-state?
 	ret	nz                              `if so, do not continue
         
-	bit	0,[iy+#vars.unknown0]
+	bit	0,[IY+#vars.unknown0]
 	ret	nz
         
-	bit	5,[iy+#vars.flags6]
+	bit	5,[IY+#vars.flags6]
 	jr	nz,:_3644._367e
         
-	ld	a,[$.RINGS]
-	and	a
-	jr	nz,:_3644
+        `has the player any rings?
+	ld	A;rings         [$.RINGS]
+	and	A;rings
+	jr	nz,:_3644                       `if so, drop them
         
         `WARNING: potential fall-through to the procedure below
 }
@@ -1462,7 +1468,7 @@ PROC    :killPlayer                             SECTION ::mobs                  
 PARAMS  IY;vars         HELP ""Address of the common variables (used throughout)
 {
         `kill the player!
-	set	0,[iy+#vars.scrollRingFlags]
+	set	0,[IY+#vars.scrollRingFlags]
         
         `set flag 7 on the mob (mob death state?)
 	ld	HL              $.SONIC.flags
@@ -1472,12 +1478,14 @@ PARAMS  IY;vars         HELP ""Address of the common variables (used throughout)
 	xor	A;zero                          `set A to zero
 	ld	[$.SONIC.Yspeed.lo]             A;zero
 	ld	[$.SONIC.Yspeed.hi]             HL
-	ld	a,$60
-	ld	[$.D287],a
-	res	6,[iy+#vars.flags6]             `turn off damage-state flag
-	res	5,[iy+#vars.flags6]             `remove shield
-	res	6,[iy+#vars.flags6]             `TODO: bug or oversight?
-	res	0,[iy+#vars.unknown0]           `the 0 byte from the level header
+        
+	ld	A,$60
+	ld	[$.D287],A
+	
+        res	6,[IY+#vars.flags6]             `turn off damage-state flag
+	res	5,[IY+#vars.flags6]             `remove shield
+	res	6,[IY+#vars.flags6]             `TODO: bug or oversight?
+	res	0,[IY+#vars.unknown0]           `the 0 byte from the level header
 	
         `play the death sound effect
 	ld	A;sfx           #index_music_death
@@ -1492,45 +1500,49 @@ PROC    :_3644                                  SECTION ::mobs                  
         
 PARAMS  IX;mob          HELP ""Address of the current mob being processed
         IY;vars         HELP ""Address of the common variables (used throughout)
+        HL              `?
 {       
+        `set player's ring-count to 0
 	xor	A;zero
 	ld	[$.RINGS]       A;zero
-	
+	`find an available unused mob-slot
         call	:findEmptyMob
 	jr	c,._367e
 	
-        push	ix
-	push	hl
-	pop	ix
-	ld	[ix+#mob.type],$55	        `"make Sonic blink"?
-	ld	[ix+#mob.unknown11],$06
-	ld	[ix+$12],$00
-	ld	hl,[$.SONIC.X]
-	ld	[ix+#mob.X.lo],l
-	ld	[ix+#mob.X.hi],h
-	ld	hl,[$.SONIC.Y]
-	ld	[ix+#mob.Y.lo],l
-	ld	[ix+#mob.Y.hi],h
-	ld	[ix+#mob.Yspeed.lo],$00
-	ld	[ix+#mob.Yspeed.hi],$fc
-	ld	[ix+#mob.Ydirection],$ff
-	pop	ix
+        push	IX, HL
+	pop	IX
         
-._367e	ld	hl,$.SONIC.flags
-	ld	de,$fffc
-	xor	a;zero
-	bit	4,[hl]
+	ld	[IX+#mob.type],$55	        `"make Sonic blink"?
+	ld	[IX+#mob.unknown11],$06
+	ld	[IX+$12],$00
+	ld	HL,[$.SONIC.X]
+	ld	[IX+#mob.X.lo],L
+	ld	[IX+#mob.X.hi],H
+	ld	HL,[$.SONIC.Y]
+	ld	[IX+#mob.Y.lo],L
+	ld	[IX+#mob.Y.hi],H
+	ld	[IX+#mob.Yspeed.lo],$00
+	ld	[IX+#mob.Yspeed.hi],$fc
+	ld	[IX+#mob.Ydirection],$ff
+	pop	IX
+        
+._367e	ld	HL,$.SONIC.flags
+	ld	DE,$fffc
+	xor	A;zero
+	
+        bit	4,[HL]
 	jr	z,._1
-	ld	de,$fffe
-._1	ld	[$.SONIC.Yspeed+0],a
-	ld	[$.SONIC.Yspeed+1],de
-	bit	1,[hl]
+	
+        ld	DE,$fffe
+._1	ld	[$.SONIC.Yspeed+0],A
+	ld	[$.SONIC.Yspeed+1],DE
+	bit	1,[HL]
 	jr	z,._2
-	ld	a,[hl]
+	ld	A,[HL]
 	or	$12
-	ld	[hl],a
-	xor	a;zero
-	ld	de,$0002
+	ld	[HL],A
+	xor	A;zero
+	ld	DE,$0002
 	jr	._3
 	
 ._2	res	1,[hl]
@@ -1541,9 +1553,11 @@ PARAMS  IX;mob          HELP ""Address of the current mob being processed
 	res	5,[iy+#vars.flags6]
 	set	6,[iy+#vars.flags6]
 	ld	[iy+#vars.joypad],$ff
-	ld	a,$11
+	
+        ld	A,$11
 	rst	:playSFX
-	ret
+	
+        ret
 }
 
 PROC    :_36be                                  SECTION ::mobs                  `$36BE
@@ -1815,19 +1829,19 @@ PARAMS  IY;vars         HELP ""Address of the common variables (used throughout)
 ._1	outi
 	outi
 	outi
-	out	[$.VDP.DATA], a
+	out	[$.VDP.DATA]    A;zero
 	outi
 	outi
 	outi
-	out	[$.VDP.DATA], a
+	out	[$.VDP.DATA]    A;zero
 	outi
 	outi
 	outi
-	out	[$.VDP.DATA], a
+	out	[$.VDP.DATA]    A;zero
 	outi
 	outi
 	outi
-	out	[$.VDP.DATA], a
+	out	[$.VDP.DATA]    A;zero
 	
 	dec	e
 	jp	nz, ._1
@@ -4362,13 +4376,10 @@ PARAMS  IX;mob          HELP ""Address of the current mob being processed
 	call	:_9eb4
 	jr	._4
 ._3	call	:_9ec4
-._4	ld	de,:_9fee
+._4	ld	DE;spriteLayout ._9fee
 	jp	:mob_door_left._9e7e
-}
-
-`sprite layout
-TABLE   :_9fee                                  SECTION ::mobs                  `$9FEE
-{
+        
+._9fee  `sprite layout                                                          `$9FEE
         BYTE $36, $FF, $FF, $FF, $FF, $FF
         BYTE $3E, $FF, $FF, $FF, $FF, $FF
         BYTE $36, $FF, $FF, $FF, $FF, $FF
@@ -4479,7 +4490,7 @@ PARAMS  IX;mob          HELP ""Address of the current mob being processed
 	call	:detectCollisionWithSonic
 	ld	hl,$0e00
 	ld	[$.TEMP1],hl
-	call	nc,:_35e5
+	call	nc,:hitPlayer
 	ld	[ix+#mob.Yspeed.lo],$00
 	ld	[ix+#mob.Yspeed.hi],$01
 	ld	[ix+#mob.Ydirection],$00
@@ -4929,7 +4940,7 @@ PARAMS  IX;mob          HELP ""Address of the current mob being processed
 	ld	hl,$0000
 	ld	[$.TEMP1],hl
 	jr	c,._6
-	call	:_35e5
+	call	:hitPlayer
 	jr	._9
 	
 ._6	ld	[ix+#mob.width],$16
@@ -4965,7 +4976,7 @@ PARAMS  IX;mob          HELP ""Address of the current mob being processed
 	call	:detectCollisionWithSonic
 	ld	hl,$0000
 	ld	[$.TEMP1],hl
-	call	nc,:_35e5
+	call	nc,:hitPlayer
 ._9	ld	[ix+#mob.Yspeed.hi],$01
 	ld	a,[$.FRAMECOUNT]
 	and	$01
@@ -5631,7 +5642,7 @@ PARAMS  IX;mob          HELP ""Address of the current mob being processed
 	call	:detectCollisionWithSonic
 	ld	hl,$1010
 	ld	[$.TEMP1],hl
-	call	nc,:_35e5
+	call	nc,:hitPlayer
 	ld	l,[ix+#mob.X.lo]
 	ld	h,[ix+#mob.X.hi]
 	ld	[$.TEMP1],hl

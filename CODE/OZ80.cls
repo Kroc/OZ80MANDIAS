@@ -28,19 +28,6 @@ Option Explicit
 'Therefore the code in here is very, very long. I've tried to arrange it in logical _
  progression order -- source code parsing & tokenising, assembling, and output
 
-'/// DEBUG ////////////////////////////////////////////////////////////////////////////
-
-Private Profiler As New bluProfiler
-
-Private Enum PROFILER_EVENTS
-    EVENT_INITIALIZE                    'Class initialisation -- caching
-    EVENT_TOKENISE                      'Tokenise File
-    EVENT_TOKENISE_READWORD             '- Parse out a single word
-    EVENT_TOKENISE_TOKENWORD            '- Tokenise a single word
-    EVENT_FORMATTOKEN                   '- Format token data for logging
-    EVENT_PROCESSZ80                    'ProcessZ80
-End Enum
-
 '/// API //////////////////////////////////////////////////////////////////////////////
 
 'Undocumented VB6 APIs to write a number of bytes to memory. _
@@ -176,6 +163,23 @@ Private Enum C1
     C1_VISIBLE = C1_SPACE Or C1_PUNCT Or C1_BLANK Or C1_ALPHANUM
 End Enum
 
+'/// DEBUG ////////////////////////////////////////////////////////////////////////////
+
+'We'll be doing some basic timing throughout
+Public Profiler As New bluProfiler
+
+Public Enum PROFILER_EVENTS
+    EVENT_INITIALIZE                    'Class initialisation -- caching
+    EVENT_FILELOAD_VB6
+    EVENT_FILELOAD_API
+    EVENT_TOKENISE                      'Tokenise File
+    EVENT_TOKENISE_READWORD             '- Parse out a single word
+    EVENT_TOKENISE_TOKENWORD            '- Tokenise a single word
+    EVENT_FORMATTOKEN                   '- Format token data for logging
+    EVENT_ASSEMBLE                      'Assembling a file (after tokenisation)
+    EVENT_PROCESSZ80                    'ProcessZ80
+End Enum
+
 '/// CLASS ////////////////////////////////////////////////////////////////////////////
 
 'Error number!
@@ -205,7 +209,6 @@ Public Enum OZ80_ERROR
     OZ80_ERROR_NONE                     'Assembly completed successfully
     OZ80_ERROR_DUPLICATE                'A name has been defined twice
     OZ80_ERROR_EXPECTED                 'Incorrect content at the current scope
-    OZ80_ERROR_EXPRESSION               'Not a valid expression
     OZ80_ERROR_FILE_END                 'Unexpected end of file
     OZ80_ERROR_FILE_NOTFOUND            'Requested file does not exist
     OZ80_ERROR_FILE_READ                'Some kind of problem while file handle open
@@ -214,6 +217,15 @@ Public Enum OZ80_ERROR
     OZ80_ERROR_OVERFLOW                 'A number overflowed the maximum
     OZ80_ERROR_UNDEFINED                'Named item is used, but undefined
 End Enum
+
+Private Const ERR_TITLE_DUPLICATE As String = "Duplicate Error"
+Private Const ERR_TITLE_EXPECTED As String = "Expected Else Error"
+Private Const ERR_TITLE_FILE_END As String = "Unexected End Of File Error"
+Private Const ERR_TITLE_FILE_NOTFOUND As String = "File Not Found Error"
+Private Const ERR_TITLE_FILE_READ As String = "File Read Error"
+Private Const ERR_TITLE_INDEFINITE As String = "Indefinite Value Error"
+Private Const ERR_TITLE_OVERFLOW As String = "Overflow Error"
+Private Const ERR_TITLE_UNDEFINED As String = "Undefined Error"
 
 Private Const STR_ERR_EXPECTED_BRACKET As String = _
     "Bracket expected. A bracket -- either Braces '{ }', Parentheses '( )' or " & _
@@ -276,6 +288,7 @@ Private Const STR_ERR_OVERFLOW As String = _
  --------------------------------------------------------------------------------------
 
 Public Enum OZ80_LOG
+    OZ80_LOG_ERROR                      'Error messages have the highest priority
     OZ80_LOG_ACTION                     'The key important happenings
     OZ80_LOG_INFO                       'Optional information, not actions happening
     OZ80_LOG_STATUS                     'Display variable values &c. when assigned
@@ -300,8 +313,10 @@ Private Const LOG_FILE_TOKENS           As String = "Tokens: {$}"
 Private Const LOG_ASM_COLS              As String = "ADDR | PX OP OF CB LO HI | MNEMONIC  PARAM1    PARAM2    PARAM3"
 Private Const LOG_ASM_HEAD              As String = "-----|-------------------|-----------------------------------------------"
 Private Const LOG_ASM                   As String = "···· | ·· ·· ·· ·· ·· ·· | ·········                                     "
-
-Private Const LOG_DATA                  As String = "{$} | {$} {$} {$} {$} {$} {$} {$} {$} {$} {$} {$} {$} {$} {$} {$} {$} | {$}{$}{$}{$}{$}{$}{$}{$}{$}{$}{$}{$}{$}{$}{$}{$}"
+Private Const LOG_ASM_FOOT              As String = "-----+-------------------+-----------------------------+-----------------"
+Private Const LOG_DATA_COLS             As String = "ADDR | 00 01 02 03 04 05 06 07 08 09 0A 0B 0C 0D 0E 0F | 0123456789ABCDEF"
+Private Const LOG_DATA_HEAD             As String = "-----|-------------------------------------------------|-----------------"
+Private Const LOG_DATA                  As String = "···· | ·· ·· ·· ·· ·· ·· ·· ·· ·· ·· ·· ·· ·· ·· ·· ·· | ················"
 
 Private Const FORMAT_QUOTE              As String = """"
 Private Const FORMAT_TOKEN              As String = "<tkn> {$} ({$},{$}) [{$}] {$}"
@@ -336,16 +351,17 @@ Private Enum CHUNK_MODE
 End Enum
 
 'When generating the disassembly log, we don't show data as 1-byte per line, _
- but render it in typical bin-hex format of 16 hex-bytes followed by ASCII. _
- We therefore need to remember up to 16 bytes as we go before we can output this
-Private ChunkData(0 To 15) As String
+ but render it in typical hex-bin format of 16 hex-bytes followed by ASCII. _
+ We therefore need to prepare a line of 16-bytes before logging it
 Private ChunkDataIndex As Long
-'Log-ready address of where the line of data begins
-Private ChunkDataAddr As String * 4
+'This will be the current line of disassembled log data (See `LOG_DATA`)
+Private ChunkDataLog As String
 
 '--------------------------------------------------------------------------------------
 'File Tokenising:
 '--------------------------------------------------------------------------------------
+
+Private Source As bluString
 
 'A lot of the text parsing will be letter-by-letter, so this enum provides the _
  common character codes we'll be referring to, as well as the particular punctuation _
@@ -1016,8 +1032,8 @@ Private ParamText(0 To [_PARAMTEXT_TOTAL]) As String * 10
 
 'Z80 Opcodes: _
  --------------------------------------------------------------------------------------
-'Z80 opcodes are made up of various bit patterns that can be broken down into the _
- following layout: (this information from <z80.info/decoding.htm>)
+'Z80 opcodes are made up of various bit patterns that can be broken down into the
+'following layout: (this information from <z80.info/decoding.htm>)
 
 '             .---------------.
 ' Bit Number: |7|6|5|4|3|2|1|0|
@@ -1169,10 +1185,13 @@ Private Sub Class_Initialize()
     'Register the events we'll be timing with the profiler
     With Profiler
         Call .RegisterEvent(EVENT_INITIALIZE, "Initialize")
+        Call .RegisterEvent(EVENT_FILELOAD_VB6, "bluString.ReadFile - InputB")
+        Call .RegisterEvent(EVENT_FILELOAD_API, "bluString.FileLoad - api_CreateFile")
         Call .RegisterEvent(EVENT_TOKENISE, "File_Tokenise")
         Call .RegisterEvent(EVENT_TOKENISE_READWORD, "File_Tokenise;ReadWord")
         Call .RegisterEvent(EVENT_TOKENISE_TOKENWORD, "File_Tokenise;TokenWord")
         Call .RegisterEvent(EVENT_FORMATTOKEN, "FormatToken")
+        Call .RegisterEvent(EVENT_ASSEMBLE, "Assemble")
         Call .RegisterEvent(EVENT_PROCESSZ80, "Z80_Process")
     End With
     
@@ -1182,6 +1201,8 @@ Private Sub Class_Initialize()
     
     'This is a re-usable temporary String for logging
     Set LogMsg = New bluString
+    
+    Set Source = New bluString
     
     'Manually create a 64-bit Double "Infinite" number, which cannot be written _
      implicitly in VB6. This method is based upon <stackoverflow.com/a/896292>. _
@@ -1718,7 +1739,7 @@ End Sub
 '======================================================================================
 Private Sub Class_Terminate()
     Call Reset
-        
+    
     'Erase the caches
     Erase ToUpperCase, IsWhiteSpace, IsVisible
     Erase Cache_HexStr8, Cache_HexStr16
@@ -1738,7 +1759,10 @@ Private Sub Class_Terminate()
           OpcodeY_Register, OpcodeY_RST, OpcodeZ_Register
     Erase TokenRegister
     
+    Set Profiler = Nothing
+    
     Set Word = Nothing
+    Set Source = Nothing
     Set LogMsg = Nothing
 End Sub
 
@@ -1783,7 +1807,9 @@ End Sub
 
 'Error : Expose the internal error number
 '======================================================================================
-Public Property Get Error() As OZ80_ERROR: Let Error = My_Error: End Property
+Public Property Get Error() As OZ80_ERROR
+    Let Error = My_Error
+End Property
 
 'Assemble : Compile a Z80 binary from a given starting source code file
 '======================================================================================
@@ -1960,9 +1986,15 @@ Private Function File_Assemble( _
      ----------------------------------------------------------------------------------
     Call RaiseMessage(OZ80_LOG_ACTION, "Assembling ""{$}""", FilePath)
     
+    '*** TIMER BEGIN ***
+    Call Profiler.EventBegin(EVENT_ASSEMBLE)
+        
     'Now begin assembling the file. If an `INCLUDE` statement is encountered, _
      it will also be tokenised and assembled
     Call ScopeRoot
+    
+    Call Profiler.EventEnd(EVENT_ASSEMBLE)
+    '*** TIMER END ***
     
     If My_Error Then GoTo Finish
     Call RaiseMessage(OZ80_LOG_INFO, "Assembly Complete for ""{$}""", FilePath)
@@ -2055,13 +2087,49 @@ Private Function File_Tokenise( _
     'This function will be called by `File_Assemble`, so the file path will already _
      have been normalised and file existance checked
     
+    '*** TIMER BEGIN ***
+    Call Profiler.EventBegin(EVENT_FILELOAD_API)
+    
     'Read the file into our fast string handler (though we won't be doing any string- _
      manipulation, we will be relying on the various methods available to us)
-    Dim Source As bluString: Set Source = New bluString
-    'Note the string will not be increasing in size, so we can trim the buffer _
-     down to the same length as the content
-    'TODO: Handle file reading errors
-    Call Source.ReadFile(FilePath).ReduceBuffer
+    
+    Call Source.FileLoad(FilePath)
+    
+    Call Profiler.EventEnd(EVENT_FILELOAD_API)
+    '*** TIMER END ***
+    '*** TIMER BEGIN ***
+    Call Profiler.EventBegin(EVENT_FILELOAD_VB6)
+    
+    'Read the file into our fast string handler (though we won't be doing any string- _
+     manipulation, we will be relying on the various methods available to us)
+    
+    Call Source.ReadFile(FilePath)
+    
+    Call Profiler.EventEnd(EVENT_FILELOAD_VB6)
+    '*** TIMER END ***
+    
+    Dim Buffer() As Integer
+    Let Buffer = Source.GetArray()
+    
+'    Dim FileNumber As Long: Let FileNumber = FreeFile
+'    Open FilePath For Input Access Read Lock Write As #FileNumber
+'
+'    Dim Source As String
+'    Let Source = StrConv(InputB(LOF(FileNumber), FileNumber), vbUnicode)
+'
+'    Dim Buffer() As Integer
+'    ReDim Buffer(0 To Len(Source)) As Integer
+'
+'    Call api_RtlMoveMemory( _
+'        VarPtr(Buffer(0)), _
+'        StrPtr(Source), _
+'        LenB(Source) _
+'    )
+'
+'    Let Source = vbNullString
+'    Close FileNumber
+    
+    
     
     'Cache this for speed, we'll be referring to it every loop
     Dim SourceLen As Long: Let SourceLen = Source.Length
@@ -2108,7 +2176,6 @@ Private Function File_Tokenise( _
     Dim Value As Double
     
     
-    
     'Read a single word:
     '----------------------------------------------------------------------------------
 ReadWord:
@@ -2117,6 +2184,11 @@ ReadWord:
     
     'Reset the captured word
     Call Word.Clear
+    
+    'A cache is *much* faster than accessing the property many times over
+    Dim WordLength As Long
+    Let WordLength = 0
+    
 SkipChar:
     'Move on to the next character in the source
     Let SourcePos = SourcePos + 1
@@ -2124,14 +2196,15 @@ ReadChar:
     'If the file ends?
     If SourcePos >= SourceLen Then
         'If no word is currently underway then we are all done
-        If Word.Length = 0 Then GoTo Finish
+        If WordLength = 0 Then GoTo Finish
         'Otherwise process this final word
         GoTo TokenWord
     End If
     
     'Read a character:
     Dim Char As OZ80_SYNTAX
-    Let Char = Source.Char(SourcePos)
+'    Let Char = Source.Char(SourcePos)
+    Let Char = Buffer(SourcePos)
     
     'Keep track of line and column position in the source file _
      (for helpful error messages, even at the tokenising stage)
@@ -2167,7 +2240,7 @@ ReadChar:
             If Char = C0_LF Then Let IsComment = False: GoTo ReadWord
             'Is this a multi-line comment? (two backticks)
             'TODO: What is going on here???
-            If Not Word.IsNull Then
+            If WordLength <> 0 Then
                 If Char = SYNTAX_COMMENT Then Let IsCommentMulti = True
                 GoTo ReadWord
             End If
@@ -2176,7 +2249,7 @@ ReadChar:
         ElseIf Char = SYNTAX_COMMENT Then
             'Check for a second back-tick following
             Let SourcePos = SourcePos + 1: Let Col = Col + 1
-            If Source.Char(SourcePos) = SYNTAX_COMMENT Then
+            If Buffer(SourcePos) = SYNTAX_COMMENT Then
                 Let IsComment = False: Let IsCommentMulti = False
                 GoTo ReadWord
             End If
@@ -2188,7 +2261,7 @@ ReadChar:
     '(NOTE: Falsey checks are slightly faster)
     ElseIf IsText = 0 Then
         'Special handling for the beginning of a word
-        If Word.IsNull Then
+        If WordLength = 0 Then
             'Skip whitespace before the word begins
             If IsWhiteSpace(Char) Then GoTo SkipChar
             
@@ -2268,7 +2341,7 @@ ReadChar:
     'Text: ............................................................................
     ElseIf TextMode = 0 Then
         'Check for multiple opening quotes
-        If Word.Length = 1 And Char = SYNTAX_TEXT Then
+        If WordLength = 1 And Char = SYNTAX_TEXT Then
             Let TextMode = TextMode + 1: GoTo SkipChar
         End If
         'Skip over the closing quote so that it doesn't get tokenised
@@ -2276,7 +2349,7 @@ ReadChar:
     
     ElseIf TextMode = 1 Then
         'Check for multiple opening quotes
-        If Word.Length = 1 And Char = SYNTAX_TEXT Then
+        If WordLength = 1 And Char = SYNTAX_TEXT Then
             Let TextMode = TextMode + 1: GoTo SkipChar
         End If
         'End of line ends the text
@@ -2298,14 +2371,14 @@ ReadChar:
 NextChar:
     'Is this the first character of the word? _
      If so, record the starting position of the word
-    If Word.IsNull Then Let TokenLine = Line: Let TokenCol = Col
+    If WordLength = 0 Then Let TokenLine = Line: Let TokenCol = Col
     'Since this is a valid letter, capture it
-    Call Word.CharPush(Char)
+    Call Word.CharPush(Char): Let WordLength = WordLength + 1
     GoTo SkipChar
 
     '----------------------------------------------------------------------------------
 Punctuation:
-    Call Word.Clear.CharPush(Char)
+    Call Word.Clear.CharPush(Char): Let WordLength = 1
     Let TokenLine = Line: Let TokenCol = Col
     GoTo TokenWord
     
@@ -2332,9 +2405,9 @@ TokenWord:
     Dim Asc1 As OZ80_SYNTAX, Asc2 As OZ80_SYNTAX, _
         Asc3 As OZ80_SYNTAX, Asc4 As OZ80_SYNTAX
     Let Asc1 = ToUpperCase(Word.Char(0))
-    If Word.Length > 3 Then Let Asc4 = ToUpperCase(Word.Char(3)) Else Let Asc4 = ASC_NUL
-    If Word.Length > 2 Then Let Asc3 = ToUpperCase(Word.Char(2)) Else Let Asc3 = ASC_NUL
-    If Word.Length > 1 Then Let Asc2 = ToUpperCase(Word.Char(1)) Else Let Asc2 = ASC_NUL
+    If WordLength > 3 Then Let Asc4 = ToUpperCase(Word.Char(3)) Else Let Asc4 = ASC_NUL
+    If WordLength > 2 Then Let Asc3 = ToUpperCase(Word.Char(2)) Else Let Asc3 = ASC_NUL
+    If WordLength > 1 Then Let Asc2 = ToUpperCase(Word.Char(1)) Else Let Asc2 = ASC_NUL
     
     'Comma (very common!) _
      .......................................................................... `,` ...
@@ -2345,7 +2418,10 @@ TokenWord:
          all commas are optional and simply skipped by the tokeniser
         GoTo SkipWord
         
+    'Register Hints
+    '......................................................................... `;'` ...
     ElseIf (Asc1 = SYNTAX_HINT1) Or (Asc1 = SYNTAX_HINT2) Then
+        'These are not used by the assembler, they're purely for commenting code
         GoTo SkipWord
         
     'A decimal number? _
@@ -2353,7 +2429,7 @@ TokenWord:
     ElseIf Word.CharIsNumeric(0, True) Then
         'Validate the number
         Let Number = 0: Let Multiplier = 1
-        For i = Word.Length - 1 To 0 Step -1
+        For i = WordLength - 1 To 0 Step -1
             'ERROR: If not a 0-9 digit then this is not a decimal number!
             If Not Word.CharIsNumeric(i, True) Then Call RaiseError( _
                 OZ80_ERROR_INVALID, STR_ERR_INVALID_NUMBER_DEC _
@@ -2388,9 +2464,9 @@ TokenWord:
      .......................................................................... `%` ...
     ElseIf Asc1 = SYNTAX_NUMBER_BIN Then
         'ERROR: Cannot be longer than 32-bits
-        If Word.Length > 33 Then GoTo ErrorOverflow
+        If WordLength > 33 Then GoTo ErrorOverflow
         Let Number = 0: Let Multiplier = 0
-        For i = Word.Length - 1 To 1 Step -1
+        For i = WordLength - 1 To 1 Step -1
             If Word.Char(i) = ASC_1 Then
                 Let Number = Number + 2 ^ Multiplier
             ElseIf Word.Char(i) <> ASC_0 Then
@@ -2434,9 +2510,9 @@ TokenWord:
      .......................................................................... `$` ...
     ElseIf Asc1 = SYNTAX_NUMBER_HEX Then
         'Any more than 8-digits will be an overflow (32-bit number maximum)
-        If Word.Length > 9 Then GoTo ErrorOverflow
+        If WordLength > 9 Then GoTo ErrorOverflow
         'Check the digits are 0-9, A-F
-        For i = 1 To Word.Length - 1
+        For i = 1 To WordLength - 1
             'ERROR: Invalid hexadecimal number!
             If Not Word.CharIsHex(i) Then Call RaiseError( _
                 OZ80_ERROR_INVALID, STR_ERR_INVALID_NUMBER_HEX _
@@ -2888,7 +2964,7 @@ Finish:
     
     'Free up the memory used for the text file _
      (we won't be referring to the original text again)
-    Set Source = Nothing
+'    Call Source.Clear
     'Clear the nesting information
     Erase Nesting: Let NestingDepth = 0
     
@@ -3278,7 +3354,7 @@ Continue:
         Else
             'ERROR: Unexpected definition
             'TODO: More specific error number/description
-            Call RaiseError(OZ80_ERROR_EXPECTED, "")
+            Call RaiseError(OZ80_ERROR_EXPECTED, "TODO")
         End If
     
     'Define a Hash:
@@ -3761,12 +3837,7 @@ ReadParams:
     
     'Finalise the disassembly log
     If ChunkMode = MODE_DATA Then
-        Call Chunks(Chunk).LogASM.LogFormat( _
-            LOG_DATA, _
-            ChunkDataAddr, ChunkData, _
-            "·", "·", "·", "·", "·", "·", "·", "·", _
-            "·", "·", "·", "·", "·", "·", "·", "·" _
-        )
+        If ChunkDataIndex <> 0 Then Call Chunks(Chunk).LogASM.Log(ChunkDataLog)
     End If
     Call Chunks(Chunk).LogASM.Log(LOG_LINEDOUBLE)
     Call RaiseMessage(OZ80_LOG_DEBUG, Chunks(Chunk).LogASM.Concatenate())
@@ -4092,12 +4163,7 @@ ReadParams:
     
     'Finalise the disassembly log
     If ChunkMode = MODE_DATA Then
-        Call Chunks(Chunk).LogASM.LogFormat( _
-            LOG_DATA, _
-            ChunkDataAddr, ChunkData, _
-            "·", "·", "·", "·", "·", "·", "·", "·", _
-            "·", "·", "·", "·", "·", "·", "·", "·" _
-        )
+        If ChunkDataIndex <> 0 Then Call Chunks(Chunk).LogASM.Log(ChunkDataLog)
     End If
     Call Chunks(Chunk).LogASM.Log(LOG_LINEDOUBLE)
     Call RaiseMessage(OZ80_LOG_DEBUG, Chunks(Chunk).LogASM.Concatenate())
@@ -4111,11 +4177,13 @@ End Sub
 'ScopeChunk: Within a code/data Chunk, i.e. `PROC`, `TABLE`
 '======================================================================================
 Private Sub ScopeChunk()
-    Dim Value As Double
     'Within a code/data chunk we can have local labels, data statements and Z80 code
+    Dim Value As Double
     
 Continue:
+    '----------------------------------------------------------------------------------
     'Z80 code?
+    '----------------------------------------------------------------------------------
     If TokenIsInstruction(TokenKind) Then
         '*** TIMER BEGIN ***
         Call Profiler.EventBegin(EVENT_PROCESSZ80)
@@ -4124,73 +4192,94 @@ Continue:
         '*** TIMER END ***
         
         If My_Error Then Exit Sub
+        
+        'Processing of the Z80 instruction (and parameters) will have moved the token _
+         pointer on to the next unread token already, so we can just loop right back
         GoTo Continue
     
     '----------------------------------------------------------------------------------
-    'Byte Data
+    'Local Label definition?
     '----------------------------------------------------------------------------------
-'    ElseIf TokenKind = TOKEN_KEYWORD_BYTE Then
-'        'Move past the `BYTE` keyword
-'        If NextTokenError() Then Exit Sub
-'
-'        'There MUST be at least one list item after the keyword
-'        'TODO: Add error here
-'        If Not TokenIsList(TokenKind) Then Stop
-'
-'        'Start walking the list
-'        Do
-'            If TokenIsExpression(TokenKind) Then
-'                If ParseExpression(Value) Then Stop
-'
-'                If ChunkMode <> MODE_DATA Then
-'                    Dim i As Long
-'                    For i = 0 To 15
-'                        Let ChunkData(i) = HexStr8(-1)
-'                    Next
-'                    Let ChunkDataIndex = Chunk.Size Mod 16
-'                    Let ChunkDataAddr = HexStr16(Chunk.Size)
-'
-'                    If ChunkMode <> MODE_UNSET Then Call Chunk.LogASM.Add( _
-'                        "-----+-------------------+-----------------------------+-----------------" _
-'                    )
-'                    Call Chunk.LogASM.Add( _
-'                        "ADDR | 00 01 02 03 04 05 06 07 08 09 0A 0B 0C 0D 0E 0F | 0123456789ABCDEF" _
-'                    )
-'                    Call Chunk.LogASM.Add( _
-'                        "-----|-------------------------------------------------|-----------------" _
-'                    )
-'                    Let ChunkMode = MODE_DATA
-'                End If
-'
-'                If Value = INDEFINITE Then
-'                    Call Chunk.AddByte(0)
-'                    Let ChunkData(ChunkDataIndex) = HexStr8(-1)
-'                Else
-'                    Call Chunk.AddByte(CLng(Value))
-'                    Let ChunkData(ChunkDataIndex) = HexStr8(CLng(Value))
-'                End If
-'
-'                Let ChunkDataIndex = ChunkDataIndex + 1
-'                If ChunkDataIndex = 16 Then
-'                    Call Chunk.LogASM.Add( _
-'                        LOG_DATA, _
-'                        ChunkDataAddr, ChunkData, _
-'                        "·", "·", "·", "·", "·", "·", "·", "·", _
-'                        "·", "·", "·", "·", "·", "·", "·", "·" _
-'                    )
-'                    Erase ChunkData
-'                    Let ChunkDataIndex = 0
-'                End If
-'            ElseIf Not TokenIsList(TokenKind) Then
-'                Exit Do
-'            End If
-'
-'            Call NextToken
-'        Loop
-    End If
+    ElseIf TokenKind = TOKEN_PROPERTY_NEW Then
+        'Fully qualify the local Label name to its global identifier
+        Dim LabelName As String
+        Let LabelName = CurrentSection & CurrentLabel & TokenText
+        'Add this to the label database, using the current offset position in the Chunk
+        Call AddUpdateLabel(LabelName, CDbl(Chunks(Chunk).Size - 1))
     
+    '----------------------------------------------------------------------------------
+    'BYTE Data
+    '----------------------------------------------------------------------------------
+    ElseIf TokenKind = TOKEN_KEYWORD_BYTE Then
+        'Move past the `BYTE` keyword; _
+         error if the file ends because the scope is obviously still open
+        If NextTokenError() Then Exit Sub
+        
+        'ERROR: There MUST be at least one List item after the keyword
+        If Not TokenIsList(TokenKind) Then
+            Call RaiseError(OZ80_ERROR_EXPECTED, "TODO")
+            Exit Sub
+        End If
+        
+        'Start walking the List
+        Do
+            If TokenIsExpression(TokenKind) Then
+                If ParseExpression(Value) Then Stop
+                
+                If Value = INDEFINITE _
+                    Then Call Chunk_AddBYTE(0) _
+                    Else Call Chunk_AddBYTE(Value)
+                
+            ElseIf Not TokenIsList(TokenKind) Then
+                Exit Do
+            Else
+                'TODO: Text...
+                Call NextToken
+            End If
+        Loop
+        GoTo Continue
+        
+    '----------------------------------------------------------------------------------
+    'WORD Data
+    '----------------------------------------------------------------------------------
+    ElseIf TokenKind = TOKEN_KEYWORD_WORD Then
+        'Move past the `WORD` keyword; _
+         error if the file ends because the scope is obviously still open
+        If NextTokenError() Then Exit Sub
+        
+        'ERROR: There MUST be at least one List item after the keyword
+        If Not TokenIsList(TokenKind) Then
+            Call RaiseError(OZ80_ERROR_EXPECTED, "TODO")
+            Exit Sub
+        End If
+        
+        'Start walking the List
+        Do
+            If TokenIsExpression(TokenKind) Then
+                If ParseExpression(Value) Then Stop
+                
+                If Value = INDEFINITE _
+                    Then Call Chunk_AddWORD(0) _
+                    Else Call Chunk_AddWORD(Value)
+                
+            ElseIf Not TokenIsList(TokenKind) Then
+                Exit Do
+            Else
+                'TODO: Text...
+                Call NextToken
+            End If
+        Loop
+        GoTo Continue
+        
+    '----------------------------------------------------------------------------------
     'The chunk might be empty `{}`, in which case we don't want to walk it
-    If TokenKind = TOKEN_BRACES_CLOSE Then GoTo Finish
+    ElseIf TokenKind = TOKEN_BRACES_CLOSE Then
+        GoTo Finish
+    Else
+        'ERROR: Not a valid token for this scope
+        Call RaiseError(OZ80_ERROR_EXPECTED, "TODO")
+        Exit Sub
+    End If
     
     '----------------------------------------------------------------------------------
     
@@ -4200,18 +4289,6 @@ Continue:
     
     'When the closing brace is encountered, we'll drop out of the scope
     If TokenKind <> TOKEN_BRACES_CLOSE Then GoTo Continue
-    
-'    'Finalise the disassembly log
-'    If ChunkMode = MODE_DATA Then
-'        Call RaiseMessage( _
-'            OZ80_LOG_DEBUG, LOG_DATA, _
-'            ChunkDataAddr, ChunkData, _
-'            "·", "·", "·", "·", "·", "·", "·", "·", _
-'            "·", "·", "·", "·", "·", "·", "·", "·" _
-'        )
-'    End If
-'    Call RaiseMessage(OZ80_LOG_DEBUG, LOG_LINEDOUBLE)
-'    Let ChunkMode = MODE_UNSET
     
 Finish:
     'Move onto the next token ready for the root scope to process. _
@@ -4427,7 +4504,7 @@ GetValue:
     '----------------------------------------------------------------------------------
     Else
         'ERROR: Not a Z80 parameter
-        Call RaiseError(OZ80_ERROR_EXPRESSION, "TODO")
+        Call RaiseError(OZ80_ERROR_INVALID, "TODO")
     End If
 
 ErrOut:
@@ -4531,12 +4608,10 @@ End Sub
 'Z80_Assemble : Assemble bytes from a Z80 instruction and parameters
 '======================================================================================
 'Instruction    | Token number of the Z80 instruction
-'---------------+----------------------------------------------------------------------
-'Returns        | The error number
 '======================================================================================
-Private Function Z80_Assemble( _
+Private Sub Z80_Assemble( _
     ByRef Instruction As OZ80_TOKEN _
-) As OZ80_ERROR
+)
     Dim LogStr As String
     Let LogStr = LOG_ASM
     Dim LogPtr As Long
@@ -4619,6 +4694,12 @@ Private Function Z80_Assemble( _
     
     'TODO: ERROR: completely invalid token number!!
     Stop
+    
+InvalidParams:
+    '----------------------------------------------------------------------------------
+    'ERROR: Wrong parameters for Z80 instruction
+    Call RaiseError(OZ80_ERROR_INVALID, "TODO")
+    Exit Sub
     
 iADC:
     'Add with Carry _
@@ -4782,7 +4863,11 @@ iDI:
 iDJNZ:
     'Decrement, Jump if Not Zero: _
      ..................................................................................
-    If Z80_TestParams(MASK_VAL) Then: Let Opcode = Y2: GoTo Output
+    If Z80_TestParams(MASK_VAL) Then
+        Let Opcode = Y2
+        Let Value = 0 'TODO: Address translation
+        GoTo Output
+    End If
     'ERROR: Wrong parameters for Z80 instruction
     GoTo InvalidParams
      
@@ -4917,9 +5002,11 @@ iJR:
     '`JR $8` - relative immediate jump
     If Z80_TestParams(MASK_VAL) Then
         Let Opcode = Y3
+        Let Value = 0 'TODO: Address translation
     '`JR NZ|Z|NC|C, $8` - conditional relative immediate jump
     ElseIf Z80_TestParams(MASK_FLAGS_CZ, MASK_VAL) Then
         Let Opcode = OpcodeY_Condition(Z80Param1.Token) + Y4
+        Let Value = 0 'TODO: Address translation
     'ERROR: Wrong parameters for Z80 instruction
     Else: GoTo InvalidParams: End If
     GoTo Output
@@ -4991,7 +5078,7 @@ iLD:
     ElseIf Z80_TestParams(MASK_MEM_VAL, MASK_REGS_BC_DE_SP) Then
         Let Opcode = X1 Or OpcodeP_RegisterPair(Z80Param2.Token) Or Z3
         GoTo OutputED16
-    '`LD BC|DE|SP, ($16)`
+    '`LD BC|DE|SP, [$16]`
     ElseIf Z80_TestParams(MASK_REGS_BC_DE_SP, MASK_MEM_VAL) Then
         Let Opcode = X1 Or OpcodeP_RegisterPair(Z80Param1.Token) Or Q1 Or Z3
         GoTo OutputED16
@@ -5450,7 +5537,7 @@ OutputCB:
     '..................................................................................
     'The double-opcodes use $CB as the primary opcode and then a second opcode after _
      the offset byte. It's fastest to handle and log this special case specifically
-    Let Bytes(ByteCount) = &HCB&
+    Let Bytes(ByteCount) = &HCB&: Let ByteCount = ByteCount + 1
     Call api_RtlMoveMemory(LogPtr + 20, StrPtr(Cache_HexStr8(&HCB&)), 4)
     
     If Offset <> -1 Then Let Bytes(ByteCount) = Offset: Let ByteCount = ByteCount + 1
@@ -5462,36 +5549,37 @@ AddBytes:
     '----------------------------------------------------------------------------------
     'Now the assembled bytes have been queued, add them to the Chunk
     With Chunks(Chunk)
+        'If the disassembly log is not yet set for Z80, do so now
         If ChunkMode <> MODE_Z80 Then
-            If ChunkMode = MODE_DATA Then Call .LogASM.LogFormat( _
-                LOG_DATA, _
-                ChunkDataAddr, ChunkData, _
-                "·", "·", "·", "·", "·", "·", "·", "·", _
-                "·", "·", "·", "·", "·", "·", "·", "·" _
-            )
-    
-            If ChunkMode <> MODE_UNSET Then Call .LogASM.Log( _
-                "-----+-------------------+-----------------------------+-----------------" _
-            )
+            'If we're coming from binary data, we'll need to finalise that
+            If ChunkMode = MODE_DATA Then
+                'Have any binary bytes have been prepared, but not logged yet?
+                If ChunkDataIndex <> 0 Then
+                    Call .LogASM.Log(ChunkDataLog)
+                    Call .LogASM.Log(LOG_ASM_FOOT)
+                End If
+            End If
+            'Add the table header for Z80 disassembly logging
             Call .LogASM.Log(LOG_ASM_COLS)
             Call .LogASM.Log(LOG_ASM_HEAD)
             Let ChunkMode = MODE_Z80
         End If
-                
+        
+        'If the Chunk data hasn't started yet, make sure we're 1-based
         Dim Index As Long
-        Let Index = .Size
+        If .Size = 0 Then Let Index = 1 Else Let Index = .Size
         
         'Write the current Chunk address on the disassembly log
-        Call api_RtlMoveMemory(LogPtr, StrPtr(Cache_HexStr16(Index)), 8)
+        Call api_RtlMoveMemory(LogPtr, StrPtr(Cache_HexStr16(.Size)), 8)
         
         'Increase the Chunk accordingly
-        Let .Size = Index + ByteCount
+        Let .Size = .Size + ByteCount
         
         'If the Chunk's buffer is full then double the buffer size to compensate. _
          This will cause the buffer to grow exponentially, i.e. 2 KB, 4 KB, 8 KB, ...
         If .Size >= .Buffer Then
             Let .Buffer = .Buffer * 2
-            ReDim Preserve .Data(0 To .Buffer - 1) As Byte
+            ReDim Preserve .Data(1 To .Buffer) As Byte
         End If
         
         'Copy the bytes into the Chunk
@@ -5504,18 +5592,7 @@ AddBytes:
         'Add the disassembly to the log
         Call .LogASM.Log(LogStr)
     End With
-    
-    GoTo Finish
-    
-InvalidParams:
-    '----------------------------------------------------------------------------------
-    'ERROR: Wrong parameters for Z80 instruction
-    Call RaiseError(OZ80_ERROR_INVALID, "TODO")
-    
-Finish:
-    'Return the error number
-    Let Z80_Assemble = My_Error
-End Function
+End Sub
 
 'Z80_TestParams : Check if parameters are of the right type desired
 '======================================================================================
@@ -5578,7 +5655,8 @@ End Function
 
 'GetListAsDictionary : Reads a whole list into a Dictionary
 '======================================================================================
-Private Function GetListAsDictionary() As Scripting.Dictionary
+Private Function GetListAsDictionary( _
+) As Scripting.Dictionary
     'Instantiate the return object
     Set GetListAsDictionary = New Scripting.Dictionary
     
@@ -5670,6 +5748,17 @@ Private Function GetListItem( _
     
     'Return True as the list has not ended yet
     Let GetListItem = True
+End Function
+
+'ParseList
+'======================================================================================
+'---------------+----------------------------------------------------------------------
+'Returns        | The error number
+'======================================================================================
+Private Function ParseList( _
+    ByRef ReturnData As OZ80Data _
+) As OZ80_ERROR
+    '
 End Function
 
 'ParseExpression : Evaluate a calculation into a Value
@@ -6020,7 +6109,7 @@ Private Sub Chunk_Begin( _
         Let Chunks(Chunk).LabelName = LabelName
         Let Chunks(Chunk).Address = CLng(Address)
         Let Chunks(Chunk).Buffer = 1024
-        ReDim Chunks(Chunk).Data(0 To 1024 - 1) As Byte
+        ReDim Chunks(Chunk).Data(1 To 1024) As Byte
         
         Set Chunks(Chunk).LogASM = New bluLog
     End If
@@ -6125,6 +6214,117 @@ End Function
 '/// GENERIC //////////////////////////////////////////////////////////////////////////
 '/// Functions used anywhere throughout the class
 
+'Chunk_AddBYTE
+'======================================================================================
+'Value          | The "BYTE" to add to the current Chunk
+'======================================================================================
+Private Sub Chunk_AddBYTE( _
+    ByRef Value As Double _
+)
+    With Chunks(Chunk)
+        'Increase the Chunk accordingly
+        Let .Size = .Size + 1
+    
+        'If the Chunk's buffer is full then double the buffer size to compensate. _
+        This will cause the buffer to grow exponentially, i.e. 2 KB, 4 KB, 8 KB, ...
+        If .Size >= .Buffer Then
+            Let .Buffer = .Buffer * 2
+            ReDim Preserve .Data(1 To .Buffer) As Byte
+        End If
+        
+        'Store the byte
+        Let .Data(.Size) = Value And &HFF&
+    End With
+    
+    'Add this to the disassembly log
+    Call Chunk_LogByte(Value And &HFF&)
+End Sub
+
+'Chunk_AddWORD
+'======================================================================================
+'Value          | The "WORD" (2-bytes) to add to the current Chunk
+'======================================================================================
+Private Sub Chunk_AddWORD( _
+    ByRef Value As Double _
+)
+    With Chunks(Chunk)
+        'Increase the Chunk accordingly
+        Let .Size = .Size + 2
+    
+        'If the Chunk's buffer is full then double the buffer size to compensate. _
+        This will cause the buffer to grow exponentially, i.e. 2 KB, 4 KB, 8 KB, ...
+        If .Size >= .Buffer Then
+            Let .Buffer = .Buffer * 2
+            ReDim Preserve .Data(1 To .Buffer) As Byte
+        End If
+        
+        'Store the bytes, low then high (Little Endian)
+        Let .Data(.Size - 1) = Value And &HFF&
+        Let .Data(.Size) = (Value \ &H100&) And &HFF&
+    End With
+    
+    'Add this to the disassembly log
+    Call Chunk_LogByte(Value And &HFF&)
+    Call Chunk_LogByte((Value \ &H100&) And &HFF&)
+End Sub
+
+'Chunk_LogByte
+'======================================================================================
+'Value          | The byte to add to the current disassembly line
+'======================================================================================
+Private Sub Chunk_LogByte( _
+    ByRef Value As Byte _
+)
+    'If we've just come from Z80 instructions, we'll need to switch to the data _
+     columns in the disassembly log
+    If ChunkMode <> MODE_DATA Then
+        'Start a new disassembly log line
+        Let ChunkDataLog = LOG_DATA
+        'Include the current address on the log line
+        Call api_RtlMoveMemory( _
+            DestinationPointer:=StrPtr(ChunkDataLog), _
+                 SourcePointer:=StrPtr(Cache_HexStr16(Chunks(Chunk).Size - 1)), _
+                        Length:=8 _
+        )
+        'Bytes will be logged according to the current offset _
+         (so that the data is displayed aligned to 16 bytes)
+        Let ChunkDataIndex = (Chunks(Chunk).Size - 1) Mod 16
+        
+        If ChunkMode <> MODE_UNSET Then
+            Call Chunks(Chunk).LogASM.Log(LOG_ASM_FOOT)
+        End If
+        Call Chunks(Chunk).LogASM.Log(LOG_DATA_COLS)
+        Call Chunks(Chunk).LogASM.Log(LOG_DATA_HEAD)
+        Let ChunkMode = MODE_DATA
+    End If
+    
+    'Place the byte into the disassembly line
+    Call api_RtlMoveMemory( _
+        DestinationPointer:=StrPtr(ChunkDataLog) + 14 + (ChunkDataIndex * 6), _
+        SourcePointer:=StrPtr(Cache_HexStr8(Value)), Length:=4 _
+    )
+    
+    'TODO: Adding the ASCII disply of bytes will require a Unicode textbox
+    
+    'If we've reached the end of a disassembly line then log it and start a new one
+    If ChunkDataIndex = 15 Then
+        'Add the prepared line to the log
+        Call Chunks(Chunk).LogASM.Log(ChunkDataLog)
+        'Start the next line
+        Let ChunkDataLog = LOG_DATA
+        Let ChunkDataIndex = 0
+        'Include the next address on the log line
+        Call api_RtlMoveMemory( _
+            DestinationPointer:=StrPtr(ChunkDataLog), _
+                 SourcePointer:=StrPtr(Cache_HexStr16(Chunks(Chunk).Size)), _
+                        Length:=8 _
+        )
+    Else
+        'Move on to the next byte in the line
+        Let ChunkDataIndex = ChunkDataIndex + 1
+    End If
+End Sub
+
 'ChunkExists : Test if a Chunk is in the array by the Label name
 '======================================================================================
 'LabelName      | Fully-qualified Label Name for the Chunk, e.g. "::Section:Label"
@@ -6227,14 +6427,33 @@ Private Function RaiseError( _
         'Clear the bluString used for formatting
         Set StrError = Nothing
     End If
-
-    'Pass the error up to the controller
-    'TODO: Error before parsing the File?
-    RaiseEvent Error( _
-        Files(File).Path, _
-        Number, "TODO", Message, _
-        TokenLine, TokenCol _
-    )
+    
+    'Get the generic title for an error number
+    Dim Title As String
+    Select Case Number
+        Case OZ80_ERROR_DUPLICATE: Let Title = ERR_TITLE_DUPLICATE
+        Case OZ80_ERROR_EXPECTED: Let Title = ERR_TITLE_EXPECTED
+        Case OZ80_ERROR_FILE_END: Let Title = ERR_TITLE_FILE_END
+        Case OZ80_ERROR_FILE_NOTFOUND: Let Title = ERR_TITLE_FILE_NOTFOUND
+        Case OZ80_ERROR_FILE_READ: Let Title = ERR_TITLE_FILE_READ
+        Case OZ80_ERROR_INDEFINITE: Let Title = ERR_TITLE_INDEFINITE
+        Case OZ80_ERROR_OVERFLOW: Let Title = ERR_TITLE_OVERFLOW
+        Case OZ80_ERROR_UNDEFINED: Let Title = ERR_TITLE_UNDEFINED
+    End Select
+    
+    'If no file has yet been processed, we won't be returning a file name
+    If File = 0 Then
+        'Pass the error up to the controller, _
+         no filename or line/col location are provided
+        RaiseEvent Error(vbNullString, Number, Title, Message, 0, 0)
+    Else
+        'Pass the error up to the controller
+        RaiseEvent Error( _
+            Files(File).Path, _
+            Number, Title, Message, _
+            TokenLine, TokenCol _
+        )
+    End If
     
     'We return the error number, purely for nicer looking tail-recursion
     Let RaiseError = Number

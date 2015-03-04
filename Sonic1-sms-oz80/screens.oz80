@@ -89,6 +89,7 @@ PARAMS  IY;vars         HELP ""Address of the common variables (used throughout)
 	and	%10111111		        `remove bit 6 of VDP register 1
 	ld	[$.VDPREGISTER_1], A
 	
+        `refresh the screen
 	res	0, [IY+#vars.flags0]
 	call	:waitForInterrupt
 	
@@ -772,48 +773,48 @@ PARAMS  IY;vars         HELP ""Address of the common variables (used throughout)
 	and	%10111111		        `remove bit 6 of $D219
 	ld	[$.VDPREGISTER_1], A
 	
-	`wait for interrupt to complete
+	`refresh the screen
 	res	0, [IY+#vars.flags0]
 	call	:waitForInterrupt
 	
 	`load the title screen tile set
 	 `BANK 9 ($24000) + $2000 = $26000
-	ld	hl, $2000
-	ld	de, $0000
-	ld	a, 9
+	ld	HL              $2000
+	ld	DE              $0000
+	ld	A               9
 	call	:decompressArt
 	
 	`load the title screen sprite set
 	 `BANK 9 ($24000) + $4B0A = $28B0A
-	ld	hl, $4B0A
-	ld	de, $2000
-	ld	a, 9
+	ld	HL              $4B0A
+	ld	DE              $2000
+	ld	A               9
 	call	:decompressArt
 	
 	`now switch page 1 ($4000-$7FFF) to bank 5 ($14000-$17FFF)
-	ld	a, 5
-	ld	[$.SMS.SLOT1], a
-	ld	[$.SLOT1], a
+	ld	A;bank          5
+	ld	[$.SMS.SLOT1]   A;bank
+	ld	[$.SLOT1]       A;bank
 	
 	`load the title screen itself
-	ld	hl, $6000		        `ROM:$16000
-	ld	de, $.VDP.SCREENNAMETABLE
-	ld	bc, $012E
-	ld	a, $00
-	ld	[$.TEMP1], a
+	ld	HL              $6000           `ROM:$16000
+	ld	DE              $.VDP.SCREENNAMETABLE
+	ld	BC              $012E
+	ld	A               $00
+	ld	[$.TEMP1]       A
 	call	:decompressScreen
 	
 	`reset horizontal / vertical scroll
-	xor	a;zero			        `set A to zero
-	ld	[$.VDPSCROLL_HORZ], a;zero
-	ld	[$.VDPSCROLL_VERT], a;zero
+	xor	A;zero			        `set A to zero
+	ld	[$.VDPSCROLL_HORZ]      A;zero
+	ld	[$.VDPSCROLL_VERT]      A;zero
 	
 	`load the palette
-	ld	hl, .S1_TitleScreen_Palette
-	ld	a, %00000011		        `flags to load tile & sprite palettes
+	ld	HL      .S1_TitleScreen_Palette
+	ld	A       %00000011		`flags to load tile & sprite palettes
 	call	:loadPaletteOnInterrupt
 	
-	set	1, [iy+#vars.flags0]
+	set	1, [IY+#vars.flags0]
 	
 	`play title screen music
 	ld	a, #index_music_titleScreen
@@ -829,11 +830,11 @@ PARAMS  IY;vars         HELP ""Address of the common variables (used throughout)
 	
 	`------------------------------------------------------------------------------
 ._1	`switch screen on (set bit 6 of VDP register 1)
-	ld	a, [$.VDPREGISTER_1]
+	ld	A       [$.VDPREGISTER_1]
 	or	%01000000
-	ld	[$.VDPREGISTER_1], a
-	
-	res	0, [iy+#vars.flags0]
+	ld	[$.VDPREGISTER_1]       A
+	`refresh the screen
+	res	0, [IY+#vars.flags0]
 	call	:waitForInterrupt
 	
 	`count to 100:

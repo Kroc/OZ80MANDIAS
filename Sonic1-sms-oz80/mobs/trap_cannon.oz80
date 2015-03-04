@@ -108,7 +108,6 @@ PARAMS  IX;mob          HELP ""Address of the current mob being processed
 	ret
         
 ._ae81  `sprite layout                                                          `$AE81
-{
         BYTE    $02, $04, $FF, $FF, $FF, $FF
         BYTE    $FF
 }

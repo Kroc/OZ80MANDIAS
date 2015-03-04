@@ -3305,7 +3305,7 @@ PARAMS  IX;mob          HELP ""Address of the current mob being processed
 	cpl	
 	ld	d,a
 	inc	de
-+._6	ld	l,[ix+$12]
+._6	ld	l,[ix+$12]
 	ld	h,[ix+#mob.unknown13]
 	add	hl,de
 	ld	a,h

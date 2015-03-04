@@ -311,11 +311,11 @@ Private Const LOG_FILE_TOKENS           As String = "Tokens: {$}"
 'For diaplying a disassembly
 
 Private Const LOG_ASM_COLS              As String = "ADDR | PX OP OF CB LO HI | MNEMONIC  PARAM1    PARAM2    PARAM3"
-Private Const LOG_ASM_HEAD              As String = "-----|-------------------|-----------------------------------------------"
+Private Const LOG_ASM_HEAD              As String = "-----¦-------------------¦-----------------------------------------------"
 Private Const LOG_ASM                   As String = "···· | ·· ·· ·· ·· ·· ·· | ·········                                     "
 Private Const LOG_ASM_FOOT              As String = "-----+-------------------+-----------------------------+-----------------"
 Private Const LOG_DATA_COLS             As String = "ADDR | 00 01 02 03 04 05 06 07 08 09 0A 0B 0C 0D 0E 0F | 0123456789ABCDEF"
-Private Const LOG_DATA_HEAD             As String = "-----|-------------------------------------------------|-----------------"
+Private Const LOG_DATA_HEAD             As String = "-----¦-------------------------------------------------¦-----------------"
 Private Const LOG_DATA                  As String = "···· | ·· ·· ·· ·· ·· ·· ·· ·· ·· ·· ·· ·· ·· ·· ·· ·· | ················"
 
 Private Const FORMAT_QUOTE              As String = """"
@@ -482,6 +482,7 @@ Private Const STR_INI                   As String = "ini"
 Private Const STR_INIR                  As String = "inir"
 Private Const STR_INCLUDE               As String = "INCLUDE"
 Private Const STR_INDEX                 As String = "INDEX"
+Private Const STR_INDEX_LABEL           As String = ".index"
 Private Const STR_INTERRUPT             As String = "INTERRUPT"
 Private Const STR_IX                    As String = "IX"
 Private Const STR_IXH                   As String = "IXH"
@@ -1101,7 +1102,8 @@ Private Type oz80Chunk
     Size As Long                        'Length of the actual data in bytes
     Section As Long
     Address As Long
-    LogASM As bluLog
+    TableIndex As Long                  'Current `INDEX` number in the Chunk
+    LogASM As bluLog                    'Disassembly log
 End Type
 'We'll erase a Chunk by setting it to this empty instance
 Private EmptyChunk As oz80Chunk
@@ -4178,6 +4180,7 @@ End Sub
 '======================================================================================
 Private Sub ScopeChunk()
     'Within a code/data chunk we can have local labels, data statements and Z80 code
+    Dim LabelName As String
     Dim Value As Double
     
 Continue:
@@ -4202,11 +4205,36 @@ Continue:
     '----------------------------------------------------------------------------------
     ElseIf TokenKind = TOKEN_PROPERTY_NEW Then
         'Fully qualify the local Label name to its global identifier
-        Dim LabelName As String
         Let LabelName = CurrentSection & CurrentLabel & TokenText
         'Add this to the label database, using the current offset position in the Chunk
         Call AddUpdateLabel(LabelName, CDbl(Chunks(Chunk).Size - 1))
     
+    '----------------------------------------------------------------------------------
+    'INDEX
+    '----------------------------------------------------------------------------------
+    ElseIf TokenKind = TOKEN_KEYWORD_INDEX Then
+        'Move past the `INDEX` keyword; _
+         error if the file ends because the scope is obviously still open
+        If NextTokenError() Then Exit Sub
+        
+        'The next token should be a Local Label name
+        If TokenKind <> TOKEN_PROPERTY_USE Then
+            Call RaiseError(OZ80_ERROR_EXPECTED, "TODO")
+            Exit Sub
+        End If
+        
+        'Fully qualify the local Label name to its global identifier
+        Let LabelName = CurrentSection & CurrentLabel & TokenText
+        'Add this to the label database, using the current offset position in the Chunk
+        Call AddUpdateLabel(LabelName, CDbl(Chunks(Chunk).Size - 1))
+        
+        'Define the Index
+        Call AddUpdateLabel(LabelName & STR_INDEX_LABEL, CDbl(Chunks(Chunk).TableIndex))
+        
+        'Move to the next index
+        'TODO: Too many indicies at 256?
+        Let Chunks(Chunk).TableIndex = Chunks(Chunk).TableIndex + 1
+        
     '----------------------------------------------------------------------------------
     'BYTE Data
     '----------------------------------------------------------------------------------

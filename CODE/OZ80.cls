@@ -214,6 +214,7 @@ Public Enum OZ80_ERROR
     OZ80_ERROR_FILE_READ                'Some kind of problem while file handle open
     OZ80_ERROR_INDEFINITE               'Indefinite value cannot be used here
     OZ80_ERROR_INVALID
+    OZ80_ERROR_LAYOUT                   'A problem with ROM layout (Chunks overlap &c.)
     OZ80_ERROR_OVERFLOW                 'A number overflowed the maximum
     OZ80_ERROR_UNDEFINED                'Named item is used, but undefined
 End Enum
@@ -313,7 +314,7 @@ Private Const LOG_FILE_TOKENS           As String = "Tokens: {$}"
 Private Const LOG_ASM_COLS              As String = "ADDR | PX OP OF CB LO HI | MNEMONIC  PARAM1    PARAM2    PARAM3"
 Private Const LOG_ASM_HEAD              As String = "-----¦-------------------¦-----------------------------------------------"
 Private Const LOG_ASM                   As String = "···· | ·· ·· ·· ·· ·· ·· | ·········                                     "
-Private Const LOG_ASM_FOOT              As String = "-----+-------------------+-----------------------------+-----------------"
+Private Const LOG_ASM_FOOT              As String = "-----+-------------------'-----------------------------.-----------------"
 Private Const LOG_DATA_COLS             As String = "ADDR | 00 01 02 03 04 05 06 07 08 09 0A 0B 0C 0D 0E 0F | 0123456789ABCDEF"
 Private Const LOG_DATA_HEAD             As String = "-----¦-------------------------------------------------¦-----------------"
 Private Const LOG_DATA                  As String = "···· | ·· ·· ·· ·· ·· ·· ·· ·· ·· ·· ·· ·· ·· ·· ·· ·· | ················"
@@ -1111,6 +1112,7 @@ Private EmptyChunk As oz80Chunk
 
 Private Chunks() As oz80Chunk
 Private ChunkCount As Long
+Private ChunksSize As Long              'Total size of all Chunks in bytes
 
 'The current chunk being assembled into. This is a reference into the Chunks array _
  so that we can speak to the current Chunk in scope consistently
@@ -1793,6 +1795,7 @@ Private Sub Reset()
     Let Chunk_Start = 0
     'Now erase the list of Chunks
     Erase Chunks: Let ChunkCount = 0
+    Let ChunksSize = 0
     
     'Reset the value stores
     Set SectionSlots = Nothing: Set SectionSlots = New Scripting.Dictionary
@@ -1858,7 +1861,7 @@ Public Function Assemble( _
     
     'Now that the size of each Chunk is known, we can arrange the Chunks in the ROM _
      space and determine each Label location
-    If LayoutROM() Then GoTo Finish
+    If ROM_Layout() Then GoTo Finish
     
     '----------------------------------------------------------------------------------
     'Phase 3: Second Parse & Assemble (now with ROM Addresses) _
@@ -3823,12 +3826,6 @@ ReadParams:
         End If
     End If
     
-'    Dim LogMsg As String
-'    Let LogMsg = "PROC " & LabelName
-'    If Interrupt <> INDEFINITE _
-'        Then Let LogMsg = LogMsg & " INTERRUPT $" & HexStr8(CLng(Interrupt))
-'    RaiseEvent Message(OZ80_LOG_STATUS, LogMsg)
-    
     'Log a header for the disassembly
     Call Chunks(Chunk).LogASM.LogFormat("PROC {$}", LabelName)
     Call Chunks(Chunk).LogASM.Log(LOG_LINEDOUBLE)
@@ -3842,7 +3839,12 @@ ReadParams:
         If ChunkDataIndex <> 0 Then Call Chunks(Chunk).LogASM.Log(ChunkDataLog)
     End If
     Call Chunks(Chunk).LogASM.Log(LOG_LINEDOUBLE)
+    Call Chunks(Chunk).LogASM.Log("Size: " & Format$(Chunks(Chunk).Size, "#,0") & " bytes")
     Call RaiseMessage(OZ80_LOG_DEBUG, Chunks(Chunk).LogASM.Concatenate())
+    
+    'Count this toward the total size of all Chunks, which we will use to determine _
+     the size of output ROM needed
+    Let ChunksSize = ChunksSize + Chunks(Chunk).Size
     
 ErrOut:
     'Leave this scope
@@ -4129,7 +4131,7 @@ ReadParams:
         OZ80_ERROR_EXPECTED, "TODO" _
     ): GoTo ErrOut
     
-    'The chunk cannot be left open
+    'The Chunk cannot be left open
     If NextTokenError() Then GoTo ErrOut
     
     'When we assemble the Table, we need to be able to normalise _
@@ -4148,13 +4150,7 @@ ReadParams:
     
     'Create the Chunk
     Call Chunk_Begin(FullLabelName)
-    
-'    Dim LogMsg As String
-'    Let LogMsg = "PROC " & LabelName
-'    If Interrupt <> INDEFINITE _
-'        Then Let LogMsg = LogMsg & " INTERRUPT $" & HexStr8(CLng(Interrupt))
-'    RaiseEvent Message(OZ80_LOG_STATUS, LogMsg)
-    
+            
     'Log a header for the disassembly
     Call Chunks(Chunk).LogASM.LogFormat("TABLE {$}", LabelName)
     Call Chunks(Chunk).LogASM.Log(LOG_LINEDOUBLE)
@@ -4168,7 +4164,12 @@ ReadParams:
         If ChunkDataIndex <> 0 Then Call Chunks(Chunk).LogASM.Log(ChunkDataLog)
     End If
     Call Chunks(Chunk).LogASM.Log(LOG_LINEDOUBLE)
+    Call Chunks(Chunk).LogASM.Log("Size: " & Format$(Chunks(Chunk).Size, "#,0") & " bytes")
     Call RaiseMessage(OZ80_LOG_DEBUG, Chunks(Chunk).LogASM.Concatenate())
+    
+    'Count this toward the total size of all Chunks, which we will use to determine _
+     the size of output ROM needed
+    Let ChunksSize = ChunksSize + Chunks(Chunk).Size
     
 ErrOut:
     'Leave this scope
@@ -6134,11 +6135,13 @@ Private Sub Chunk_Begin( _
         Let ChunkCount = ChunkCount + 1
         ReDim Preserve Chunks(1 To ChunkCount) As oz80Chunk
         Let Chunk = ChunkCount
+        'Apply the details we have
         Let Chunks(Chunk).LabelName = LabelName
         Let Chunks(Chunk).Address = CLng(Address)
+        'Create a buffer of 1K to hold the assembled data
         Let Chunks(Chunk).Buffer = 1024
         ReDim Chunks(Chunk).Data(1 To 1024) As Byte
-        
+        'As we assemble, we'll also provide a disassembly listing
         Set Chunks(Chunk).LogASM = New bluLog
     End If
 End Sub
@@ -6158,16 +6161,55 @@ Private Sub AddUpdateLabel( _
         Else Let Labels.Item(LabelName) = Value
 End Sub
 
-'LayoutROM : Calculate the placement of the code/data Chunks in the output ROM
+'ROM_Layout : Calculate the placement of the code/data Chunks in the output ROM
 '======================================================================================
 'Returns        | The error number
 '======================================================================================
-Private Function LayoutROM( _
+Private Function ROM_Layout( _
 ) As OZ80_ERROR
+    '----------------------------------------------------------------------------------
+    '[0]: Select the ROM size
+    '----------------------------------------------------------------------------------
+    'How many bytes do we have?
+    Call RaiseMessage(OZ80_LOG_INFO, "Total Size: " & Format$(ChunksSize, "#,0") & " bytes")
+    'The default ROM size will already have been set, just keep increasing it until _
+     the data fits. This is only an estimate as gaps in the ROM (such as where the _
+     interrupt routines are) could push the ROM over this initial size)
+    Do While ChunksSize > ROMSize: Let ROMSize = ROMSize * 2: Loop
+    'TODO: Check for ROM too big (hard limit -- 32 MB -- and user limit)
+    'Assign the ROM space
+    ReDim ROM(0 To ROMSize - 1) As Byte
+    
     '----------------------------------------------------------------------------------
     '[1]: Place the Interrupt Procedures
     '----------------------------------------------------------------------------------
     If Chunk_Interrupt00 <> 0 Then
+        'TODO: Check for clash with START routine on Master System
+        If ROM_AddChunk(Chunk_Interrupt00, 0) Then GoTo Finish
+    End If
+    If Chunk_Interrupt08 <> 0 Then
+        If ROM_AddChunk(Chunk_Interrupt08, &H8&) Then GoTo Finish
+    End If
+    If Chunk_Interrupt10 <> 0 Then
+        If ROM_AddChunk(Chunk_Interrupt10, &H10&) Then GoTo Finish
+    End If
+    If Chunk_Interrupt18 <> 0 Then
+        If ROM_AddChunk(Chunk_Interrupt18, &H18&) Then GoTo Finish
+    End If
+    If Chunk_Interrupt20 <> 0 Then
+        If ROM_AddChunk(Chunk_Interrupt20, &H20&) Then GoTo Finish
+    End If
+    If Chunk_Interrupt28 <> 0 Then
+        If ROM_AddChunk(Chunk_Interrupt28, &H28&) Then GoTo Finish
+    End If
+    If Chunk_Interrupt30 <> 0 Then
+        If ROM_AddChunk(Chunk_Interrupt30, &H30&) Then GoTo Finish
+    End If
+    If Chunk_Interrupt38 <> 0 Then
+        If ROM_AddChunk(Chunk_Interrupt38, &H38&) Then GoTo Finish
+    End If
+    If Chunk_Interrupt66 <> 0 Then
+        If ROM_AddChunk(Chunk_Interrupt66, &H66&) Then GoTo Finish
     End If
     
     '----------------------------------------------------------------------------------
@@ -6189,54 +6231,130 @@ Private Function LayoutROM( _
     '----------------------------------------------------------------------------------
     '[6]: Place paged Sections
     '----------------------------------------------------------------------------------
+
+Finish:
+    Let ROM_Layout = My_Error
 End Function
 
-Private Function LayoutAdd( _
-    ByRef ChunkAddr As Long, _
-    ByRef ChunkRef As Long _
+'ROM_AddChunk : Add a Chunk to the ROM, checking for collisions with other Chunks
+'======================================================================================
+'ChunkRef       | Which Chunk to add to the ROM
+'[ChunkAddr]    | Where specifically to put the Chunk, otherwise find a place
+'---------------+----------------------------------------------------------------------
+'Returns        | The error number
+'======================================================================================
+Private Function ROM_AddChunk( _
+             ByRef ChunkRef As Long, _
+    Optional ByRef ChunkAddr As Long = -1 _
 ) As OZ80_ERROR
+    'TODO: If the ChunkSize is zero, discard it? _
+           (We need to handle zero-sized Chunks earlier though -- how do we handle _
+            references to empty Chunks? -- fixed and non-fixed)
+    
+    'How big is the Chunk we're handling?
+    Dim ChunkSize As Long: Let ChunkSize = Chunks(ChunkRef).Size
+    Dim ChunkEnd As Long:  Let ChunkEnd = ChunkAddr + (ChunkSize - 1)
+    
+    Dim i As Long
+    Dim PrevLink As Long, NextLink As Long
+    
     'If there are no layout items yet, start the linked list
+    '----------------------------------------------------------------------------------
     If LayoutCount = 0 Then
-        Let LayoutCount = 1
-        ReDim Layout(1 To 1) As oz80Layout
-        'Apply the fields
-        'TODO: Update the database value for the Label Name
-        Let Chunks(ChunkRef).Address = ChunkAddr
-        Let Layout(1).Chunk = ChunkRef
+        'TODO: Check the address is within the ROM space / overflow
+        'Define the first Chunk in the layout _
+         (fall through to `AddLink`)
         
-        Let Layout(1).AddrBegin = ChunkAddr
-        Let Layout(1).AddrSize = Chunks(ChunkRef).Size
-        Let Layout(1).AddrEnd = ChunkAddr + Layout(1).AddrSize
+    'Do we have an address for the Chunk already?
+    '----------------------------------------------------------------------------------
+    ElseIf ChunkAddr <> -1 Then
+        'Search through the layout chain and find the point where our Chunk goes
+        Let i = 1
+        Do
+            'Remember this link, should we reach a successful conclusion and need _
+             to insert a link between this one and the next
+            Let PrevLink = i
+            
+            'Check if the current link comes after our Chunk's desired location
+            '..........................................................................
+            If Layout(i).AddrBegin > ChunkAddr Then
+                'Check that our Chunk won't overlap the following one
+                If ChunkEnd >= Layout(i).AddrBegin Then
+                    'ERROR: Our Chunk will not fit in the desired location
+                    Call RaiseError(OZ80_ERROR_LAYOUT, "TODO"): GoTo Finish
+                End If
+                
+                'TODO: Check our Chunk won't overlap the end of the ROM
+                
+                Let NextLink = Layout(i).NextIndex
+                GoTo AddLink
+                
+            'If any Chunk is in the same place as our desired location, error
+            '..........................................................................
+            ElseIf Layout(i).AddrBegin = ChunkAddr Then
+                'ERROR: Two Chunks want the same address
+                Call RaiseError(OZ80_ERROR_LAYOUT, "TODO"): GoTo Finish
+                
+            'If a Chunk comes before our desired location, _
+             but its size precludes our desired location, then error
+            '..........................................................................
+            ElseIf Layout(i).AddrEnd >= ChunkAddr Then
+                'ERROR: A Chunk is trying to be placed within another
+                Call RaiseError(OZ80_ERROR_LAYOUT, "TODO"): GoTo Finish
+            End If
+            
+            'Follow the chain to the next item in the list
+            Let i = Layout(i).NextIndex
+            'If this is the end of the list, do not continue
+            If i = 0 Then Exit Do
+            
+        Loop
         
-        Exit Function
+        'If all links in the chain have been tested then we have come to the _
+         conclusion that there is no Chunk after our desired address, and no Chunk _
+         before that would overlap. We can go ahead and use the address we want
+        '(fall through to `AddLink` below)
+        
+    '----------------------------------------------------------------------------------
+    Else
+        '
+        Stop
     End If
     
-    'Search through the nodes and find the point where this one goes
-    Dim i As Long
-    Let i = 1
-    Do
-        'If any current Chunk is in the same place as our desired location, error
-        If Layout(i).AddrBegin = ChunkAddr Then
-            'TODO: Error when two Chunks want the same address
-            Stop
-            
-        'If a Chunk comes before our desired location, but its size precludes our _
-         desired location, then error
-        ElseIf Layout(i).AddrBegin < ChunkAddr And Layout(i).AddrEnd > ChunkAddr Then
-            'TODO: Error when a Chunk is trying to be placed within another
-            Stop
-            
-        'Check if the current node comes after our Chunk's desired location
-        ElseIf Layout(i).AddrBegin > ChunkAddr Then
-            
-            
-        End If
-        
-        'Follow the chain to the next item in the list
-        Let i = Layout(i).NextIndex
-        'If this is the end of the list, do not continue
-        If i = 0 Then Exit Do
-    Loop
+    '----------------------------------------------------------------------------------
+AddLink:
+    Let LayoutCount = LayoutCount + 1
+    ReDim Preserve Layout(1 To LayoutCount) As oz80Layout
+    
+    Let Layout(LayoutCount).AddrBegin = ChunkAddr
+    Let Layout(LayoutCount).AddrSize = ChunkSize
+    Let Layout(LayoutCount).AddrEnd = ChunkEnd
+    
+    If PrevLink <> 0 Then
+        Let Layout(LayoutCount).PrevIndex = PrevLink
+        Let Layout(PrevLink).NextIndex = LayoutCount
+    End If
+    If NextLink <> 0 Then
+        Let Layout(LayoutCount).NextIndex = NextLink
+        Let Layout(NextLink).PrevIndex = LayoutCount
+    End If
+    
+    'Set the address on the Chunk for use in the second pass
+    Let Chunks(ChunkRef).Address = ChunkAddr
+    'Update the Label database with the new address
+    Call AddUpdateLabel(Chunks(Chunk).LabelName, CDbl(ChunkAddr))
+    
+    'TODO: Calculate Bank and apply to Chunk?
+    
+    'Copy the Chunk bytes into the ROM
+    Call api_RtlMoveMemory( _
+        DestinationPointer:=VarPtr(ROM(ChunkAddr)), _
+             SourcePointer:=VarPtr(Chunks(ChunkRef).Data(1)), _
+                    Length:=ChunkSize _
+    )
+    
+Finish:
+    Let ROM_AddChunk = My_Error
 End Function
 
 '/// GENERIC //////////////////////////////////////////////////////////////////////////

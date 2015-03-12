@@ -178,6 +178,7 @@ Public Enum PROFILER_EVENTS
     EVENT_FORMATTOKEN                   '- Format token data for logging
     EVENT_ASSEMBLE                      'Assembling a file (after tokenisation)
     EVENT_PROCESSZ80                    'ProcessZ80
+    EVENT_ROM_ADDCHUNK
 End Enum
 
 '/// CLASS ////////////////////////////////////////////////////////////////////////////
@@ -185,7 +186,9 @@ End Enum
 'Error number!
 Private My_Error As OZ80_ERROR
 
-Private WindowsVersion
+'Some APIs are different for Windows XP / Vista+. _
+ We fetch the Windows kernel version number during initialisation and store it here
+Private WindowsVersion As Single
 
 'During class initialisation we manually create special 64-bit numbers _
  in these values, which cannot be written out natively in VB6
@@ -198,6 +201,7 @@ Private NUMBER_MAX_K As Double
 Private NUMBER_MIN_KB As Double
 Private NUMBER_MAX_KB As Double
 
+'Errors:
 '--------------------------------------------------------------------------------------
 
 Public Enum OZ80_WARNING
@@ -828,6 +832,7 @@ Private TokenIndex As Long
 'The portions of Text in the source code file
 Private TokenStrings As bluArrayStrings
 
+'System:
 '--------------------------------------------------------------------------------------
 
 'Which target system is selected, e.g. SEGA Master System
@@ -840,21 +845,29 @@ Public Enum OZ80_SYSTEM
     SYSTEM_SMS                          'SEGA Master System
 End Enum
 
+'OZ80 `SECTION`s:
+'--------------------------------------------------------------------------------------
+'A "Section" is a group of code/data Chunks that will be placed into the ROM together _
+ according to special rules for the Slot pattern
+
+Private Type oz80Section
+    SectionName As String
+    SectionID As Long                   'Index of the name in `TokenStrings`
+    TotalSize As Long                   'Total number of Chunk bytes for the Section
+    Slot As OZ80_SLOT                   'The Slot (banking) pattern assigned
+End Type
+
+Private Sections() As oz80Section
+Private SectionCount As Long
+
+'For normalising Label names, we note which Section is in play
+Private CurrentSection As String
+
 '--------------------------------------------------------------------------------------
 
 'The database of named item values. _
  This includes Constants, RAM Names and Hash values
 Private Values As Scripting.Dictionary
-
-Private Type oz80Section
-    SectionName As String
-    Slot As OZ80_SLOT
-End Type
-
-'Sections need to be defined first before they can be used
-Private SectionSlots As Scripting.Dictionary
-'For normalising Label names, we note which Section is in play
-Private CurrentSection As String
 
 'The database of Label locations (in ROM) and their properties. _
  These are separate from the other named items since we keep the _
@@ -863,6 +876,7 @@ Private Labels As Scripting.Dictionary
 'For normalising Property names, we note which Label is in play
 Private CurrentLabel As String
 
+'--------------------------------------------------------------------------------------
 'Z80 Parameters: _
  --------------------------------------------------------------------------------------
 'In order to compare the hundreds of permutations of parameters for Z80 instructions, _
@@ -1032,8 +1046,9 @@ End Enum
 
 Private ParamText(0 To [_PARAMTEXT_TOTAL]) As String * 10
 
-'Z80 Opcodes: _
- --------------------------------------------------------------------------------------
+'--------------------------------------------------------------------------------------
+'Z80 Opcodes:
+'--------------------------------------------------------------------------------------
 'Z80 opcodes are made up of various bit patterns that can be broken down into the
 'following layout: (this information from <z80.info/decoding.htm>)
 
@@ -1068,7 +1083,7 @@ Private TokenRegister([_TOKEN_REGS_BEGIN] To [_TOKEN_REGS_END]) As Long
 'Look-up tables for converting certain z80 parameters into opcode-components
 Private OpcodeP_RegisterPair([_TOKEN_REGS_BEGIN] To [_TOKEN_REGS_END]) As Long
 Private OpcodeY_Condition([_TOKEN_REGS_BEGIN] To [_TOKEN_REGS_END]) As Long
-Private OpcodeY_RST(0 To &H38) As Long
+Private OpcodeY_RST(0 To &H38&) As Long
 Private OpcodeY_Bit(0 To 7) As Long
 'Sure this is a waste of memory, but it is fast as we don't have to convert _
  bit-powers to linear numbers for many instructions being assembled
@@ -1197,6 +1212,7 @@ Private Sub Class_Initialize()
         Call .RegisterEvent(EVENT_FORMATTOKEN, "FormatToken")
         Call .RegisterEvent(EVENT_ASSEMBLE, "Assemble")
         Call .RegisterEvent(EVENT_PROCESSZ80, "Z80_Process")
+        Call .RegisterEvent(EVENT_ROM_ADDCHUNK, "ROM_AddChunk")
     End With
     
     '*** TIMER BEGIN ***
@@ -1230,7 +1246,6 @@ Private Sub Class_Initialize()
     Let NUMBER_MAX_KB = NUMBER_MAX / 1024
     Let NUMBER_MIN_KB = -NUMBER_MAX_KB
     
-    '----------------------------------------------------------------------------------
     'Upper-case look-up table:
     '----------------------------------------------------------------------------------
     'Begin with a straight forward list of all 2-byte UCS-2 code points
@@ -1282,7 +1297,6 @@ Private Sub Class_Initialize()
         )
     End If
     
-    '----------------------------------------------------------------------------------
     'Unicode properties look-up tables:
     '----------------------------------------------------------------------------------
     'Use the Windows API to convert the list of Unicode points into their properties. _
@@ -1305,10 +1319,8 @@ Private Sub Class_Initialize()
     Next i
     Erase Properties
     
-    '----------------------------------------------------------------------------------
     '8 & 16-bit hexadecimal numbers:
     '----------------------------------------------------------------------------------
-    
     For i = 0 To &HF&:          Let Cache_HexStr8(i) = "0" & Hex$(i):       Next i
     For i = &H10& To &HFF&:     Let Cache_HexStr8(i) = Hex$(i):             Next i
     Let Cache_HexStr8(-1) = "··"
@@ -1318,6 +1330,8 @@ Private Sub Class_Initialize()
     For i = &H100& To &HFFF&:   Let Cache_HexStr16(i) = "0" & Hex$(i):      Next i
     For i = &H1000& To &HFFFF&: Let Cache_HexStr16(i) = Hex$(i):            Next i
     
+    'Token Names:
+    '----------------------------------------------------------------------------------
     'Z80 Instructions .................................................................
     Let TokenNames(TOKEN_Z80_ADC) = STR_ADC
     Let TokenNames(TOKEN_Z80_ADD) = STR_ADD
@@ -1472,7 +1486,6 @@ Private Sub Class_Initialize()
     Let TokenNames(TOKEN_RAM) = Chr$(SYNTAX_NUMBER_HEX) & Chr$(SYNTAX_PROPERTY)
     Let TokenNames(TOKEN_SECTION) = String(2, Chr$(SYNTAX_LABEL))
     
-    '----------------------------------------------------------------------------------
     'Z80 Param Text:
     '----------------------------------------------------------------------------------
     'Index 0 acts as an "unimplemented" marker so we can see when certain cache _
@@ -1537,7 +1550,7 @@ Private Sub Class_Initialize()
     'Initialise the token stream string database _
      (the text portions within source code files)
     Set TokenStrings = New bluArrayStrings
-    Let TokenStrings.AllowDuplicates = True
+    Let TokenStrings.AllowDuplicates = False
     
     'Build the look-up tables for checking which categories each Token falls into
     Dim t As OZ80_TOKEN
@@ -1773,10 +1786,8 @@ End Sub
 'Reset
 '======================================================================================
 Private Sub Reset()
-    'Dereference any currently attached source code File
-    Let File = 0
     'Clear the database of source files
-    Erase Files
+    Erase Files: Let File = 0
     
     'Dereference the currently attached Chunk
     Let Chunk = 0
@@ -1798,12 +1809,12 @@ Private Sub Reset()
     Let ChunksSize = 0
     
     'Reset the value stores
-    Set SectionSlots = Nothing: Set SectionSlots = New Scripting.Dictionary
-    Set Values = Nothing:       Set Values = New Scripting.Dictionary
-    Set Labels = Nothing:       Set Labels = New Scripting.Dictionary
+    Erase Sections: Let SectionCount = 0
+    Set Values = Nothing: Set Values = New Scripting.Dictionary
+    Set Labels = Nothing: Set Labels = New Scripting.Dictionary
     
-    Erase Layout
-    Let LayoutCount = 0
+    'Clear ROM layout
+    Erase Layout: Let LayoutCount = 0
     
     Erase ROM
     'TODO: Default ROM size should be per-system / user-selectable?
@@ -1878,10 +1889,10 @@ Public Function Assemble( _
     'TODO
     
     'Finally, write the ROM to disk
-'    Dim FileNumber As Integer: Let FileNumber = FreeFile
-'    Open App.Path & "\ROM.sms" For Binary Access Write As #FileNumber
-'    Put #FileNumber, , ROM
-'    Close #FileNumber
+    Dim FileNumber As Integer: Let FileNumber = FreeFile
+    Open App.Path & "\ROM.sms" For Binary Access Write As #FileNumber
+    Put #FileNumber, , ROM
+    Close #FileNumber
     
     Call RaiseMessage(OZ80_LOG_ACTION, LOG_ASM_COMPLETE)
     Call RaiseMessage(OZ80_LOG_INFO, LOG_TIME, Format$(Timer - Begin, "0.000"))
@@ -1892,8 +1903,6 @@ Finish:
     'Return the error code (also available in the `Error` property)
     Let Assemble = My_Error
 End Function
-
-
 
 '/// PARSING //////////////////////////////////////////////////////////////////////////
 '/// Read in the source code and walk it
@@ -2144,8 +2153,8 @@ Private Function File_Tokenise( _
     )
         
     '----------------------------------------------------------------------------------
-    'Begin parsing words: _
-     ----------------------------------------------------------------------------------
+    'Begin parsing words:
+    '----------------------------------------------------------------------------------
     'Prepare a large buffer to accept the token stream (using `ReDim` for every token _
      added is *incredibly* slow). If the tokens overflow this buffer, we'll increase _
      it by another chunk there and then
@@ -2726,7 +2735,7 @@ TokenWord:
         'Z80 flag conditions
         If (Asc2 = ASC_NUL) Then
             Let Token = TOKEN_Z80_M
-        'There is no `m` register
+        'There is no `M` register
         Else: GoTo WordError: End If
         
     ElseIf Asc1 = ASC_N Then '................................................. `N` ...
@@ -2739,7 +2748,7 @@ TokenWord:
         'Z80 flag conditions
         ElseIf (Asc3 = ASC_NUL) And (Asc2 = ASC_C) Then Let Token = TOKEN_Z80_NC
         ElseIf (Asc3 = ASC_NUL) And (Asc2 = ASC_Z) Then Let Token = TOKEN_Z80_NZ
-        'There are no `n` registers
+        'There are no `N` registers
         Else: GoTo WordError: End If
         
     ElseIf Asc1 = ASC_O Then '................................................. `O` ...
@@ -3525,12 +3534,12 @@ End Sub
 '======================================================================================
 Private Sub DefineProc()
     'ERROR: The file ended before the first parameter
-    If NextTokenError() Then GoTo ErrOut
+    If NextTokenError() Then GoTo Finish
     
     'ERROR: No Label name for Procedure
     If TokenKind <> TOKEN_LABEL Then Call RaiseError( _
         OZ80_ERROR_EXPECTED, "TODO" _
-    ): GoTo ErrOut
+    ): GoTo Finish
     
     'Remember the String of the Label name, _
      we can't create the Label until the parameters are read
@@ -3538,7 +3547,7 @@ Private Sub DefineProc()
     Let LabelName = TokenText
     
     'ERROR: The file cannot end until the Chunk has been opened and closed
-    If NextTokenError() Then GoTo ErrOut
+    If NextTokenError() Then GoTo Finish
     
     'The `INTERRUPT` parameter is optional, but can be zero, so use 'undefined'
     Dim Interrupt As Double
@@ -3559,33 +3568,45 @@ ReadParams:
         'ERROR: The Section parameter has already been specified
         If IsSectionDefined Then Call RaiseError( _
             OZ80_ERROR_DUPLICATE, "TODO" _
-        ): GoTo ErrOut
+        ): GoTo Finish
         
         'ERROR: Cannot co-exist with the `INTERRUPT` parameter
         If IsInterruptDefined Then Call RaiseError( _
             OZ80_ERROR_INVALID, "TODO" _
-        ): GoTo ErrOut
+        ): GoTo Finish
         
         'ERROR: File ended before the Section name?
-        If NextTokenError() Then GoTo ErrOut
+        If NextTokenError() Then GoTo Finish
         
         'ERROR: Not a Section name following the Section keyword
         If TokenKind <> TOKEN_SECTION Then Call RaiseError( _
             OZ80_ERROR_EXPECTED, "TODO" _
-        ): GoTo ErrOut
+        ): GoTo Finish
+        
+        'The Value of the Text token points to the string in the TokenStrings _
+         database. We'll can use this number instead of comparing whole strings
+        Dim SectionID As Long
+        Let SectionID = TokenValue
+        
+        Dim i As Long
+        'Look through the currently defined Sections for the Section name mentioned
+        For i = 1 To SectionCount
+            Dim SectionIndex As Long
+            If Sections(i).SectionID = SectionID Then SectionIndex = i: Exit For
+        Next i
         
         'ERROR: Section has not been defined
-        If Not Labels.Exists(TokenText) Then Call RaiseError( _
+        If SectionIndex = 0 Then Call RaiseError( _
             OZ80_ERROR_INVALID, "TODO" _
-        ): GoTo ErrOut
+        ): GoTo Finish
         
-        'Record the Section name
         Dim SectionName As String
         Let SectionName = TokenText
+        
         Let IsSectionDefined = True
         
-        'Pass over the Section name
-        If NextTokenError() Then GoTo ErrOut
+        'Pass over the Section name, if the file ends, the Procedure isn't complete!
+        If NextTokenError() Then GoTo Finish
         
         GoTo ReadParams
     
@@ -3596,10 +3617,10 @@ ReadParams:
         'ERROR: The `HELP` parameter has already been specified
         If IsParamsDefined Then Call RaiseError( _
             OZ80_ERROR_DUPLICATE, "TODO" _
-        ): GoTo ErrOut
+        ): GoTo Finish
          
         'Pass over the `HELP` keyword, the file cannot end here
-        If NextTokenError() Then GoTo ErrOut
+        If NextTokenError() Then GoTo Finish
         
         'Fetch the text description (ignored for now)
         'For now, just read and discard only text tokens
@@ -3607,7 +3628,7 @@ ReadParams:
             'If not a text token, then continue
             If TokenKind <> TOKEN_TEXT Then Exit Do
             'Move over the token, the file ending is an error
-            If NextTokenError() Then GoTo ErrOut
+            If NextTokenError() Then GoTo Finish
         Loop
         
         Let IsHelpDefined = True
@@ -3624,10 +3645,10 @@ ReadParams:
         'ERROR: The `PARAMS` parameter has already been specified
         If IsParamsDefined Then Call RaiseError( _
             OZ80_ERROR_DUPLICATE, "TODO" _
-        ): GoTo ErrOut
+        ): GoTo Finish
          
         'Pass over the `PARAMS` keyword, the file cannot end here
-        If NextTokenError() Then GoTo ErrOut
+        If NextTokenError() Then GoTo Finish
         
         Do
             'Check for a valid `PARAMS` item
@@ -3637,12 +3658,12 @@ ReadParams:
                 'Skip over the list item, these are not recorded just yet _
                  but will be in the future (for auto-documentation)
                 'ERROR: File cannot end in the midst of the List
-                If NextTokenError() Then GoTo ErrOut
+                If NextTokenError() Then GoTo Finish
                 
                 'Check for a `HELP` description for the list item
                 If TokenKind = TOKEN_KEYWORD_HELP Then
                     'Pass over the `HELP` keyword, the file cannot end here
-                    If NextTokenError() Then GoTo ErrOut
+                    If NextTokenError() Then GoTo Finish
                     
                     'Fetch the text description (ignored for now)
                     'For now, just read and discard only text tokens
@@ -3650,16 +3671,16 @@ ReadParams:
                         'If not a text token, then continue
                         If TokenKind <> TOKEN_TEXT Then Exit Do
                         'Move over the token, the file ending is an error
-                        If NextTokenError() Then GoTo ErrOut
+                        If NextTokenError() Then GoTo Finish
                     Loop
                 End If
                 
             'The list ends when we hit one of the other `PROC` parameters or the _
              opening brace. Anything else is considered a bad `PARAMS` list item
-            ElseIf TokenKind = TOKEN_KEYWORD_HELP _
-            Or TokenKind = TOKEN_KEYWORD_RETURN _
-            Or TokenKind = TOKEN_KEYWORD_SECTION _
-            Or TokenKind = TOKEN_BRACES_OPEN _
+            ElseIf (TokenKind = TOKEN_KEYWORD_HELP) _
+                Or (TokenKind = TOKEN_KEYWORD_RETURN) _
+                Or (TokenKind = TOKEN_KEYWORD_SECTION) _
+                Or (TokenKind = TOKEN_BRACES_OPEN) _
             Then
                 'The list has come to the end, _
                  look for more parameters
@@ -3668,7 +3689,7 @@ ReadParams:
             Else
                 'ERROR: Only Registers and RAM Names are allowed at the moment
                 Call RaiseError(OZ80_ERROR_EXPECTED, "TODO")
-                GoTo ErrOut
+                GoTo Finish
             End If
         Loop
         
@@ -3682,10 +3703,10 @@ ReadParams:
         'ERROR: The `RETURN` parameter has already been specified
         If IsReturnDefined Then Call RaiseError( _
             OZ80_ERROR_DUPLICATE, "TODO" _
-        ): GoTo ErrOut
+        ): GoTo Finish
          
         'Pass over the `RETURN` keyword, the file cannot end here
-        If NextTokenError() Then GoTo ErrOut
+        If NextTokenError() Then GoTo Finish
         
         Do
             'Check for a valid `RETURN` item
@@ -3695,12 +3716,12 @@ ReadParams:
                 'Skip over the list item, these are not recorded just yet _
                  but will be in the future (for auto-documentation)
                 'ERROR: File cannot end in the midst of the List
-                If NextTokenError() Then GoTo ErrOut
+                If NextTokenError() Then GoTo Finish
                 
                 'Check for a `HELP` description for the list item
                 If TokenKind = TOKEN_KEYWORD_HELP Then
                     'Pass over the `HELP` keyword, the file cannot end here
-                    If NextTokenError() Then GoTo ErrOut
+                    If NextTokenError() Then GoTo Finish
                     
                     'Fetch the text description (ignored for now)
                     'For now, just read and discard only text tokens
@@ -3708,16 +3729,16 @@ ReadParams:
                         'If not a text token, then continue
                         If TokenKind <> TOKEN_TEXT Then Exit Do
                         'Move over the token, the file ending is an error
-                        If NextTokenError() Then GoTo ErrOut
+                        If NextTokenError() Then GoTo Finish
                     Loop
                 End If
                 
             'The list ends when we hit one of the other `PROC` parameters or the _
              opening brace. Anything else is considered a bad `RETURN` list item
-            ElseIf TokenKind = TOKEN_KEYWORD_HELP _
-            Or TokenKind = TOKEN_KEYWORD_PARAMS _
-            Or TokenKind = TOKEN_KEYWORD_SECTION _
-            Or TokenKind = TOKEN_BRACES_OPEN _
+            ElseIf (TokenKind = TOKEN_KEYWORD_HELP) _
+                Or (TokenKind = TOKEN_KEYWORD_PARAMS) _
+                Or (TokenKind = TOKEN_KEYWORD_SECTION) _
+                Or (TokenKind = TOKEN_BRACES_OPEN) _
             Then
                 'The list has come to the end, _
                  look for more parameters
@@ -3726,7 +3747,7 @@ ReadParams:
             Else
                 'ERROR: Only Registers and RAM Names are allowed at the moment
                 Call RaiseError(OZ80_ERROR_EXPECTED, "TODO")
-                GoTo ErrOut
+                GoTo Finish
             End If
         Loop
         
@@ -3741,32 +3762,32 @@ ReadParams:
         'ERROR: The `INTERRUPT` parameter has already been specified
         If IsInterruptDefined Then Call RaiseError( _
             OZ80_ERROR_DUPLICATE, "TODO" _
-        ): GoTo ErrOut
+        ): GoTo Finish
         
         'ERROR: Cannot co-exist with the `SECTION` parameter
         If IsSectionDefined Then Call RaiseError( _
             OZ80_ERROR_INVALID, "TODO" _
-        ): GoTo ErrOut
+        ): GoTo Finish
         
         'ERROR: File cannot end before the parameter Expression!
-        If NextTokenError() Then GoTo ErrOut
+        If NextTokenError() Then GoTo Finish
         
         'Is this an Expression at all?
         If Not TokenIsExpression(TokenKind) Then Call RaiseError( _
             OZ80_ERROR_EXPECTED, "TODO" _
-        ): GoTo ErrOut
+        ): GoTo Finish
         
         'Calculate the Expression:
         '(If there was an error in the Expression, the error event _
           will already have been raised, we only need to fold upwards)
-        If ParseExpression(Interrupt) Then GoTo ErrOut
+        If ParseExpression(Interrupt) Then GoTo Finish
         
         'An indefinite Value cannot be used for an Interrupt address, we will only be _
          able to define the indefinite Values (i.e. Label locations in ROM) once _
          the whole code is parsed and we use the Sections to layout the ROM
         If Interrupt = INDEFINITE Then Call RaiseError( _
             OZ80_ERROR_INDEFINITE, "TODO" _
-        ): GoTo ErrOut
+        ): GoTo Finish
         
         'Validate the Value, only certain Interrupt addresses are allowed
         If Not ((Interrupt = &H0) Or (Interrupt = &H8) Or (Interrupt = &H10) _
@@ -3774,7 +3795,7 @@ ReadParams:
             Or (Interrupt = &H30) Or (Interrupt = &H38) Or (Interrupt = &H66)) _
         Then Call RaiseError( _
             OZ80_ERROR_INVALID, "TODO" _
-        ): GoTo ErrOut
+        ): GoTo Finish
         
         Let IsInterruptDefined = True
         GoTo ReadParams
@@ -3785,10 +3806,10 @@ ReadParams:
     'With the parameters read, the only allowed token is the opening of the Chunk
     If TokenKind <> TOKEN_BRACES_OPEN Then Call RaiseError( _
         OZ80_ERROR_EXPECTED, "TODO" _
-    ): GoTo ErrOut
+    ): GoTo Finish
     
     'The chunk cannot be left open
-    If NextTokenError() Then GoTo ErrOut
+    If NextTokenError() Then GoTo Finish
     
     'When we assemble the Procedure, we need to be able to normalise _
      the Property names to their Section+Label
@@ -3802,12 +3823,14 @@ ReadParams:
     'You can't name two Chunks the same thing
     If ChunkExists(FullLabelName) Then Call RaiseError( _
         OZ80_ERROR_DUPLICATE, "TODO" _
-    ): GoTo ErrOut
+    ): GoTo Finish
     
     'Create the Chunk
     If Interrupt = INDEFINITE Then
         'A standard Procedure without fixed (interrupt) address
         Call Chunk_Begin(FullLabelName)
+        'TODO: ...
+        Let Chunks(Chunk).Section = SectionIndex
     Else
         'A special fixed-Procedure for hardware interrupts
         Call Chunk_Begin(FullLabelName, Interrupt)
@@ -3824,6 +3847,8 @@ ReadParams:
         ElseIf Interrupt = &H38& Then Let Chunk_Interrupt38 = Chunk
         ElseIf Interrupt = &H66& Then Let Chunk_Interrupt66 = Chunk
         End If
+        
+        Let Chunks(Chunk).Section = -1
     End If
     
     'Log a header for the disassembly
@@ -3836,17 +3861,25 @@ ReadParams:
     
     'Finalise the disassembly log
     If ChunkMode = MODE_DATA Then
+        'If data bytes have been assembled, ensure the remainder are added to _
+         the log since we only output the disassembly line every 16 data bytes
         If ChunkDataIndex <> 0 Then Call Chunks(Chunk).LogASM.Log(ChunkDataLog)
     End If
     Call Chunks(Chunk).LogASM.Log(LOG_LINEDOUBLE)
     Call Chunks(Chunk).LogASM.Log("Size: " & Format$(Chunks(Chunk).Size, "#,0") & " bytes")
     Call RaiseMessage(OZ80_LOG_DEBUG, Chunks(Chunk).LogASM.Concatenate())
     
+    'If this Chunk belongs to a Section, ad its size to the total count
+    If IsSectionDefined Then
+        Let Sections(SectionIndex).TotalSize = _
+            Sections(SectionIndex).TotalSize + Chunks(Chunk).Size
+    End If
+    
     'Count this toward the total size of all Chunks, which we will use to determine _
      the size of output ROM needed
     Let ChunksSize = ChunksSize + Chunks(Chunk).Size
     
-ErrOut:
+Finish:
     'Leave this scope
     Let CurrentSection = vbNullString
     Let CurrentLabel = vbNullString
@@ -3899,13 +3932,13 @@ Private Sub DefineSection()
     Dim SectionName As String
     Let SectionName = TokenText
     
+    Dim SectionID As Long
+    Let SectionID = CLng(TokenValue)
+    
     'Has this Section already been defined?
-    If Labels.Exists(TokenText) Then Call RaiseError( _
+    If Labels.Exists(SectionName) Then Call RaiseError( _
         OZ80_ERROR_DUPLICATE, "TODO" _
     ): Exit Sub
-    
-    Call Labels.Add(SectionName, INDEFINITE)
-    Call SectionSlots.Add(SectionName, 0)
     
     '----------------------------------------------------------------------------------
     
@@ -3967,29 +4000,27 @@ Private Sub DefineSection()
     End If
 
 Finish:
+    '----------------------------------------------------------------------------------
     'Record the result:
-    Let SectionSlots(SectionName) = Slot
-    Call RaiseMessage( _
-        OZ80_LOG_STATUS, LOG_SECTION, _
-        SectionName _
-    )
-'    RaiseEvent Message(OZ80_LOG_STATUS, _
-'        "SECTION " & TokenStrings(SectionKey) & _
-'        " SLOT " & IIf( _
-'            Slot = 0, "?", _
-'                IIf(Slot And OZ80_SLOT.SLOT0, "0 ", "") & _
-'                IIf(Slot And OZ80_SLOT.SLOT1, "1 ", "") & _
-'                IIf(Slot And OZ80_SLOT.SLOT2, "2 ", "") _
-'            ) _
-'    )
+    Call RaiseMessage(OZ80_LOG_STATUS, LOG_SECTION, SectionName)
+    
+    Let SectionCount = SectionCount + 1
+    ReDim Preserve Sections(1 To SectionCount) As oz80Section
+    
+    Let Sections(SectionCount).SectionName = SectionName
+    Let Sections(SectionCount).SectionID = SectionID
+    Let Sections(SectionCount).Slot = Slot
+    
+    Call Labels.Add(SectionName, INDEFINITE)
+    
     Exit Sub
-
+    
     '----------------------------------------------------------------------------------
 ErrInvalid:
     'Only a specific Slot pattern can be used
     Call RaiseError(OZ80_ERROR_INVALID, "TODO")
     Exit Sub
-
+    
 ErrIndefinite:
     'An indefinite Value cannot be used for a Slot number, we will only be _
      able to define the indefinite Values (i.e. Label locations in ROM) once _
@@ -4021,7 +4052,8 @@ Private Sub DefineStart()
     'Create the Chunk
     'TODO: Check that the System has been defined
     Call Chunk_Begin(STR_START, 0)
-    
+    Let Chunks(Chunk).Section = -1
+        
     'Keep a reference to this for laying out the ROM
     Let Chunk_Start = Chunk
     
@@ -4072,12 +4104,12 @@ End Sub
 '======================================================================================
 Private Sub DefineTable()
     'ERROR: The file ended before the first parameter
-    If NextTokenError() Then GoTo ErrOut
+    If NextTokenError() Then GoTo Finish
     
     'ERROR: No Label name for Table
     If TokenKind <> TOKEN_LABEL Then Call RaiseError( _
         OZ80_ERROR_EXPECTED, "TODO" _
-    ): GoTo ErrOut
+    ): GoTo Finish
     
     'Remember the String of the Label name, _
      we can't create the Label until the parameters are read
@@ -4085,7 +4117,7 @@ Private Sub DefineTable()
     Let LabelName = TokenText
     
     'ERROR: The file cannot end until the Chunk has been opened and closed
-    If NextTokenError() Then GoTo ErrOut
+    If NextTokenError() Then GoTo Finish
     
 ReadParams:
     'Keep track of which params have been included or not
@@ -4098,41 +4130,53 @@ ReadParams:
         'ERROR: The Section parameter has already been specified
         If IsSectionDefined Then Call RaiseError( _
             OZ80_ERROR_DUPLICATE, "TODO" _
-        ): GoTo ErrOut
+        ): GoTo Finish
         
         'ERROR: File ended before the Section name?
-        If NextTokenError() Then GoTo ErrOut
+        If NextTokenError() Then GoTo Finish
         
         'ERROR: Not a Section name following the Section keyword
         If TokenKind <> TOKEN_SECTION Then Call RaiseError( _
             OZ80_ERROR_EXPECTED, "TODO" _
-        ): GoTo ErrOut
+        ): GoTo Finish
+        
+        'The Value of the Text token points to the string in the TokenStrings _
+         database. We'll can use this number instead of comparing whole strings
+        Dim SectionID As Long
+        Let SectionID = TokenValue
+        
+        Dim i As Long
+        'Look through the currently defined Sections for the Section name mentioned
+        For i = 1 To SectionCount
+            Dim SectionIndex As Long
+            If Sections(i).SectionID = SectionID Then SectionIndex = i: Exit For
+        Next i
         
         'ERROR: Section has not been defined
-        If Not Labels.Exists(TokenText) Then Call RaiseError( _
+        If SectionIndex = 0 Then Call RaiseError( _
             OZ80_ERROR_INVALID, "TODO" _
-        ): GoTo ErrOut
+        ): GoTo Finish
         
-        'Record the Section name
         Dim SectionName As String
         Let SectionName = TokenText
+        
         Let IsSectionDefined = True
         
-        'Pass over the Section name
-        If NextTokenError() Then GoTo ErrOut
+        'Pass over the Section name, if the file ends, the Procedure isn't complete!
+        If NextTokenError() Then GoTo Finish
         
         GoTo ReadParams
     End If
     
-    '----------------------------------------------------------------------------------
-    
     'With the parameters read, the only allowed token is the opening of the Chunk
     If TokenKind <> TOKEN_BRACES_OPEN Then Call RaiseError( _
         OZ80_ERROR_EXPECTED, "TODO" _
-    ): GoTo ErrOut
+    ): GoTo Finish
     
     'The Chunk cannot be left open
-    If NextTokenError() Then GoTo ErrOut
+    If NextTokenError() Then GoTo Finish
+    
+    '----------------------------------------------------------------------------------
     
     'When we assemble the Table, we need to be able to normalise _
      the Property names to their Section+Label
@@ -4146,11 +4190,12 @@ ReadParams:
     'You can't name two Chunks the same thing
     If ChunkExists(FullLabelName) Then Call RaiseError( _
         OZ80_ERROR_DUPLICATE, "TODO" _
-    ): GoTo ErrOut
+    ): GoTo Finish
     
     'Create the Chunk
     Call Chunk_Begin(FullLabelName)
-            
+    Let Chunks(Chunk).Section = SectionIndex
+    
     'Log a header for the disassembly
     Call Chunks(Chunk).LogASM.LogFormat("TABLE {$}", LabelName)
     Call Chunks(Chunk).LogASM.Log(LOG_LINEDOUBLE)
@@ -4167,11 +4212,11 @@ ReadParams:
     Call Chunks(Chunk).LogASM.Log("Size: " & Format$(Chunks(Chunk).Size, "#,0") & " bytes")
     Call RaiseMessage(OZ80_LOG_DEBUG, Chunks(Chunk).LogASM.Concatenate())
     
-    'Count this toward the total size of all Chunks, which we will use to determine _
-     the size of output ROM needed
+    'Count this toward the total size of all Chunks, _
+     which we will use to determine the size of output ROM needed
     Let ChunksSize = ChunksSize + Chunks(Chunk).Size
     
-ErrOut:
+Finish:
     'Leave this scope
     Let CurrentSection = vbNullString
     Let CurrentLabel = vbNullString
@@ -4314,7 +4359,7 @@ Continue:
     
     'Move to the next token. If the file ends unexpectedly, the chunk has not been _
      closed properly (closing brace is expected)
-    If NextTokenError() Then GoTo Finish
+    If NextTokenError() Then Exit Sub
     
     'When the closing brace is encountered, we'll drop out of the scope
     If TokenKind <> TOKEN_BRACES_CLOSE Then GoTo Continue
@@ -6180,6 +6225,11 @@ Private Function ROM_Layout( _
     'Assign the ROM space
     ReDim ROM(0 To ROMSize - 1) As Byte
     
+    Dim i As Long
+    For i = 1 To SectionCount
+        Call RaiseMessage(OZ80_LOG_INFO, "Section " & Sections(i).SectionName & ": " & Format$(Sections(i).TotalSize, "#,0") & " bytes")
+    Next i
+    
     '----------------------------------------------------------------------------------
     '[1]: Place the Interrupt Procedures
     '----------------------------------------------------------------------------------
@@ -6219,17 +6269,35 @@ Private Function ROM_Layout( _
     '----------------------------------------------------------------------------------
     '[3]: Place the START Procedure
     '----------------------------------------------------------------------------------
+    If Chunk_Start <> 0 Then
+        'TODO: Check for clash with INTERRUPT 0 routine on Master System
+        If ROM_AddChunk(Chunk_Start, 0) Then GoTo Finish
+    End If
     
     '----------------------------------------------------------------------------------
     '[4]: Place the 1 KB SEGA Slot
     '----------------------------------------------------------------------------------
+    'The special SEGA 1 KB Slot ($0000-$03FF) stays paged-in at all times regardless _
+     of which Bank is in Slot 0 ($0400-$3FFF). Therefore we have to place these Chunks _
+     before other Un/Sectioned code as all data MUST appear within the first 1 KB of _
+     the ROM
+    
     
     '----------------------------------------------------------------------------------
-    '[5]: Place un-paged Sections
+    '[5]: Place un-Sectioned Chunks
+    '----------------------------------------------------------------------------------
+    For i = 1 To ChunkCount
+        If Chunks(i).Section = 0 Then
+            If ROM_AddChunk(i) Then GoTo Finish
+        End If
+    Next i
+    
+    '----------------------------------------------------------------------------------
+    '[6]: Place un-paged Sections
     '----------------------------------------------------------------------------------
     
     '----------------------------------------------------------------------------------
-    '[6]: Place paged Sections
+    '[7]: Place paged Sections
     '----------------------------------------------------------------------------------
 
 Finish:
@@ -6247,6 +6315,9 @@ Private Function ROM_AddChunk( _
              ByRef ChunkRef As Long, _
     Optional ByRef ChunkAddr As Long = -1 _
 ) As OZ80_ERROR
+    '*** TIMER BEGIN ***
+    Call Profiler.EventBegin(EVENT_ROM_ADDCHUNK)
+    
     'TODO: If the ChunkSize is zero, discard it? _
            (We need to handle zero-sized Chunks earlier though -- how do we handle _
             references to empty Chunks? -- fixed and non-fixed)
@@ -6265,6 +6336,7 @@ Private Function ROM_AddChunk( _
         'Define the first Chunk in the layout _
          (fall through to `AddLink`)
         
+    '----------------------------------------------------------------------------------
     'Do we have an address for the Chunk already?
     '----------------------------------------------------------------------------------
     ElseIf ChunkAddr <> -1 Then
@@ -6316,16 +6388,63 @@ Private Function ROM_AddChunk( _
         '(fall through to `AddLink` below)
         
     '----------------------------------------------------------------------------------
+    'Find the first available space to put the Chunk:
+    '----------------------------------------------------------------------------------
     Else
-        '
-        Stop
+        'We will begin with attempting to place our Chunk from $67 onwards
+        'TODO: Refine this definition -- System dependent
+        Let ChunkAddr = &H67&
+        
+        'Search through the layout chain and find the point where our Chunk goes
+        Let i = 1
+        Do
+            'Remember this link, should we reach a successful conclusion and need _
+             to insert a link between this one and the next
+            Let PrevLink = i
+            Let NextLink = Layout(i).NextIndex
+            
+            'If the beginning of our Chunk clips the current Chunk:
+            '..........................................................................
+            If (ChunkAddr >= Layout(i).AddrBegin) _
+            And (ChunkAddr <= Layout(i).AddrEnd) _
+            Then
+                'Push our location forward
+                Let ChunkAddr = Layout(i).AddrEnd + 1
+            
+            'If the end of our Chunk clips the current Chunk:
+            '..........................................................................
+            ElseIf (ChunkAddr + ChunkSize >= Layout(i).AddrBegin) _
+               And (ChunkAddr + ChunkSize < Layout(i).AddrEnd) _
+            Then
+                'Push our location forward
+                Let ChunkAddr = Layout(i).AddrEnd + 1
+            
+            'If the current Chunk lies entirely within our Chunk:
+            '..........................................................................
+            ElseIf (Layout(i).AddrBegin >= ChunkAddr) _
+               And (Layout(i).AddrEnd < ChunkAddr + ChunkSize) _
+            Then
+                'Push our location forward
+                Let ChunkAddr = Layout(i).AddrEnd + 1
+            End If
+            
+            'Follow the chain to the next item in the list
+            Let i = Layout(i).NextIndex
+            'If this is the end of the list, do not continue
+            If i = 0 Then Exit Do
+        Loop
+        
+        Let ChunkEnd = ChunkAddr + (ChunkSize - 1)
     End If
     
     '----------------------------------------------------------------------------------
 AddLink:
+    'Increase the number of links in the chain. _
+     Note that they won't necessarily link in array order
     Let LayoutCount = LayoutCount + 1
     ReDim Preserve Layout(1 To LayoutCount) As oz80Layout
     
+    'Set the Chunk information on the newly crerated link
     Let Layout(LayoutCount).AddrBegin = ChunkAddr
     Let Layout(LayoutCount).AddrSize = ChunkSize
     Let Layout(LayoutCount).AddrEnd = ChunkEnd
@@ -6339,10 +6458,10 @@ AddLink:
         Let Layout(NextLink).PrevIndex = LayoutCount
     End If
     
-    'Set the address on the Chunk for use in the second pass
+    'Set the ROM address on the Chunk for use in the second pass
     Let Chunks(ChunkRef).Address = ChunkAddr
     'Update the Label database with the new address
-    Call AddUpdateLabel(Chunks(Chunk).LabelName, CDbl(ChunkAddr))
+    Call AddUpdateLabel(Chunks(ChunkRef).LabelName, CDbl(ChunkAddr))
     
     'TODO: Calculate Bank and apply to Chunk?
     
@@ -6353,8 +6472,19 @@ AddLink:
                     Length:=ChunkSize _
     )
     
+    Call RaiseMessage(OZ80_LOG_INFO, _
+        "${$}:{$} | {$} | {$}", _
+        Cache_HexStr8((ChunkAddr And &HFF0000) \ &H10000), _
+        Cache_HexStr16(ChunkAddr And &HFFFF&), _
+        Right$("      " & Format$(ChunkSize, "#,0"), 6), _
+        Chunks(ChunkRef).LabelName _
+    )
+    
 Finish:
     Let ROM_AddChunk = My_Error
+    
+    Call Profiler.EventEnd(EVENT_ROM_ADDCHUNK)
+    '*** TIMER END ***
 End Function
 
 '/// GENERIC //////////////////////////////////////////////////////////////////////////

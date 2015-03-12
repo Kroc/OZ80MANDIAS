@@ -5,7 +5,6 @@ Class=bluString; CODE\blu\CORE\bluString.cls
 Class=bluProfiler; CODE\blu\DEBUG\bluProfiler.cls
 Class=bluArrayStrings; CODE\blu\CORE\bluArrayStrings.cls
 Class=bluArray; CODE\blu\CORE\bluArray.cls
-Class=bluBinary; CODE\blu\FILESYSTEM\bluBinary.cls
 Class=bluLog; CODE\blu\FILESYSTEM\bluLog.cls
 Class=OZ80; CODE\OZ80.cls
 Class=OZ80Data; CODE\OZ80Data.cls

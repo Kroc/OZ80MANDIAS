@@ -178,6 +178,7 @@ Public Enum PROFILER_EVENTS
     EVENT_FORMATTOKEN                   '- Format token data for logging
     EVENT_ASSEMBLE                      'Assembling a file (after tokenisation)
     EVENT_PROCESSZ80                    'ProcessZ80
+    EVENT_ROM_LAYOUT
     EVENT_ROM_ADDCHUNK
 End Enum
 
@@ -370,7 +371,7 @@ Private Source As bluString
 
 'A lot of the text parsing will be letter-by-letter, so this enum provides the _
  common character codes we'll be referring to, as well as the particular punctuation _
- symbols used for OZ80 syntax. Note that `UCS2` is defined by 'bluString.bas'
+ symbols used for OZ80 syntax. Note that `UCS2` is defined by 'bluString.cls'
 Private Enum OZ80_SYNTAX
     ASC_NUL
     ASC_TAB = UCS2.C0_HT
@@ -828,6 +829,8 @@ Private File As Long
 'The current position in the token stream (of the current file). _
  Since VB6 is not multi-threaded we don't have to store this per-file
 Private TokenIndex As Long
+'Alongside that a cache of `Files(File).TokensLength` to avoid this repetition
+Private TokensLength As Long
 
 'The portions of Text in the source code file
 Private TokenStrings As bluArrayStrings
@@ -845,7 +848,8 @@ Public Enum OZ80_SYSTEM
     SYSTEM_SMS                          'SEGA Master System
 End Enum
 
-'OZ80 `SECTION`s:
+'--------------------------------------------------------------------------------------
+'Sections:
 '--------------------------------------------------------------------------------------
 'A "Section" is a group of code/data Chunks that will be placed into the ROM together _
  according to special rules for the Slot pattern
@@ -855,12 +859,14 @@ Private Type oz80Section
     SectionID As Long                   'Index of the name in `TokenStrings`
     TotalSize As Long                   'Total number of Chunk bytes for the Section
     Slot As OZ80_SLOT                   'The Slot (banking) pattern assigned
+    Chunks() As Long                    'A list of which Chunks are in the Section
+    ChunkCount As Long                  'Number of the above, 1-based
 End Type
 
 Private Sections() As oz80Section
 Private SectionCount As Long
 
-'For normalising Label names, we note which Section is in play
+'For normalising Label names, we note which Section is in scope
 Private CurrentSection As String
 
 '--------------------------------------------------------------------------------------
@@ -884,6 +890,7 @@ Private CurrentLabel As String
  parameter falls within an allowed list of accepted types
 
 Private Enum OZ80_MASK
+    MASK_NONE
     
     [_MASK_REGS_BEGIN] = 1
     MASK_REG_B = 2 ^ 0
@@ -1110,10 +1117,13 @@ End Enum
 '--------------------------------------------------------------------------------------
 'ROM Layout:
 '--------------------------------------------------------------------------------------
+'As PROCs and TABLEs are parsed they are assembled into binary "Chunks". After all the _
+ Source code Is assembled, the Chunks are arranged according to their attributes and _
+ placed into the output ROM file
 
 Private Type oz80Chunk
-    LabelName As String
-    Data() As Byte
+    LabelName As String                 'Quick-access to the full Label name
+    Data() As Byte                      'The binary content of the Chunk
     Buffer As Long                      'Buffer size for the data (power of 2)
     Size As Long                        'Length of the actual data in bytes
     Section As Long
@@ -1124,9 +1134,8 @@ End Type
 'We'll erase a Chunk by setting it to this empty instance
 Private EmptyChunk As oz80Chunk
 
-
-Private Chunks() As oz80Chunk
-Private ChunkCount As Long
+Private Chunks() As oz80Chunk           'All Chunks are collected here
+Private ChunkCount As Long              '1-based count of Chunks
 Private ChunksSize As Long              'Total size of all Chunks in bytes
 
 'The current chunk being assembled into. This is a reference into the Chunks array _
@@ -1161,8 +1170,9 @@ End Type
 Private Layout() As oz80Layout
 Private LayoutCount As Long
 
-Private ROM() As Byte
-Private ROMSize As Long
+Private ROM() As Byte                   'The ROM's binary contents
+Private ROMSize As Long                 'The ROM file size, e.g. 256 KB
+Private ROMUsed As Long                 'Where the current end of the data is
 
 '--------------------------------------------------------------------------------------
 'Cache:
@@ -1212,6 +1222,7 @@ Private Sub Class_Initialize()
         Call .RegisterEvent(EVENT_FORMATTOKEN, "FormatToken")
         Call .RegisterEvent(EVENT_ASSEMBLE, "Assemble")
         Call .RegisterEvent(EVENT_PROCESSZ80, "Z80_Process")
+        Call .RegisterEvent(EVENT_ROM_LAYOUT, "ROM_Layout")
         Call .RegisterEvent(EVENT_ROM_ADDCHUNK, "ROM_AddChunk")
     End With
     
@@ -1789,6 +1800,9 @@ Private Sub Reset()
     'Clear the database of source files
     Erase Files: Let File = 0
     
+    Let TokenIndex = 0
+    Let TokensLength = 0
+    
     'Dereference the currently attached Chunk
     Let Chunk = 0
     'Dereference the fixed Chunks so that the array can be emptied without _
@@ -1808,8 +1822,13 @@ Private Sub Reset()
     Erase Chunks: Let ChunkCount = 0
     Let ChunksSize = 0
     
-    'Reset the value stores
+    'Reset Sections
     Erase Sections: Let SectionCount = 0
+    'User-defined Sections begin from index 1 and up. _
+     Index 0 is reserved as a default Section for Chunks without a specified Section
+    ReDim Sections(0 To 0) As oz80Section
+    
+    'Reset the value stores
     Set Values = Nothing: Set Values = New Scripting.Dictionary
     Set Labels = Nothing: Set Labels = New Scripting.Dictionary
     
@@ -1820,6 +1839,8 @@ Private Sub Reset()
     'TODO: Default ROM size should be per-system / user-selectable?
     Let ROMSize = 8192
 End Sub
+
+'/// PUBLIC INTERFACE /////////////////////////////////////////////////////////////////
 
 'Error : Expose the internal error number
 '======================================================================================
@@ -1904,9 +1925,6 @@ Finish:
     Let Assemble = My_Error
 End Function
 
-'/// PARSING //////////////////////////////////////////////////////////////////////////
-'/// Read in the source code and walk it
-
 'File_Assemble : Tokenise a source code file and then begin assembling it
 '======================================================================================
 'FilePath       | File path to the source code file (".oz80")
@@ -1918,6 +1936,7 @@ Private Function File_Assemble( _
 ) As OZ80_ERROR
     'Since we have a "scrrun.dll" reference for Dictionary object, this also gives _
      us the `FileSystemObject` to simplify a lot of mucky folder / file checking
+    'TODO: This will be replaced with Unicode-safe file handling
     Dim FSO As FileSystemObject
     Set FSO = New FileSystemObject
     
@@ -1992,8 +2011,8 @@ Private Function File_Assemble( _
         '*** TIMER END ***
     End If
     
-    'The user will obviously want to begin at the start of the stream _
-     rather than the end
+    'The user will obviously want to begin at the start of the stream rather than _
+     the end. Note that this resets `TokenIndex`
     Call File_Rewind
     
     '[4] Assemble the file: _
@@ -2026,7 +2045,7 @@ End Function
 'EOF : End Of File?
 '======================================================================================
 Private Property Get EOF() As Boolean
-    Let EOF = (TokenIndex >= Files(File).TokensLength)
+    Let EOF = (TokenIndex = TokensLength)
 End Property
 
 'TokenText : Gets the string associated with a token (e.g. `TOKEN_TEXT`)
@@ -2044,17 +2063,16 @@ End Property
 '======================================================================================
 'Returns        | False if the token stream hit the end
 '======================================================================================
-Private Function NextToken( _
-) As Boolean
+Private Sub NextToken()
 '    'Generate a debug message with the details of the current token
 '    RaiseEvent Message(OZ80_LOG_DEBUG, FormatToken())
     
     Let TokenIndex = TokenIndex + 1
-    Call CacheToken
-    
-    If TokenIndex >= Files(File).TokensLength Then Exit Function
-    Let NextToken = True
-End Function
+    Let TokenKind = Files(File).Tokens(TokenIndex).Kind
+    Let TokenValue = Files(File).Tokens(TokenIndex).Value
+    Let TokenLine = Files(File).Tokens(TokenIndex).Line
+    Let TokenCol = Files(File).Tokens(TokenIndex).Col
+End Sub
 
 'NextTokenError : Move onto the next token and error if the file ended
 '======================================================================================
@@ -2064,15 +2082,24 @@ Private Function NextTokenError( _
 ) As OZ80_ERROR
 '    'Generate a debug message with the details of the current token
 '    RaiseEvent Message(OZ80_LOG_DEBUG, FormatToken())
-    
-    Let TokenIndex = TokenIndex + 1
-    Call CacheToken
-    
-    If TokenIndex >= Files(File).TokensLength Then
+        
+    If TokenIndex = TokensLength Then
+        Let TokenKind = 0
+        Let TokenValue = 0
+        Let TokenLine = 0
+        Let TokenCol = 0
         'Raise an error message
         Call RaiseError(OZ80_ERROR_FILE_END, STR_ERR_FILE_END)
         'Return the error number for easy tail-recursion
         Let NextTokenError = My_Error
+    Else
+        Let TokenIndex = TokenIndex + 1
+        With Files(File).Tokens(TokenIndex)
+            Let TokenKind = .Kind
+            Let TokenValue = .Value
+            Let TokenLine = .Line
+            Let TokenCol = .Col
+        End With
     End If
 End Function
 
@@ -2080,7 +2107,14 @@ End Function
 '======================================================================================
 Private Sub File_Rewind()
     Let TokenIndex = 0
-    Call CacheToken
+    Let TokensLength = Files(File).TokensLength
+    
+    With Files(File).Tokens(TokenIndex)
+        Let TokenKind = .Kind
+        Let TokenValue = .Value
+        Let TokenLine = .Line
+        Let TokenCol = .Col
+    End With
 End Sub
 
 'File_Tokenise : Break the source file into words and convert to machine tokens
@@ -2101,52 +2135,53 @@ Private Function File_Tokenise( _
     'This function will be called by `File_Assemble`, so the file path will already _
      have been normalised and file existance checked
     
-    '*** TIMER BEGIN ***
-    Call Profiler.EventBegin(EVENT_FILELOAD_API)
-    
-    'Read the file into our fast string handler (though we won't be doing any string- _
-     manipulation, we will be relying on the various methods available to us)
-    
-    Call Source.FileLoad(FilePath)
-    
-    Call Profiler.EventEnd(EVENT_FILELOAD_API)
-    '*** TIMER END ***
+'    '*** TIMER BEGIN ***
+'    Call Profiler.EventBegin(EVENT_FILELOAD_API)
+'
+'    'Read the file into our fast string handler (though we won't be doing any string- _
+'     manipulation, we will be relying on the various methods available to us)
+'
+'    Call Source.FileLoad(FilePath)
+'
+'    Call Profiler.EventEnd(EVENT_FILELOAD_API)
+'    '*** TIMER END ***
     '*** TIMER BEGIN ***
     Call Profiler.EventBegin(EVENT_FILELOAD_VB6)
     
     'Read the file into our fast string handler (though we won't be doing any string- _
      manipulation, we will be relying on the various methods available to us)
     
-    Call Source.ReadFile(FilePath)
+'    Call Source.ReadFile(FilePath)
+    
+'    Dim Buffer() As Integer
+'    Let Buffer = Source.GetArray()
+    
+    Dim FileNumber As Long: Let FileNumber = FreeFile
+    Open FilePath For Input Access Read Lock Write As #FileNumber
+
+    Dim Source As String
+    Let Source = StrConv(InputB(LOF(FileNumber), FileNumber), vbUnicode)
+
+    Dim SourceLen As Long
+    Let SourceLen = Len(Source)
+    
+    Dim Buffer() As Integer
+    ReDim Buffer(0 To SourceLen) As Integer
+
+    Call api_RtlMoveMemory( _
+        VarPtr(Buffer(0)), _
+        StrPtr(Source), _
+        LenB(Source) _
+    )
+    
+    Let Source = vbNullString
+    Close FileNumber
     
     Call Profiler.EventEnd(EVENT_FILELOAD_VB6)
     '*** TIMER END ***
     
-    Dim Buffer() As Integer
-    Let Buffer = Source.GetArray()
-    
-'    Dim FileNumber As Long: Let FileNumber = FreeFile
-'    Open FilePath For Input Access Read Lock Write As #FileNumber
-'
-'    Dim Source As String
-'    Let Source = StrConv(InputB(LOF(FileNumber), FileNumber), vbUnicode)
-'
-'    Dim Buffer() As Integer
-'    ReDim Buffer(0 To Len(Source)) As Integer
-'
-'    Call api_RtlMoveMemory( _
-'        VarPtr(Buffer(0)), _
-'        StrPtr(Source), _
-'        LenB(Source) _
-'    )
-'
-'    Let Source = vbNullString
-'    Close FileNumber
-    
-    
-    
-    'Cache this for speed, we'll be referring to it every loop
-    Dim SourceLen As Long: Let SourceLen = Source.Length
+'    'Cache this for speed, we'll be referring to it every loop
+'    Dim SourceLen As Long: Let SourceLen = Source.Length
     
     Call RaiseMessage(OZ80_LOG_ACTION, _
         "Tokenising ""{$}""", FilePath _
@@ -2920,9 +2955,6 @@ NextWord:
          on a new line -- this constitutes a property definition in a Chunk
         Let PrevLine = TokenLine
         
-'        'TODO: Not necessary here?
-'        Call CacheToken
-        
         'Move to the next token number
         Let TokenIndex = TokenIndex + 1
 
@@ -2938,9 +2970,6 @@ NextWord:
             ReDim Preserve .Tokens(0 To .TokensBuffer) As oz80Token
         End If
     End With
-
-'    'Generate a debug message
-'    RaiseEvent Message(OZ80_LOG_DEBUG, FormatToken())
         
 SkipWord:
     Call Profiler.EventEnd(EVENT_TOKENISE_TOKENWORD)
@@ -2971,8 +3000,7 @@ Finish:
         )
     Else
         'clean up!
-        'TODO: This leaves the class in a broken state _
-         (no tokens array anymore and no call to `cacheToken`)
+        'TODO: This leaves the class in a broken state?
         Erase Files(File).Tokens: Let Files(File).TokensLength = 0
     End If
     
@@ -2987,24 +3015,6 @@ Finish:
 End Function
 
 '/// PRIVATE PROCEDURES ///////////////////////////////////////////////////////////////
-
-'CacheToken : Cache the current token info
-'======================================================================================
-Private Sub CacheToken()
-    If TokenIndex > Files(File).TokensLength Then
-        Let TokenKind = 0
-        Let TokenValue = 0
-        Let TokenLine = 0
-        Let TokenCol = 0
-        Exit Sub
-    End If
-    With Files(File).Tokens(TokenIndex)
-        Let TokenKind = .Kind
-        Let TokenValue = .Value
-        Let TokenLine = .Line
-        Let TokenCol = .Col
-    End With
-End Sub
 
 'FormatToken : Format the details of the current token for logging
 '======================================================================================
@@ -3452,11 +3462,12 @@ Private Sub DefineConst()
     
     'The constant value is optional (it will default to 0), so the file can end here _
      (it's up to the parent to check if there's a unclosed scope problem)
-    If Not NextToken() Then
+    If EOF Then
         'Define the Constant as zero
         Call Values.Add(ConstName, 0)
         Exit Sub
     End If
+    Call NextToken
     
     'Check that this is an Expression
     If Not TokenIsExpression(TokenKind) Then
@@ -3515,7 +3526,14 @@ Private Sub ProcessInclude()
     'Reattach the previous file
     Let File = ReturnFile
     Let TokenIndex = ReturnToken
-    Call CacheToken
+    Let TokensLength = Files(File).TokensLength
+    
+    With Files(File).Tokens(TokenIndex)
+        Let TokenKind = .Kind
+        Let TokenValue = .Value
+        Let TokenLine = .Line
+        Let TokenCol = .Col
+    End With
     
     Call RaiseMessage( _
         OZ80_LOG_ACTION, "Continuing Assembly of ""{$}""", _
@@ -3828,12 +3846,10 @@ ReadParams:
     'Create the Chunk
     If Interrupt = INDEFINITE Then
         'A standard Procedure without fixed (interrupt) address
-        Call Chunk_Begin(FullLabelName)
-        'TODO: ...
-        Let Chunks(Chunk).Section = SectionIndex
+        Call Chunk_Begin(FullLabelName, SectionIndex)
     Else
         'A special fixed-Procedure for hardware interrupts
-        Call Chunk_Begin(FullLabelName, Interrupt)
+        Call Chunk_Begin(FullLabelName, -1, Interrupt)
         'We keep direct references to Interrupt Procedures to make it easier to _
          lay out the ROM contents
         If Interrupt = &H0& Then
@@ -3847,8 +3863,6 @@ ReadParams:
         ElseIf Interrupt = &H38& Then Let Chunk_Interrupt38 = Chunk
         ElseIf Interrupt = &H66& Then Let Chunk_Interrupt66 = Chunk
         End If
-        
-        Let Chunks(Chunk).Section = -1
     End If
     
     'Log a header for the disassembly
@@ -3929,21 +3943,23 @@ Private Sub DefineSection()
     ): Exit Sub
     
     'Keep ahold of the Section identifier
-    Dim SectionName As String
-    Let SectionName = TokenText
-    
-    Dim SectionID As Long
-    Let SectionID = CLng(TokenValue)
+    Dim SectionName As String: Let SectionName = TokenText
+    Dim SectionID As Long: Let SectionID = CLng(TokenValue)
     
     'Has this Section already been defined?
-    If Labels.Exists(SectionName) Then Call RaiseError( _
-        OZ80_ERROR_DUPLICATE, "TODO" _
-    ): Exit Sub
+    Dim s As Long
+    For s = 1 To SectionCount
+        'ERROR: Section has already been defined!
+        If Sections(s).SectionID = SectionID Then Call RaiseError( _
+            OZ80_ERROR_DUPLICATE, "TODO" _
+        ): Exit Sub
+    Next s
     
     '----------------------------------------------------------------------------------
     
     'If the file ends here it's valid, as the params are optional
-    If Not NextToken() Then GoTo Finish
+    If EOF Then GoTo Finish
+    Call NextToken
     
     'The only allowed Slot lists are: 0 / 1 / 2 / 0, 1 / 0, 1, 2 / 1, 2. _
      These are stored as a bit-pattern allowing packing into one value, _
@@ -4005,7 +4021,7 @@ Finish:
     Call RaiseMessage(OZ80_LOG_STATUS, LOG_SECTION, SectionName)
     
     Let SectionCount = SectionCount + 1
-    ReDim Preserve Sections(1 To SectionCount) As oz80Section
+    ReDim Preserve Sections(0 To SectionCount) As oz80Section
     
     Let Sections(SectionCount).SectionName = SectionName
     Let Sections(SectionCount).SectionID = SectionID
@@ -4051,8 +4067,7 @@ Private Sub DefineStart()
     
     'Create the Chunk
     'TODO: Check that the System has been defined
-    Call Chunk_Begin(STR_START, 0)
-    Let Chunks(Chunk).Section = -1
+    Call Chunk_Begin(STR_START, -1, 0)
         
     'Keep a reference to this for laying out the ROM
     Let Chunk_Start = Chunk
@@ -4193,8 +4208,7 @@ ReadParams:
     ): GoTo Finish
     
     'Create the Chunk
-    Call Chunk_Begin(FullLabelName)
-    Let Chunks(Chunk).Section = SectionIndex
+    Call Chunk_Begin(FullLabelName, SectionIndex)
     
     'Log a header for the disassembly
     Call Chunks(Chunk).LogASM.LogFormat("TABLE {$}", LabelName)
@@ -4234,12 +4248,7 @@ Continue:
     'Z80 code?
     '----------------------------------------------------------------------------------
     If TokenIsInstruction(TokenKind) Then
-        '*** TIMER BEGIN ***
-        Call Profiler.EventBegin(EVENT_PROCESSZ80)
         Call Z80_Process
-        Call Profiler.EventEnd(EVENT_PROCESSZ80)
-        '*** TIMER END ***
-        
         If My_Error Then Exit Sub
         
         'Processing of the Z80 instruction (and parameters) will have moved the token _
@@ -4436,23 +4445,26 @@ Private Function Z80_GetParameter( _
             End If
             
             'ERROR: File ends before the memory expression is closed
-            If Not NextToken() Then Call RaiseError( _
+            If EOF Then Call RaiseError( _
                 OZ80_ERROR_FILE_END, STR_ERR_FILE_END _
             ): GoTo ErrOut
             
+            Call NextToken
             GoTo EndScope
             
 AddExpr:    'Look for the `+` following the register name
-            If Not NextToken() Then Call RaiseError( _
+            If EOF Then Call RaiseError( _
                 OZ80_ERROR_FILE_END, STR_ERR_FILE_END _
             ): GoTo ErrOut
+            Call NextToken
             
             'If present, skip over it and check for an expression
             If TokenKind = TOKEN_OPERATOR_ADD Then
                 'ERROR: Something must follow the "+"!
-                If Not NextToken() Then Call RaiseError( _
+                If EOF Then Call RaiseError( _
                     OZ80_ERROR_FILE_END, STR_ERR_FILE_END _
                 ): GoTo ErrOut
+                Call NextToken
                 
                 'Try and calculate the Expression
                 '(If there was an error in the Expression, the error event _
@@ -4591,14 +4603,18 @@ End Function
 '{asm} [<param>] [<param>] [<param>]
 '======================================================================================
 Private Sub Z80_Process()
+    '*** TIMER BEGIN ***
+    Call Profiler.EventBegin(EVENT_PROCESSZ80)
+    
     'Remember which Z80 instruction is being processed
     Dim Instruction As OZ80_TOKEN
     Let Instruction = TokenKind
     'Skip over the Z80 instruction token now that we know it. _
      If the file ends it's an error because the chunk has not been closed
-    If Not NextToken() Then Call RaiseError( _
+    If EOF Then Call RaiseError( _
         OZ80_ERROR_FILE_END, STR_ERR_FILE_END _
     ): Exit Sub
+    Call NextToken
     
     '----------------------------------------------------------------------------------
     
@@ -4677,6 +4693,9 @@ Private Sub Z80_Process()
         
         Call Z80_Assemble(Instruction)
     End If
+
+    Call Profiler.EventEnd(EVENT_PROCESSZ80)
+    '*** TIMER END ***
 End Sub
 
 'Z80_Assemble : Assemble bytes from a Z80 instruction and parameters
@@ -5871,7 +5890,8 @@ Continue:
     
     'Get the second operand
     'TODO: Error - unexpected end
-    If Not NextToken() Then Stop
+    If EOF Then Stop
+    Call NextToken
     'Cannot have an operator hanging there without an operand following
     If ParseValue(Operand2) Then Stop
         
@@ -5947,9 +5967,7 @@ Private Function ParseValue( _
     '----------------------------------------------------------------------------------
     If TokenKind = TOKEN_PARENS_OPEN Then
         'Move over the open parentheses. If the file ends here, it's an error
-        If Not NextToken() Then Call RaiseError( _
-            OZ80_ERROR_FILE_END, STR_ERR_FILE_END _
-        ): GoTo ErrOut
+        If NextTokenError() Then GoTo ErrOut
         
         'Parse the nested Expression and return its Value as our own
         If ParseExpression(ReturnValue) Then GoTo ErrOut
@@ -5973,9 +5991,7 @@ Private Function ParseValue( _
     '----------------------------------------------------------------------------------
     ElseIf TokenKind = TOKEN_KEYWORD_HI Then
         'Move over the `HI` keyword. If the file ends here, it's an error
-        If Not NextToken() Then Call RaiseError( _
-            OZ80_ERROR_FILE_END, STR_ERR_FILE_END _
-        ): GoTo ErrOut
+        If NextTokenError() Then GoTo ErrOut
         
         'Fetch the parameter to the `HI` function
         If ParseExpression(ReturnValue) Then GoTo ErrOut
@@ -5999,9 +6015,7 @@ Private Function ParseValue( _
     '----------------------------------------------------------------------------------
     ElseIf TokenKind = TOKEN_KEYWORD_LO Then
         'Move over the `LO` keyword. If the file ends here, it's an error
-        If Not NextToken() Then Call RaiseError( _
-            OZ80_ERROR_FILE_END, STR_ERR_FILE_END _
-        ): GoTo ErrOut
+        If NextTokenError() Then GoTo ErrOut
         
         'Fetch the parameter to the `LO` function
         If ParseExpression(ReturnValue) Then GoTo ErrOut
@@ -6031,9 +6045,7 @@ Private Function ParseValue( _
          hexadecimal/binary numbers or named-items (Constants, RAM names, Labels etc.)
         Dim IsNegative As Boolean: Let IsNegative = True
         'Move forward past the negative sign. If the file ends here, it's an error
-        If Not NextToken() Then Call RaiseError( _
-            OZ80_ERROR_FILE_END, STR_ERR_FILE_END _
-        ): GoTo ErrOut
+        If NextTokenError() Then GoTo ErrOut
         'Continue parsing the number...
         GoTo GetNumber
         
@@ -6050,7 +6062,11 @@ GetNumber:
         'Move over the number. If the file ends here, the Value is still valid, _
          so no error. The parent can check if any scope has been left open. We skip _
          checking for a number prefix, but we do need to apply any negative sign
-        If NextToken() Then
+        If EOF Then
+            GoTo ErrOut
+        Else
+            Call NextToken
+            
             'Check for a number prefix, e.g. `KB`
             '..........................................................................
             If TokenKind = TOKEN_PREFIX_K Then
@@ -6164,31 +6180,40 @@ End Function
 
 'Chunk_Begin : Begin a new Chunk to hold assembled Z80 code / data
 '======================================================================================
+'LabelName      | String of the fully-qualified Label name, i.e. "::section:label"
+'[SectionIndex] | Which Section this belongs to, index of `Sections` array
+'[Address]      | Optional address to place the Chunk in ROM
+'======================================================================================
 Private Sub Chunk_Begin( _
              ByRef LabelName As String, _
+    Optional ByRef SectionIndex As Long = -1, _
     Optional ByRef Address As Double = -1 _
 )
     'Register the Label name in the database
     Call AddUpdateLabel(LabelName, Address)
-    'Does the Chunk already exist? On the first pass we want to ensure that the user _
-     doesn't try and define two Chunks with the same name, and this is handled by the _
-     `PROC` handler. On the second pass the Chunks will already have been defined
-    If ChunkExists(LabelName) Then
-        'Attach the existing Chunk
-        Let Chunk = GetChunk(LabelName)
-    Else
-        Let ChunkCount = ChunkCount + 1
-        ReDim Preserve Chunks(1 To ChunkCount) As oz80Chunk
-        Let Chunk = ChunkCount
-        'Apply the details we have
-        Let Chunks(Chunk).LabelName = LabelName
-        Let Chunks(Chunk).Address = CLng(Address)
-        'Create a buffer of 1K to hold the assembled data
-        Let Chunks(Chunk).Buffer = 1024
-        ReDim Chunks(Chunk).Data(1 To 1024) As Byte
-        'As we assemble, we'll also provide a disassembly listing
-        Set Chunks(Chunk).LogASM = New bluLog
+    
+    Let ChunkCount = ChunkCount + 1
+    ReDim Preserve Chunks(1 To ChunkCount) As oz80Chunk
+    
+    'Apply the details we have
+    Let Chunk = ChunkCount
+    Let Chunks(Chunk).LabelName = LabelName
+    Let Chunks(Chunk).Address = CLng(Address)
+    Let Chunks(Chunk).Section = SectionIndex
+    
+    If SectionIndex >= 0 Then
+        Dim SectionChunks As Long
+        Let SectionChunks = Sections(SectionIndex).ChunkCount + 1
+        ReDim Preserve Sections(SectionIndex).Chunks(1 To SectionChunks) As Long
+        Let Sections(SectionIndex).Chunks(SectionChunks) = ChunkCount
+        Let Sections(SectionIndex).ChunkCount = SectionChunks
     End If
+    
+    'Create a buffer of 1K to hold the assembled data
+    Let Chunks(Chunk).Buffer = 1024
+    ReDim Chunks(Chunk).Data(1 To 1024) As Byte
+    'As we assemble, we'll also provide a disassembly listing
+    Set Chunks(Chunk).LogASM = New bluLog
 End Sub
 
 'AddUpdateLabel: Blindly adds to or updates the Label database
@@ -6212,23 +6237,24 @@ End Sub
 '======================================================================================
 Private Function ROM_Layout( _
 ) As OZ80_ERROR
-    '----------------------------------------------------------------------------------
-    '[0]: Select the ROM size
-    '----------------------------------------------------------------------------------
+    '*** TIMER BEGIN ***
+    Call Profiler.EventBegin(EVENT_ROM_LAYOUT)
+    
     'How many bytes do we have?
     Call RaiseMessage(OZ80_LOG_INFO, "Total Size: " & Format$(ChunksSize, "#,0") & " bytes")
-    'The default ROM size will already have been set, just keep increasing it until _
-     the data fits. This is only an estimate as gaps in the ROM (such as where the _
-     interrupt routines are) could push the ROM over this initial size)
-    Do While ChunksSize > ROMSize: Let ROMSize = ROMSize * 2: Loop
-    'TODO: Check for ROM too big (hard limit -- 32 MB -- and user limit)
-    'Assign the ROM space
+    'Assign the default ROM space
     ReDim ROM(0 To ROMSize - 1) As Byte
     
+    'Log the Sections defined
     Dim i As Long
     For i = 1 To SectionCount
         Call RaiseMessage(OZ80_LOG_INFO, "Section " & Sections(i).SectionName & ": " & Format$(Sections(i).TotalSize, "#,0") & " bytes")
     Next i
+    
+    Call RaiseMessage(OZ80_LOG_INFO, "ROM Layout:")
+    Call RaiseMessage(OZ80_LOG_INFO, LOG_LINEDOUBLE)
+    Call RaiseMessage(OZ80_LOG_INFO, "ADDRESS  |   SIZE | LABEL")
+    Call RaiseMessage(OZ80_LOG_INFO, "---------¦--------¦------------------------------------------------------")
     
     '----------------------------------------------------------------------------------
     '[1]: Place the Interrupt Procedures
@@ -6269,7 +6295,11 @@ Private Function ROM_Layout( _
     '----------------------------------------------------------------------------------
     '[3]: Place the START Procedure
     '----------------------------------------------------------------------------------
+    'The `START` Procedure is where the System begins running code first, _
+     usually this is $0000, but can be elsewhere on other Systems
     If Chunk_Start <> 0 Then
+        Call RaiseMessage(OZ80_LOG_INFO, "---------¦--------¦------------------------------------------------------")
+        
         'TODO: Check for clash with INTERRUPT 0 routine on Master System
         If ROM_AddChunk(Chunk_Start, 0) Then GoTo Finish
     End If
@@ -6282,10 +6312,11 @@ Private Function ROM_Layout( _
      before other Un/Sectioned code as all data MUST appear within the first 1 KB of _
      the ROM
     
-    
     '----------------------------------------------------------------------------------
     '[5]: Place un-Sectioned Chunks
     '----------------------------------------------------------------------------------
+    Call RaiseMessage(OZ80_LOG_INFO, "---------¦--------¦------------------------------------------------------")
+    
     For i = 1 To ChunkCount
         If Chunks(i).Section = 0 Then
             If ROM_AddChunk(i) Then GoTo Finish
@@ -6295,13 +6326,48 @@ Private Function ROM_Layout( _
     '----------------------------------------------------------------------------------
     '[6]: Place un-paged Sections
     '----------------------------------------------------------------------------------
+    'Chunks that are assigned to Sections, but which Sections do not assign a Slot _
+     pattern (for paging) are treated the same as un-Sectioned code and lumped into _
+     the first 48 KB of ROM
+    Call RaiseMessage(OZ80_LOG_INFO, "---------¦--------¦------------------------------------------------------")
+    
+    'Go through the defined Sections looking for Sections with no Slots assigned
+    Dim s As Long
+    For s = 1 To SectionCount
+        'Is this Section Slotless?
+        If Sections(s).Slot = 0 Then
+            'Walk through the Chunks in this Slot
+            For i = 1 To ChunkCount
+                If Chunks(i).Section = s Then
+                    'Place this Chunk
+                    If ROM_AddChunk(i) Then GoTo Finish
+                End If
+            Next i
+        End If
+    Next s
     
     '----------------------------------------------------------------------------------
     '[7]: Place paged Sections
     '----------------------------------------------------------------------------------
-
+    
+    
+    Call RaiseMessage(OZ80_LOG_INFO, LOG_LINEDOUBLE)
+    
 Finish:
     Let ROM_Layout = My_Error
+    Call Profiler.EventEnd(EVENT_ROM_LAYOUT)
+    '*** TIMER END ***
+End Function
+
+'ROM_Increase : Increase the size of the ROM
+'======================================================================================
+'Returns        | The error number
+'======================================================================================
+Private Function ROM_Increase( _
+) As OZ80_ERROR
+    Do While ROMUsed > ROMSize: Let ROMSize = ROMSize * 2: Loop
+    'TODO: Check for ROM too big (hard limit -- 32 MB -- and user limit)
+    ReDim ROM(0 To ROMSize - 1) As Byte
 End Function
 
 'ROM_AddChunk : Add a Chunk to the ROM, checking for collisions with other Chunks

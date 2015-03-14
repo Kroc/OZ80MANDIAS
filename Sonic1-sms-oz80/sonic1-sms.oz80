@@ -96,8 +96,9 @@ DEF !SCORE_1UP                  5
 
 `======================================================================================
 
-DEF SECTION     ::interrupts    SLOT 0
+DEF SECTION     ::interrupts    SLOT 1 KB
 DEF SECTION     ::main          SLOT 0
+DEF SECTION     ::screens       SLOT 0
 DEF SECTION     ::mobs          SLOT 1, 2
 DEF SECTION     ::sound         SLOT 2
 

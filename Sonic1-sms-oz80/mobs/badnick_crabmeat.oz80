@@ -105,7 +105,7 @@ PARAMS  IX;mob          HELP ""Address of the current mob being processed
 ._66c5	BYTE $01 $01 $01 $01 $01 $01 $01 $01 $01 $01 $03 $03 $04 $02 $02 $02
 	BYTE $02 $02 $02 $02 $02 $02 $02 $03 $03 $04 $00
 
-._66e0	BYTE ._66ea ._66ea ._66ea ._66f3 ._66f6
+._66e0	WORD ._66ea ._66ea ._66ea ._66f3 ._66f6
 
 ._66ea	BYTE $00 $0C $01 $0C $02 $0C $01 $0C $FF
 ._66f3	BYTE $01 $01 $FF

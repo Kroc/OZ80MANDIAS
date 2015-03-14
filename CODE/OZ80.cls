@@ -866,6 +866,15 @@ Private Type oz80Section
     ChunkCount As Long                  'Number of the above, 1-based
 End Type
 
+'Whilst in the syntax `SLOT` uses a list (i.e. `SLOT 0, 1, 2`), we convert that into _
+ a bit pattern to make it quick and easy to work with instead of iterating an array
+Private Enum OZ80_SLOT
+    SLOT0 = 2 ^ 0
+    SLOT1 = 2 ^ 1
+    SLOT2 = 2 ^ 2
+    SLOT1KB = 1024
+End Enum
+
 Private Sections() As oz80Section
 Private SectionCount As Long
 
@@ -1108,14 +1117,6 @@ Private Z80Param2 As oz80Param
 Private Z80Param3 As oz80Param
 'For quick emptying of the params
 Private Z80ParamEmpty As oz80Param
-
-'Whilst in the syntax `SLOT` uses a list (i.e. `SLOT 0, 1, 2`), we convert that into _
- a bit pattern to make it quick and easy to work with instead of iterating an array
-Private Enum OZ80_SLOT
-    SLOT0 = 2 ^ 0
-    SLOT1 = 2 ^ 1
-    SLOT2 = 2 ^ 2
-End Enum
 
 '--------------------------------------------------------------------------------------
 'ROM Layout:
@@ -3964,7 +3965,7 @@ Private Sub DefineSection()
     If EOF Then GoTo Finish
     Call NextToken
     
-    'The only allowed Slot lists are: 0 / 1 / 2 / 0, 1 / 0, 1, 2 / 1, 2. _
+    'The only allowed Slot lists are: 1 KB | 0 | 1 | 2 | 0, 1 | 0, 1, 2 | 1, 2. _
      These are stored as a bit-pattern allowing packing into one value, _
      which when zero infers the default "let the assembler choose for me"
     Dim Slot As OZ80_SLOT
@@ -3991,8 +3992,9 @@ Private Sub DefineSection()
         'An indefinite value cannot be used for the Slot
         If List.Item(0) = INDEFINITE Then GoTo ErrIndefinite
         
-        'Check for one item: 0, 1 or 2
+        'Check for one item: 1KB, 0, 1 or 2
         If List.Count = 1 Then
+            If List.Item(0) = 1024 Then Let Slot = SLOT1KB: GoTo Finish
             If List.Item(0) = 0 Then Let Slot = SLOT0: GoTo Finish
             If List.Item(0) = 1 Then Let Slot = SLOT1: GoTo Finish
             If List.Item(0) = 2 Then Let Slot = SLOT2: GoTo Finish
@@ -4316,10 +4318,20 @@ Continue:
                     Then Call Chunk_AddBYTE(0) _
                     Else Call Chunk_AddBYTE(Value)
                 
+            ElseIf TokenKind = TOKEN_TEXT Then
+                'Walk the Text bytes
+                Let LogMsg.Text = TokenText
+                Dim i As Long
+                For i = 0 To LogMsg.Length - 1
+                    Call Chunk_AddBYTE(LogMsg.Char(i) And &HFF&)
+                Next i
+                If NextTokenError Then Exit Sub
+                
             ElseIf Not TokenIsList(TokenKind) Then
                 Exit Do
+                
             Else
-                'TODO: Text...
+                Stop
                 Call NextToken
             End If
         Loop
@@ -4812,7 +4824,7 @@ iADC:
         GoTo OutputED
     'ERROR: Wrong parameters for Z80 instruction
     Else: GoTo InvalidParams: End If
-    GoTo Output
+    GoTo Output8
     
 iADD:
     'Add: _
@@ -4838,7 +4850,7 @@ iADD:
         Let Opcode = X3 Or Z6
     'ERROR: Wrong parameters for Z80 instruction
     Else: GoTo InvalidParams: End If
-    GoTo Output
+    GoTo Output8
     
 iAND:
     'Bitwise AND: _
@@ -4851,7 +4863,7 @@ iAND:
         Let Opcode = X3 Or Y4 Or Z6
     'ERROR: Wrong parameters for Z80 instruction
     Else: GoTo InvalidParams: End If
-    GoTo Output
+    GoTo Output8
     
 iBIT:
     'Test a bit: _
@@ -4878,11 +4890,11 @@ iCALL:
         Let Opcode = X3 Or Q1 Or Z5: GoTo Output16
     'ERROR: Wrong parameters for Z80 instruction
     Else: GoTo InvalidParams: End If
-    GoTo Output
+    GoTo Output8
     
 iCCF:
     '..................................................................................
-    If Z80_TestParams() Then Let Opcode = Y7 Or Z7: GoTo Output
+    If Z80_TestParams() Then Let Opcode = Y7 Or Z7: GoTo Output8
     'ERROR: Wrong parameters for Z80 instruction
     GoTo InvalidParams
     
@@ -4896,7 +4908,7 @@ iCP:
         Let Opcode = X3 Or Y7 Or Z6
     'ERROR: Wrong parameters for Z80 instruction
     Else: GoTo InvalidParams: End If
-    GoTo Output
+    GoTo Output8
     
 iCPD:
     '..................................................................................
@@ -4925,14 +4937,14 @@ iCPIR:
 iCPL:
     'Compliment: Flip the bits of the Accumulator _
      ..................................................................................
-    If Z80_TestParams() Then Let Opcode = Y5 Or Z7: GoTo Output
+    If Z80_TestParams() Then Let Opcode = Y5 Or Z7: GoTo Output8
     'ERROR: Wrong parameters for Z80 instruction
     GoTo InvalidParams
     
 iDAA:
     'Decimal Adjust Accumulator: _
      ..................................................................................
-    If Z80_TestParams() Then Let Opcode = Y4 Or Z7: GoTo Output
+    If Z80_TestParams() Then Let Opcode = Y4 Or Z7: GoTo Output8
     'ERROR: Wrong parameters for Z80 instruction
     GoTo InvalidParams
 
@@ -4947,12 +4959,12 @@ iDEC:
         Let Opcode = OpcodeY_Register(Z80Param1.Mask) Or Z5
     'ERROR: Wrong parameters for Z80 instruction
     Else: GoTo InvalidParams: End If
-    GoTo Output
+    GoTo Output8
     
 iDI:
     'Disable Interrupts: _
      ..................................................................................
-    If Z80_TestParams() Then Let Opcode = X3 Or Y6 Or Z3: GoTo Output
+    If Z80_TestParams() Then Let Opcode = X3 Or Y6 Or Z3: GoTo Output8
     'ERROR: Wrong parameters for Z80 instruction
     GoTo InvalidParams
     
@@ -4962,7 +4974,7 @@ iDJNZ:
     If Z80_TestParams(MASK_VAL) Then
         Let Opcode = Y2
         Let Value = 0 'TODO: Address translation
-        GoTo Output
+        GoTo Output8
     End If
     'ERROR: Wrong parameters for Z80 instruction
     GoTo InvalidParams
@@ -4970,7 +4982,7 @@ iDJNZ:
 iEI:
     'Enable Interrupts: _
      ..................................................................................
-    If Z80_TestParams() Then Let Opcode = X3 Or Y7 Or Z3: GoTo Output
+    If Z80_TestParams() Then Let Opcode = X3 Or Y7 Or Z3: GoTo Output8
     'ERROR: Wrong parameters for Z80 instruction
     GoTo InvalidParams
     
@@ -4988,19 +5000,19 @@ iEX:
         Let Opcode = X3 Or Y5 Or Z3
     'ERROR: Wrong parameters for Z80 instruction
     Else: GoTo InvalidParams: End If
-    GoTo Output
+    GoTo Output8
     
 iEXX:
     'Exchange All: _
      ..................................................................................
-    If Z80_TestParams() Then Let Opcode = X3 Or Q1 Or P1 Or Z1: GoTo Output
+    If Z80_TestParams() Then Let Opcode = X3 Or Q1 Or P1 Or Z1: GoTo Output8
     'ERROR: Wrong parameters for Z80 instruction
     GoTo InvalidParams
 
 iHALT:
     'Halt: Stop the processor and wait for interrupts _
      ..................................................................................
-    If Z80_TestParams() Then Let Opcode = X1 Or Y6 Or Z6: GoTo Output
+    If Z80_TestParams() Then Let Opcode = X1 Or Y6 Or Z6: GoTo Output8
     'ERROR: Wrong parameters for Z80 instruction
     GoTo InvalidParams
         
@@ -5021,7 +5033,7 @@ iIM:
         End If
     'ERROR: Wrong parameters for Z80 instruction
     Else: GoTo InvalidParams: End If
-    GoTo Output
+    GoTo Output8
 
 iIN:
     'Read from port: _
@@ -5037,7 +5049,7 @@ iIN:
         Let Opcode = X1 Or Y6: GoTo OutputED
     'ERROR: Wrong parameters for Z80 instruction
     Else: GoTo InvalidParams: End If
-    GoTo Output
+    GoTo Output8
     
 iINC:
     'Increment: _
@@ -5050,7 +5062,7 @@ iINC:
         Let Opcode = OpcodeY_Register(Z80Param1.Mask) Or Z4
     'ERROR: Wrong parameters for Z80 instruction
     Else: GoTo InvalidParams: End If
-    GoTo Output
+    GoTo Output8
     
 iIND:
     '..................................................................................
@@ -5090,7 +5102,7 @@ iJP:
         Let Opcode = X3 Or Z3: GoTo Output16
     'ERROR: Wrong parameters for Z80 instruction
     Else: GoTo InvalidParams: End If
-    GoTo Output
+    GoTo Output8
     
 iJR:
     'Jump Relative: _
@@ -5105,7 +5117,7 @@ iJR:
         Let Value = 0 'TODO: Address translation
     'ERROR: Wrong parameters for Z80 instruction
     Else: GoTo InvalidParams: End If
-    GoTo Output
+    GoTo Output8
     
 iLD:
     'The Mother-Load: _
@@ -5192,7 +5204,7 @@ iLD:
         Let Opcode = X1 Or Y3 Or Z7: GoTo OutputED
     'ERROR: Wrong parameters for Z80 instruction
     Else: GoTo InvalidParams: End If
-    GoTo Output
+    GoTo Output8
     
 iLDD:
     '..................................................................................
@@ -5229,7 +5241,7 @@ iNOP:
     'No Operation: _
      ..................................................................................
     '`NOP` - Opcode is 0
-    If Z80_TestParams() Then: Let Opcode = 0: GoTo Output
+    If Z80_TestParams() Then: Let Opcode = 0: GoTo Output8
     'ERROR: Wrong parameters for Z80 instruction
     GoTo InvalidParams
     
@@ -5244,7 +5256,7 @@ iOR:
         Let Opcode = X3 Or Y6 Or Z6
     'ERROR: Wrong parameters for Z80 instruction
     Else: GoTo InvalidParams: End If
-    GoTo Output
+    GoTo Output8
     
 iOUT:
     'Write to port: _
@@ -5260,7 +5272,7 @@ iOUT:
         Let Opcode = X1 Or Y6 Or Z1: GoTo OutputED
     'ERROR: Wrong parameters for Z80 instruction
     Else: GoTo InvalidParams: End If
-    GoTo Output
+    GoTo Output8
     
 iOUTD:
     '..................................................................................
@@ -5294,7 +5306,7 @@ iPOP:
         Let Opcode = X3 Or OpcodeP_RegisterPair(Z80Param1.Token) Or Z1
     'ERROR: Wrong parameters for Z80 instruction
     Else: GoTo InvalidParams: End If
-    GoTo Output
+    GoTo Output8
     
 iPUSH:
     'Push a register on to the stack: _
@@ -5304,7 +5316,7 @@ iPUSH:
         Let Opcode = X3 Or OpcodeP_RegisterPair(Z80Param1.Token) Or Z5
     'ERROR: Wrong parameters for Z80 instruction
     Else: GoTo InvalidParams: End If
-    GoTo Output
+    GoTo Output8
     
 iRES:
     'Reset a bit: _
@@ -5331,7 +5343,7 @@ iRET:
         Let Opcode = X3 Or Q1 Or Z1
     'ERROR: Wrong parameters for Z80 instruction
     Else: GoTo InvalidParams: End If
-    GoTo Output
+    GoTo Output8
 
 iRETI:
     'Return from Interrupt: _
@@ -5349,7 +5361,7 @@ iRETN:
     
 iRLA:
     '..................................................................................
-    If Z80_TestParams() Then Let Opcode = Y2 Or Z7: GoTo Output
+    If Z80_TestParams() Then Let Opcode = Y2 Or Z7: GoTo Output8
     'ERROR: Wrong parameters for Z80 instruction
     GoTo InvalidParams
     
@@ -5368,7 +5380,7 @@ iRL:
 
 iRLCA:
     '..................................................................................
-    If Z80_TestParams() Then Let Opcode = Z7: GoTo Output
+    If Z80_TestParams() Then Let Opcode = Z7: GoTo Output8
     'ERROR: Wrong parameters for Z80 instruction
     GoTo InvalidParams
     
@@ -5393,7 +5405,7 @@ iRLD:
     
 iRRA:
     '..................................................................................
-    If Z80_TestParams() Then Let Opcode = Y3 Or Z7: GoTo Output
+    If Z80_TestParams() Then Let Opcode = Y3 Or Z7: GoTo Output8
     'ERROR: Wrong parameters for Z80 instruction
     GoTo InvalidParams
     
@@ -5412,7 +5424,7 @@ iRR:
 
 iRRCA:
     '..................................................................................
-    If Z80_TestParams() Then Let Opcode = Y1 Or Z7: GoTo Output
+    If Z80_TestParams() Then Let Opcode = Y1 Or Z7: GoTo Output8
     'ERROR: Wrong parameters for Z80 instruction
     GoTo InvalidParams
 
@@ -5441,10 +5453,12 @@ iRST:
     '`RST $00|$08|$10|$18|$20|$28|$30|$38`
     If Z80_TestParams(MASK_VAL) Then
         'TODO: Need to validate the number is in range at some point in the chain
-        Let Opcode = X3 Or OpcodeY_RST(Z80Param1.Value) Or Z7
+        Let Opcode = X3 Or OpcodeY_RST(Value) Or Z7
+        'The Value is baked into the Opcode, so discard it and don't write a separate byte!
+        Let Value = -1
     'ERROR: Wrong parameters for Z80 instruction
     Else: GoTo InvalidParams: End If
-    GoTo Output
+    GoTo Output8
     
 iSBC:
     '..................................................................................
@@ -5459,11 +5473,11 @@ iSBC:
         Let Opcode = X1 Or OpcodeP_RegisterPair(Z80Param2.Token) Or Z2: GoTo OutputED
     'ERROR: Wrong parameters for Z80 instruction
     Else: GoTo InvalidParams: End If
-    GoTo Output
+    GoTo Output8
 
 iSCF:
     '..................................................................................
-    If Z80_TestParams() Then Let Opcode = Y6 Or Z7: GoTo Output
+    If Z80_TestParams() Then Let Opcode = Y6 Or Z7: GoTo Output8
     'ERROR: Wrong parameters for Z80 instruction
     GoTo InvalidParams
     
@@ -5544,7 +5558,7 @@ iSUB:
         Let Opcode = X3 Or Y2 Or Z6
     'ERROR: Wrong parameters for Z80 instruction
     Else: GoTo InvalidParams: End If
-    GoTo Output
+    GoTo Output8
     
 iXOR:
     'Bitwise XOR: _
@@ -5561,9 +5575,11 @@ iXOR:
     '----------------------------------------------------------------------------------
     'Write the assembled bytes to the Chunk
     '----------------------------------------------------------------------------------
-Output:
+Output8:
     '..................................................................................
     'TODO: Validate 8-bit value?
+    
+'    If Chunks(Chunk).LabelName = "::interrupts:interruptHandler" Then Stop
     
     Let Bytes(ByteCount) = Opcode: Let ByteCount = ByteCount + 1
     Call api_RtlMoveMemory(LogPtr + 20, StrPtr(Cache_HexStr8(Opcode)), 4)
@@ -5584,12 +5600,13 @@ Output16:
     Let Bytes(ByteCount) = Opcode: Let ByteCount = ByteCount + 1
     Call api_RtlMoveMemory(LogPtr + 20, StrPtr(Cache_HexStr8(Opcode)), 4)
     
-    If Value <> -1 Then
-        Let Bytes(ByteCount) = (Value And &HFF&): Let ByteCount = ByteCount + 1
-        Call api_RtlMoveMemory(LogPtr + 38, StrPtr(Cache_HexStr8(Value And &HFF&)), 4)
-        Let Bytes(ByteCount) = ((Value \ &H100&) And &HFF&): Let ByteCount = ByteCount + 1
-        Call api_RtlMoveMemory(LogPtr + 44, StrPtr(Cache_HexStr8((Value \ &H100&) And &HFF&)), 4)
-    End If
+    'When Labels are indefinite they will have a Value of -1
+'    If Value = -1 Then Stop
+    
+    Let Bytes(ByteCount) = (Value And &HFF&): Let ByteCount = ByteCount + 1
+    Call api_RtlMoveMemory(LogPtr + 38, StrPtr(Cache_HexStr8(Value And &HFF&)), 4)
+    Let Bytes(ByteCount) = ((Value \ &H100&) And &HFF&): Let ByteCount = ByteCount + 1
+    Call api_RtlMoveMemory(LogPtr + 44, StrPtr(Cache_HexStr8((Value \ &H100&) And &HFF&)), 4)
     
     GoTo AddBytes
     
@@ -5663,7 +5680,7 @@ AddBytes:
         
         'If the Chunk data hasn't started yet, make sure we're 1-based
         Dim Index As Long
-        If .Size = 0 Then Let Index = 1 Else Let Index = .Size
+        If .Size = 0 Then Let Index = 1 Else Let Index = .Size + 1
         
         'Write the current Chunk address on the disassembly log
         Call api_RtlMoveMemory(LogPtr, StrPtr(Cache_HexStr16(.Size)), 8)
@@ -6249,10 +6266,10 @@ Private Function ROM_Layout( _
     ReDim ROM(0 To ROMSize - 1) As Byte
     
     'Log the Sections defined
-    Dim i As Long
-    For i = 1 To SectionCount
-        Call RaiseMessage(OZ80_LOG_INFO, "Section " & Sections(i).SectionName & ": " & Format$(Sections(i).TotalSize, "#,0") & " bytes")
-    Next i
+    Dim s As Long, c As Long
+    For s = 1 To SectionCount
+        Call RaiseMessage(OZ80_LOG_INFO, "Section " & Sections(s).SectionName & ": " & Format$(Sections(s).TotalSize, "#,0") & " bytes")
+    Next s
     
     Call RaiseMessage(OZ80_LOG_INFO, "ROM Layout:")
     Call RaiseMessage(OZ80_LOG_INFO, LOG_LINEDOUBLE)
@@ -6314,15 +6331,27 @@ Private Function ROM_Layout( _
      of which Bank is in Slot 0 ($0400-$3FFF). Therefore we have to place these Chunks _
      before other Un/Sectioned code as all data MUST appear within the first 1 KB of _
      the ROM
+    Call RaiseMessage(OZ80_LOG_INFO, "---------¦--------¦------------------------------------------------------")
+    
+    For s = 1 To SectionCount
+        'Is this Section Slotless?
+        If Sections(s).Slot = SLOT1KB Then
+            'Walk through the Chunks in this Slot
+            For c = 1 To Sections(s).ChunkCount
+                'Place this Chunk
+                If ROM_AddChunk(Sections(s).Chunks(c)) Then GoTo Finish
+            Next c
+        End If
+    Next s
     
     '----------------------------------------------------------------------------------
     '[5]: Place un-Sectioned Chunks
     '----------------------------------------------------------------------------------
     Call RaiseMessage(OZ80_LOG_INFO, "---------¦--------¦------------------------------------------------------")
     
-    For i = 1 To Sections(0).ChunkCount
-        If ROM_AddChunk(Sections(0).Chunks(i)) Then GoTo Finish
-    Next i
+    For c = 1 To Sections(0).ChunkCount
+        If ROM_AddChunk(Sections(0).Chunks(c)) Then GoTo Finish
+    Next c
     
     '----------------------------------------------------------------------------------
     '[6]: Place un-paged Sections
@@ -6333,15 +6362,14 @@ Private Function ROM_Layout( _
     Call RaiseMessage(OZ80_LOG_INFO, "---------¦--------¦------------------------------------------------------")
     
     'Go through the defined Sections looking for Sections with no Slots assigned
-    Dim s As Long
     For s = 1 To SectionCount
         'Is this Section Slotless?
         If Sections(s).Slot = 0 Then
             'Walk through the Chunks in this Slot
-            For i = 1 To Sections(s).ChunkCount
+            For c = 1 To Sections(s).ChunkCount
                 'Place this Chunk
-                If ROM_AddChunk(Sections(s).Chunks(i)) Then GoTo Finish
-            Next i
+                If ROM_AddChunk(Sections(s).Chunks(c)) Then GoTo Finish
+            Next c
         End If
     Next s
     
@@ -6352,13 +6380,13 @@ Private Function ROM_Layout( _
     Call RaiseMessage(OZ80_LOG_INFO, "---------¦--------¦------------------------------------------------------")
     
     For s = 1 To SectionCount
-        'Is this Section Slotless?
-        If Sections(s).Slot <> 0 Then
-            'Walk through the Chunks in this Slot
-            For i = 1 To Sections(s).ChunkCount
+        'Is this Section assigned to a Slot pattern other than 'SEGA 1 KB'?
+        If (Sections(s).Slot And (SLOT0 Or SLOT1 Or SLOT2)) <> 0 Then
+            'Walk through the Chunks in this Section
+            For c = 1 To Sections(s).ChunkCount
                 'Place this Chunk
-                If ROM_AddChunk(Sections(s).Chunks(i)) Then GoTo Finish
-            Next i
+                If ROM_AddChunk(Sections(s).Chunks(c)) Then GoTo Finish
+            Next c
         End If
     Next s
     
@@ -6537,14 +6565,13 @@ AddLink:
     
     'TODO: Calculate Bank and apply to Chunk?
     
+    If ChunkEnd > ROMUsed Then Let ROMUsed = ChunkEnd
     'Is this going to fit in the ROM?
-    If ChunkEnd > ROMUsed Then
-        'This will be the new upper-limit
-        Let ROMUsed = ChunkEnd
+    If ROMUsed >= ROMSize Then
         'Keep doubling the ROM size until the contents fits
-        Do While ROMUsed > ROMSize: Let ROMSize = ROMSize * 2: Loop
+        Do While ROMUsed >= ROMSize: Let ROMSize = ROMSize * 2: Loop
         'TODO: Check for ROM too big (hard limit -- 32 MB -- and user limit)
-        ReDim ROM(0 To ROMSize - 1) As Byte
+        ReDim Preserve ROM(0 To ROMSize - 1) As Byte
     End If
     
     'Copy the Chunk bytes into the ROM
@@ -6553,7 +6580,7 @@ AddLink:
              SourcePointer:=VarPtr(Chunks(ChunkRef).Data(1)), _
                     Length:=ChunkSize _
     )
-    
+        
     Call RaiseMessage(OZ80_LOG_INFO, _
         "${$}:{$} | {$} | {$}", _
         Cache_HexStr8((ChunkAddr And &HFF0000) \ &H10000), _

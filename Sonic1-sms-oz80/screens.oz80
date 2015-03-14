@@ -3,7 +3,7 @@
    for MaSS1VE: The Master System Sonic 1 Visual Editor <github.com/Kroc/MaSS1VE>
    ================================================================================= ``
 
-PROC    :_LABEL_C52_106                                                         `$0C52
+PROC    :_LABEL_C52_106                         SECTION ::screens               `$0C52
         `==============================================================================
         `map screen?
 PARAMS  IY;vars         HELP ""Address of the common variables (used throughout)
@@ -136,7 +136,7 @@ PARAMS  IY;vars         HELP ""Address of the common variables (used throughout)
 	call	:_b50
 
 	`play the map screen music
-._3	ld	A;music         #index_music_mapScreen
+._3	ld	A;music         7               `#index_music_mapScreen
 	rst	:playMusic
 	
 ._4	call	:_LABEL_E86_110
@@ -240,7 +240,7 @@ PARAMS  IY;vars         HELP ""Address of the common variables (used throughout)
 
         }
 
-PROC    :_0dd9                                                                  `$0DD9
+PROC    :_0dd9                                  SECTION ::screens               `$0DD9
         `==============================================================================
         `referenced by table at $1201
 PARAMS  IY;vars         HELP ""Address of the common variables (used throughout)
@@ -282,7 +282,7 @@ PARAMS  IY;vars         HELP ""Address of the common variables (used throughout)
 	jp	:_LABEL_C52_106._
 }
 
-PROC    :_0e24                                                                  `$0E24
+PROC    :_0e24                                  SECTION ::screens               `$0E24
         `==============================================================================
         `referenced by table at $1201
 PARAMS  IY;vars         HELP ""Address of the common variables (used throughout)
@@ -307,7 +307,7 @@ PARAMS  IY;vars         HELP ""Address of the common variables (used throughout)
 	jp	:_LABEL_C52_106._
 }
 
-PROC    :_0e4b                                                                  `$04EB
+PROC    :_0e4b                                  SECTION ::screens               `$04EB
         `==============================================================================
         `referenced by table at $1201
 PARAMS  IY;vars         HELP ""Address of the common variables (used throughout)
@@ -332,22 +332,22 @@ PARAMS  IY;vars         HELP ""Address of the common variables (used throughout)
 	jp	:_LABEL_C52_106._
 }
 
-TABLE   :_0e72
+TABLE   :_0e72                                  SECTION ::screens               `$0E72
 {
         WORD    :_1129  BYTE $04, $01
         WORD    :_113b  BYTE $04, $00
 }
-TABLE   :_0e7a
+TABLE   :_0e7a                                  SECTION ::screens               `$0E7A
 {
         WORD    :_114d  BYTE $04, $01
         WORD    :_115f  BYTE $04, $00
 }
-TABLE   :_0e82
+TABLE   :_0e82                                  SECTION ::screens               `$0E82
 {
         WORD    :_1183  BYTE $04, $00
 }
 
-PROC    :_LABEL_E86_110                                                         `$0E86
+PROC    :_LABEL_E86_110                         SECTION ::screens               `$0E86
         `==============================================================================
 PARAMS  IY;vars         HELP ""Address of the common variables (used throughout)
         $.TEMP1
@@ -402,7 +402,7 @@ PARAMS  IY;vars         HELP ""Address of the common variables (used throughout)
 	ret
 }
 
-PROC    :_0edd                                                                  `$0EDD
+PROC    :_0edd                                  SECTION ::screens               `$0EDD
         `==============================================================================
         `something to do with constructing the sprites on the map screen?
         
@@ -451,12 +451,12 @@ PARAMS  bc
 	ret
 }
 
-TABLE   :S1_MapScreen1_Palette			                                `$0F0E
+TABLE   :S1_MapScreen1_Palette			SECTION ::screens               `$0F0E
 {
         BYTE    $35 $01 $06 $0B $04 $08 $0C $3D $1F $39 $2A $14 $25 $2B $00 $3F
         BYTE    $2B $20 $35 $1B $16 $2A $00 $3F $03 $0F $01 $15 $00 $3C $00 $3F
 }
-TABLE   :S1_MapScreen2_Palette			                                `$0F2E
+TABLE   :S1_MapScreen2_Palette			SECTION ::screens               `$0F2E
 {
         BYTE    $25 $01 $06 $0B $04 $18 $2C $35 $2B $10 $2A $14 $15 $1F $00 $3F
         BYTE    $2B $20 $35 $1B $16 $2A $00 $3F $03 $0F $01 $15 $07 $2D $00 $3F
@@ -464,7 +464,7 @@ TABLE   :S1_MapScreen2_Palette			                                `$0F2E
 
 `--------------------------------------------------------------------------------------
 
-TABLE   :_f4e                                                                   `0F4E
+TABLE   :_f4e                                   SECTION ::screens               `0F4E
 {
         WORD    :_0f84  BYTE $00		`Green Hill Act 1
         WORD    :_0f93  BYTE $00		`Green Hill Act 2
@@ -488,44 +488,44 @@ TABLE   :_f4e                                                                   
 
 `--------------------------------------------------------------------------------------
 
-TABLE   :_0f84					`Green Hill Act 1               `$0F84
-{
+TABLE   :_0f84					SECTION ::screens               `$0F84
+{       `Green Hill Act 1
         WORD    :_10bd  BYTE $50, $68, $1E
         WORD    :_10ab  BYTE $50, $68, $1E
         WORD    :_0f84  BYTE $00, $00, $00
 }
-TABLE   :_0f93					`Green Hill Act 2               `$0F93
-{
+TABLE   :_0f93					SECTION ::screens               `$0F93
+{       `Green Hill Act 2
         WORD    :_10cf  BYTE $50, $60, $1E
         WORD    :_10ab  BYTE $50, $60, $1E
         WORD    :_0f93  BYTE $00, $00, $00
 }
-TABLE   :_0fa2					`Bridge Act 1                   `$0FA2
-{
+TABLE   :_0fa2					SECTION ::screens               `$0FA2
+{       `Bridge Act 1
         WORD    :_10e1  BYTE $60, $60, $1E
         WORD    :_10ab  BYTE $60, $60, $1E
         WORD    :_0fa2  BYTE $00, $00, $00
 }
-TABLE   :_0fb1					`Bridge Act 2                   `$0FB1
-{
+TABLE   :_0fb1					SECTION ::screens               `$0FB1
+{       `Bridge Act 2
         WORD    :_10f3  BYTE $80, $50, $1E
         WORD    :_10ab  BYTE $80, $50, $1E
         WORD    :_0fb1  BYTE $00, $00, $00
 }
-TABLE   :_0fc0					`Jungle Act 1                   `$0FC0
-{
+TABLE   :_0fc0					SECTION ::screens               `$0FC0
+{       `Jungle Act 1
         WORD    :_1105  BYTE $70, $48, $1E
         WORD    :_10ab  BYTE $70, $48, $1E
         WORD    :_0fc0  BYTE $00, $00, $00
 }        
-TABLE   :_0fcf					`Jungle Act 2                   `$0FCF
-{
+TABLE   :_0fcf					SECTION ::screens               `$0FCF
+{       `Jungle Act 2
         WORD    :_1117  BYTE $70, $38, $1E
         WORD    :_10ab  BYTE $70, $38, $1E
         WORD    :_0fcf  BYTE $00, $00, $00
 }
-TABLE   :_0fde					`Green Hill Act 3               `$0FDE
-{
+TABLE   :_0fde					SECTION ::screens               `$0FDE
+{       `Green Hill Act 3
         WORD    :_1183  BYTE $58, $58, $08
         WORD    :_1183  BYTE $58, $58, $08
         WORD    :_1183  BYTE $58, $56, $08
@@ -536,38 +536,38 @@ TABLE   :_0fde					`Green Hill Act 3               `$0FDE
         WORD    :_1183  BYTE $58, $56, $08
         WORD    :_0fde  BYTE $00, $00, $00
 }
-TABLE   :_100b					`Labyrinth Act 1                `$100B
-{
+TABLE   :_100b					SECTION ::screens               `$100B
+{       `Labyrinth Act 1
         WORD    :_1195  BYTE $58, $68, $1E
         WORD    :_10ab  BYTE $58, $68, $1E
         WORD    :_100b  BYTE $00, $00, $00
 }
-TABLE   :_101a					`Labyrinth Act 2                `$101A
-{
+TABLE   :_101a					SECTION ::screens               `$101A
+{       `Labyrinth Act 2
         WORD    :_11a7  BYTE $68, $78, $1E
         WORD    :_10ab  BYTE $68, $78, $1E
         WORD    :_101a  BYTE $00, $00, $00
 }
-TABLE   :_1029					`Scrap Brain Act 1              `$1029
-{
+TABLE   :_1029					SECTION ::screens               `$1029
+{       `Scrap Brain Act 1
         WORD    :_11b9  BYTE $70, $58, $1E
         WORD    :_10ab  BYTE $70, $58, $1E
         WORD    :_1029  BYTE $00, $00, $00
 }
-TABLE   :_1038					`Scrap Brain Act 2              `$1038
-{
+TABLE   :_1038					SECTION ::screens               `$1038
+{       `Scrap Brain Act 2
         WORD    :_11cb  BYTE $78, $48, $1E
         WORD    :_10ab  BYTE $78, $48, $1E
         WORD    :_1038  BYTE $00, $00, $00
 }
-TABLE   :_1047					`Sky Base Act 1                 `$1047
-{
+TABLE   :_1047					SECTION ::screens               `$1047
+{       `Sky Base Act 1
         WORD    :_11dd  BYTE $68, $28, $1E
         WORD    :_10ab  BYTE $68, $28, $1E
         WORD    :_1047  BYTE $00, $00, $00
 }
-TABLE   :_1056					`Sky Base Act 2 / 3             `$1056
-{
+TABLE   :_1056					SECTION ::screens               `$1056
+{       `Sky Base Act 2 / 3
         WORD    :_11ef  BYTE $80, $28, $1E
         WORD    :_11ef  BYTE $80, $26, $08
         WORD    :_11ef  BYTE $80, $26, $08
@@ -577,23 +577,23 @@ TABLE   :_1056					`Sky Base Act 2 / 3             `$1056
         WORD    :_11ef  BYTE $80, $26, $08
         WORD    :_1056  BYTE $00, $00, $00
 }
-TABLE   :_107e					`Bridge Act 3                   `$107E
-{
+TABLE   :_107e					SECTION ::screens               `$107E
+{       `Bridge Act 3
         WORD    :_1183  BYTE $80, $48, $08
         WORD    :_107e  BYTE $00, $00, $00
 }
-TABLE   :_1088					`Jungle Act 3                   `$1088
-{
+TABLE   :_1088					SECTION ::screens               `$1088
+{       `Jungle Act 3
         WORD    :_1183  BYTE $78, $30, $08
         WORD    :_1088  BYTE $00, $00, $00
 }
-TABLE   :_1092					`Labyrinth Act 3                `$1092
-{
+TABLE   :_1092					SECTION ::screens               `$1092
+{       `Labyrinth Act 3
         WORD    :_1183  BYTE $70, $60, $08
         WORD    :_1092  BYTE $00, $00, $00
 }
-TABLE   :_109c					`Scrap Brain Act 3              `$109C
-{
+TABLE   :_109c					SECTION ::screens               `$109C
+{       `Scrap Brain Act 3
         WORD    :_1129  BYTE $68, $40, $08
         WORD    :_113b  BYTE $68, $40, $08
         WORD    :_109c  BYTE $00, $00, $00
@@ -601,117 +601,118 @@ TABLE   :_109c					`Scrap Brain Act 3              `$109C
 
 `--------------------------------------------------------------------------------------
 
-TABLE   :_10ab					`blank frame (to make it blink) `$10AB
+`blank frame (to make it blink)
+TABLE   :_10ab					SECTION ::screens               `$10AB
 {       `why not self-terminating,
          `rather than the full block?
         BYTE    $FF, $FF, $FF, $FF, $FF, $FF
         BYTE    $FF, $FF, $FF, $FF, $FF, $FF
         BYTE    $FF, $FF, $FF, $FF, $FF, $FF
 }
-TABLE   :_10bd					`Green Hill Act 1               `$10BD
-{
+TABLE   :_10bd					SECTION ::screens               `$10BD
+{       `Green Hill Act 1
         BYTE    $00, $02, $FF, $FF, $FF, $FF
         BYTE    $FE, $22, $24, $26, $28, $FF
         BYTE    $FF, $FF, $FF, $FF, $FF, $FF
 }
-TABLE   :_10cf					`Green Hill Act 2               `$10CF
-{
+TABLE   :_10cf					SECTION ::screens               `$10CF
+{       `Green Hill Act 2
         BYTE    $04, $06, $08, $FF, $FF, $FF
         BYTE    $FF, $FF, $FF, $FF, $FF, $FF
         BYTE    $FF, $FF, $FF, $FF, $FF, $FF
 }
-TABLE   :_10e1					`Bridge Act 1                   `$10E1
-{
+TABLE   :_10e1					SECTION ::screens               `$10E1
+{`Bridge Act 1
         BYTE    $40, $42, $44, $46, $48, $FF
         BYTE    $FF, $FF, $FF, $FF, $FF, $FF
         BYTE    $FF, $FF, $FF, $FF, $FF, $FF
 }
-TABLE   :_10f3					`Bridge Act 2                   `$10F3
-{
+TABLE   :_10f3					SECTION ::screens               `$10F3
+{       `Bridge Act 2
         BYTE    $4A, $4C, $FF, $FF, $FF, $FF
         BYTE    $6A, $6C, $FF, $FF, $FF, $FF
         BYTE    $FF, $FF, $FF, $FF, $FF, $FF
 }
-TABLE   :_1105					`Jungle Act 1                   `$1105
-{
+TABLE   :_1105					SECTION ::screens               `$1105
+{       `Jungle Act 1
         BYTE    $60, $62, $64, $66, $FF, $FF
         BYTE    $FF, $FF, $FF, $FF, $FF, $FF
         BYTE    $FF, $FF, $FF, $FF, $FF, $FF
 }
-TABLE   :_1117					`Jungle Act 2                   `$1117
-{
+TABLE   :_1117					SECTION ::screens               `$1117
+{       `Jungle Act 2
         BYTE    $FE, $FE, $0E, $FF, $FF, $FF
         BYTE    $2A, $2C, $2E, $FF, $FF, $FF
         BYTE    $FF, $FF, $FF, $FF, $FF, $FF
 }
-TABLE   :_1129					`Scrap Brain Act 3 - step 1     `$1129
-{
+TABLE   :_1129					SECTION ::screens               `$1129
+{       `Scrap Brain Act 3 - step 1
         BYTE    $10, $12, $14, $16, $FF, $FF
         BYTE    $30, $32, $34, $36, $FF, $FF
         BYTE    $FF, $FF, $FF, $FF, $FF, $FF
 }
-TABLE   :_113b					`Scrap Brain Act 3 - step 2     `$113B
-{
+TABLE   :_113b					SECTION ::screens               `$113B
+{       `Scrap Brain Act 3 - step 2
         BYTE    $10, $12, $14, $18, $FF, $FF
         BYTE    $30, $32, $34, $38, $FF, $FF
         BYTE    $FF, $FF, $FF, $FF, $FF, $FF
 }
-TABLE   :_114d					`Robotnik flying right frame 1  `$114D
-{
+TABLE   :_114d					SECTION ::screens               `$114D
+{       `Robotnik flying right frame 1
         BYTE    $50, $54, $56, $58, $FF, $FF	`referenced by table at `_0e7a`
         BYTE    $70, $74, $76, $78, $FF, $FF
         BYTE    $FF, $FF, $FF, $FF, $FF, $FF
 }
-TABLE   :_115f					`Robotnik flying right frame 2  `$115F
-{
+TABLE   :_115f					SECTION ::screens               `$115F
+{       `Robotnik flying right frame 2
         BYTE    $52, $54, $56, $58, $FF, $FF	`referenced by table at `_0e7a`
         BYTE    $72, $74, $76, $78, $FF, $FF
         BYTE    $FF, $FF, $FF, $FF, $FF, $FF
 }
-TABLE   :_1171					`unused -- same as _114d        `$1171
-{
+TABLE   :_1171					SECTION ::screens               `$1171
+{       `unused -- same as _114d
         BYTE    $50, $54, $56, $58, $FF, $FF
         BYTE    $70, $74, $76, $78, $FF, $FF
         BYTE    $FF, $FF, $FF, $FF, $FF, $FF
 }
-TABLE   :_1183					`Green Hill, Bridge, Jungle     `$1183
-{                                                `& Labyrinth Act 3
+TABLE   :_1183					SECTION ::screens               `$1183
+{       `Green Hill, Bridge, Jungle & Labyrinth Act 3
         BYTE    $5A, $5C, $5E, $FF, $FF, $FF
         BYTE    $7A, $7C, $7E, $FF, $FF, $FF
         BYTE    $FF, $FF, $FF, $FF, $FF, $FF
 }
-TABLE   :_1195					`Labyrinth Act 1                `$1195
-{
+TABLE   :_1195					SECTION ::screens               `$1195
+{       `Labyrinth Act 1
         BYTE    $00, $02, $FF, $FF, $FF, $FF
         BYTE    $20, $22, $04, $FF, $FF, $FF
         BYTE    $FF, $FF, $FF, $FF, $FF, $FF
 }
-TABLE   :_11a7					`Labyrinth Act 2                `$11A7
-{
+TABLE   :_11a7					SECTION ::screens               `$11A7
+{       `Labyrinth Act 2
         BYTE    $0A, $0C, $0E, $FF, $FF, $FF
         BYTE    $2A, $2C, $2E, $FF, $FF, $FF
         BYTE    $FF, $FF, $FF, $FF, $FF, $FF
 }
-TABLE   :_11b9					`Scrap Brain Act 1              `$11B9
-{
+TABLE   :_11b9					SECTION ::screens               `$11B9
+{       `Scrap Brain Act 1
         BYTE    $68, $6A, $6C, $FF, $FF, $FF
         BYTE    $FE, $FE, $6E, $FF, $FF, $FF
         BYTE    $FF, $FF, $FF, $FF, $FF, $FF
 }
-TABLE   :_11cb					`Scrap Brain Act 2              `$11CB
-{
+TABLE   :_11cb					SECTION ::screens              `$11CB
+{       `Scrap Brain Act 2
         BYTE    $06, $08, $4A, $4C, $FF, $FF
         BYTE    $FE, $FE, $4E, $3E, $FF, $FF
         BYTE    $FE, $40, $42, $44, $FF, $FF
 }
-TABLE   :_11dd					`Sky Base Act 1                 `$11DD
-{
+TABLE   :_11dd					SECTION ::screens               `$11DD
+{       `Sky Base Act 1
         BYTE    $60, $62, $64, $66, $FF, $FF
         BYTE    $FF, $FF, $FF, $FF, $FF, $FF
         BYTE    $FF, $FF, $FF, $FF, $FF, $FF
 }
-TABLE   :_11ef					`Sky Base Act 2 / 3             `$11EF
-{
+TABLE   :_11ef					SECTION ::screens               `$11EF
+{       `Sky Base Act 2 / 3
         BYTE    $46, $48, $26, $28, $FF, $FF
         BYTE    $1A, $1C, $3A, $3C, $FF, $FF
         BYTE    $FF, $FF, $FF, $FF, $FF, $FF
@@ -720,7 +721,7 @@ TABLE   :_11ef					`Sky Base Act 2 / 3             `$11EF
 `--------------------------------------------------------------------------------------
 `list of functions that handle extra animations on the map screen
 
-TABLE   :_1201                                                                  `$1201
+TABLE   :_1201                                  SECTION ::screens               `$1201
 {
         WORD    :_0dd9
         WORD    :_0e24
@@ -728,7 +729,7 @@ TABLE   :_1201                                                                  
         WORD    :_0dd9
 }
 
-TABLE   :S1_ZoneTitles                                                          `$1209
+TABLE   :S1_ZoneTitles                          SECTION ::screens               `$1209
         `==============================================================================
 {        
         WORD    .GreenHill			`Green Hill Act 1
@@ -764,7 +765,7 @@ TABLE   :S1_ZoneTitles                                                          
         BYTE    $10 $13 $AE $6E $DE $EB $1F $1E $AE $3E $EB $EB $EB $EB $FF
 }
 
-PROC    :titleScreen                                                            `$1287
+PROC    :titleScreen                            SECTION ::screens               `$1287
         `==============================================================================
 PARAMS  IY;vars         HELP ""Address of the common variables (used throughout)
 {        
@@ -943,7 +944,7 @@ PARAMS  IY;vars         HELP ""Address of the common variables (used throughout)
         BYTE    $00 $10 $34 $38 $06 $1B $2F $3F $3D $3E $01 $03 $0B $0F $00 $3F
 }
 
-PROC    :_1401                                                                  `$1401
+PROC    :_1401                                  SECTION ::screens               `$1401
         `==============================================================================
         `Act Complete screen?
 PARAMS  IY;vars         HELP ""Address of the common variables (used throughout)
@@ -1098,7 +1099,7 @@ PARAMS  IY;vars         HELP ""Address of the common variables (used throughout)
         BYTE    $3A $15
 }
 
-PROC    :_155e                                                                  `$155E
+PROC    :_155e                                  SECTION ::screens               `$155E
         `==============================================================================
         `Act Complete screen?
 PARAMS  IY;vars         HELP ""Address of the common variables (used throughout)
@@ -1306,7 +1307,7 @@ PARAMS  IY;vars         HELP ""Address of the common variables (used throughout)
 .exit	ret
 }
 
-PROC    :_16d9                                                                  `$16D9
+PROC    :_16d9                                  SECTION ::screens               `$16D9
         `==============================================================================
 {        
 	ld	b,a
@@ -1346,13 +1347,13 @@ PROC    :_16d9                                                                  
 
 }
 
-TABLE   :_1711                                                                  `$1711
+TABLE   :_1711                                  SECTION ::screens               `$1711
 {
         BYTE $14, $ad, $ae, $ff
         BYTE $15, $bd, $be, $ff
 }
 
-PROC    :_1719                                                                  `$1719
+PROC    :_1719                                  SECTION ::screens               `$1719
         `==============================================================================
 PARAMS  IY;vars         HELP ""Address of the common variables (used throughout)
 {        
@@ -1365,7 +1366,7 @@ PARAMS  IY;vars         HELP ""Address of the common variables (used throughout)
         ret
 }
 
-PROC    :_1726                                                                  `$1726
+PROC    :_1726                                  SECTION ::screens               `$1726
         `==============================================================================
         `called by Act Complete screen?
 PARAMS  IY;vars         HELP ""Address of the common variables (used throughout)
@@ -1376,7 +1377,7 @@ PARAMS  IY;vars         HELP ""Address of the common variables (used throughout)
 	ret
 }
 
-PROC    :_172f                                                                  `$172F
+PROC    :_172f                                  SECTION ::screens               `$172F
         `==============================================================================
         `jumped to from $155E
 {
@@ -1537,7 +1538,7 @@ PROC    :_172f                                                                  
 	ret
 }
 
-PROC    :_1860                                                                  `$1860
+PROC    :_1860                                  SECTION ::screens               `$1860
         `==============================================================================
 PARAMS  IY;vars         HELP ""Address of the common variables (used throughout)
 {        
@@ -1628,66 +1629,66 @@ PARAMS  IY;vars         HELP ""Address of the common variables (used throughout)
 }
 
 `these look like text boxes
-TABLE   :_1907                                                                  `$1907
+TABLE   :_1907                                  SECTION ::screens               `$1907
 {
         BYTE    $07 $09 $DA $DB $DB $DB $DB $DB $DB $DB $DB $DB $DB $DB $DB $DB
         BYTE    $DB $DB $DB $DC $FF
 }
-TABLE   :_191c                                                                  `$191C
+TABLE   :_191c                                  SECTION ::screens               `$191C
 {
         BYTE    $07 $0A $EA $EB $EB $EB $EB $EB $EB $EB $EB $EB $EB $EB $EB $EB
         BYTE    $EB $EB $EB $EC $FF
 }
-TABLE   :_1931                                                                  `$1931
+TABLE   :_1931                                  SECTION ::screens               `$1931
 {
         BYTE    $07 $0B $FB $FC $FC $FC $FC $FC $FC $FC $FC $FC $FC $FC $FC $FC
         BYTE    $FC $FC $FC $FD $FF
 }
-TABLE   :_1946                                                                  `$1946
+TABLE   :_1946                                  SECTION ::screens               `$1946
 {
         BYTE    $11 $0B $DA $DB $DB $DB $DB $DB $DB $DB $DB $DC $FF
 }
-TABLE   :_1953                                                                  `$1953
+TABLE   :_1953                                  SECTION ::screens               `$1953
 {
         BYTE    $11 $0C $EA $EB $EB $EB $EB $EB $EB $EB $EB $EC $FF
 }
-TABLE   :_1960                                                                  `$1960
+TABLE   :_1960                                  SECTION ::screens               `$1960
 {
         BYTE    $11 $0D $EA $EB $EB $FA $EB $EB $EB $EB $EB $EC $FF
 }
-TABLE   :_196d                                                                  `$196D
+TABLE   :_196d                                  SECTION ::screens               `$196D
 {
         BYTE    $11 $0E $FB $FC $FC $FC $FC $FC $FC $FC $FC $FD $FF
 }
-TABLE   :_197a                                                                  `$197A
+TABLE   :_197a                                  SECTION ::screens               `$197A
 {
         BYTE    $14 $0D $EB $FF
 }
 
-TABLE   :_197e					`"CHAOS EMERALD"                `$197E
-{
+TABLE   :_197e					SECTION ::screens               `$197E
+{       `"CHAOS EMERALD"
         BYTE    $08 $0A $36 $47 $34 $61 $70 $EB $44 $50 $44 $62 $34 $43 $37 $FF
 }
-TABLE   :_198e					`"SONIC LEFT"                   `$198E
-{
+TABLE   :_198e					SECTION ::screens               `$198E
+{       `"SONIC LEFT"
         BYTE    $08 $0A $70 $52 $51 $40 $36 $EB $43 $44 $45 $80 $EB $EB $EB $FF
 }
-TABLE   :_199e					`"SPECIAL BONUS"                `$199E
-{
+TABLE   :_199e					SECTION ::screens               `$199E
+{       `"SPECIAL BONUS"
         BYTE    $08 $0A $70 $60 $44 $36 $40 $34 $43 $EB $35 $52 $51 $81 $70 $FF
 }
 
 `unknown:
-TABLE   :_19ae                                                                  `$19AE
+TABLE   :_19ae                                  SECTION ::screens               `$19AE
 {
         BYTE    $02 $00 $00
 }
-TABLE   :_19b1                                                                  `$19B1
+TABLE   :_19b1                                  SECTION ::screens               `$19B1
 {
         BYTE    $00 $50 $00
 }
 
-PROC    :_19b4                                                                  `$19B4
+PROC    :_19b4                                  SECTION ::screens               `$19B4
         `==============================================================================
 {        
 	ld	hl,$.RINGS
@@ -1717,7 +1718,7 @@ PROC    :_19b4                                                                  
 	ret
 }
 
-PROC    :_19df                                                                  `$19DF
+PROC    :_19df                                  SECTION ::screens               `$19DF
         `==============================================================================
 {        
 	ld	hl,[$.TEMP4]
@@ -1756,12 +1757,12 @@ PROC    :_19df                                                                  
 	ret
 }
 
-TABLE   :_1a14                                                                  `$1A14
+TABLE   :_1a14                                  SECTION ::screens               `$1A14
 {
         BYTE    $00, $00, $00, $00
 }
 
-PROC    :_1a18                                                                  `$1A18
+PROC    :_1a18                                  SECTION ::screens               `$1A18
         `==============================================================================
 PARAMS  IY;vars         HELP ""Address of the common variables (used throughout)
 {        
@@ -1845,7 +1846,7 @@ PARAMS  IY;vars         HELP ""Address of the common variables (used throughout)
 	ret
 }
 
-PROC    :_1aca                                                                  `$1ACA
+PROC    :_1aca                                  SECTION ::screens               `$1ACA
         `==============================================================================
 {        
 	`load number of lives into HL
@@ -1889,7 +1890,7 @@ PROC    :_1aca                                                                  
 	ret
 }
 
-PROC    :_1b13                                                                  `$1B13
+PROC    :_1b13                                  SECTION ::screens               `$1B13
         `==============================================================================
 {        
 	ld	a,[hl]
@@ -1940,12 +1941,12 @@ PROC    :_1b13                                                                  
 
 `UNKNOWN
 
-TABLE   :_1b51                                                                  `$1B51
+TABLE   :_1b51                                  SECTION ::screens               `$1B51
 {
         BYTE    $83 $84 $93 $94 $A3 $A4 $B3 $B4 $85 $86 $95 $96 $A5 $A6 $B5 $B6
         BYTE    $87 $88 $97 $98 $A7 $A8 $B7 $B8
 }
-TABLE   :_1b69                                                                  `$1B69
+TABLE   :_1b69                                  SECTION ::screens               `$1B69
 {
         BYTE    $00 $08 $10 $00 $08 $10 $00 $08 $10 $00 $08 $10 $00 $08 $10 $00
         BYTE    $08 $10 $00 $00 $08 $08 $08 $08 $08 $08 $08 $08 $00 $00 $00 $00
@@ -1954,13 +1955,13 @@ TABLE   :_1b69                                                                  
 
 `"Sonic Has Passed" screen palette:
 
-TABLE   :S1_ActComplete_Palette                                                 `$1B8D
+TABLE   :S1_ActComplete_Palette                 SECTION ::screens               `$1B8D
 {
         BYTE    $35 $01 $06 $0B $04 $08 $0C $3D $1F $39 $2A $14 $25 $2B $00 $3F
         BYTE    $35 $20 $35 $1B $16 $2A $00 $3F $01 $03 $3A $06 $0F $00 $00 $00
 }
 
-PROC    :_1bad                                                                  `$1BAD
+PROC    :_1bad                                  SECTION ::screens               `$1BAD
         `==============================================================================
         `Demo playback??
 PARAMS  IY;vars         HELP ""Address of the common variables (used throughout)
@@ -1990,7 +1991,7 @@ PARAMS  IY;vars         HELP ""Address of the common variables (used throughout)
         BYTE    $FF $FF $00
 }
 
-PROC    :_LABEL_1C49_62                                                         `$1C49
+PROC    :_LABEL_1C49_62                         SECTION ::screens               `$1C49
         `==============================================================================
 PARAMS  IY;vars         HELP ""Address of the common variables (used throughout)
 {        
@@ -2079,7 +2080,7 @@ PARAMS  IY;vars         HELP ""Address of the common variables (used throughout)
 	jp	._LABEL_1CBD_120
 }
 	
-PROC    :fillMemoryWithValue                                                    `$1CE8
+PROC    :fillMemoryWithValue                    SECTION ::screens               `$1CE8
         `==============================================================================
 PARAMS	hl;addr	        `memory address
 	b;count	        `number of bytes to fill
@@ -2091,7 +2092,7 @@ PARAMS	hl;addr	        `memory address
 	ret
 }
 
-PROC    :_LABEL_1CED_131                                                        `$1CED
+PROC    :_LABEL_1CED_131                        SECTION ::screens               `$1CED
         `==============================================================================
         `start level? (could be main gameplay loop)
 PARAMS  IY;vars         HELP ""Address of the common variables (used throughout)
@@ -2335,7 +2336,7 @@ PARAMS  IY;vars         HELP ""Address of the common variables (used throughout)
 	ret
 }
 
-PROC    :_1e9e                                                                  `$1E9E
+PROC    :_1e9e                                  SECTION ::screens               `$1E9E
         `==============================================================================
         `demo mode?
 PARAMS  IY;vars         HELP ""Address of the common variables (used throughout)
@@ -2369,7 +2370,7 @@ PARAMS  IY;vars         HELP ""Address of the common variables (used throughout)
 	ret
 }
 
-PROC    :lockCameraHorizontal                                                   `$1ED8
+PROC    :lockCameraHorizontal                   SECTION ::screens               `$1ED8
         `==============================================================================
         ``lock the screen -- prevents the screen scrolling left or right
           (i.e. during boss battles)``
@@ -2380,7 +2381,7 @@ PROC    :lockCameraHorizontal                                                   
 	ret
 }
 
-PROC    :autoscrollRight                                                        `$1EE2
+PROC    :autoscrollRight                        SECTION ::screens               `$1EE2
         `==============================================================================
         `move the left-hand side of the level across -- i.e. Bridge Act 2
 {        
@@ -2400,7 +2401,7 @@ PROC    :autoscrollRight                                                        
 	ret
 }
 
-PROC    :autoscrollUp                                                           `$1EF2
+PROC    :autoscrollUp                           SECTION ::screens               `$1EF2
         `==============================================================================
         `autoscroll upwards -- unused by the game, but working
 {       
@@ -2417,7 +2418,7 @@ PROC    :autoscrollUp                                                           
 	ret
 }
 
-PROC    :dontScrollDown                                                         `$1EFF
+PROC    :dontScrollDown                         SECTION ::screens               `$1EFF
         `==============================================================================
         ``fix the bottom of the level to the current screen position, 
           i.e. Jungle Act 2``
@@ -2427,7 +2428,7 @@ PROC    :dontScrollDown                                                         
 	ret
 }
 
-PROC    :_1f06                                                                  `$1F06
+PROC    :_1f06                                  SECTION ::screens               `$1F06
         `==============================================================================
 {        
 	dec	a
@@ -2468,7 +2469,7 @@ PROC    :_1f06                                                                  
 	ret
 }
 
-PROC    :_1f49                                                                  `$1F49
+PROC    :_1f49                                  SECTION ::screens               `$1F49
         `==============================================================================
         `lightning is enabled...
 {       
@@ -2527,20 +2528,20 @@ PROC    :_1f49                                                                  
 }
 	
 `lightning palette control:
-TABLE   :_1f9d                                                                  `$1F9D
+TABLE   :_1f9d                                  SECTION ::screens               `$1F9D
 {
         BYTE    $02 $04 WORD :S1_PaletteData.skyBase_cycles
 }       
-TABLE   :_1fa1                                                                  `$1FA1
+TABLE   :_1fa1                                  SECTION ::screens               `$1FA1
 {
         BYTE    $02 $04 WORD :S1_PaletteData.skyBase_cycles_Lightning1
 }
-TABLE   :_1fa5                                                                  `$1FA5
+TABLE   :_1fa5                                  SECTION ::screens               `$1FA5
 {
         BYTE    $02 $04 WORD :S1_PaletteData.skyBase_cycles_Lightning2
 }
 
-PROC    :_1fa9                                                                  `$1FA9
+PROC    :_1fa9                                  SECTION ::screens               `$1FA9
         `==============================================================================
 PARAMS  IY;vars         HELP ""Address of the common variables (used throughout)
 {        
@@ -2607,12 +2608,12 @@ PARAMS  IY;vars         HELP ""Address of the common variables (used throughout)
 	ret
 }
 
-TABLE   :_2023                                                                  `$2023
+TABLE   :_2023                                  SECTION ::screens               `$2023
 {                                               
         WORD    $0000, :_202d, :addExtraLife, :add10Rings, :_203f
 }
 
-PROC    :_202d                                                                  `$202D
+PROC    :_202d                                  SECTION ::screens               `$202D
         `==============================================================================
 {        
 	ld	a, $0E
@@ -2620,7 +2621,7 @@ PROC    :_202d                                                                  
 	ret
 }
 
-PROC    :addExtraLife                                                           `$2031
+PROC    :addExtraLife                           SECTION ::screens               `$2031
         `==============================================================================
         `increases lives
 {        
@@ -2633,7 +2634,7 @@ PROC    :addExtraLife                                                           
 	ret
 }
 
-PROC    :add10Rings                                                             `$2039
+PROC    :add10Rings                             SECTION ::screens               `$2039
         `==============================================================================
 {
         `add 10 rings to the ring counter
@@ -2642,7 +2643,7 @@ PROC    :add10Rings                                                             
 	ret
 }
 
-PROC    :_203f                                                                  `$203F
+PROC    :_203f                                  SECTION ::screens               `$203F
         `==============================================================================
 PARAMS  IY;vars         HELP ""Address of the common variables (used throughout)
 {        
@@ -2652,13 +2653,13 @@ PARAMS  IY;vars         HELP ""Address of the common variables (used throughout)
 	ret
 }
 
-TABLE   :_2047                                                                  `$2047
+TABLE   :_2047                                  SECTION ::screens               `$2047
 {
         BYTE    $7F $7F $7F $7F $7F $7F $7F $7F $7F $7F $7F $7F $7F $7F $7F $7F
         BYTE    $7F $7F $7F $7F $7F $7F $7F $7F $7F $7F $7F $7F $7F $7F $7F $7F
 }
 
-PROC    :_2067                                                                  `$2067
+PROC    :_2067                                  SECTION ::screens               `$2067
         `==============================================================================
 PARAMS  IY;vars         HELP ""Address of the common variables (used throughout)
 {        
@@ -2690,7 +2691,7 @@ PARAMS  IY;vars         HELP ""Address of the common variables (used throughout)
 	ret
 }
 
-PROC    :disableWaterline                                                       `$20A4
+PROC    :disableWaterline                       SECTION ::screens               `$20A4
         `==============================================================================
 PARAMS  IY;vars         HELP ""Address of the common variables (used throughout)
 {        
@@ -2710,7 +2711,7 @@ PARAMS  IY;vars         HELP ""Address of the common variables (used throughout)
 	ret
 }
 
-PROC    :_20b8                                                                  `$20B8
+PROC    :_20b8                                  SECTION ::screens               `$20B8
         `==============================================================================
 {        
 	ld	a,:sound_fadeOut.bank
@@ -2725,7 +2726,7 @@ PROC    :_20b8                                                                  
 	ret
 }
 	
-PROC    :loadLevel                                                              `$20CB
+PROC    :loadLevel                              SECTION ::screens               `$20CB
         `==============================================================================
 PARAMS  IY;vars         HELP ""Address of the common variables (used throughout)
         hl;header       `address of the level header
@@ -3264,7 +3265,7 @@ PARAMS  IY;vars         HELP ""Address of the common variables (used throughout)
 	ret
 }
 	
-PROC    :loadObjectLayout                                                       `$232B
+PROC    :loadObjectLayout                       SECTION ::screens               `$232B
         `------------------------------------------------------------------------------
 PARAMS  hl      `address of an object layout
 {       
@@ -3316,7 +3317,7 @@ PARAMS  hl      `address of an object layout
 	ret
 }
 
-PROC    :loadObject                                                             `$235E
+PROC    :loadObject                             SECTION ::screens               `$235E
         `------------------------------------------------------------------------------
 PARAMS  IX;mob          HELP ""Address of the current mob being processed
         a	        `object type
@@ -3381,7 +3382,7 @@ PARAMS  IX;mob          HELP ""Address of the current mob being processed
 	ret
 }
 
-PROC    :_239c                                                                  `$239C
+PROC    :_239c                                  SECTION ::screens               `$239C
         `==============================================================================
         `animate ring
 {
@@ -3420,7 +3421,7 @@ PROC    :_239c                                                                  
 	ret
 }
 
-PROC    :_23c9                                                                  `$23C9
+PROC    :_23c9                                  SECTION ::screens               `$23C9
         `==============================================================================
 {        
 	ld	a,[$.CYCLEPALETTE_COUNTER]
@@ -3452,19 +3453,19 @@ PROC    :_23c9                                                                  
 	ret
 }
 
-TABLE   :_23f9                                                                  `$23F9
+TABLE   :_23f9                                  SECTION ::screens               `$23F9
 {
         BYTE    $05, $04, $03, $02, $01, $00
 }
-TABLE   :_23ff                                                                  `$23FF
+TABLE   :_23ff                                  SECTION ::screens               `$23FF
 {
         BYTE    $00, $00, $00
 }
-TABLE   :_2402                                                                  `$2402
+TABLE   :_2402                                  SECTION ::screens               `$2402
 {
         BYTE    $01, $30, $00
 }
-TABLE   :_2405                                                                  `$2405
+TABLE   :_2405                                  SECTION ::screens               `$2405
 {
         BYTE    $01 $00 $00			`Special Stage 1?
         BYTE    $01 $00 $00			`Special Stage 2?
@@ -3518,7 +3519,7 @@ TABLE   :_2405                                                                  
 }
 
 `end sequence screens?
-PROC    :_LABEL_258B_133                                                        `$258B
+PROC    :_LABEL_258B_133                        SECTION ::screens               `$258B
         `==============================================================================
 PARAMS  IY;vars         HELP ""Address of the common variables (used throughout)
 {
@@ -3737,12 +3738,12 @@ PARAMS  IY;vars         HELP ""Address of the common variables (used throughout)
 	call	:_2795
 }
 	
-PROC    :unused_infiniteLoop
+PROC    :unused_infiniteLoop                    SECTION ::screens
 {	
         jp	:
 }
 
-PROC    :_2718                                                                  `$2718
+PROC    :_2718                                  SECTION ::screens               `$2718
         `==============================================================================
 PARAMS  IY;vars         HELP ""Address of the common variables (used throughout)
 {        
@@ -3773,7 +3774,7 @@ PARAMS  IY;vars         HELP ""Address of the common variables (used throughout)
 	ret
 }
 
-PROC    :waitFrames                                                             `$2745
+PROC    :waitFrames                             SECTION ::screens               `$2745
         `==============================================================================
 HELP  ""Wait a given number of frames
 PARAMS  IY;vars         HELP ""Address of the common variables (used throughout)
@@ -3799,7 +3800,7 @@ PARAMS  IY;vars         HELP ""Address of the common variables (used throughout)
 	ret
 }
 
-PROC    :_275a                                                                  `$275A
+PROC    :_275a                                  SECTION ::screens               `$275A
         `==============================================================================
 {        
 	ld	e,[hl]
@@ -3856,7 +3857,7 @@ PROC    :_275a                                                                  
 	ret
 }
 
-PROC    :_2795                                                                  `$2795
+PROC    :_2795                                  SECTION ::screens               `$2795
         `==============================================================================
 {        
 	ld	de,$.LAYOUT_BUFFER
@@ -3952,12 +3953,12 @@ PROC    :_2795                                                                  
 	jp	._
 }
 
-TABLE   :_2825                                                                  `$2825
+TABLE   :_2825                                  SECTION ::screens               `$2825
 {
         BYTE    $5c, $5e, $ff
 }
-TABLE   :_2828		                        `credits screen palette         `$2828
-{
+TABLE   :_2828		                        SECTION ::screens               `$2828
+{       `credits screen palette
         BYTE    $35 $01 $06 $0B $04 $08 $0C $3D $1F $39 $2A $14 $25 $2B $00 $3F
         BYTE    $35 $20 $35 $1B $16 $2A $00 $3F $03 $0F $01 $15 $00 $3C $00 $3F
         
@@ -3997,7 +3998,7 @@ TABLE   :_2828		                        `credits screen palette         `$2828
         BYTE    $40 $48 $FF
 }
 
-TABLE   :S1_Credits_Text			                                `$2905
+TABLE   :S1_Credits_Text                        SECTION ::screens               `$2905
 {
 
 ``ASCIITABLE
@@ -4106,7 +4107,7 @@ ENDA``
         BYTE    $FF
 }
 
-TABLE   :S1_Credits_Palette			                                `$2AD6
+TABLE   :S1_Credits_Palette                     SECTION ::screens               `$2AD6
 {
         BYTE    $35 $3D $1F $39 $06 $1B $01 $34 $2B $10 $03 $14 $2A $1F $00 $3F
         BYTE    $35 $3D $1F $39 $06 $1B $01 $34 $2B $10 $03 $14 $2A $1F $00 $3F

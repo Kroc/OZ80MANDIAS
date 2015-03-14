@@ -366,6 +366,9 @@ Private ChunkDataLog As String
 '--------------------------------------------------------------------------------------
 'File Tokenising:
 '--------------------------------------------------------------------------------------
+'OZ80 converts the source code files into "Tokens", byte-code representations of the _
+ source "words" which are then used for parsing. It would be too slow to re-interpret _
+ the text every time we needed to cross-reference
 
 Private Source As bluString
 
@@ -431,11 +434,11 @@ Private Const TAB_WIDTH As Long = 8
 'During parsing, we will need to do case-insensitive character comparisons, _
  upper-casing the token word is one of the biggest bottlenecks in the process! _
  Therefore we build a lookup table for upper-casing individual characters
-Private ToUpperCase(0 To 65535) As Integer
+Private CharToUpperCase(0 To 65535) As Integer
 'A look-up table of Unicode characters that are considered white-space
-Private IsWhiteSpace(0 To 65535) As Long
+Private CharIsWhiteSpace(0 To 65535) As Long
 'A look-up table of Unicode characters considered 'visible' (have width)
-Private IsVisible(0 To 65535) As Long
+Private CharIsVisible(0 To 65535) As Long
 
 'String constants at class level so that these texts do not have to be temporarily _
  created and thrown away every time we use them
@@ -1292,8 +1295,8 @@ Private Sub Class_Initialize()
                             MapFlags:=LCMAP_UPPERCASE Or LCMAP_LINGUISTIC_CASING, _
                  SourceStringPointer:=VarPtr(Unicode(0)), _
                   SourceStringLength:=UBound(Unicode) + 1, _
-            DestinationStringPointer:=VarPtr(ToUpperCase(0)), _
-             DestinationStringLength:=UBound(ToUpperCase) + 1, _
+            DestinationStringPointer:=VarPtr(CharToUpperCase(0)), _
+             DestinationStringLength:=UBound(CharToUpperCase) + 1, _
                   VersionInfoPointer:=0&, ReservedPointer:=0&, SortHandle:=0& _
         )
     Else
@@ -1303,8 +1306,8 @@ Private Sub Class_Initialize()
                             MapFlags:=LCMAP_UPPERCASE Or LCMAP_LINGUISTIC_CASING, _
                  SourceStringPointer:=VarPtr(Unicode(0)), _
                   SourceStringLength:=UBound(Unicode) + 1, _
-            DestinationStringPointer:=VarPtr(ToUpperCase(0)), _
-             DestinationStringLength:=UBound(ToUpperCase) + 1 _
+            DestinationStringPointer:=VarPtr(CharToUpperCase(0)), _
+             DestinationStringLength:=UBound(CharToUpperCase) + 1 _
         )
     End If
     
@@ -1325,8 +1328,8 @@ Private Sub Class_Initialize()
     'Walk the array of Unicode properties and populate the look-up tables for _
      specfic properties...
     For i = 0 To 65535
-        Let IsWhiteSpace(i) = ((Properties(i) And C1_SPACE) <> 0)
-        Let IsVisible(i) = ((Properties(i) And C1_VISIBLE) <> 0)
+        Let CharIsWhiteSpace(i) = ((Properties(i) And C1_SPACE) <> 0)
+        Let CharIsVisible(i) = ((Properties(i) And C1_VISIBLE) <> 0)
     Next i
     Erase Properties
     
@@ -1769,7 +1772,7 @@ Private Sub Class_Terminate()
     Call Reset
     
     'Erase the caches
-    Erase ToUpperCase, IsWhiteSpace, IsVisible
+    Erase CharToUpperCase, CharIsWhiteSpace, CharIsVisible
     Erase Cache_HexStr8, Cache_HexStr16
     Erase TokenNames, ParamText
     
@@ -2273,7 +2276,7 @@ ReadChar:
         'Tab goes to the next tab stop boundary:
         Let Col = Col + TAB_WIDTH - (Col Mod TAB_WIDTH)
     
-    ElseIf IsVisible(Char) Then
+    ElseIf CharIsVisible(Char) Then
         Let Col = Col + 1
         
     Else
@@ -2312,7 +2315,7 @@ ReadChar:
         'Special handling for the beginning of a word
         If WordLength = 0 Then
             'Skip whitespace before the word begins
-            If IsWhiteSpace(Char) Then GoTo SkipChar
+            If CharIsWhiteSpace(Char) Then GoTo SkipChar
             
             'Punctuation characters that are only one letter long: _
              When we hit one of these we need to end the word immediately, but parsing _
@@ -2357,7 +2360,7 @@ ReadChar:
             If Char = ASC_LF Then GoTo TokenWord
             
             'End the word on a space
-            If IsWhiteSpace(Char) Then GoTo TokenWord
+            If CharIsWhiteSpace(Char) Then GoTo TokenWord
             
             'Symbols that can break a word in the middle without spaces to separate
             If Char = SYNTAX_NEXT Then GoTo WordBreak
@@ -2453,10 +2456,10 @@ TokenWord:
      comparisons and can be done quickly without resorting to Strings
     Dim Asc1 As OZ80_SYNTAX, Asc2 As OZ80_SYNTAX, _
         Asc3 As OZ80_SYNTAX, Asc4 As OZ80_SYNTAX
-    Let Asc1 = ToUpperCase(Word.Char(0))
-    If WordLength > 3 Then Let Asc4 = ToUpperCase(Word.Char(3)) Else Let Asc4 = ASC_NUL
-    If WordLength > 2 Then Let Asc3 = ToUpperCase(Word.Char(2)) Else Let Asc3 = ASC_NUL
-    If WordLength > 1 Then Let Asc2 = ToUpperCase(Word.Char(1)) Else Let Asc2 = ASC_NUL
+    Let Asc1 = CharToUpperCase(Word.Char(0))
+    If WordLength > 3 Then Let Asc4 = CharToUpperCase(Word.Char(3)) Else Let Asc4 = ASC_NUL
+    If WordLength > 2 Then Let Asc3 = CharToUpperCase(Word.Char(2)) Else Let Asc3 = ASC_NUL
+    If WordLength > 1 Then Let Asc2 = CharToUpperCase(Word.Char(1)) Else Let Asc2 = ASC_NUL
     
     'Comma (very common!) _
      .......................................................................... `,` ...
@@ -6317,10 +6320,8 @@ Private Function ROM_Layout( _
     '----------------------------------------------------------------------------------
     Call RaiseMessage(OZ80_LOG_INFO, "---------¦--------¦------------------------------------------------------")
     
-    For i = 1 To ChunkCount
-        If Chunks(i).Section = 0 Then
-            If ROM_AddChunk(i) Then GoTo Finish
-        End If
+    For i = 1 To Sections(0).ChunkCount
+        If ROM_AddChunk(Sections(0).Chunks(i)) Then GoTo Finish
     Next i
     
     '----------------------------------------------------------------------------------
@@ -6337,11 +6338,9 @@ Private Function ROM_Layout( _
         'Is this Section Slotless?
         If Sections(s).Slot = 0 Then
             'Walk through the Chunks in this Slot
-            For i = 1 To ChunkCount
-                If Chunks(i).Section = s Then
-                    'Place this Chunk
-                    If ROM_AddChunk(i) Then GoTo Finish
-                End If
+            For i = 1 To Sections(s).ChunkCount
+                'Place this Chunk
+                If ROM_AddChunk(Sections(s).Chunks(i)) Then GoTo Finish
             Next i
         End If
     Next s
@@ -6349,7 +6348,19 @@ Private Function ROM_Layout( _
     '----------------------------------------------------------------------------------
     '[7]: Place paged Sections
     '----------------------------------------------------------------------------------
+    'TODO: Obviously implement correct rules for Slots...
+    Call RaiseMessage(OZ80_LOG_INFO, "---------¦--------¦------------------------------------------------------")
     
+    For s = 1 To SectionCount
+        'Is this Section Slotless?
+        If Sections(s).Slot <> 0 Then
+            'Walk through the Chunks in this Slot
+            For i = 1 To Sections(s).ChunkCount
+                'Place this Chunk
+                If ROM_AddChunk(Sections(s).Chunks(i)) Then GoTo Finish
+            Next i
+        End If
+    Next s
     
     Call RaiseMessage(OZ80_LOG_INFO, LOG_LINEDOUBLE)
     
@@ -6357,17 +6368,6 @@ Finish:
     Let ROM_Layout = My_Error
     Call Profiler.EventEnd(EVENT_ROM_LAYOUT)
     '*** TIMER END ***
-End Function
-
-'ROM_Increase : Increase the size of the ROM
-'======================================================================================
-'Returns        | The error number
-'======================================================================================
-Private Function ROM_Increase( _
-) As OZ80_ERROR
-    Do While ROMUsed > ROMSize: Let ROMSize = ROMSize * 2: Loop
-    'TODO: Check for ROM too big (hard limit -- 32 MB -- and user limit)
-    ReDim ROM(0 To ROMSize - 1) As Byte
 End Function
 
 'ROM_AddChunk : Add a Chunk to the ROM, checking for collisions with other Chunks
@@ -6392,6 +6392,10 @@ Private Function ROM_AddChunk( _
     Dim ChunkSize As Long: Let ChunkSize = Chunks(ChunkRef).Size
     Dim ChunkEnd As Long:  Let ChunkEnd = ChunkAddr + (ChunkSize - 1)
     
+    'The Layout is a 'linked-list' where each link contains a reference to the next _
+     link in the chain. This allows us to re-order the items in the chain quickly _
+     without having to shift up/down the entire list. The Layout list needs to always _
+     be in order so that we can find the gaps between Chunks in the ROM Layout
     Dim i As Long
     Dim PrevLink As Long, NextLink As Long
     
@@ -6524,12 +6528,24 @@ AddLink:
         Let Layout(NextLink).PrevIndex = LayoutCount
     End If
     
+    '----------------------------------------------------------------------------------
+    
     'Set the ROM address on the Chunk for use in the second pass
     Let Chunks(ChunkRef).Address = ChunkAddr
     'Update the Label database with the new address
     Call AddUpdateLabel(Chunks(ChunkRef).LabelName, CDbl(ChunkAddr))
     
     'TODO: Calculate Bank and apply to Chunk?
+    
+    'Is this going to fit in the ROM?
+    If ChunkEnd > ROMUsed Then
+        'This will be the new upper-limit
+        Let ROMUsed = ChunkEnd
+        'Keep doubling the ROM size until the contents fits
+        Do While ROMUsed > ROMSize: Let ROMSize = ROMSize * 2: Loop
+        'TODO: Check for ROM too big (hard limit -- 32 MB -- and user limit)
+        ReDim ROM(0 To ROMSize - 1) As Byte
+    End If
     
     'Copy the Chunk bytes into the ROM
     Call api_RtlMoveMemory( _
@@ -6548,7 +6564,6 @@ AddLink:
     
 Finish:
     Let ROM_AddChunk = My_Error
-    
     Call Profiler.EventEnd(EVENT_ROM_ADDCHUNK)
     '*** TIMER END ***
 End Function

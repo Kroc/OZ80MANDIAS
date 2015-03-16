@@ -1,19 +1,19 @@
 VERSION 5.00
 Begin VB.Form UI 
    Caption         =   "OZ80MANDIAS"
-   ClientHeight    =   7008
-   ClientLeft      =   108
-   ClientTop       =   432
-   ClientWidth     =   9468
+   ClientHeight    =   7005
+   ClientLeft      =   105
+   ClientTop       =   435
+   ClientWidth     =   9465
    LinkTopic       =   "Form1"
-   ScaleHeight     =   7008
-   ScaleWidth      =   9468
+   ScaleHeight     =   7005
+   ScaleWidth      =   9465
    StartUpPosition =   3  'Windows Default
    Begin VB.TextBox txtLog 
       BorderStyle     =   0  'None
       BeginProperty Font 
          Name            =   "Courier New"
-         Size            =   9.6
+         Size            =   9.75
          Charset         =   0
          Weight          =   400
          Underline       =   0   'False
@@ -113,12 +113,7 @@ Private Sub Form_Load()
     Call Assembler.Assemble(App.Path & "\Sonic1-sms-oz80\sonic1-sms.oz80")
 '    Call Assembler.Assemble(App.Path & "\TEST\test.oz80")
     
-    'Do something that only faults in the IDE
-    On Error GoTo Err_True
-    Debug.Print 1 \ 0
-    MsgBox Format$(Timer - StartTime, "0.000")
-Err_True:
-    
+    Call Log("External Time: " & Format$(Timer - StartTime, "0.000"), OZ80_LOG_INFO)
     Call Log(Assembler.Profiler.Report, OZ80_LOG_INFO)
     Set Assembler = Nothing
     

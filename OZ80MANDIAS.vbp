@@ -1,5 +1,5 @@
 Type=Exe
-Reference=*\G{420B2830-E718-11CF-893D-00A0C9054228}#1.0#0#..\..\..\..\Windows\system32\scrrun.dll#Microsoft Scripting Runtime
+Reference=*\G{420B2830-E718-11CF-893D-00A0C9054228}#1.0#0#C:\Windows\SysWOW64\scrrun.dll#Microsoft Scripting Runtime
 Form=CODE\UI.frm
 Class=bluString; CODE\blu\CORE\bluString.cls
 Class=bluProfiler; CODE\blu\DEBUG\bluProfiler.cls

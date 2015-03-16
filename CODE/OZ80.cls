@@ -4894,7 +4894,7 @@ iCALL:
     
 iCCF:
     '..................................................................................
-    If Z80_TestParams() Then Let Opcode = Y7 Or Z7: GoTo Output8
+    If Z80_TestParams() Then Let Opcode = Y7 Or Z7: GoTo Output0
     'ERROR: Wrong parameters for Z80 instruction
     GoTo InvalidParams
     
@@ -4937,14 +4937,14 @@ iCPIR:
 iCPL:
     'Compliment: Flip the bits of the Accumulator _
      ..................................................................................
-    If Z80_TestParams() Then Let Opcode = Y5 Or Z7: GoTo Output8
+    If Z80_TestParams() Then Let Opcode = Y5 Or Z7: GoTo Output0
     'ERROR: Wrong parameters for Z80 instruction
     GoTo InvalidParams
     
 iDAA:
     'Decimal Adjust Accumulator: _
      ..................................................................................
-    If Z80_TestParams() Then Let Opcode = Y4 Or Z7: GoTo Output8
+    If Z80_TestParams() Then Let Opcode = Y4 Or Z7: GoTo Output0
     'ERROR: Wrong parameters for Z80 instruction
     GoTo InvalidParams
 
@@ -4964,7 +4964,7 @@ iDEC:
 iDI:
     'Disable Interrupts: _
      ..................................................................................
-    If Z80_TestParams() Then Let Opcode = X3 Or Y6 Or Z3: GoTo Output8
+    If Z80_TestParams() Then Let Opcode = X3 Or Y6 Or Z3: GoTo Output0
     'ERROR: Wrong parameters for Z80 instruction
     GoTo InvalidParams
     
@@ -4982,7 +4982,7 @@ iDJNZ:
 iEI:
     'Enable Interrupts: _
      ..................................................................................
-    If Z80_TestParams() Then Let Opcode = X3 Or Y7 Or Z3: GoTo Output8
+    If Z80_TestParams() Then Let Opcode = X3 Or Y7 Or Z3: GoTo Output0
     'ERROR: Wrong parameters for Z80 instruction
     GoTo InvalidParams
     
@@ -5005,14 +5005,14 @@ iEX:
 iEXX:
     'Exchange All: _
      ..................................................................................
-    If Z80_TestParams() Then Let Opcode = X3 Or Q1 Or P1 Or Z1: GoTo Output8
+    If Z80_TestParams() Then Let Opcode = X3 Or Q1 Or P1 Or Z1: GoTo Output0
     'ERROR: Wrong parameters for Z80 instruction
     GoTo InvalidParams
 
 iHALT:
     'Halt: Stop the processor and wait for interrupts _
      ..................................................................................
-    If Z80_TestParams() Then Let Opcode = X1 Or Y6 Or Z6: GoTo Output8
+    If Z80_TestParams() Then Let Opcode = X1 Or Y6 Or Z6: GoTo Output0
     'ERROR: Wrong parameters for Z80 instruction
     GoTo InvalidParams
         
@@ -5033,7 +5033,9 @@ iIM:
         End If
     'ERROR: Wrong parameters for Z80 instruction
     Else: GoTo InvalidParams: End If
-    GoTo Output8
+    'The Value is baked into the Opcode, _
+     so doesn't need to be written out separately
+    GoTo Output0
 
 iIN:
     'Read from port: _
@@ -5241,7 +5243,7 @@ iNOP:
     'No Operation: _
      ..................................................................................
     '`NOP` - Opcode is 0
-    If Z80_TestParams() Then: Let Opcode = 0: GoTo Output8
+    If Z80_TestParams() Then: Let Opcode = 0: GoTo Output0
     'ERROR: Wrong parameters for Z80 instruction
     GoTo InvalidParams
     
@@ -5340,7 +5342,7 @@ iRET:
         Let Opcode = X3 Or OpcodeY_Condition(Z80Param1.Token)
     '`RET`
     ElseIf Z80_TestParams() Then
-        Let Opcode = X3 Or Q1 Or Z1
+        Let Opcode = X3 Or Q1 Or Z1: GoTo Output0
     'ERROR: Wrong parameters for Z80 instruction
     Else: GoTo InvalidParams: End If
     GoTo Output8
@@ -5361,7 +5363,7 @@ iRETN:
     
 iRLA:
     '..................................................................................
-    If Z80_TestParams() Then Let Opcode = Y2 Or Z7: GoTo Output8
+    If Z80_TestParams() Then Let Opcode = Y2 Or Z7: GoTo Output0
     'ERROR: Wrong parameters for Z80 instruction
     GoTo InvalidParams
     
@@ -5380,7 +5382,7 @@ iRL:
 
 iRLCA:
     '..................................................................................
-    If Z80_TestParams() Then Let Opcode = Z7: GoTo Output8
+    If Z80_TestParams() Then Let Opcode = Z7: GoTo Output0
     'ERROR: Wrong parameters for Z80 instruction
     GoTo InvalidParams
     
@@ -5405,7 +5407,7 @@ iRLD:
     
 iRRA:
     '..................................................................................
-    If Z80_TestParams() Then Let Opcode = Y3 Or Z7: GoTo Output8
+    If Z80_TestParams() Then Let Opcode = Y3 Or Z7: GoTo Output0
     'ERROR: Wrong parameters for Z80 instruction
     GoTo InvalidParams
     
@@ -5424,7 +5426,7 @@ iRR:
 
 iRRCA:
     '..................................................................................
-    If Z80_TestParams() Then Let Opcode = Y1 Or Z7: GoTo Output8
+    If Z80_TestParams() Then Let Opcode = Y1 Or Z7: GoTo Output0
     'ERROR: Wrong parameters for Z80 instruction
     GoTo InvalidParams
 
@@ -5454,11 +5456,10 @@ iRST:
     If Z80_TestParams(MASK_VAL) Then
         'TODO: Need to validate the number is in range at some point in the chain
         Let Opcode = X3 Or OpcodeY_RST(Value) Or Z7
-        'The Value is baked into the Opcode, so discard it and don't write a separate byte!
-        Let Value = -1
     'ERROR: Wrong parameters for Z80 instruction
     Else: GoTo InvalidParams: End If
-    GoTo Output8
+    'The Value is baked into the Opcode, so discard it and don't write a separate byte!
+    GoTo Output0
     
 iSBC:
     '..................................................................................
@@ -5477,7 +5478,7 @@ iSBC:
 
 iSCF:
     '..................................................................................
-    If Z80_TestParams() Then Let Opcode = Y6 Or Z7: GoTo Output8
+    If Z80_TestParams() Then Let Opcode = Y6 Or Z7: GoTo Output0
     'ERROR: Wrong parameters for Z80 instruction
     GoTo InvalidParams
     
@@ -5571,15 +5572,13 @@ iXOR:
         Let Opcode = X3 Or Y5 Or Z6
     'ERROR: Wrong parameters for Z80 instruction
     Else: GoTo InvalidParams: End If
-
+    
     '----------------------------------------------------------------------------------
     'Write the assembled bytes to the Chunk
     '----------------------------------------------------------------------------------
 Output8:
     '..................................................................................
     'TODO: Validate 8-bit value?
-    
-'    If Chunks(Chunk).LabelName = "::interrupts:interruptHandler" Then Stop
     
     Let Bytes(ByteCount) = Opcode: Let ByteCount = ByteCount + 1
     Call api_RtlMoveMemory(LogPtr + 20, StrPtr(Cache_HexStr8(Opcode)), 4)
@@ -5591,6 +5590,13 @@ Output8:
         Call api_RtlMoveMemory(LogPtr + 38, StrPtr(Cache_HexStr8(Value)), 4)
     End If
     
+    GoTo AddBytes
+    
+Output0:
+    'Output only the Opcode, no Value or Offset required:
+    '..................................................................................
+    Let Bytes(ByteCount) = Opcode: Let ByteCount = ByteCount + 1
+    Call api_RtlMoveMemory(LogPtr + 20, StrPtr(Cache_HexStr8(Opcode)), 4)
     GoTo AddBytes
     
 Output16:
@@ -6771,7 +6777,7 @@ Private Sub RaiseMessage( _
     ParamArray FormatValues() As Variant _
 )
     Let LogMsg.Text = FormatText
-    
+
     'Are there any values to format?
     If UBound(FormatValues) < 0 Then
         'No, raise just the text given

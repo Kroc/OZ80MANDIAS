@@ -91,7 +91,7 @@ PARAMS  IX;mob          HELP ""Address of the current mob being processed
 	and	a
 	sbc	hl,de
 	jr	nc,._1
-	ld	[ix+#mob.type],$FF	`remove object?
+	ld	[ix+#mob.type],$FF	        `remove object?
 ._1	ld	hl,$0202
 	ld	[$.TEMP6],hl
 	call	:detectCollisionWithSonic

@@ -49,7 +49,7 @@ PROC    :IRQ                                    INTERRUPT $38
         
         `this short copyright message is wedged between the IRQ
          `and NMI routines in the original ROM
-        BYTE    "Developed By [c] 1991 Ancient - S", $A5, "Hayashi.", $00
+        BYTE    "Developed By (C) 1991 Ancient - S", $A5, "Hayashi.", $00
 }
 
 PROC    :pause                                  INTERRUPT $66

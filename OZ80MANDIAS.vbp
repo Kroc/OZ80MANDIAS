@@ -8,6 +8,7 @@ Class=bluArray; CODE\blu\CORE\bluArray.cls
 Class=bluLog; CODE\blu\FILESYSTEM\bluLog.cls
 Class=OZ80; CODE\OZ80.cls
 Class=OZ80Data; CODE\OZ80Data.cls
+Class=OZ80VM; CODE\OZ80VM.cls
 IconForm="UI"
 Startup="UI"
 HelpFile=""

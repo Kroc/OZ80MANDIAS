@@ -431,6 +431,11 @@ End Enum
 'TODO: This should be a class property so that the user can customise
 Private Const TAB_WIDTH As Long = 8
 
+'Lookup table of hexadecimal prettyprint, _
+ saves slow & repetitive text manipulation when logging
+Private Cache_HexStr8(-1 To &HFF&) As String * 2
+Private Cache_HexStr16(0 To &HFFFF&) As String * 4
+
 'During parsing, we will need to do case-insensitive character comparisons, _
  upper-casing the token word is one of the biggest bottlenecks in the process! _
  Therefore we build a lookup table for upper-casing individual characters
@@ -1179,19 +1184,10 @@ Private ROM() As Byte                   'The ROM's binary contents
 Private ROMSize As Long                 'The ROM file size, e.g. 256 KB
 Private ROMUsed As Long                 'Where the current end of the data is
 
-'Once the ROM has been laid out, we need to assemble a second time to fill in the _
- indefinite Values which could not be calculated until all code had been parsed. _
- This flag will allow the second assembly pass to adapt behaviour
-Private LayoutComplete As Long
-
 '--------------------------------------------------------------------------------------
-'Cache:
+'Virtual Machine:
 '--------------------------------------------------------------------------------------
-
-'Lookup table of hexadecimal prettyprint, _
- saves slow & repetitive text manipulation when logging
-Private Cache_HexStr8(-1 To &HFF&) As String * 2
-Private Cache_HexStr16(0 To &HFFFF&) As String * 4
+Private WithEvents VM As OZ80VM
 
 '/// EVENTS ///////////////////////////////////////////////////////////////////////////
 
@@ -1769,6 +1765,10 @@ Private Sub Class_Initialize()
     Set Word = New bluString
     Let Word.Buffer = BUFFER_1K
     
+    '----------------------------------------------------------------------------------
+    'Instantiate the OZ80 Virtual Machine that will do the ouputting of the ROM
+    Set VM = New OZ80VM
+    
     Call Profiler.EventEnd(EVENT_INITIALIZE)
     '*** TIMER END ***
 End Sub
@@ -1777,6 +1777,9 @@ End Sub
 '======================================================================================
 Private Sub Class_Terminate()
     Call Reset
+    
+    'Shutdown the OZ80 Virtual Machine, used for outputting the ROM
+    Set VM = Nothing
     
     'Erase the caches
     Erase CharToUpperCase, CharIsWhiteSpace, CharIsVisible
@@ -1844,7 +1847,6 @@ Private Sub Reset()
     
     'Clear ROM layout
     Erase Layout: Let LayoutCount = 0
-    Let LayoutComplete = 0
     
     Erase ROM
     'TODO: Default ROM size should be per-system / user-selectable?
@@ -1876,10 +1878,7 @@ Public Function Assemble( _
     Let My_Error = OZ80_ERROR_NONE
     
     'Announce ourselves
-    Call RaiseMessage( _
-        OZ80_LOG_INFO, LOG_VERSION, _
-        App.Major, App.Minor, App.Revision _
-    )
+    Call RaiseMessage(OZ80_LOG_INFO, LOG_VERSION, App.Major, App.Minor, App.Revision)
     
     'Clean up stuff from any previous assemble
     Call Reset
@@ -1917,7 +1916,7 @@ Public Function Assemble( _
     Let File = 0
     
     'Begin assembling again
-    If File_Assemble(FilePath) Then GoTo Finish
+'    If File_Assemble(FilePath) Then GoTo Finish
     
     '----------------------------------------------------------------------------------
     'Phase 4: Post Processing, e.g. Checksum _
@@ -3855,7 +3854,7 @@ ReadParams:
     Dim FullLabelName As String
     Let FullLabelName = CurrentSection & CurrentLabel
     
-    'You can't name two Chunks the same thing
+    'ERROR: Duplicate Chunk name
     If ChunkExists(FullLabelName) Then Call RaiseError( _
         OZ80_ERROR_DUPLICATE, "TODO" _
     ): GoTo Finish
@@ -3882,6 +3881,16 @@ ReadParams:
         End If
     End If
     
+    'If this Chunk belongs to a Section, add its size to the total count
+    If IsSectionDefined Then
+        Let Sections(SectionIndex).TotalSize = _
+            Sections(SectionIndex).TotalSize + Chunks(Chunk).Size
+    End If
+    
+    'Count this toward the total size of all Chunks, which we will use to determine _
+     the size of output ROM needed
+    Let ChunksSize = ChunksSize + Chunks(Chunk).Size
+    
     'Log a header for the disassembly
     Call Chunks(Chunk).LogASM.LogFormat("PROC {$}", LabelName)
     Call Chunks(Chunk).LogASM.Log(LOG_LINEDOUBLE)
@@ -3899,16 +3908,6 @@ ReadParams:
     Call Chunks(Chunk).LogASM.Log(LOG_LINEDOUBLE)
     Call Chunks(Chunk).LogASM.Log("Size: " & Format$(Chunks(Chunk).Size, "#,0") & " bytes")
     Call RaiseMessage(OZ80_LOG_DEBUG, Chunks(Chunk).LogASM.Concatenate())
-    
-    'If this Chunk belongs to a Section, ad its size to the total count
-    If IsSectionDefined Then
-        Let Sections(SectionIndex).TotalSize = _
-            Sections(SectionIndex).TotalSize + Chunks(Chunk).Size
-    End If
-    
-    'Count this toward the total size of all Chunks, which we will use to determine _
-     the size of output ROM needed
-    Let ChunksSize = ChunksSize + Chunks(Chunk).Size
     
 Finish:
     'Leave this scope
@@ -3963,17 +3962,14 @@ Private Sub DefineSection()
     Dim SectionName As String: Let SectionName = TokenText
     Dim SectionID As Long: Let SectionID = CLng(TokenValue)
     
-    'Has this Section already been defined? _
-     (on the second pass, this can be ignored as we keep the Section information)
-    If LayoutComplete = 0 Then
-        Dim s As Long
-        For s = 1 To SectionCount
-            'ERROR: Section has already been defined!
-            If Sections(s).SectionID = SectionID Then Call RaiseError( _
-                OZ80_ERROR_DUPLICATE, "TODO" _
-            ): Exit Sub
-        Next s
-    End If
+    'Has this Section already been defined?
+    Dim s As Long
+    For s = 1 To SectionCount
+        'ERROR: Section has already been defined!
+        If Sections(s).SectionID = SectionID Then Call RaiseError( _
+            OZ80_ERROR_DUPLICATE, "TODO" _
+        ): Exit Sub
+    Next s
     
     '----------------------------------------------------------------------------------
     
@@ -4038,19 +4034,18 @@ Private Sub DefineSection()
 
 Finish:
     '----------------------------------------------------------------------------------
-    If LayoutComplete = 0 Then
-        'Record the result:
-        Call RaiseMessage(OZ80_LOG_STATUS, LOG_SECTION, SectionName)
-        
-        Let SectionCount = SectionCount + 1
-        ReDim Preserve Sections(0 To SectionCount) As oz80Section
-        
-        Let Sections(SectionCount).SectionName = SectionName
-        Let Sections(SectionCount).SectionID = SectionID
-        Let Sections(SectionCount).Slot = Slot
-        
-        Call Labels.Add(SectionName, INDEFINITE)
-    End If
+    'Record the result:
+    Call RaiseMessage(OZ80_LOG_STATUS, LOG_SECTION, SectionName)
+    
+    Let SectionCount = SectionCount + 1
+    ReDim Preserve Sections(0 To SectionCount) As oz80Section
+    
+    Let Sections(SectionCount).SectionName = SectionName
+    Let Sections(SectionCount).SectionID = SectionID
+    Let Sections(SectionCount).Slot = Slot
+    
+    Call Labels.Add(SectionName, INDEFINITE)
+    
     Exit Sub
     
     '----------------------------------------------------------------------------------
@@ -4072,11 +4067,9 @@ End Sub
 '======================================================================================
 Private Sub DefineStart()
     'You can't define the START procedure twice
-    If LayoutComplete = 0 Then
-        If ChunkExists(STR_START) Then Call RaiseError( _
-            OZ80_ERROR_DUPLICATE, "TODO" _
-        ): Exit Sub
-    End If
+    If ChunkExists(STR_START) Then Call RaiseError( _
+        OZ80_ERROR_DUPLICATE, "TODO" _
+    ): Exit Sub
     
     'ERROR: The file cannot end until the Chunk has been opened and closed
     If NextTokenError() Then Exit Sub
@@ -6422,10 +6415,6 @@ Private Function ROM_Layout( _
     Next s
     
     Call RaiseMessage(OZ80_LOG_INFO, LOG_LINEDOUBLE)
-    
-    'With the Layout complete, the address of all Labels should be known. _
-     A second assembly pass will be able to fill in the blanks from the first time
-    Let LayoutComplete = 1
     
 Finish:
     Let ROM_Layout = My_Error

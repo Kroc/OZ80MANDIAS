@@ -370,8 +370,6 @@ Private ChunkDataLog As String
  source "words" which are then used for parsing. It would be too slow to re-interpret _
  the text every time we needed to cross-reference
 
-Private Source As bluString
-
 'A lot of the text parsing will be letter-by-letter, so this enum provides the _
  common character codes we'll be referring to, as well as the particular punctuation _
  symbols used for OZ80 syntax. Note that `UCS2` is defined by 'bluString.cls'
@@ -1187,7 +1185,18 @@ Private ROMUsed As Long                 'Where the current end of the data is
 '--------------------------------------------------------------------------------------
 'Virtual Machine:
 '--------------------------------------------------------------------------------------
-Private WithEvents VM As OZ80VM
+'Being both an assembler and a programming langauge, it would be too slow to keep _
+ walking over the source code to do the more complex programmy things like functions. _
+ Once all the source code is in memory we can instead write out an optimised list of _
+ instructions that simplifies all the actions of the user's program down to a stream _
+ of read/calculate/write instructions
+
+'To achieve this we need a Virtual Machine -- not a Virtual Machine for running one _
+ Operating System within another, but an emulator for a very simple hypothetical _
+ processor that reads instructions, does calulcations and outputs results
+
+Private WithEvents VM As vmTapeDeck
+Attribute VM.VB_VarHelpID = -1
 
 '/// EVENTS ///////////////////////////////////////////////////////////////////////////
 
@@ -1238,8 +1247,6 @@ Private Sub Class_Initialize()
     
     'This is a re-usable temporary String for logging
     Set LogMsg = New bluString
-    
-    Set Source = New bluString
     
     'Manually create a 64-bit Double "Infinite" number, which cannot be written _
      implicitly in VB6. This method is based upon <stackoverflow.com/a/896292>. _
@@ -1766,8 +1773,8 @@ Private Sub Class_Initialize()
     Let Word.Buffer = BUFFER_1K
     
     '----------------------------------------------------------------------------------
-    'Instantiate the OZ80 Virtual Machine that will do the ouputting of the ROM
-    Set VM = New OZ80VM
+    'Instantiate the virtual machine that will do the ouputting of the ROM
+    Set VM = New vmTapeDeck
     
     Call Profiler.EventEnd(EVENT_INITIALIZE)
     '*** TIMER END ***
@@ -1803,7 +1810,6 @@ Private Sub Class_Terminate()
     Set Profiler = Nothing
     
     Set Word = Nothing
-    Set Source = Nothing
     Set LogMsg = Nothing
 End Sub
 
@@ -2151,53 +2157,18 @@ Private Function File_Tokenise( _
     'This function will be called by `File_Assemble`, so the file path will already _
      have been normalised and file existance checked
     
-'    '*** TIMER BEGIN ***
-'    Call Profiler.EventBegin(EVENT_FILELOAD_API)
-'
-'    'Read the file into our fast string handler (though we won't be doing any string- _
-'     manipulation, we will be relying on the various methods available to us)
-'
-'    Call Source.FileLoad(FilePath)
-'
-'    Call Profiler.EventEnd(EVENT_FILELOAD_API)
-'    '*** TIMER END ***
     '*** TIMER BEGIN ***
-    Call Profiler.EventBegin(EVENT_FILELOAD_VB6)
-    
-    'Read the file into our fast string handler (though we won't be doing any string- _
-     manipulation, we will be relying on the various methods available to us)
-    
-'    Call Source.ReadFile(FilePath)
-    
-'    Dim Buffer() As Integer
-'    Let Buffer = Source.GetArray()
-    
-    Dim FileNumber As Long: Let FileNumber = FreeFile
-    Open FilePath For Input Access Read Lock Write As #FileNumber
-
-    Dim Source As String
-    Let Source = StrConv(InputB(LOF(FileNumber), FileNumber), vbUnicode)
-
-    Dim SourceLen As Long
-    Let SourceLen = Len(Source)
+    Call Profiler.EventBegin(EVENT_FILELOAD_API)
     
     Dim Buffer() As Integer
-    ReDim Buffer(0 To SourceLen) As Integer
-
-    Call api_RtlMoveMemory( _
-        VarPtr(Buffer(0)), _
-        StrPtr(Source), _
-        LenB(Source) _
-    )
+    Call bluFileSystem.ReadTextFile_AsArray(FilePath, Buffer)
     
-    Let Source = vbNullString
-    Close FileNumber
+    'Cache this for speed, we'll be referring to it every loop
+    Dim SourceLen As Long
+    Let SourceLen = UBound(Buffer) + 1
     
-    Call Profiler.EventEnd(EVENT_FILELOAD_VB6)
+    Call Profiler.EventEnd(EVENT_FILELOAD_API)
     '*** TIMER END ***
-    
-'    'Cache this for speed, we'll be referring to it every loop
-'    Dim SourceLen As Long: Let SourceLen = Source.Length
     
     Call RaiseMessage(OZ80_LOG_ACTION, _
         "Tokenising ""{$}""", FilePath _
@@ -2268,7 +2239,6 @@ ReadChar:
     
     'Read a character:
     Dim Char As OZ80_SYNTAX
-'    Let Char = Source.Char(SourcePos)
     Let Char = Buffer(SourcePos)
     
     'Keep track of line and column position in the source file _
@@ -3022,7 +2992,7 @@ Finish:
     
     'Free up the memory used for the text file _
      (we won't be referring to the original text again)
-'    Call Source.Clear
+    Erase Buffer
     'Clear the nesting information
     Erase Nesting: Let NestingDepth = 0
     
@@ -5885,17 +5855,6 @@ Private Function GetListItem( _
     
     'Return True as the list has not ended yet
     Let GetListItem = True
-End Function
-
-'ParseList
-'======================================================================================
-'---------------+----------------------------------------------------------------------
-'Returns        | The error number
-'======================================================================================
-Private Function ParseList( _
-    ByRef ReturnData As OZ80Data _
-) As OZ80_ERROR
-    '
 End Function
 
 'ParseExpression : Evaluate a calculation into a Value

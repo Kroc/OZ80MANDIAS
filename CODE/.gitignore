@@ -2,6 +2,8 @@
 !.gitignore
 
 !blu
+!TapeDeck
+
 !*.bas
 !*.cls
 !*.ctl

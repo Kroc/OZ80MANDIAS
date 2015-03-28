@@ -1991,7 +1991,7 @@ Private Function File_Assemble( _
     
     '[2] Check file exists: _
      ----------------------------------------------------------------------------------
-    If Not FSO.FileExists(TestPath.Text) Then
+    If Not bluFileSystem.FileExists(TestPath.Text) Then
         'ERROR: File Not Found
         Call RaiseError(OZ80_ERROR_FILE_NOTFOUND, _
             "The following file could not be found:" & vbCrLf & vbCrLf & "{$}", _
@@ -6712,19 +6712,6 @@ Private Property Get ChunkExists( _
         End If
     Next i
 End Property
-
-'FileExists : See if a file exists or not
-'======================================================================================
-'FilePath       | Path to the file to check for
-'---------------+----------------------------------------------------------------------
-'Returns        | True if the file exists, false if not
-'======================================================================================
-Private Function FileExists( _
-    ByRef FilePath As String _
-) As Boolean
-    '<cuinl.tripod.com/Tips/fileexist.htm>
-    Let FileExists = CBool(Dir$(FilePath) <> vbNullString)
-End Function
 
 'GetChunk : Retrieves a Chunk in the array by its Label Name
 '======================================================================================

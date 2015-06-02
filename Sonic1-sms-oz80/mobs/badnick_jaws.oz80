@@ -4,48 +4,48 @@ PROC    :mob_badnick_jaws                       SECTION ::mobs                  
         `==============================================================================
 PARAMS  IX;mob          HELP ""Address of the current mob being processed
 {
-	set	5,[ix+#mob.flags]
-	ld	a,[ix+#mob.unknown11]
-	cp	$80
-	jr	nc,._1
-	ld	[ix+#mob.Xspeed.lo],$20
-	ld	[ix+#mob.Xspeed.hi],$00
-	ld	[ix+#mob.Xdirection],$00
-	ld	[ix+#mob.width], 20
-	ld	[ix+#mob.height],12
-	ld	hl,$0a02
-	ld	[$.TEMP6],hl
-	call	:detectCollisionWithSonic
-	ld	hl,$0008
-	ld	[$.TEMP1],hl
-	call	nc,:hitPlayer
-	ld	de,._88be
-	ld	bc,._88b4
-	call	:_7c41
-	jr	._2
-	
-._1	ld	[ix+#mob.Xspeed.lo],$e0
-	ld	[ix+#mob.Xspeed.hi],$ff
-	ld	[ix+#mob.Xdirection],$ff
-	ld	[ix+#mob.width],$0c
-	ld	[ix+#mob.height],$0c
-	ld	hl,$0202
-	ld	[$.TEMP6],hl
-	call	:detectCollisionWithSonic
-	ld	hl,$0000
-	ld	[$.TEMP1],hl
-	call	nc,:hitPlayer
-	ld	de,._88be
-	ld	bc,._88b9
-	call	:_7c41
-._2	ld	a,[$.FRAMECOUNT]
-	and	$07
-	ret	nz
-	inc	[ix+#mob.unknown11]
-	call	:_LABEL_625_57
-	and	$1e
-	call	z,:_91eb
-	ret
+        set     5,[ix+#mob.flags]               `mob does not collide with the floor
+        ld      a,[ix+#mob.unknown11]
+        cp      $80
+        jr      nc,._1
+        ld      [ix+#mob.Xspeed.lo],$20
+        ld      [ix+#mob.Xspeed.hi],$00
+        ld      [ix+#mob.Xdirection],$00
+        ld      [ix+#mob.width], 20
+        ld      [ix+#mob.height],12
+        ld      hl,$0a02
+        ld      [$.TEMP6],hl
+        call    :detectCollisionWithSonic
+        ld      hl,$0008
+        ld      [$.TEMP1],hl
+        call    nc,:hitPlayer
+        ld      de,._88be
+        ld      bc,._88b4
+        call    :_7c41
+        jr      ._2
+        
+._1     ld      [ix+#mob.Xspeed.lo],$e0
+        ld      [ix+#mob.Xspeed.hi],$ff
+        ld      [ix+#mob.Xdirection],$ff
+        ld      [ix+#mob.width],$0c
+        ld      [ix+#mob.height],$0c
+        ld      hl,$0202
+        ld      [$.TEMP6],hl
+        call    :detectCollisionWithSonic
+        ld      hl,$0000
+        ld      [$.TEMP1],hl
+        call    nc,:hitPlayer
+        ld      de,._88be
+        ld      bc,._88b9
+        call    :_7c41
+._2     ld      a,[$.FRAMECOUNT]
+        and     $07
+        ret     nz
+        inc     [ix+#mob.unknown11]
+        call    :_LABEL_625_57
+        and     $1e
+        call    z,:_91eb
+        ret
         
 ._88b4  BYTE $00, $04, $01, $04, $FF
 ._88b9  BYTE $02, $04, $03, $04, $FF

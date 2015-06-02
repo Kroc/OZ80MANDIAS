@@ -73,7 +73,7 @@ RAM     $#SMS
 `--------------------------------------------------------------------------------------
 RAM     $#SMS
 [
-.SMS.JOYPADA		$DC     HASH [
+.SMS.JOYPADA            $DC     HASH [
         .pad1up                 BOOL
         .pad1down               BOOL
         .pad1left               BOOL
@@ -83,7 +83,7 @@ RAM     $#SMS
         .pad2up                 BOOL
         .pad2down               BOOL
                                 ]
-.SMS.JOYPADB		$DD     HASH [
+.SMS.JOYPADB            $DD     HASH [
         .pad2left               BOOL
         .pad2right              BOOL
         .pad2button1            BOOL

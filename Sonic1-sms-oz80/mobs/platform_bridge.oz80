@@ -4,86 +4,86 @@ PROC    :mob_platform_bridge                    SECTION ::mobs                  
         `==============================================================================
 PARAMS  IX;mob          HELP ""Address of the current mob being processed
 {
-	set	5,[ix+#mob.flags]
-	ld	[ix+#mob.width], 14
-	ld	[ix+#mob.height],8
-	bit	0,[ix+#mob.flags]
-	jr	nz,._2
+        set     5,[ix+#mob.flags]               `mob does not collide with the floor
+        ld      [ix+#mob.width], 14
+        ld      [ix+#mob.height],8
+        bit     0,[ix+#mob.flags]
+        jr      nz,._2
         
-	xor	a;zero
-	ld	[ix+#mob.spriteLayout.lo],a;zero
-	ld	[ix+#mob.spriteLayout.hi],a;zero
-	ld	l;zero,a;zero
-	ld	h;zero,a;zero
-	ld	[$.TEMP1],hl;zero
+        xor     a;zero
+        ld      [ix+#mob.spriteLayout.lo],a;zero
+        ld      [ix+#mob.spriteLayout.hi],a;zero
+        ld      l;zero,a;zero
+        ld      h;zero,a;zero
+        ld      [$.TEMP1],hl;zero
         
-	bit	1,[ix+#mob.flags]
-	jr	nz,._1
-	
-        call	:_LABEL_625_57
-	and	$1f
-	inc	a
-	ld	[ix+#mob.unknown11],a
-	set	1,[ix+#mob.flags]
-._1	dec	[ix+#mob.unknown11]
-	jp	nz,._
-	ld	[ix+#mob.unknown11],$01
-	ld	a,[$.D2AB+1]
-	and	$80
-	jp	z,._
-	ld	l,[ix+#mob.X.lo]
-	ld	h,[ix+#mob.X.hi]
-	ld	[$.D2AB],hl
-	ld	l,[ix+#mob.Y.lo]
-	ld	h,[ix+#mob.Y.hi]
-	ld	de,$000e
-	add	hl,de
-	ld	[$.D2AD],hl
-	ld	hl,._848e
-	ld	[$.D2AF],hl
-	set	0,[ix+#mob.flags]
-	ld	a,$20
-	rst	:rst_playSFX
-._2	ld	[ix+#mob.spriteLayout.lo],._8481.lo
-	ld	[ix+#mob.spriteLayout.hi],._8481.hi
-	ld	l,[ix+#mob.Yspeed.lo]
-	ld	h,[ix+#mob.Yspeed.hi]
-	ld	a,[ix+#mob.Ydirection]
-	ld	de,$0020
-	add	hl,de
-	adc	a,$00
-	ld	c,a
-	ld	a,h
-	cp	$04
-	jr	c,._3
-	ld	h,$04
-._3	ld	[ix+#mob.Yspeed.lo],l
-	ld	[ix+#mob.Yspeed.hi],h
-	ld	[ix+#mob.Ydirection],c
-	ld	[$.TEMP1],hl
-	ld	de,[$.CAMERA_Y]
-	inc	d
-	ld	l,[ix+#mob.Y.lo]
-	ld	h,[ix+#mob.Y.hi]
-	and	a
-	sbc	hl,de
-	jr	c,._
-	ld	[ix+#mob.type],$FF	`remove object?
-	ret
-	
-._4	ld	hl,$0402
-	ld	[$.TEMP6],hl
-	call	:detectCollisionWithSonic
-	ret	c
+        bit     1,[ix+#mob.flags]
+        jr      nz,._1
         
-	ld	a,[$.SONIC.Ydirection]
-	and	a
-	ret	m
-	
-	ld	de,[$.TEMP1]
-	ld	bc,$0010
-	call	:_LABEL_7CC1_12
-	ret
+        call    :_LABEL_625_57
+        and     $1f
+        inc     a
+        ld      [ix+#mob.unknown11],a
+        set     1,[ix+#mob.flags]
+._1     dec     [ix+#mob.unknown11]
+        jp      nz,._
+        ld      [ix+#mob.unknown11],$01
+        ld      a,[$.D2AB+1]
+        and     $80
+        jp      z,._
+        ld      l,[ix+#mob.X.lo]
+        ld      h,[ix+#mob.X.hi]
+        ld      [$.D2AB],hl
+        ld      l,[ix+#mob.Y.lo]
+        ld      h,[ix+#mob.Y.hi]
+        ld      de,$000e
+        add     hl,de
+        ld      [$.D2AD],hl
+        ld      hl,._848e
+        ld      [$.D2AF],hl
+        set     0,[ix+#mob.flags]
+        ld      a,$20
+        rst     :rst_playSFX
+._2     ld      [ix+#mob.spriteLayout.lo],._8481.lo
+        ld      [ix+#mob.spriteLayout.hi],._8481.hi
+        ld      l,[ix+#mob.Yspeed.lo]
+        ld      h,[ix+#mob.Yspeed.hi]
+        ld      a,[ix+#mob.Ydirection]
+        ld      de,$0020
+        add     hl,de
+        adc     a,$00
+        ld      c,a
+        ld      a,h
+        cp      $04
+        jr      c,._3
+        ld      h,$04
+._3     ld      [ix+#mob.Yspeed.lo],l
+        ld      [ix+#mob.Yspeed.hi],h
+        ld      [ix+#mob.Ydirection],c
+        ld      [$.TEMP1],hl
+        ld      de,[$.CAMERA_Y]
+        inc     d
+        ld      l,[ix+#mob.Y.lo]
+        ld      h,[ix+#mob.Y.hi]
+        and     a
+        sbc     hl,de
+        jr      c,._
+        ld      [ix+#mob.type],$FF      `remove object?
+        ret
+        
+._4     ld      hl,$0402
+        ld      [$.TEMP6],hl
+        call    :detectCollisionWithSonic
+        ret     c
+        
+        ld      a,[$.SONIC.Ydirection]
+        and     a
+        ret     m
+        
+        ld      de,[$.TEMP1]
+        ld      bc,$0010
+        call    :_LABEL_7CC1_12
+        ret
 
         `sprite layout
 ._8481  BYTE $FE, $FF, $FF, $FF, $FF, $FF

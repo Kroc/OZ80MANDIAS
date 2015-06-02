@@ -2,54 +2,55 @@ PROC    :_9be8                                  SECTION ::mobs                  
         `==============================================================================
 PARAMS  IX;mob          HELP ""Address of the current mob being processed
 {
-	ld	[ix+#mob.Xspeed.lo],$80
-	ld	[ix+#mob.Xspeed.hi],$01
-	ld	[ix+#mob.Xdirection],$00
-	ld	[ix+#mob.spriteLayout.lo],._9c69.lo
-	ld	[ix+#mob.spriteLayout.hi],._9c69.hi
-._9bfc	set	5,[ix+#mob.flags]
-	bit	0,[ix+#mob.flags]
-	jr	nz,._1
-	ld	a,[ix+#mob.X.lo]
-	ld	[ix+#mob.unknown11],a
-	ld	a,[ix+#mob.X.hi]
-	ld	[ix+$12],a
-	ld	a,$18
-	rst	:rst_playSFX
-	set	0,[ix+#mob.flags]
-._1	ld	[ix+#mob.width],$06
-	ld	[ix+#mob.height],$08
-	ld	a,[ix+#mob.unknown13]
-	cp	$64
-	jr	nc,._2
-	ld	hl,$0400
-	ld	[$.TEMP6],hl
-	call	:detectCollisionWithSonic
-	call	nc,:_35fd
-._2	inc	[ix+#mob.unknown13]
-	ld	a,[ix+#mob.unknown13]
-	cp	$64
-	ret	c
-	cp	$f0
-	jr	c,._3
-	xor	a;zero			        `set A to 0
-	ld	[ix+#mob.Xsubpixel],a;zero
-	ld	[ix+#mob.unknown13],a;zero
-	ld	a,[ix+#mob.unknown11]
-	ld	[ix+#mob.X.lo],a
-	ld	a,[ix+$12]
-	ld	[ix+#mob.X.hi],a
-	ld	a,$18
-	rst	:rst_playSFX
-	ret
-	
-._3	xor	a;zero
-	ld	[ix+#mob.spriteLayout.lo],a;zero
-	ld	[ix+#mob.spriteLayout.hi],a;zero
-	ld	[ix+#mob.Xspeed.lo],a;zero
-	ld	[ix+#mob.Xspeed.hi],a;zero
-	ld	[ix+#mob.Xdirection],a;zero
-	ret
+        ld      [ix+#mob.Xspeed.lo],$80
+        ld      [ix+#mob.Xspeed.hi],$01
+        ld      [ix+#mob.Xdirection],$00
+        ld      [ix+#mob.spriteLayout.lo],._9c69.lo
+        ld      [ix+#mob.spriteLayout.hi],._9c69.hi
+        
+._9bfc  set     5,[ix+#mob.flags]               `mob does not collide with the floor
+        bit     0,[ix+#mob.flags]
+        jr      nz,._1
+        ld      a,[ix+#mob.X.lo]
+        ld      [ix+#mob.unknown11],a
+        ld      a,[ix+#mob.X.hi]
+        ld      [ix+$12],a
+        ld      a,$18
+        rst     :rst_playSFX
+        set     0,[ix+#mob.flags]
+._1     ld      [ix+#mob.width],$06
+        ld      [ix+#mob.height],$08
+        ld      a,[ix+#mob.unknown13]
+        cp      $64
+        jr      nc,._2
+        ld      hl,$0400
+        ld      [$.TEMP6],hl
+        call    :detectCollisionWithSonic
+        call    nc,:hitPlayer._35fd
+._2     inc     [ix+#mob.unknown13]
+        ld      a,[ix+#mob.unknown13]
+        cp      $64
+        ret     c
+        cp      $f0
+        jr      c,._3
+        xor     a;zero                          `set A to 0
+        ld      [ix+#mob.Xsubpixel],a;zero
+        ld      [ix+#mob.unknown13],a;zero
+        ld      a,[ix+#mob.unknown11]
+        ld      [ix+#mob.X.lo],a
+        ld      a,[ix+$12]
+        ld      [ix+#mob.X.hi],a
+        ld      a,$18
+        rst     :rst_playSFX
+        ret
+        
+._3     xor     a;zero
+        ld      [ix+#mob.spriteLayout.lo],a;zero
+        ld      [ix+#mob.spriteLayout.hi],a;zero
+        ld      [ix+#mob.Xspeed.lo],a;zero
+        ld      [ix+#mob.Xspeed.hi],a;zero
+        ld      [ix+#mob.Xdirection],a;zero
+        ret
 
         `sprite layout
 ._9c69  BYTE $0C, $0E, $FF, $FF, $FF, $FF

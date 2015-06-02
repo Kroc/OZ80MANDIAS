@@ -5,16 +5,16 @@
 `` please use tab stops at 8 and a line width of 88 chars, thanks
    ================================================================================= ``
 ``
-			W    A    R    N    I    N    G    !
-	
-	Here be dragons! This disassembly is in progress, expect constant
-	changes as well as future planned improvements:
-	
-	*	split up into categorised files
-	
-	*	fully commented and described program flow
-	
-	*	portable data
+                        W    A    R    N    I    N    G    !
+        
+        Here be dragons! This disassembly is in progress, expect constant
+        changes as well as future planned improvements:
+        
+        *       split up into categorised files
+        
+        *       fully commented and described program flow
+        
+        *       portable data
 
    --------------------------------------------------------------------------------- ``
 `` This source code is given to the public domain:
@@ -35,23 +35,23 @@
 `` this disassembly was made by using these tools:
 
 :: SMSExamine: <smspower.org/Development/SMSExamine>
-	this excellent tool disassembles much of the ROM by effectively 'running'
-	the code to determine what parts are code and what parts are data.
-	this saved a very large amount of effort, but due to the dynamic and complex
-	nature of code, it didn't get all of it right, therefore I used:
+        this excellent tool disassembles much of the ROM by effectively 'running'
+        the code to determine what parts are code and what parts are data.
+        this saved a very large amount of effort, but due to the dynamic and complex
+        nature of code, it didn't get all of it right, therefore I used:
  
 :: dz80: <inkland.org.uk/dz80>
-	to do a byte-for-byte disassembly to fill in the blanks (this had to all be
-	manually labelled!). that was largely wasted time as I later got help from
-	the author of:
+        to do a byte-for-byte disassembly to fill in the blanks (this had to all be
+        manually labelled!). that was largely wasted time as I later got help from
+        the author of:
  
 :: Emulicious: <emulicious.net>
-	which was able to provide a far superior disassembly that filled in all the
-	gaps through a specific configuration file provided kindly by the author to
-	assist me
+        which was able to provide a far superior disassembly that filled in all the
+        gaps through a specific configuration file provided kindly by the author to
+        assist me
  
 :: WLA DX <villehelin.com/wla.html>
-	I used this assembler to get things working, and after having explored the
+        I used this assembler to get things working, and after having explored the
         syntax and the task at hand, I opted to write my own assembler:
 
 :: OZ80MANDIAS <github.com/Kroc/OZ80MANDIAS>
@@ -73,14 +73,14 @@ INCLUDE         "system.sms.oz80"
 ``
 DEF !VDP_REGISTER_WRITE %10000000
 DEF !VDP_REGISTER_0     !VDP_REGISTER_WRITE | 0
-DEF !VDP_REGISTER_1	!VDP_REGISTER_WRITE | 1
-DEF !VDP_REGISTER_2	!VDP_REGISTER_WRITE | 2
+DEF !VDP_REGISTER_1     !VDP_REGISTER_WRITE | 1
+DEF !VDP_REGISTER_2     !VDP_REGISTER_WRITE | 2
 DEF !VDP_REGISTER_5     !VDP_REGISTER_WRITE | 5
-DEF !VDP_REGISTER_6	!VDP_REGISTER_WRITE | 6
+DEF !VDP_REGISTER_6     !VDP_REGISTER_WRITE | 6
 DEF !VDP_REGISTER_7     !VDP_REGISTER_WRITE | 7
-DEF !VDP_REGISTER_8	!VDP_REGISTER_WRITE | 8
-DEF !VDP_REGISTER_9	!VDP_REGISTER_WRITE | 9
-DEF !VDP_REGISTER_10	!VDP_REGISTER_WRITE | 10
+DEF !VDP_REGISTER_8     !VDP_REGISTER_WRITE | 8
+DEF !VDP_REGISTER_9     !VDP_REGISTER_WRITE | 9
+DEF !VDP_REGISTER_10    !VDP_REGISTER_WRITE | 10
 
 
 

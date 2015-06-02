@@ -2,61 +2,61 @@ PROC    :mob_explosion                          SECTION ::mobs                  
         `==============================================================================
 PARAMS  IX;mob          HELP ""Address of the current mob being processed
 {
-	set	5,[ix+#mob.flags]
-	ld	a,[ix+#mob.unknown15]
-	cp	$aa
-	jr	z,._1
-	xor	a;zero
-	ld	[ix+#mob.unknown11],a;zero
-	ld	[ix+#mob.unknown15],$aa
-	ld	[ix+#mob.unknown16],a;zero
-	ld	[ix+#mob.unknown17],a;zero
-	bit	5,[iy+#vars.flags0]
-	jr	z,._1
-	ld	a,[$.CURRENT_LEVEL]
-	cp	$12
-	jr	z,._1
-	ld	a,[$.SONIC.flags]
-	rlca	
-	jr	c,._1
-	ld	a,[$.D2E8]
-	ld	de,[$.D2E6]
-	inc	de
-	ld	c,a
-	ld	hl,[$.SONIC.Yspeed]
-	ld	a,l
-	cpl	
-	ld	l,a
-	ld	a,h
-	cpl	
-	ld	h,a
-	
-	ld	a,[$.SONIC.Ydirection]
-	and	a
-	jp	m,._1
-	
-	cpl	
-	add	hl,de
-	adc	a,c
-	ld	[$.SONIC.Yspeed],hl
-	ld	[$.SONIC.Ydirection],a
-	
-._1	xor	a;zero			        `set A to 0
-	ld	[ix+#mob.Xspeed.lo],a;zero
-	ld	[ix+#mob.Xspeed.hi],a;zero
-	ld	[ix+#mob.Xdirection],a;zero
-	ld	[ix+#mob.Yspeed.lo],a;zero
-	ld	[ix+#mob.Yspeed.hi],a;zerp
-	ld	[ix+#mob.Ydirection],a;zero
-	ld	de,._69be
-	ld	bc,._69b7
-	call	:_7c41
-	inc	[ix+#mob.unknown11]
-	ld	a,[ix+#mob.unknown11]
-	cp	$18
-	ret	c
-	ld	[ix+#mob.type],$FF	        `remove object?
-	ret
+        set     5,[ix+#mob.flags]               `mob does not collide with the floor
+        ld      a,[ix+#mob.unknown15]
+        cp      $aa
+        jr      z,._1
+        xor     a;zero
+        ld      [ix+#mob.unknown11],a;zero
+        ld      [ix+#mob.unknown15],$aa
+        ld      [ix+#mob.unknown16],a;zero
+        ld      [ix+#mob.unknown17],a;zero
+        bit     5,[iy+#vars.flags0]
+        jr      z,._1
+        ld      a,[$.CURRENT_LEVEL]
+        cp      $12
+        jr      z,._1
+        ld      a,[$.SONIC.flags]
+        rlca    
+        jr      c,._1
+        ld      a,[$.D2E8]
+        ld      de,[$.D2E6]
+        inc     de
+        ld      c,a
+        ld      hl,[$.SONIC.Yspeed]
+        ld      a,l
+        cpl     
+        ld      l,a
+        ld      a,h
+        cpl     
+        ld      h,a
+        
+        ld      a,[$.SONIC.Ydirection]
+        and     a
+        jp      m,._1
+        
+        cpl     
+        add     hl,de
+        adc     a,c
+        ld      [$.SONIC.Yspeed],hl
+        ld      [$.SONIC.Ydirection],a
+        
+._1     xor     a;zero                          `set A to 0
+        ld      [ix+#mob.Xspeed.lo],a;zero
+        ld      [ix+#mob.Xspeed.hi],a;zero
+        ld      [ix+#mob.Xdirection],a;zero
+        ld      [ix+#mob.Yspeed.lo],a;zero
+        ld      [ix+#mob.Yspeed.hi],a;zerp
+        ld      [ix+#mob.Ydirection],a;zero
+        ld      de,._69be
+        ld      bc,._69b7
+        call    :_7c41
+        inc     [ix+#mob.unknown11]
+        ld      a,[ix+#mob.unknown11]
+        cp      $18
+        ret     c
+        ld      [ix+#mob.type],$FF              `remove object?
+        ret
         
 ._69b7  BYTE $00, $08, $01, $08, $02, $08, $ff
 ._69be  `sprite layout

@@ -4,62 +4,62 @@ PROC    :mob_trap_spikeBall                     SECTION ::mobs                  
         `==============================================================================
 PARAMS  IX;mob          HELP ""Address of the current mob being processed
 {
-	set	5,[ix+#mob.flags]
-	ld	[ix+#mob.width], 8
-	ld	[ix+#mob.height],12
-	bit	0,[ix+#mob.flags]
-	jr	nz,._1
-	ld	l,[ix+#mob.X.lo]
-	ld	h,[ix+#mob.X.hi]
-	ld	de,$0008
-	add	hl,de
-	ld	[ix+#mob.unknown12],l
-	ld	[ix+#mob.unknown13],h
-	ld	l,[ix+#mob.Y.lo]
-	ld	h,[ix+#mob.Y.hi]
-	ld	de,$0008
-	add	hl,de
-	ld	[ix+#mob.unknown14],l
-	ld	[ix+#mob.unknown15],h
-	set	0,[ix+#mob.flags]
-._1	ld	l,[ix+#mob.unknown11]
-	ld	h,$00
-	add	hl,hl
-	ld	de,._898e
-	add	hl,de
-	ld	e,[hl]
-	inc	hl
-	ld	c,[hl]
-	ld	d,$00
-	ld	b,d
-	bit	7,e
-	jr	z,._2
-	dec	d
-._2	bit	7,c
-	jr	z,._3
-	dec	b
-._3	ld	l,[ix+#mob.unknown12]
-	ld	h,[ix+#mob.unknown13]
-	add	hl,de
-	ld	[ix+#mob.X.lo],l
-	ld	[ix+#mob.X.hi],h
-	ld	l,[ix+#mob.unknown14]
-	ld	h,[ix+#mob.unknown15]
-	add	hl,bc
-	ld	[ix+#mob.Y.lo],l
-	ld	[ix+#mob.Y.hi],h
-	ld	hl,$0204
-	ld	[$.TEMP6],hl
-	call	:detectCollisionWithSonic
-	call	nc,:_35fd
-	ld	[ix+#mob.spriteLayout.lo],._8987.lo
-	ld	[ix+#mob.spriteLayout.hi],._8987.hi
-	inc	[ix+#mob.unknown11]
-	ld	a,[ix+#mob.unknown11]
-	cp	$b4
-	ret	c
-	ld	[ix+#mob.unknown11],$00
-	ret
+        set     5,[ix+#mob.flags]               `mob does not collide with the floor
+        ld      [ix+#mob.width], 8
+        ld      [ix+#mob.height],12
+        bit     0,[ix+#mob.flags]
+        jr      nz,._1
+        ld      l,[ix+#mob.X.lo]
+        ld      h,[ix+#mob.X.hi]
+        ld      de,$0008
+        add     hl,de
+        ld      [ix+#mob.unknown12],l
+        ld      [ix+#mob.unknown13],h
+        ld      l,[ix+#mob.Y.lo]
+        ld      h,[ix+#mob.Y.hi]
+        ld      de,$0008
+        add     hl,de
+        ld      [ix+#mob.unknown14],l
+        ld      [ix+#mob.unknown15],h
+        set     0,[ix+#mob.flags]
+._1     ld      l,[ix+#mob.unknown11]
+        ld      h,$00
+        add     hl,hl
+        ld      de,._898e
+        add     hl,de
+        ld      e,[hl]
+        inc     hl
+        ld      c,[hl]
+        ld      d,$00
+        ld      b,d
+        bit     7,e
+        jr      z,._2
+        dec     d
+._2     bit     7,c
+        jr      z,._3
+        dec     b
+._3     ld      l,[ix+#mob.unknown12]
+        ld      h,[ix+#mob.unknown13]
+        add     hl,de
+        ld      [ix+#mob.X.lo],l
+        ld      [ix+#mob.X.hi],h
+        ld      l,[ix+#mob.unknown14]
+        ld      h,[ix+#mob.unknown15]
+        add     hl,bc
+        ld      [ix+#mob.Y.lo],l
+        ld      [ix+#mob.Y.hi],h
+        ld      hl,$0204
+        ld      [$.TEMP6],hl
+        call    :detectCollisionWithSonic
+        call    nc,:hitPlayer._35fd
+        ld      [ix+#mob.spriteLayout.lo],._8987.lo
+        ld      [ix+#mob.spriteLayout.hi],._8987.hi
+        inc     [ix+#mob.unknown11]
+        ld      a,[ix+#mob.unknown11]
+        cp      $b4
+        ret     c
+        ld      [ix+#mob.unknown11],$00
+        ret
  
         `sprite layout
 ._8987  BYTE $60, $62, $FF, $FF, $FF, $FF

@@ -4,138 +4,138 @@ PROC    :mob_platform_flipper                   SECTION ::mobs                  
         `==============================================================================
 PARAMS  IX;mob          HELP ""Address of the current mob being processed
 {
-	set	5,[ix+#mob.flags]
-	ld	[ix+#mob.spriteLayout.lo],._9a7e.lo
-	ld	[ix+#mob.spriteLayout.hi],._9a7e.hi
-	bit	5,[iy+#vars.joypad]
-	jr	nz,._1
-	ld	a,[ix+#mob.unknown11]
-	ld	[ix+$12],a
-	ld	a,[ix+#mob.unknown11]
-	cp	$05
-	jr	nc,._2
-	inc	[ix+#mob.unknown11]
-	jp	._2
-	
-._1	ld	a,[ix+#mob.unknown11]
-	and	a
-	jr	z,._2
-	dec	[ix+#mob.unknown11]
-._2	ld	a,[ix+#mob.unknown11]
-	cp	$01
-	jr	nc,._3
-	ld	hl,$140c
-	ld	[$.TEMP6],hl
-	ld	[ix+#mob.width],$1e
-	ld	[ix+#mob.height],$16
-	call	:detectCollisionWithSonic
-	ret	c
-	ld	bc,._999e
-	call	._9aaf
-	ret	nc
-	ld	a,[$.D2E8]
-	ld	hl,[$.D2E6]
-	ld	[$.SONIC.Yspeed],hl
-	ld	[$.SONIC.Ydirection],a
-	ld	de,$fffc
-	ld	hl,[$.SONIC.Xspeed]
-	ld	a,[$.SONIC.Xdirection]
-	add	hl,de
-	adc	a,$ff
-	ld	[$.SONIC.Xspeed],hl
-	ld	[$.SONIC.Xdirection],a
-	ret
-	
-._3	cp	$04
-	jp	nc,._4
-	ld	[ix+#mob.spriteLayout.lo],._9a90.lo
-	ld	[ix+#mob.spriteLayout.hi],._9a90.hi
-	ld	hl,$080f
-	ld	[$.TEMP6],hl
-	ld	[ix+#mob.width],$1e
-	ld	[ix+#mob.height],$16
-	call	:detectCollisionWithSonic
-	ret	c
-	ld	bc,._99be
-	call	._9aaf
-	ret	nc
-	ld	a,[ix+$12]
-	cp	[ix+#mob.unknown11]
-	ret	nc
-	ld	a,[$.SONIC.X]
-	add	a,$0c
-	and	$1f
-	add	a,a
-	ld	c,a
-	ld	b,$00
-	ld	hl,._99fe
-	add	hl,bc
-	ld	e,[hl]
-	inc	hl
-	ld	d,[hl]
-	ld	hl,[$.SONIC.Xspeed]
-	ld	a,[$.SONIC.Xdirection]
-	add	hl,de
-	adc	a,$ff
-	ld	[$.SONIC.Xspeed],hl
-	ld	[$.SONIC.Xdirection],a
-	ld	hl,._9a3e
-	add	hl,bc
-	ld	e,[hl]
-	inc	hl
-	ld	d,[hl]
-	ld	hl,[$.SONIC.Yspeed]
-	ld	a,l
-	cpl	
-	ld	l,a
-	ld	a,h
-	cpl	
-	ld	h,a
-	ld	a,[$.SONIC.Ydirection]
-	cpl	
-	add	hl,de
-	adc	a,$ff
-	ld	[$.SONIC.Yspeed],hl
-	ld	[$.SONIC.Ydirection],a
-	ret
+        set     5,[ix+#mob.flags]               `mob does not collide with the floor
+        ld      [ix+#mob.spriteLayout.lo],._9a7e.lo
+        ld      [ix+#mob.spriteLayout.hi],._9a7e.hi
+        bit     5,[iy+#vars.joypad]
+        jr      nz,._1
+        ld      a,[ix+#mob.unknown11]
+        ld      [ix+$12],a
+        ld      a,[ix+#mob.unknown11]
+        cp      $05
+        jr      nc,._2
+        inc     [ix+#mob.unknown11]
+        jp      ._2
+        
+._1     ld      a,[ix+#mob.unknown11]
+        and     a
+        jr      z,._2
+        dec     [ix+#mob.unknown11]
+._2     ld      a,[ix+#mob.unknown11]
+        cp      $01
+        jr      nc,._3
+        ld      hl,$140c
+        ld      [$.TEMP6],hl
+        ld      [ix+#mob.width],$1e
+        ld      [ix+#mob.height],$16
+        call    :detectCollisionWithSonic
+        ret     c
+        ld      bc,._999e
+        call    ._9aaf
+        ret     nc
+        ld      a,[$.D2E8]
+        ld      hl,[$.D2E6]
+        ld      [$.SONIC.Yspeed],hl
+        ld      [$.SONIC.Ydirection],a
+        ld      de,$fffc
+        ld      hl,[$.SONIC.Xspeed]
+        ld      a,[$.SONIC.Xdirection]
+        add     hl,de
+        adc     a,$ff
+        ld      [$.SONIC.Xspeed],hl
+        ld      [$.SONIC.Xdirection],a
+        ret
+        
+._3     cp      $04
+        jp      nc,._4
+        ld      [ix+#mob.spriteLayout.lo],._9a90.lo
+        ld      [ix+#mob.spriteLayout.hi],._9a90.hi
+        ld      hl,$080f
+        ld      [$.TEMP6],hl
+        ld      [ix+#mob.width],$1e
+        ld      [ix+#mob.height],$16
+        call    :detectCollisionWithSonic
+        ret     c
+        ld      bc,._99be
+        call    ._9aaf
+        ret     nc
+        ld      a,[ix+$12]
+        cp      [ix+#mob.unknown11]
+        ret     nc
+        ld      a,[$.SONIC.X]
+        add     a,$0c
+        and     $1f
+        add     a,a
+        ld      c,a
+        ld      b,$00
+        ld      hl,._99fe
+        add     hl,bc
+        ld      e,[hl]
+        inc     hl
+        ld      d,[hl]
+        ld      hl,[$.SONIC.Xspeed]
+        ld      a,[$.SONIC.Xdirection]
+        add     hl,de
+        adc     a,$ff
+        ld      [$.SONIC.Xspeed],hl
+        ld      [$.SONIC.Xdirection],a
+        ld      hl,._9a3e
+        add     hl,bc
+        ld      e,[hl]
+        inc     hl
+        ld      d,[hl]
+        ld      hl,[$.SONIC.Yspeed]
+        ld      a,l
+        cpl     
+        ld      l,a
+        ld      a,h
+        cpl     
+        ld      h,a
+        ld      a,[$.SONIC.Ydirection]
+        cpl     
+        add     hl,de
+        adc     a,$ff
+        ld      [$.SONIC.Yspeed],hl
+        ld      [$.SONIC.Ydirection],a
+        ret
 
-	`unused section of code?
-	ld	a,[$.D2E8]
-	ld	hl,[$.D2E6]
-	ld	[$.SONIC.Yspeed],hl
-	ld	[$.SONIC.Ydirection],a
-	ld	de,$0008
-	ld	hl,[$.SONIC.Xspeed]
-	ld	a,[$.SONIC.Xdirection]
-	add	hl,de
-	adc	a,$00
-	ld	[$.SONIC.Xspeed],hl
-	ld	[$.SONIC.Xdirection],a
-	ret
-	
-._4	ld	[ix+#mob.spriteLayout.lo],._9aa2.lo
-	ld	[ix+#mob.spriteLayout.hi],._9aa2.hi
-	ld	hl,$021a
-	ld	[$.TEMP6],hl
-	ld	[ix+#mob.width],$1e
-	ld	[ix+#mob.height],$16
-	call	:detectCollisionWithSonic
-	ret	c
-	ld	bc,._99de
-	call	._9aaf
-	ret	nc
-	ld	a,[$.D2E8]
-	ld	hl,[$.D2E6]
-	ld	[$.SONIC.Yspeed],hl
-	ld	[$.SONIC.Ydirection],a
-	ld	de,$001a
-	ld	hl,[$.SONIC.Xspeed]
-	ld	a,[$.SONIC.Xdirection]
-	add	hl,de
-	adc	a,$00
-	ld	[$.SONIC.Xspeed],hl
-	ld	[$.SONIC.Xdirection],a
-	ret
+        `unused section of code?
+        ld      a,[$.D2E8]
+        ld      hl,[$.D2E6]
+        ld      [$.SONIC.Yspeed],hl
+        ld      [$.SONIC.Ydirection],a
+        ld      de,$0008
+        ld      hl,[$.SONIC.Xspeed]
+        ld      a,[$.SONIC.Xdirection]
+        add     hl,de
+        adc     a,$00
+        ld      [$.SONIC.Xspeed],hl
+        ld      [$.SONIC.Xdirection],a
+        ret
+        
+._4     ld      [ix+#mob.spriteLayout.lo],._9aa2.lo
+        ld      [ix+#mob.spriteLayout.hi],._9aa2.hi
+        ld      hl,$021a
+        ld      [$.TEMP6],hl
+        ld      [ix+#mob.width],$1e
+        ld      [ix+#mob.height],$16
+        call    :detectCollisionWithSonic
+        ret     c
+        ld      bc,._99de
+        call    ._9aaf
+        ret     nc
+        ld      a,[$.D2E8]
+        ld      hl,[$.D2E6]
+        ld      [$.SONIC.Yspeed],hl
+        ld      [$.SONIC.Ydirection],a
+        ld      de,$001a
+        ld      hl,[$.SONIC.Xspeed]
+        ld      a,[$.SONIC.Xdirection]
+        add     hl,de
+        adc     a,$00
+        ld      [$.SONIC.Xspeed],hl
+        ld      [$.SONIC.Xdirection],a
+        ret
 
 ._999e  BYTE $FF $FF $FE $FE $FE $FD $FD $FD $FC $FC $FC $FC $FB $FB $FB $FB
         BYTE $FA $FA $FA $FA $FA $F9 $F9 $F9 $F9 $F9 $F9 $FA $FA $FB $FC $FE
@@ -165,48 +165,48 @@ PARAMS  IX;mob          HELP ""Address of the current mob being processed
 
         `--------------------------------------------------------------------[$9AAF]---
 
-._9aaf	ld	a,[$.SONIC.Ydirection]
-	and	a
-	ret	m
-	
-	ld	a,[$.SONIC.X]
-	add	a,$0c
-	and	$1f
-	ld	l,a
-	ld	h,$00
-	add	hl,bc
-	ld	b,$00
-	ld	c,[hl]
-	bit	7,c
-	jr	z,._1
-	dec	b
-._1	ld	l,[ix+#mob.Y.lo]
-	ld	h,[ix+#mob.Y.hi]
-	add	hl,bc
-	ld	[$.SONIC.Y],hl
-	ld	a,[$.SONIC.Yspeed.hi]
-	cp	$03
-	jr	nc,._2
-	scf	
-	ret
-	
-._2	ld	de,$0001
-	ld	hl,[$.SONIC.Yspeed]
-	ld	a,l
-	cpl	
-	ld	l,a
-	ld	a,h
-	cpl	
-	ld	h,a
-	ld	a,[$.SONIC.Ydirection]
-	cpl	
-	add	hl,de
-	adc	a,$00
-	sra	a
-	rr	h
-	rr	l
-	ld	[$.SONIC.Yspeed],hl
-	ld	[$.SONIC.Ydirection],a
-	and	a
-	ret
+._9aaf  ld      a,[$.SONIC.Ydirection]
+        and     a
+        ret     m
+        
+        ld      a,[$.SONIC.X]
+        add     a,$0c
+        and     $1f
+        ld      l,a
+        ld      h,$00
+        add     hl,bc
+        ld      b,$00
+        ld      c,[hl]
+        bit     7,c
+        jr      z,._1
+        dec     b
+._1     ld      l,[ix+#mob.Y.lo]
+        ld      h,[ix+#mob.Y.hi]
+        add     hl,bc
+        ld      [$.SONIC.Y],hl
+        ld      a,[$.SONIC.Yspeed.hi]
+        cp      $03
+        jr      nc,._2
+        scf     
+        ret
+        
+._2     ld      de,$0001
+        ld      hl,[$.SONIC.Yspeed]
+        ld      a,l
+        cpl     
+        ld      l,a
+        ld      a,h
+        cpl     
+        ld      h,a
+        ld      a,[$.SONIC.Ydirection]
+        cpl     
+        add     hl,de
+        adc     a,$00
+        sra     a
+        rr      h
+        rr      l
+        ld      [$.SONIC.Yspeed],hl
+        ld      [$.SONIC.Ydirection],a
+        and     a
+        ret
 }

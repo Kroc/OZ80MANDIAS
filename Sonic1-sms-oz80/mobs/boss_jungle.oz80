@@ -2,169 +2,169 @@ PROC    :mob_boss_jungle                        SECTION ::mobs                  
         `==============================================================================
 PARAMS  IX;mob          HELP ""Address of the current mob being processed
 {
-	set	5,[ix+#mob.flags]
-	ld	[ix+#mob.width], 32
-	ld	[ix+#mob.height],28
-	bit	0,[ix+#mob.flags]
-	jr	nz,._1
-	ld	hl,[$.SONIC.Y]
-	ld	de,$00e0
-	and	a
-	sbc	hl,de
-	ret	nc
-	ld	a,[$.SONIC.flags]
-	rlca	
-	ret	nc
-	`boss sprite set
-	ld	hl,$aeb1
-	ld	de,$2000
-	ld	a,9
-	call	:decompressArt
-	
-	ld	hl,:S1_BossPalette
-	ld	a,%00000010
-	call	:loadPaletteOnInterrupt
-	
-	ld	a,#index_music_boss1
-	rst	:rst_playMusic
-	
-	xor	a;zero
-	ld	[$.D2EC],a;zero
-	
-	`there's a routine at `_7c8c` for setting the scroll positions that should
-	 `have been used here?
-	ld	hl,[$.CAMERA_X]
-	ld	[$.LEVEL_LEFT],hl
-	ld	[$.LEVEL_RIGHT],hl
-	
-	ld	hl,[$.CAMERA_Y]
-	ld	[$.LEVEL_TOP],hl
-	ld	[$.LEVEL_BOTTOM],hl
-	ld	hl,$01f0
-	ld	[$.CAMERA_X_GOTO],hl
-	ld	hl,$0048
-	ld	[$.CAMERA_Y_GOTO],hl
-	
-	set	0,[ix+#mob.flags]
-	
-._1	call	:_7ca6
-	bit	0,[ix+#mob.unknown11]
-	jr	nz,._2
-	ld	[ix+#mob.spriteLayout.lo],._81f4.lo
-	ld	[ix+#mob.spriteLayout.hi],._81f4.hi
-	ld	[ix+#mob.Yspeed.lo],$80
-	ld	[ix+#mob.Yspeed.hi],$00
-	ld	[ix+#mob.Ydirection],$00
-	ld	l,[ix+#mob.Y.lo]
-	ld	h,[ix+#mob.Y.hi]
-	ld	de,$0058
-	xor	a;zero
-	sbc	hl,de
-	ret	c
-	ld	[ix+#mob.Yspeed.lo],a;zero
-	ld	[ix+#mob.Yspeed.hi],a;zero
-	ld	[ix+#mob.Ydirection],a;zero
-	set	0,[ix+#mob.unknown11]
-._2	ld	a,[ix+$12]
-	and	a
-	jp	nz,._4
-	ld	l,[ix+#mob.X.lo]
-	ld	h,[ix+#mob.X.hi]
-	bit	1,[ix+#mob.unknown11]
-	jr	nz,._3
-	ld	[ix+#mob.spriteLayout.lo],._81f4.lo
-	ld	[ix+#mob.spriteLayout.hi],._81f4.hi
-	res	1,[ix+#mob.flags]
-	ld	[ix+#mob.Xspeed.lo],$00
-	ld	[ix+#mob.Xspeed.hi],$ff
-	ld	[ix+#mob.Xdirection],$ff
-	ld	de,$021c
-	and	a
-	sbc	hl,de
-	jp	nc,._8
-	ld	[ix+$12],$67
-	jp	._8
-	
-._3	ld	[ix+#mob.spriteLayout.lo],._8206.lo
-	ld	[ix+#mob.spriteLayout.hi],._8206.hi
-	set	1,[ix+#mob.flags]
-	ld	[ix+#mob.Xspeed.lo],$00
-	ld	[ix+#mob.Xspeed.hi],$01
-	ld	[ix+#mob.Xdirection],$00
-	ld	de,$02aa
-	and	a
-	sbc	hl,de
-	jp	c,._8
-	ld	[ix+$12],$67
-	jp	._8
-	
-._4	xor	a;zero
-	ld	[ix+#mob.Xspeed.lo],a;zero
-	ld	[ix+#mob.Xspeed.hi],a;zero
-	ld	[ix+#mob.Xdirection],a;zero
-	ld	hl,$0001
-	dec	[ix+$12]
-	jr	z,._5
-	ld	a,[ix+$12]
-	cp	$40
-	jr	nc,._6
-	ld	hl,$ffff
-	cp	$28
-	jr	c,._6
-	cp	$34
-	jr	z,._7
-._5	ld	hl,$0000
-._6	ld	[ix+#mob.Yspeed.lo],$00
-	ld	[ix+#mob.Yspeed.hi],l
-	ld	[ix+#mob.Ydirection],h
-	jr	._8
-	
-._7	ld	a,[ix+#mob.unknown11]
-	xor	$02
-	ld	[ix+#mob.unknown11],a
-	ld	a,[$.D2EC]
-	cp	$08
-	jr	nc,._8
-	call	:findEmptyMob
-	ret	c
-	ld	e,[ix+#mob.X.lo]
-	ld	d,[ix+#mob.X.hi]
-	ld	c,[ix+#mob.Y.lo]
-	ld	b,[ix+#mob.Y.hi]
-	push	ix
-	push	hl
-	pop	ix
-	ld	[ix+#mob.type],$2B	        `unknown object
-	xor	a;zero			        `set A to 0
-	ld	[ix+#mob.Xsubpixel],a;zero
-	ld	hl,$000b
-	add	hl,de
-	ld	[ix+#mob.X.lo],l
-	ld	[ix+#mob.X.hi],h
-	ld	[ix+#mob.Ysubpixel],a;zero
-	ld	hl,$0030
-	add	hl,bc
-	ld	[ix+#mob.Y.lo],l
-	ld	[ix+#mob.Y.hi],h
-	ld	[ix+#mob.Xspeed.lo],a;zero
-	ld	[ix+#mob.Xspeed.hi],a;zero
-	ld	[ix+#mob.Xdirection],a;zero
-	ld	[ix+#mob.Yspeed.lo],a;zero
-	ld	[ix+#mob.Yspeed.hi],a;zero
-	ld	[ix+#mob.Ydirection],a;zero
-	ld	[ix+#mob.unknown11],a;zero
-	ld	[ix+#mob.unknown16],a;zero
-	ld	[ix+#mob.unknown17],a;zero
-	call	:_LABEL_625_57
-	and	$3f
-	add	a,$64
-	ld	[ix+$12],a
-	pop	ix
-._8	ld	hl,$005a
-	ld	[$.D216],hl
-	call	:_77be
-	call	:_79fa
-	ret
+        set     5,[ix+#mob.flags]               `mob does not collide with the floor
+        ld      [ix+#mob.width], 32
+        ld      [ix+#mob.height],28
+        bit     0,[ix+#mob.flags]
+        jr      nz,._1
+        ld      hl,[$.SONIC.Y]
+        ld      de,$00e0
+        and     a
+        sbc     hl,de
+        ret     nc
+        ld      a,[$.SONIC.flags]
+        rlca    
+        ret     nc
+        `boss sprite set
+        ld      hl,$aeb1
+        ld      de,$2000
+        ld      a,9
+        call    :decompressArt
+        
+        ld      hl,:S1_BossPalette
+        ld      a,%00000010
+        call    :loadPaletteOnInterrupt
+        
+        ld      a,#index_music_boss1
+        rst     :rst_playMusic
+        
+        xor     a;zero
+        ld      [$.D2EC],a;zero
+        
+        `there's a routine at `_7c8c` for setting the scroll positions that should
+         `have been used here?
+        ld      hl,[$.CAMERA_X]
+        ld      [$.LEVEL_LEFT],hl
+        ld      [$.LEVEL_RIGHT],hl
+        
+        ld      hl,[$.CAMERA_Y]
+        ld      [$.LEVEL_TOP],hl
+        ld      [$.LEVEL_BOTTOM],hl
+        ld      hl,$01f0
+        ld      [$.CAMERA_X_GOTO],hl
+        ld      hl,$0048
+        ld      [$.CAMERA_Y_GOTO],hl
+        
+        set     0,[ix+#mob.flags]
+        
+._1     call    :_7ca6
+        bit     0,[ix+#mob.unknown11]
+        jr      nz,._2
+        ld      [ix+#mob.spriteLayout.lo],._81f4.lo
+        ld      [ix+#mob.spriteLayout.hi],._81f4.hi
+        ld      [ix+#mob.Yspeed.lo],$80
+        ld      [ix+#mob.Yspeed.hi],$00
+        ld      [ix+#mob.Ydirection],$00
+        ld      l,[ix+#mob.Y.lo]
+        ld      h,[ix+#mob.Y.hi]
+        ld      de,$0058
+        xor     a;zero
+        sbc     hl,de
+        ret     c
+        ld      [ix+#mob.Yspeed.lo],a;zero
+        ld      [ix+#mob.Yspeed.hi],a;zero
+        ld      [ix+#mob.Ydirection],a;zero
+        set     0,[ix+#mob.unknown11]
+._2     ld      a,[ix+$12]
+        and     a
+        jp      nz,._4
+        ld      l,[ix+#mob.X.lo]
+        ld      h,[ix+#mob.X.hi]
+        bit     1,[ix+#mob.unknown11]
+        jr      nz,._3
+        ld      [ix+#mob.spriteLayout.lo],._81f4.lo
+        ld      [ix+#mob.spriteLayout.hi],._81f4.hi
+        res     1,[ix+#mob.flags]
+        ld      [ix+#mob.Xspeed.lo],$00
+        ld      [ix+#mob.Xspeed.hi],$ff
+        ld      [ix+#mob.Xdirection],$ff
+        ld      de,$021c
+        and     a
+        sbc     hl,de
+        jp      nc,._8
+        ld      [ix+$12],$67
+        jp      ._8
+        
+._3     ld      [ix+#mob.spriteLayout.lo],._8206.lo
+        ld      [ix+#mob.spriteLayout.hi],._8206.hi
+        set     1,[ix+#mob.flags]
+        ld      [ix+#mob.Xspeed.lo],$00
+        ld      [ix+#mob.Xspeed.hi],$01
+        ld      [ix+#mob.Xdirection],$00
+        ld      de,$02aa
+        and     a
+        sbc     hl,de
+        jp      c,._8
+        ld      [ix+$12],$67
+        jp      ._8
+        
+._4     xor     a;zero
+        ld      [ix+#mob.Xspeed.lo],a;zero
+        ld      [ix+#mob.Xspeed.hi],a;zero
+        ld      [ix+#mob.Xdirection],a;zero
+        ld      hl,$0001
+        dec     [ix+$12]
+        jr      z,._5
+        ld      a,[ix+$12]
+        cp      $40
+        jr      nc,._6
+        ld      hl,$ffff
+        cp      $28
+        jr      c,._6
+        cp      $34
+        jr      z,._7
+._5     ld      hl,$0000
+._6     ld      [ix+#mob.Yspeed.lo],$00
+        ld      [ix+#mob.Yspeed.hi],l
+        ld      [ix+#mob.Ydirection],h
+        jr      ._8
+        
+._7     ld      a,[ix+#mob.unknown11]
+        xor     $02
+        ld      [ix+#mob.unknown11],a
+        ld      a,[$.D2EC]
+        cp      $08
+        jr      nc,._8
+        call    :findEmptyMob
+        ret     c
+        ld      e,[ix+#mob.X.lo]
+        ld      d,[ix+#mob.X.hi]
+        ld      c,[ix+#mob.Y.lo]
+        ld      b,[ix+#mob.Y.hi]
+        push    ix
+        push    hl
+        pop     ix
+        ld      [ix+#mob.type],$2B              `unknown object
+        xor     a;zero                          `set A to 0
+        ld      [ix+#mob.Xsubpixel],a;zero
+        ld      hl,$000b
+        add     hl,de
+        ld      [ix+#mob.X.lo],l
+        ld      [ix+#mob.X.hi],h
+        ld      [ix+#mob.Ysubpixel],a;zero
+        ld      hl,$0030
+        add     hl,bc
+        ld      [ix+#mob.Y.lo],l
+        ld      [ix+#mob.Y.hi],h
+        ld      [ix+#mob.Xspeed.lo],a;zero
+        ld      [ix+#mob.Xspeed.hi],a;zero
+        ld      [ix+#mob.Xdirection],a;zero
+        ld      [ix+#mob.Yspeed.lo],a;zero
+        ld      [ix+#mob.Yspeed.hi],a;zero
+        ld      [ix+#mob.Ydirection],a;zero
+        ld      [ix+#mob.unknown11],a;zero
+        ld      [ix+#mob.unknown16],a;zero
+        ld      [ix+#mob.unknown17],a;zero
+        call    :_LABEL_625_57
+        and     $3f
+        add     a,$64
+        ld      [ix+$12],a
+        pop     ix
+._8     ld      hl,$005a
+        ld      [$.D216],hl
+        call    :_77be
+        call    :_79fa
+        ret
 
         `sprite layout
 ._81f4  BYTE $20, $22, $24, $26, $28, $FF

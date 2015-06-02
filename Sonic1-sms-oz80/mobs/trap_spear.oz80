@@ -3,104 +3,103 @@
 PROC    :mob_trap_spear                         SECTION ::mobs                  `$8AF6
         `==============================================================================
 PARAMS  IX;mob          HELP ""Address of the current mob being processed
-
 {
-	set	5,[ix+#mob.flags]
-	bit	0,[ix+#mob.flags]
-	jr	nz,._1
-	ld	l,[ix+#mob.X.lo]
-	ld	h,[ix+#mob.X.hi]
-	ld	de,$000c
-	add	hl,de
-	ld	[ix+#mob.X.lo],l
-	ld	[ix+#mob.X.hi],h
-	set	0,[ix+#mob.flags]
-._1	ld	l,[ix+#mob.X.lo]
-	ld	h,[ix+#mob.X.hi]
-	ld	[$.TEMP1],hl
-	ld	l,[ix+#mob.Y.lo]
-	ld	h,[ix+#mob.Y.hi]
-	ld	[$.TEMP3],hl
-	ld	hl,$0000
-	ld	[$.TEMP4],hl
-	ld	a,[$.FRAMECOUNT]
-	rlca	
-	rlca	
-	and	$03
-	jr	nz,._2
-	ld	hl,._8bbc
-	ld	a,[$.FRAMECOUNT]
-	and	$3f
-	ld	e,a
-	cp	$08
-	jr	c,._5
-	ld	hl,._8bcd
-	ld	e,$00
-	jr	._5
-	
-._2	cp	$01
-	jr	nz,._3
-	ld	hl,._8bcd
-	ld	e,$00
-	jr	._5
-	
-._3	cp	$02
-	jr	nz,._4
-	ld	hl,._8bc4
-	ld	a,[$.FRAMECOUNT]
-	and	$3f
-	ld	e,a
-	cp	$08
-	jr	c,._5
-	ld	hl,._8bcc
-	ld	e,$00
-	jr	._5
-	
-._4	ld	hl,._8bcc
-	ld	e,$00
-._5	ld	d,$00
-	add	hl,de
-	ld	a,[hl]
-	ld	hl,._8bce
-	add	a,a
-	add	a,a
-	add	a,a
-	ld	e,a
-	add	hl,de
-	ld	b,$03
-	
-.loop	push	bc
-	ld	a,[hl]
-	inc	hl
-	ld	e,[hl]
-	inc	hl
-	and	a
-	jp	m,._6
-	push	hl
-	ld	d,$00
-	ld	[$.TEMP6],de
-	call	:_3581
-	pop	hl
-._6	pop	bc
-	djnz	.loop
-	
-	ld	[ix+#mob.spriteLayout.lo],b
-	ld	[ix+#mob.spriteLayout.hi],b
-	ld	d,[hl]
-	ld	e,$04
-	ld	[$.TEMP6],de
-	inc	hl
-	ld	a,[hl]
-	ld	[ix+#mob.width],$01
-	ld	[ix+#mob.height],a
-	call	:detectCollisionWithSonic
-	call	nc,:_35fd
-	ld	a,[$.FRAMECOUNT]
-	cp	$80
-	ret	nz
-	ld	a,$1d
-	rst	:rst_playSFX
-	ret
+        set     5,[ix+#mob.flags]               `mob does not collide with the floor
+        bit     0,[ix+#mob.flags]
+        jr      nz,._1
+        ld      l,[ix+#mob.X.lo]
+        ld      h,[ix+#mob.X.hi]
+        ld      de,$000c
+        add     hl,de
+        ld      [ix+#mob.X.lo],l
+        ld      [ix+#mob.X.hi],h
+        set     0,[ix+#mob.flags]
+._1     ld      l,[ix+#mob.X.lo]
+        ld      h,[ix+#mob.X.hi]
+        ld      [$.TEMP1],hl
+        ld      l,[ix+#mob.Y.lo]
+        ld      h,[ix+#mob.Y.hi]
+        ld      [$.TEMP3],hl
+        ld      hl,$0000
+        ld      [$.TEMP4],hl
+        ld      a,[$.FRAMECOUNT]
+        rlca    
+        rlca    
+        and     $03
+        jr      nz,._2
+        ld      hl,._8bbc
+        ld      a,[$.FRAMECOUNT]
+        and     $3f
+        ld      e,a
+        cp      $08
+        jr      c,._5
+        ld      hl,._8bcd
+        ld      e,$00
+        jr      ._5
+        
+._2     cp      $01
+        jr      nz,._3
+        ld      hl,._8bcd
+        ld      e,$00
+        jr      ._5
+        
+._3     cp      $02
+        jr      nz,._4
+        ld      hl,._8bc4
+        ld      a,[$.FRAMECOUNT]
+        and     $3f
+        ld      e,a
+        cp      $08
+        jr      c,._5
+        ld      hl,._8bcc
+        ld      e,$00
+        jr      ._5
+        
+._4     ld      hl,._8bcc
+        ld      e,$00
+._5     ld      d,$00
+        add     hl,de
+        ld      a,[hl]
+        ld      hl,._8bce
+        add     a,a
+        add     a,a
+        add     a,a
+        ld      e,a
+        add     hl,de
+        ld      b,$03
+        
+.loop   push    bc
+        ld      a,[hl]
+        inc     hl
+        ld      e,[hl]
+        inc     hl
+        and     a
+        jp      m,._6
+        push    hl
+        ld      d,$00
+        ld      [$.TEMP6],de
+        call    :_3581
+        pop     hl
+._6     pop     bc
+        djnz    .loop
+        
+        ld      [ix+#mob.spriteLayout.lo],b
+        ld      [ix+#mob.spriteLayout.hi],b
+        ld      d,[hl]
+        ld      e,$04
+        ld      [$.TEMP6],de
+        inc     hl
+        ld      a,[hl]
+        ld      [ix+#mob.width],$01
+        ld      [ix+#mob.height],a
+        call    :detectCollisionWithSonic
+        call    nc,:hitPlayer._35fd
+        ld      a,[$.FRAMECOUNT]
+        cp      $80
+        ret     nz
+        ld      a,$1d
+        rst     :rst_playSFX
+        ret
         
 ._8bbc  BYTE $00 $01 $02 $03 $04 $05 $06 $07
 ._8bc4  BYTE $07 $06 $05 $04 $03 $02 $01 $00

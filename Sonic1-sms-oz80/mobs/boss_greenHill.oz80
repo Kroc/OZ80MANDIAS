@@ -4,253 +4,253 @@ PROC    :mob_boss_greenHill                     SECTION ::mobs                  
         `==============================================================================
 PARAMS  IX;mob          HELP ""Address of the current mob being processed
 {
-	set	5,[ix+#mob.flags]
-	ld	[ix+#mob.width], 32
-	ld	[ix+#mob.height],28
-	call	:_7ca6
-	bit	0,[ix+#mob.unknown11]
-	jr	nz,._1
-	ld	l,[ix+#mob.Y.lo]
-	ld	h,[ix+#mob.Y.hi]
-	ld	de,$fff8
-	add	hl,de
-	ld	[ix+#mob.Y.lo],l
-	ld	[ix+#mob.Y.hi],h
-	
-	`boss sprite set
-	ld	hl,$aeb1
-	ld	de,$2000
-	ld	a,9
-	call	:decompressArt
-	
-	ld	hl,:S1_BossPalette
-	ld	a,%00000010
-	call	:loadPaletteOnInterrupt
-	
-	ld	a,#index_music_boss1
-	rst	:rst_playMusic
-	
-	xor	a;zero
-	ld	[$.D2EC],a;zero
-	ld	[ix+$12],a;zero
-	ld	[ix+#mob.unknown14],$a1
-	ld	[ix+#mob.unknown15],$72
-	
-	ld	hl,$0760
-	ld	de,$00e8
-	call	:_7c8c
-	
-	set	0,[ix+#mob.unknown11]
-._1	ld	a,[ix+#mob.unknown13]
-	and	$3f
-	ld	e,a
-	ld	d,$00
-	ld	hl,$7261
-	add	hl,de
-	ld	a,[hl]
-	and	a
-	jp	p,._2
-	ld	c,$ff
-	jr	._3
-._2	ld	c,$00
-._3	ld	[ix+#mob.Yspeed.lo],a
-	ld	[ix+#mob.Yspeed.hi],c
-	ld	[ix+#mob.Ydirection],c
-._4	ld	e,[ix+$12]
-	ld	d,$00
-	ld	l,[ix+#mob.unknown14]
-	ld	h,[ix+#mob.unknown15]
-	add	hl,de
-	ld	[$.TEMP6],hl
-	ld	a,[hl]
-	and	a
-	jr	nz,._5
-	inc	hl
-	ld	a,[hl]
-	ld	[ix+$12],a
-	jp	._4
-	
-._5	dec	a
-	add	a,a
-	ld	e,a
-	ld	d,$00
-	ld	hl,._724b
-	add	hl,de
-	ld	a,[hl]
-	inc	hl
-	ld	h,[hl]
-	ld	l,a
-	jp	[hl]
-	ld	hl,[$.LEVEL_LEFT]
-	ld	de,$0006
-	add	hl,de
-	ld	e,[ix+#mob.X.lo]
-	ld	d,[ix+#mob.X.hi]
-	and	a
-	sbc	hl,de
-	ld	c,$ff
-	ld	hl,$ff00
-	jp	c,._9
-	
-	ld	[ix+$12],$00
-	bit	1,[ix+#mob.unknown11]
-	jr	nz,._6
-	ld	[ix+#mob.unknown14],$a4
-	ld	[ix+#mob.unknown15],$72
-	set	1,[ix+#mob.unknown11]
-	jp	._9
-	
-._6	ld	[ix+#mob.unknown14],$a7
-	ld	[ix+#mob.unknown15],$72
-	res	1,[ix+#mob.unknown11]
-	jp	._9
-	
-	ld	hl,[$.LEVEL_LEFT]
-	ld	de,$00e0
-	add	hl,de
-	ld	e,[ix+#mob.X.lo]
-	ld	d,[ix+#mob.X.hi]
-	and	a
-	sbc	hl,de
-	ld	c,$00
-	ld	hl,$0100
-	jp	nc,._9
-	ld	[ix+$12],$00
-	bit	2,[ix+#mob.unknown11]
-	jr	nz,._7
-	ld	[ix+#mob.unknown14],$a1
-	ld	[ix+#mob.unknown15],$72
-	set	2,[ix+#mob.unknown11]
-	jp	._9
-	
-._7	ld	[ix+#mob.unknown14],$aa
-	ld	[ix+#mob.unknown15],$72
-	res	2,[ix+#mob.unknown11]
-	jp	._9
-	
-	ld	[ix+#mob.Yspeed.lo],$60
-	ld	[ix+#mob.Yspeed.hi],$00
-	ld	[ix+#mob.Ydirection],$00
-	ld	hl,[$.CAMERA_Y]
-	ld	de,$0074
-	add	hl,de
-	ld	e,[ix+#mob.Y.lo]
-	ld	d,[ix+#mob.Y.hi]
-	xor	a;zero
-	sbc	hl,de
-	ld	c,a;zero
-	ld	l,c
-	ld	h,c
-	jp	nc,._9
-	ld	[ix+$12],$00
-	ld	[ix+#mob.unknown14],$b0
-	ld	[ix+#mob.unknown15],$72
-	jp	._9
-	
-	ld	c,$00
-	ld	hl,$0400
-	jp	._9
-	
-	ld	[ix+#mob.Yspeed.lo],$60
-	ld	[ix+#mob.Yspeed.hi],$00
-	ld	[ix+#mob.Ydirection],$00
-	ld	hl,[$.CAMERA_Y]
-	ld	de,$0074
-	add	hl,de
-	ld	e,[ix+#mob.Y.lo]
-	ld	d,[ix+#mob.Y.hi]
-	xor	a;zero
-	sbc	hl,de
-	ld	c,a;zero
-	ld	l,c
-	ld	h,c
-	jp	nc,._9
-	ld	[ix+$12],$00
-	ld	[ix+#mob.unknown14],$bc
-	ld	[ix+#mob.unknown15],$72
-	jp	._9
-	
-	ld	c,$ff
-	ld	hl,$fc00
-	jr	._9
-	
-	ld	c,$00
-	ld	l,c
-	ld	h,c
-	jr	._9
-	
-	ld	c,$00
-	ld	l,c
-	ld	h,c
-	ld	[ix+#mob.unknown14],$ad
-	ld	[ix+#mob.unknown15],$72
-	ld	[ix+$12],c
-	ld	[ix+#mob.unknown13],c
-	jr	._9
-	
-	ld	[ix+#mob.Yspeed.lo],$00
-	ld	[ix+#mob.Yspeed.hi],$ff
-	ld	[ix+#mob.Ydirection],$ff
-	ld	hl,[$.CAMERA_Y]
-	ld	de,$001a
-	add	hl,de
-	ld	e,[ix+#mob.Y.lo]
-	ld	d,[ix+#mob.Y.hi]
-	xor	a;zero
-	sbc	hl,de
-	ld	c,a;zero
-	ld	l,c
-	ld	h,c
-	jp	c,._9
-	ld	l,[ix+#mob.X.lo]
-	ld	h,[ix+#mob.X.hi]
-	ld	de,[$.LEVEL_LEFT]
-	xor	a;zero
-	sbc	hl,de
-	ld	c,a;zero
-	ld	l,c
-	ld	h,c
-	jr	c,._8
-	ld	[ix+#mob.unknown14],$a1
-	ld	[ix+#mob.unknown15],$72
-	ld	[ix+$12],a
-	jr	._9
-	
-._8	ld	[ix+#mob.unknown14],$a4
-	ld	[ix+#mob.unknown15],$72
-	ld	[ix+$12],a
-	jr	._9
-	
-._9	ld	[ix+#mob.Xspeed.lo],l
-	ld	[ix+#mob.Xspeed.hi],h
-	ld	[ix+#mob.Xdirection],c
-	ld	hl,[$.TEMP6]
-	ld	e,[hl]
-	ld	d,$00
-	ld	hl,._72c8
-	add	hl,de
-	ld	a,[hl]
-	ld	hl,._72f8
-	and	a
-	jr	z,._10
-	ld	hl,._730a
-._10	ld	e,a
-	ld	a,[ix+#mob.flags]
-	and	$fd
-	or	e
-	ld	[ix+#mob.flags],a
-	ld	[ix+#mob.spriteLayout.lo],l
-	ld	[ix+#mob.spriteLayout.hi],h
-	ld	hl,$0012
-	ld	[$.D216],hl
-	call	:_77be
-	call	:_79fa
-	inc	[ix+#mob.unknown13]
-	ld	a,[ix+#mob.unknown13]
-	and	$0f
-	ret	nz
-	inc	[ix+$12]
-	ret
+        set     5,[ix+#mob.flags]               `mob does not collide with the floor
+        ld      [ix+#mob.width], 32
+        ld      [ix+#mob.height],28
+        call    :_7ca6
+        bit     0,[ix+#mob.unknown11]
+        jr      nz,._1
+        ld      l,[ix+#mob.Y.lo]
+        ld      h,[ix+#mob.Y.hi]
+        ld      de,$fff8
+        add     hl,de
+        ld      [ix+#mob.Y.lo],l
+        ld      [ix+#mob.Y.hi],h
+        
+        `boss sprite set
+        ld      hl,$aeb1
+        ld      de,$2000
+        ld      a,9
+        call    :decompressArt
+        
+        ld      hl,:S1_BossPalette
+        ld      a,%00000010
+        call    :loadPaletteOnInterrupt
+        
+        ld      a,#index_music_boss1
+        rst     :rst_playMusic
+        
+        xor     a;zero
+        ld      [$.D2EC],a;zero
+        ld      [ix+$12],a;zero
+        ld      [ix+#mob.unknown14],$a1
+        ld      [ix+#mob.unknown15],$72
+        
+        ld      hl,$0760
+        ld      de,$00e8
+        call    :_7c8c
+        
+        set     0,[ix+#mob.unknown11]
+._1     ld      a,[ix+#mob.unknown13]
+        and     $3f
+        ld      e,a
+        ld      d,$00
+        ld      hl,$7261
+        add     hl,de
+        ld      a,[hl]
+        and     a
+        jp      p,._2
+        ld      c,$ff
+        jr      ._3
+._2     ld      c,$00
+._3     ld      [ix+#mob.Yspeed.lo],a
+        ld      [ix+#mob.Yspeed.hi],c
+        ld      [ix+#mob.Ydirection],c
+._4     ld      e,[ix+$12]
+        ld      d,$00
+        ld      l,[ix+#mob.unknown14]
+        ld      h,[ix+#mob.unknown15]
+        add     hl,de
+        ld      [$.TEMP6],hl
+        ld      a,[hl]
+        and     a
+        jr      nz,._5
+        inc     hl
+        ld      a,[hl]
+        ld      [ix+$12],a
+        jp      ._4
+        
+._5     dec     a
+        add     a,a
+        ld      e,a
+        ld      d,$00
+        ld      hl,._724b
+        add     hl,de
+        ld      a,[hl]
+        inc     hl
+        ld      h,[hl]
+        ld      l,a
+        jp      [hl]
+        ld      hl,[$.LEVEL_LEFT]
+        ld      de,$0006
+        add     hl,de
+        ld      e,[ix+#mob.X.lo]
+        ld      d,[ix+#mob.X.hi]
+        and     a
+        sbc     hl,de
+        ld      c,$ff
+        ld      hl,$ff00
+        jp      c,._9
+        
+        ld      [ix+$12],$00
+        bit     1,[ix+#mob.unknown11]
+        jr      nz,._6
+        ld      [ix+#mob.unknown14],$a4
+        ld      [ix+#mob.unknown15],$72
+        set     1,[ix+#mob.unknown11]
+        jp      ._9
+        
+._6     ld      [ix+#mob.unknown14],$a7
+        ld      [ix+#mob.unknown15],$72
+        res     1,[ix+#mob.unknown11]
+        jp      ._9
+        
+        ld      hl,[$.LEVEL_LEFT]
+        ld      de,$00e0
+        add     hl,de
+        ld      e,[ix+#mob.X.lo]
+        ld      d,[ix+#mob.X.hi]
+        and     a
+        sbc     hl,de
+        ld      c,$00
+        ld      hl,$0100
+        jp      nc,._9
+        ld      [ix+$12],$00
+        bit     2,[ix+#mob.unknown11]
+        jr      nz,._7
+        ld      [ix+#mob.unknown14],$a1
+        ld      [ix+#mob.unknown15],$72
+        set     2,[ix+#mob.unknown11]
+        jp      ._9
+        
+._7     ld      [ix+#mob.unknown14],$aa
+        ld      [ix+#mob.unknown15],$72
+        res     2,[ix+#mob.unknown11]
+        jp      ._9
+        
+        ld      [ix+#mob.Yspeed.lo],$60
+        ld      [ix+#mob.Yspeed.hi],$00
+        ld      [ix+#mob.Ydirection],$00
+        ld      hl,[$.CAMERA_Y]
+        ld      de,$0074
+        add     hl,de
+        ld      e,[ix+#mob.Y.lo]
+        ld      d,[ix+#mob.Y.hi]
+        xor     a;zero
+        sbc     hl,de
+        ld      c,a;zero
+        ld      l,c
+        ld      h,c
+        jp      nc,._9
+        ld      [ix+$12],$00
+        ld      [ix+#mob.unknown14],$b0
+        ld      [ix+#mob.unknown15],$72
+        jp      ._9
+        
+        ld      c,$00
+        ld      hl,$0400
+        jp      ._9
+        
+        ld      [ix+#mob.Yspeed.lo],$60
+        ld      [ix+#mob.Yspeed.hi],$00
+        ld      [ix+#mob.Ydirection],$00
+        ld      hl,[$.CAMERA_Y]
+        ld      de,$0074
+        add     hl,de
+        ld      e,[ix+#mob.Y.lo]
+        ld      d,[ix+#mob.Y.hi]
+        xor     a;zero
+        sbc     hl,de
+        ld      c,a;zero
+        ld      l,c
+        ld      h,c
+        jp      nc,._9
+        ld      [ix+$12],$00
+        ld      [ix+#mob.unknown14],$bc
+        ld      [ix+#mob.unknown15],$72
+        jp      ._9
+        
+        ld      c,$ff
+        ld      hl,$fc00
+        jr      ._9
+        
+        ld      c,$00
+        ld      l,c
+        ld      h,c
+        jr      ._9
+        
+        ld      c,$00
+        ld      l,c
+        ld      h,c
+        ld      [ix+#mob.unknown14],$ad
+        ld      [ix+#mob.unknown15],$72
+        ld      [ix+$12],c
+        ld      [ix+#mob.unknown13],c
+        jr      ._9
+        
+        ld      [ix+#mob.Yspeed.lo],$00
+        ld      [ix+#mob.Yspeed.hi],$ff
+        ld      [ix+#mob.Ydirection],$ff
+        ld      hl,[$.CAMERA_Y]
+        ld      de,$001a
+        add     hl,de
+        ld      e,[ix+#mob.Y.lo]
+        ld      d,[ix+#mob.Y.hi]
+        xor     a;zero
+        sbc     hl,de
+        ld      c,a;zero
+        ld      l,c
+        ld      h,c
+        jp      c,._9
+        ld      l,[ix+#mob.X.lo]
+        ld      h,[ix+#mob.X.hi]
+        ld      de,[$.LEVEL_LEFT]
+        xor     a;zero
+        sbc     hl,de
+        ld      c,a;zero
+        ld      l,c
+        ld      h,c
+        jr      c,._8
+        ld      [ix+#mob.unknown14],$a1
+        ld      [ix+#mob.unknown15],$72
+        ld      [ix+$12],a
+        jr      ._9
+        
+._8     ld      [ix+#mob.unknown14],$a4
+        ld      [ix+#mob.unknown15],$72
+        ld      [ix+$12],a
+        jr      ._9
+        
+._9     ld      [ix+#mob.Xspeed.lo],l
+        ld      [ix+#mob.Xspeed.hi],h
+        ld      [ix+#mob.Xdirection],c
+        ld      hl,[$.TEMP6]
+        ld      e,[hl]
+        ld      d,$00
+        ld      hl,._72c8
+        add     hl,de
+        ld      a,[hl]
+        ld      hl,._72f8
+        and     a
+        jr      z,._10
+        ld      hl,._730a
+._10    ld      e,a
+        ld      a,[ix+#mob.flags]
+        and     $fd
+        or      e
+        ld      [ix+#mob.flags],a
+        ld      [ix+#mob.spriteLayout.lo],l
+        ld      [ix+#mob.spriteLayout.hi],h
+        ld      hl,$0012
+        ld      [$.D216],hl
+        call    :_77be
+        call    :_79fa
+        inc     [ix+#mob.unknown13]
+        ld      a,[ix+#mob.unknown13]
+        and     $0f
+        ret     nz
+        inc     [ix+$12]
+        ret
 
 ._724b  BYTE $AC $70 $EC $70 $2C $71 $5D $71 $65 $71 $96 $71 $9D $71 $A3 $71
         BYTE $B7 $71 $00 $00 $9D $71 $00 $14 $28 $28 $3C $3C $3C $50 $50 $50

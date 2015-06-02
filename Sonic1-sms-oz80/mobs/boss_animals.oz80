@@ -4,63 +4,63 @@ PROC    :mob_boss_freeBird                      SECTION ::mobs                  
         `==============================================================================
 PARAMS  IX;mob          HELP ""Address of the current mob being processed
 {
-	res	5,[ix+#mob.flags]
-	ld	[ix+#mob.width], 12
-	ld	[ix+#mob.height],16
-	bit	7,[ix+#mob.flags]
-	jr	z,._1
-	ld	[ix+#mob.Yspeed.lo],$00
-	ld	[ix+#mob.Yspeed.hi],$fd
-	ld	[ix+#mob.Ydirection],$ff
-._1	ld	de,$0012
-	ld	a,[$.LEVEL_SOLIDITY]
-	cp	$03
-	jr	nz,._2
-	ld	de,$0038
-._2	ld	l,[ix+#mob.Yspeed.lo]
-	ld	h,[ix+#mob.Yspeed.hi]
-	ld	a,[ix+#mob.Ydirection]
-	add	hl,de
-	adc	a,$00
-	ld	c,a
-	jp	m,._3
-	ld	a,h
-	cp	$02
-	jr	c,._3
-	ld	hl,$0200
-	ld	c,$00
-._3	ld	[ix+#mob.Yspeed.lo],l
-	ld	[ix+#mob.Yspeed.hi],h
-	ld	[ix+#mob.Ydirection],c
-	ld	hl,$FE00
-	ld	a,[$.LEVEL_SOLIDITY]
-	cp	$03
-	jr	nz,._4
-	ld	hl,$FE80
-._4	ld	[ix+#mob.Xspeed.lo],l
-	ld	[ix+#mob.Xspeed.hi],h
-	ld	[ix+#mob.Xdirection],$ff
-	ld	bc,._7629
-	ld	a,[$.LEVEL_SOLIDITY]
-	and	a
-	jr	z,._5
-	ld	bc,._762e
-	cp	$03
-	jr	nz,._5
-	ld	bc,._7633
-._5	ld	de,._7638
-	call	:_7c41
+        res     5,[ix+#mob.flags]               `mob adheres to the floor
+        ld      [ix+#mob.width], 12
+        ld      [ix+#mob.height],16
+        bit     7,[ix+#mob.flags]
+        jr      z,._1
+        ld      [ix+#mob.Yspeed.lo],$00
+        ld      [ix+#mob.Yspeed.hi],$fd
+        ld      [ix+#mob.Ydirection],$ff
+._1     ld      de,$0012
+        ld      a,[$.LEVEL_SOLIDITY]
+        cp      $03
+        jr      nz,._2
+        ld      de,$0038
+._2     ld      l,[ix+#mob.Yspeed.lo]
+        ld      h,[ix+#mob.Yspeed.hi]
+        ld      a,[ix+#mob.Ydirection]
+        add     hl,de
+        adc     a,$00
+        ld      c,a
+        jp      m,._3
+        ld      a,h
+        cp      $02
+        jr      c,._3
+        ld      hl,$0200
+        ld      c,$00
+._3     ld      [ix+#mob.Yspeed.lo],l
+        ld      [ix+#mob.Yspeed.hi],h
+        ld      [ix+#mob.Ydirection],c
+        ld      hl,$FE00
+        ld      a,[$.LEVEL_SOLIDITY]
+        cp      $03
+        jr      nz,._4
+        ld      hl,$FE80
+._4     ld      [ix+#mob.Xspeed.lo],l
+        ld      [ix+#mob.Xspeed.hi],h
+        ld      [ix+#mob.Xdirection],$ff
+        ld      bc,._7629
+        ld      a,[$.LEVEL_SOLIDITY]
+        and     a
+        jr      z,._5
+        ld      bc,._762e
+        cp      $03
+        jr      nz,._5
+        ld      bc,._7633
+._5     ld      de,._7638
+        call    :_7c41
         
-._7612	ld	l,[ix+#mob.X.lo]
-	ld	h,[ix+#mob.X.hi]
-	ld	de,$0010
-	add	hl,de
-	ld	de,[$.CAMERA_X]
-	and	a
-	sbc	hl,de
-	ret	nc
-	ld	[ix+#mob.type],$FF	`remove object?
-	ret
+._7612  ld      l,[ix+#mob.X.lo]
+        ld      h,[ix+#mob.X.hi]
+        ld      de,$0010
+        add     hl,de
+        ld      de,[$.CAMERA_X]
+        and     a
+        sbc     hl,de
+        ret     nc
+        ld      [ix+#mob.type],$FF      `remove object?
+        ret
 
 ._7629  BYTE $00, $02, $01, $02, $ff
 ._762e  BYTE $02, $04, $03, $04, $ff
@@ -95,80 +95,80 @@ PROC    :mob_boss_freeRabbit                    SECTION ::mobs                  
         `==============================================================================
 PARAMS  IX;mob          HELP ""Address of the current mob being processed
 {
-	res	5,[ix+#mob.flags]
-	ld	[ix+#mob.width], 12
-	ld	[ix+#mob.height],32
-	ld	hl,:_7760
-	ld	a,[$.LEVEL_SOLIDITY]
-	and	a
-	jr	z,._1
-	ld	hl,:_777b
-	dec	a
-	jr	z,._1
-	ld	hl,:_7796
-	dec	a
-	jr	z,._1
-	ld	hl,:_77b1
-._1	ld	[ix+#mob.spriteLayout.lo],l
-	ld	[ix+#mob.spriteLayout.hi],h
-	bit	7,[ix+#mob.flags]
-	jr	z,._4
+        res     5,[ix+#mob.flags]               `mob adheres to the floor
+        ld      [ix+#mob.width], 12
+        ld      [ix+#mob.height],32
+        ld      hl,:_7760
+        ld      a,[$.LEVEL_SOLIDITY]
+        and     a
+        jr      z,._1
+        ld      hl,:_777b
+        dec     a
+        jr      z,._1
+        ld      hl,:_7796
+        dec     a
+        jr      z,._1
+        ld      hl,:_77b1
+._1     ld      [ix+#mob.spriteLayout.lo],l
+        ld      [ix+#mob.spriteLayout.hi],h
+        bit     7,[ix+#mob.flags]
+        jr      z,._4
         
-	xor	a;zero
-	ld	[ix+#mob.Yspeed.lo],a;zero
-	ld	[ix+#mob.Yspeed.hi],$01
-	ld	[ix+#mob.Ydirection],a;zero
-	ld	[ix+#mob.Xspeed.lo],a;zero
-	ld	[ix+#mob.Xspeed.hi],a;zero
-	ld	[ix+#mob.Xdirection],a;zero
+        xor     a;zero
+        ld      [ix+#mob.Yspeed.lo],a;zero
+        ld      [ix+#mob.Yspeed.hi],$01
+        ld      [ix+#mob.Ydirection],a;zero
+        ld      [ix+#mob.Xspeed.lo],a;zero
+        ld      [ix+#mob.Xspeed.hi],a;zero
+        ld      [ix+#mob.Xdirection],a;zero
         
-	ld	hl,:_7752
-	ld	a,[$.LEVEL_SOLIDITY]
-	ld	c,a
-	and	a
-	jr	z,._2
-	ld	hl,:_776d
-	dec	a
-	jr	z,._2
-	ld	hl,:_7788
-	dec	a
-	jr	z,._2
-	ld	hl,:_77a3
-._2	ld	[ix+#mob.spriteLayout.lo],l
-	ld	[ix+#mob.spriteLayout.hi],h
-	inc	[ix+#mob.unknown11]
-	ld	a,[ix+#mob.unknown11]
-	cp	$08
-	ret	c
-	ld	hl,$fffc
-	ld	a,c
-	and	a
-	jr	z,._3
-	ld	hl,$fffe
-._3	ld	[ix+#mob.Yspeed.lo],$00
-	ld	[ix+#mob.Yspeed.hi],l
-	ld	[ix+#mob.Ydirection],h
-._4	ld	l,[ix+#mob.Yspeed.lo]
-	ld	h,[ix+#mob.Yspeed.hi]
-	ld	a,[ix+#mob.Ydirection]
-	ld	de,$0028
-	add	hl,de
-	adc	a,$00
-	ld	c,a
-	jp	m,._5
-	ld	a,h
-	cp	$02
-	jr	c,._5
-	ld	hl,$0200
-	ld	c,$00
-._5	ld	[ix+#mob.Yspeed.lo],l
-	ld	[ix+#mob.Yspeed.hi],h
-	ld	[ix+#mob.Ydirection],c
-	ld	[ix+#mob.Xspeed.lo],$80
-	ld	[ix+#mob.Xspeed.hi],$fe
-	ld	[ix+#mob.Xdirection],$ff
-	ld	[ix+#mob.unknown11],$00
-	jp	:mob_boss_freeBird._7612
+        ld      hl,:_7752
+        ld      a,[$.LEVEL_SOLIDITY]
+        ld      c,a
+        and     a
+        jr      z,._2
+        ld      hl,:_776d
+        dec     a
+        jr      z,._2
+        ld      hl,:_7788
+        dec     a
+        jr      z,._2
+        ld      hl,:_77a3
+._2     ld      [ix+#mob.spriteLayout.lo],l
+        ld      [ix+#mob.spriteLayout.hi],h
+        inc     [ix+#mob.unknown11]
+        ld      a,[ix+#mob.unknown11]
+        cp      $08
+        ret     c
+        ld      hl,$fffc
+        ld      a,c
+        and     a
+        jr      z,._3
+        ld      hl,$fffe
+._3     ld      [ix+#mob.Yspeed.lo],$00
+        ld      [ix+#mob.Yspeed.hi],l
+        ld      [ix+#mob.Ydirection],h
+._4     ld      l,[ix+#mob.Yspeed.lo]
+        ld      h,[ix+#mob.Yspeed.hi]
+        ld      a,[ix+#mob.Ydirection]
+        ld      de,$0028
+        add     hl,de
+        adc     a,$00
+        ld      c,a
+        jp      m,._5
+        ld      a,h
+        cp      $02
+        jr      c,._5
+        ld      hl,$0200
+        ld      c,$00
+._5     ld      [ix+#mob.Yspeed.lo],l
+        ld      [ix+#mob.Yspeed.hi],h
+        ld      [ix+#mob.Ydirection],c
+        ld      [ix+#mob.Xspeed.lo],$80
+        ld      [ix+#mob.Xspeed.hi],$fe
+        ld      [ix+#mob.Xdirection],$ff
+        ld      [ix+#mob.unknown11],$00
+        jp      :mob_boss_freeBird._7612
         
         `sprite layout
 ._7752  BYTE $70, $72, $FF, $FF, $FF, $FF

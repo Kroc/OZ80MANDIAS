@@ -4,66 +4,66 @@ PROC    :mob_badnick_motobug                    SECTION ::mobs                  
         `==============================================================================
 PARAMS  IX;mob          HELP ""Address of the current mob being processed
 {
-	res	5,[ix+#mob.flags]
-	ld	[ix+#mob.width], 10
-	ld	[ix+#mob.height],16
-	ld	e,[ix+$12]
-	ld	d,$00
-._1	ld	hl,._6e96
-	add	hl,de
-	ld	[$.TEMP6],hl
-	ld	a,[hl]
-	and	a
-	jr	nz,._2
-	ld	[ix+$12],a
-	ld	e,a
-	jp	._1
-	
-._2	dec	a
-	jr	nz,._3
-	ld	c,$ff
-	ld	hl,$ff00
-	jp	._5
-	
-._3	dec	a
-	jr	nz,._4
-	ld	c,$00
-	ld	hl,$0100
-	jp	._5
-._4	ld	c,$00
-	ld	l,c
-	ld	h,c
-._5	ld	[ix+#mob.Xspeed.lo],l
-	ld	[ix+#mob.Xspeed.hi],h
-	ld	[ix+#mob.Xdirection],c
-	ld	l,[ix+#mob.unknown11]
-	ld	h,[ix+$12]
-	ld	de,$0008
-	add	hl,de
-	ld	[ix+#mob.unknown11],l
-	ld	[ix+$12],h
-	ld	[ix+#mob.Yspeed.lo],$00
-	ld	[ix+#mob.Yspeed.hi],$02
-	ld	[ix+#mob.Ydirection],$00
-	ld	hl,[$.TEMP6]
-	ld	a,[hl]
-	add	a,a
-	ld	e,a
-	ld	d,$00
-	ld	hl,._6eb1
-	add	hl,de
-	ld	c,[hl]
-	inc	hl
-	ld	b,[hl]
-	ld	de,._6ecb
-	call	:_7c41
-	ld	hl,$0203
-	ld	[$.TEMP6],hl
-	call	:detectCollisionWithSonic
-	ld	hl,$0000
-	ld	[$.TEMP1],hl
-	call	nc,:hitPlayer
-	ret
+        res     5,[ix+#mob.flags]               `mob adheres to the floor
+        ld      [ix+#mob.width], 10
+        ld      [ix+#mob.height],16
+        ld      e,[ix+$12]
+        ld      d,$00
+._1     ld      hl,._6e96
+        add     hl,de
+        ld      [$.TEMP6],hl
+        ld      a,[hl]
+        and     a
+        jr      nz,._2
+        ld      [ix+$12],a
+        ld      e,a
+        jp      ._1
+        
+._2     dec     a
+        jr      nz,._3
+        ld      c,$ff
+        ld      hl,$ff00
+        jp      ._5
+        
+._3     dec     a
+        jr      nz,._4
+        ld      c,$00
+        ld      hl,$0100
+        jp      ._5
+._4     ld      c,$00
+        ld      l,c
+        ld      h,c
+._5     ld      [ix+#mob.Xspeed.lo],l
+        ld      [ix+#mob.Xspeed.hi],h
+        ld      [ix+#mob.Xdirection],c
+        ld      l,[ix+#mob.unknown11]
+        ld      h,[ix+$12]
+        ld      de,$0008
+        add     hl,de
+        ld      [ix+#mob.unknown11],l
+        ld      [ix+$12],h
+        ld      [ix+#mob.Yspeed.lo],$00
+        ld      [ix+#mob.Yspeed.hi],$02
+        ld      [ix+#mob.Ydirection],$00
+        ld      hl,[$.TEMP6]
+        ld      a,[hl]
+        add     a,a
+        ld      e,a
+        ld      d,$00
+        ld      hl,._6eb1
+        add     hl,de
+        ld      c,[hl]
+        inc     hl
+        ld      b,[hl]
+        ld      de,._6ecb
+        call    :_7c41
+        ld      hl,$0203
+        ld      [$.TEMP6],hl
+        call    :detectCollisionWithSonic
+        ld      hl,$0000
+        ld      [$.TEMP1],hl
+        call    nc,:hitPlayer
+        ret
 
 ._6e96  BYTE $01, $01, $01, $01, $01, $01, $01, $01, $01
         BYTE $03, $03, $03, $03, $02, $02, $02, $02, $02

@@ -1,5 +1,4 @@
-`` Sonic 1 Master System Disassembly
-   created by Kroc Camen <kroc@camendesign.com>
+`` Sonic 1 Master System Disassembly, created by Kroc Camen <kroc@camendesign.com>
    for MaSS1VE: The Master System Sonic 1 Visual Editor <github.com/Kroc/MaSS1VE>
    ================================================================================= ``
 
@@ -70,9 +69,9 @@ PARAMS  HL;dataAddr     HELP ""Relative address from the beginning of the intend
         
 ._3     ld      [$.TEMP4], hl
         
-        `begin reading the compressed art header:
-         `see <info.sonicretro.org/SCHG:Sonic_the_Hedgehog_%288-bit%29#Header>
-         `for details on the format
+        ``begin reading the compressed art header:
+          see <info.sonicretro.org/SCHG:Sonic_the_Hedgehog_(8-bit)#Header>
+          for details on the format``
         
         `skip the "48 59" art header marker
         inc     hl
@@ -735,14 +734,14 @@ PROC    :updateCamera                           SECTION ::main                  
         set     7,[iy+#vars.flags0]
         
         `------------------------------------------------------------------------------
-        `update the VDP horizontal / vertical scroll values in the RAM,
-         `the interrupt routine will send the values to the chip
+        ``update the VDP horizontal / vertical scroll values in the RAM,
+          the interrupt routine will send the values to the chip``
 ._6     ld      [$.VDPSCROLL_HORZ],bc
         
-        `get the number of blocks across / down the camera is located:
-         `we do this by multiplying the camera position by 8 and taking only the high
-         `byte (effectively dividing by 256) so that everything below 32 pixels of
-         `precision is lost
+        ``get the number of blocks across / down the camera is located:
+          we do this by multiplying the camera position by 8 and taking only the high
+          byte (effectively dividing by 256) so that everything below 32 pixels of
+          precision is lost``
         
         ld      hl,[$.CAMERA_X]
         sla     l                               `x2 ...
@@ -786,13 +785,13 @@ PROC    :fillOverscrollCache                    SECTION ::main                  
         
         di      
         `switch pages 1 & 2 ($4000-$BFFF) to banks 4 & 5 ($10000-$17FFF)
-        ld      a,:S1_BlockMappings.bank
-        ld      [$.SMS.SLOT1],a
-        ld      [$.SLOT1],a
-        ld      a,:S1_BlockMappings.bank+1
-        ld      [$.SMS.SLOT2],a
-        ld      [$.SLOT2],a
-        ei      
+        ld      A;bank          :S1_BlockMappings.bank
+        ld      [$.SMS.SLOT1]   A;bank
+        ld      [$.SLOT1]       A;bank
+        ld      A;bank          :S1_BlockMappings.bank+1
+        ld      [$.SMS.SLOT2]   A;bank
+        ld      [$.SLOT2]       A;bank
+        ei
         
         `------------------------------------------------------------------------------
         `get the address of the solidity data for the level's tilemap:

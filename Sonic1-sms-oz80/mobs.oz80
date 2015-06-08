@@ -369,8 +369,8 @@ PARAMS  IY;vars         HELP ""Address of the common variables (used throughout)
         
         `-------------------------------------------------------------------------------
         
-        `I believe this bit is to do with getting Sonic and the camera to move with
-         `along with another mob, such as a moving platform
+        ``I believe this bit is to do with getting Sonic and the camera to move with
+          along with another mob, such as a moving platform``
         
         ld      HL          [$.D267]            `gets set by the mob
         ld      DE          [$.D25F]            `gets set by Sonic
@@ -590,24 +590,24 @@ PROC    :scrollCameraTo_vertical                SECTION ::mobs                  
         `===============================================================================
         `scroll vertically towards the locked camera position
 
-PARAMS  hl
+PARAMS  HL
 {
-        ld      de;ypos,[$.LEVEL_TOP]
-        and     a
-        sbc     hl,de;ypos
+        ld      DE;ypos [$.LEVEL_TOP]
+        and     A
+        sbc     HL      DE;ypos
         ret     z
-        jr      c,.up
+        jr      c, .up
         
         `scroll downwards
-        inc     de;ypos
-        ld      [$.LEVEL_TOP],de;ypos
-        ld      [$.LEVEL_BOTTOM],de;ypos
+        inc     DE;ypos
+        ld      [$.LEVEL_TOP]       DE;ypos
+        ld      [$.LEVEL_BOTTOM]    DE;ypos
         ret
         
         `scroll upwards
-.up     dec     de;ypos
-        ld      [$.LEVEL_TOP],de;ypos
-        ld      [$.LEVEL_BOTTOM],de;ypos
+.up     dec     DE;ypos
+        ld      [$.LEVEL_TOP]       DE;ypos
+        ld      [$.LEVEL_BOTTOM]    DE;ypos
         ret
 }
 
@@ -615,22 +615,22 @@ PROC    :scrollCameraTo_horizontal              SECTION ::mobs                  
         `===============================================================================
         `scroll horizontally towards the locked camera position
         
-PARAMS  hl      `$.RAM_CAMERA_X_GOTO
+PARAMS  HL      `$.RAM_CAMERA_X_GOTO
 {
-        ld      de,[$.LEVEL_LEFT]
-        and     a                               `reset carry so it doesn't affect `sbc`
-        sbc     hl,de
+        ld      DE,[$.LEVEL_LEFT]
+        and     A                               `reset carry so it doesn't affect `sbc`
+        sbc     HL,DE
         ret     z                               `if HL = DE then return -- no change
         jr      c,._1                           `is DE > HL?
         
-        inc     de
-        ld      [$.LEVEL_LEFT],de
-        ld      [$.LEVEL_RIGHT],de
+        inc     DE
+        ld      [$.LEVEL_LEFT]  DE
+        ld      [$.LEVEL_RIGHT] DE
         ret
         
-._1     dec     de
-        ld      [$.LEVEL_LEFT],de
-        ld      [$.LEVEL_RIGHT],de
+._1     dec     DE
+        ld      [$.LEVEL_LEFT]  DE
+        ld      [$.LEVEL_RIGHT] DE
         ret
 }
 
@@ -2737,6 +2737,8 @@ TABLE   :Unknown                                SECTION ::mobs                  
         BYTE    $80 $80 $80 $80 $80 $80 $80 $80
 }
 
+`=======================================================================================
+
 INCLUDE "mobs\sonic.oz80"
 
 INCLUDE "mobs\powerups_common.oz80"
@@ -3131,8 +3133,8 @@ PARAMS  IX;mob          HELP ""Address of the current mob being processed
 
 PROC    :findEmptyMob                           SECTION ::mobs                  `$7C7B
         `===============================================================================
-        `search through the mob storage and find the first empty mob available
-        `(this is used for spawning new mobs, such as bullets)
+        ``search through the mob storage and find the first empty mob available
+          (this is used for spawning new mobs, such as bullets)``
 {
         ld      hl,$.MOBS
         ld      de,#mob.size
@@ -3454,8 +3456,8 @@ PARAMS  IX;mob          HELP ""Address of the current mob being processed
         BYTE $00, $00, $00
 
         `jumped to by `doObjectCode_platform_roll`, OBJECT: log - floating (Jungle)
-._8003  ld      [ix+#mob.spriteLayout.lo],._8022.lo
-        ld      [ix+#mob.spriteLayout.hi],._8022.hi
+._8003  ld      [ix+#mob.spriteLayout.lo], LO ._8022
+        ld      [ix+#mob.spriteLayout.hi], HI ._8022
 ._800b  inc     [ix+#mob.unknown11]
         ld      a,[ix+#mob.unknown11]
         cp      $28
@@ -4114,8 +4116,8 @@ PARAMS  IX;mob          HELP ""Address of the current mob being processed
         ld      [ix+#mob.Xspeed.lo],$80
         ld      [ix+#mob.Xspeed.hi],$fe
         ld      [ix+#mob.Xdirection],$ff
-        ld      [ix+#mob.spriteLayout.lo],._9c87.lo
-        ld      [ix+#mob.spriteLayout.hi],._9c87.hi
+        ld      [ix+#mob.spriteLayout.lo], LO ._9c87
+        ld      [ix+#mob.spriteLayout.hi], HI ._9c87
         jp      :_9be8._9bfc
 
         `sprite layout

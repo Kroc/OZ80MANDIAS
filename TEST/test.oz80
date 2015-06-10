@@ -204,118 +204,118 @@ PROC    :bit            SECTION ::default       `PX OP OF CB LO HI
         bit     7       [IX+$FF]                `DD CB FF 7E ·· ··
         bit     7       [IY+$FF]                `FD CB FF 7E ·· ··
         `undocumented triple-parameter instructions:
-        bit     0       [IX+$FF]        A       `·· ·· ·· ·· ·· ··
-        bit     0       [IX+$FF]        B       `·· ·· ·· ·· ·· ··
-        bit     0       [IX+$FF]        C       `·· ·· ·· ·· ·· ··
-        bit     0       [IX+$FF]        D       `·· ·· ·· ·· ·· ··
-        bit     0       [IX+$FF]        E       `·· ·· ·· ·· ·· ··
-        bit     0       [IX+$FF]        H       `·· ·· ·· ·· ·· ··
-        bit     0       [IX+$FF]        L       `·· ·· ·· ·· ·· ··
-        bit     0       [IY+$FF]        A       `·· ·· ·· ·· ·· ··
-        bit     0       [IY+$FF]        B       `·· ·· ·· ·· ·· ··
-        bit     0       [IY+$FF]        C       `·· ·· ·· ·· ·· ··
-        bit     0       [IY+$FF]        D       `·· ·· ·· ·· ·· ··
-        bit     0       [IY+$FF]        E       `·· ·· ·· ·· ·· ··
-        bit     0       [IY+$FF]        H       `·· ·· ·· ·· ·· ··
-        bit     0       [IY+$FF]        L       `·· ·· ·· ·· ·· ··
-        bit     1       [IX+$FF]        A       `·· ·· ·· ·· ·· ··
-        bit     1       [IX+$FF]        B       `·· ·· ·· ·· ·· ··
-        bit     1       [IX+$FF]        C       `·· ·· ·· ·· ·· ··
-        bit     1       [IX+$FF]        D       `·· ·· ·· ·· ·· ··
-        bit     1       [IX+$FF]        E       `·· ·· ·· ·· ·· ··
-        bit     1       [IX+$FF]        H       `·· ·· ·· ·· ·· ··
-        bit     1       [IX+$FF]        L       `·· ·· ·· ·· ·· ··
-        bit     1       [IY+$FF]        A       `·· ·· ·· ·· ·· ··
-        bit     1       [IY+$FF]        B       `·· ·· ·· ·· ·· ··
-        bit     1       [IY+$FF]        C       `·· ·· ·· ·· ·· ··
-        bit     1       [IY+$FF]        D       `·· ·· ·· ·· ·· ··
-        bit     1       [IY+$FF]        E       `·· ·· ·· ·· ·· ··
-        bit     1       [IY+$FF]        H       `·· ·· ·· ·· ·· ··
-        bit     1       [IY+$FF]        L       `·· ·· ·· ·· ·· ··
-        bit     2       [IX+$FF]        A       `·· ·· ·· ·· ·· ··
-        bit     2       [IX+$FF]        B       `·· ·· ·· ·· ·· ··
-        bit     2       [IX+$FF]        C       `·· ·· ·· ·· ·· ··
-        bit     2       [IX+$FF]        D       `·· ·· ·· ·· ·· ··
-        bit     2       [IX+$FF]        E       `·· ·· ·· ·· ·· ··
-        bit     2       [IX+$FF]        H       `·· ·· ·· ·· ·· ··
-        bit     2       [IX+$FF]        L       `·· ·· ·· ·· ·· ··
-        bit     2       [IY+$FF]        A       `·· ·· ·· ·· ·· ··
-        bit     2       [IY+$FF]        B       `·· ·· ·· ·· ·· ··
-        bit     2       [IY+$FF]        C       `·· ·· ·· ·· ·· ··
-        bit     2       [IY+$FF]        D       `·· ·· ·· ·· ·· ··
-        bit     2       [IY+$FF]        E       `·· ·· ·· ·· ·· ··
-        bit     2       [IY+$FF]        H       `·· ·· ·· ·· ·· ··
-        bit     2       [IY+$FF]        L       `·· ·· ·· ·· ·· ··
-        bit     3       [IX+$FF]        A       `·· ·· ·· ·· ·· ··
-        bit     3       [IX+$FF]        B       `·· ·· ·· ·· ·· ··
-        bit     3       [IX+$FF]        C       `·· ·· ·· ·· ·· ··
-        bit     3       [IX+$FF]        D       `·· ·· ·· ·· ·· ··
-        bit     3       [IX+$FF]        E       `·· ·· ·· ·· ·· ··
-        bit     3       [IX+$FF]        H       `·· ·· ·· ·· ·· ··
-        bit     3       [IX+$FF]        L       `·· ·· ·· ·· ·· ··
-        bit     3       [IY+$FF]        A       `·· ·· ·· ·· ·· ··
-        bit     3       [IY+$FF]        B       `·· ·· ·· ·· ·· ··
-        bit     3       [IY+$FF]        C       `·· ·· ·· ·· ·· ··
-        bit     3       [IY+$FF]        D       `·· ·· ·· ·· ·· ··
-        bit     3       [IY+$FF]        E       `·· ·· ·· ·· ·· ··
-        bit     3       [IY+$FF]        H       `·· ·· ·· ·· ·· ··
-        bit     3       [IY+$FF]        L       `·· ·· ·· ·· ·· ··
-        bit     4       [IX+$FF]        A       `·· ·· ·· ·· ·· ··
-        bit     4       [IX+$FF]        B       `·· ·· ·· ·· ·· ··
-        bit     4       [IX+$FF]        C       `·· ·· ·· ·· ·· ··
-        bit     4       [IX+$FF]        D       `·· ·· ·· ·· ·· ··
-        bit     4       [IX+$FF]        E       `·· ·· ·· ·· ·· ··
-        bit     4       [IX+$FF]        H       `·· ·· ·· ·· ·· ··
-        bit     4       [IX+$FF]        L       `·· ·· ·· ·· ·· ··
-        bit     4       [IY+$FF]        A       `·· ·· ·· ·· ·· ··
-        bit     4       [IY+$FF]        B       `·· ·· ·· ·· ·· ··
-        bit     4       [IY+$FF]        C       `·· ·· ·· ·· ·· ··
-        bit     4       [IY+$FF]        D       `·· ·· ·· ·· ·· ··
-        bit     4       [IY+$FF]        E       `·· ·· ·· ·· ·· ··
-        bit     4       [IY+$FF]        H       `·· ·· ·· ·· ·· ··
-        bit     4       [IY+$FF]        L       `·· ·· ·· ·· ·· ··
-        bit     5       [IX+$FF]        A       `·· ·· ·· ·· ·· ··
-        bit     5       [IX+$FF]        B       `·· ·· ·· ·· ·· ··
-        bit     5       [IX+$FF]        C       `·· ·· ·· ·· ·· ··
-        bit     5       [IX+$FF]        D       `·· ·· ·· ·· ·· ··
-        bit     5       [IX+$FF]        E       `·· ·· ·· ·· ·· ··
-        bit     5       [IX+$FF]        H       `·· ·· ·· ·· ·· ··
-        bit     5       [IX+$FF]        L       `·· ·· ·· ·· ·· ··
-        bit     5       [IY+$FF]        A       `·· ·· ·· ·· ·· ··
-        bit     5       [IY+$FF]        B       `·· ·· ·· ·· ·· ··
-        bit     5       [IY+$FF]        C       `·· ·· ·· ·· ·· ··
-        bit     5       [IY+$FF]        D       `·· ·· ·· ·· ·· ··
-        bit     5       [IY+$FF]        E       `·· ·· ·· ·· ·· ··
-        bit     5       [IY+$FF]        H       `·· ·· ·· ·· ·· ··
-        bit     5       [IY+$FF]        L       `·· ·· ·· ·· ·· ··
-        bit     6       [IX+$FF]        A       `·· ·· ·· ·· ·· ··
-        bit     6       [IX+$FF]        B       `·· ·· ·· ·· ·· ··
-        bit     6       [IX+$FF]        C       `·· ·· ·· ·· ·· ··
-        bit     6       [IX+$FF]        D       `·· ·· ·· ·· ·· ··
-        bit     6       [IX+$FF]        E       `·· ·· ·· ·· ·· ··
-        bit     6       [IX+$FF]        H       `·· ·· ·· ·· ·· ··
-        bit     6       [IX+$FF]        L       `·· ·· ·· ·· ·· ··
-        bit     6       [IY+$FF]        A       `·· ·· ·· ·· ·· ··
-        bit     6       [IY+$FF]        B       `·· ·· ·· ·· ·· ··
-        bit     6       [IY+$FF]        C       `·· ·· ·· ·· ·· ··
-        bit     6       [IY+$FF]        D       `·· ·· ·· ·· ·· ··
-        bit     6       [IY+$FF]        E       `·· ·· ·· ·· ·· ··
-        bit     6       [IY+$FF]        H       `·· ·· ·· ·· ·· ··
-        bit     6       [IY+$FF]        L       `·· ·· ·· ·· ·· ··
-        bit     7       [IX+$FF]        A       `·· ·· ·· ·· ·· ··
-        bit     7       [IX+$FF]        B       `·· ·· ·· ·· ·· ··
-        bit     7       [IX+$FF]        C       `·· ·· ·· ·· ·· ··
-        bit     7       [IX+$FF]        D       `·· ·· ·· ·· ·· ··
-        bit     7       [IX+$FF]        E       `·· ·· ·· ·· ·· ··
-        bit     7       [IX+$FF]        H       `·· ·· ·· ·· ·· ··
-        bit     7       [IX+$FF]        L       `·· ·· ·· ·· ·· ··
-        bit     7       [IY+$FF]        A       `·· ·· ·· ·· ·· ··
-        bit     7       [IY+$FF]        B       `·· ·· ·· ·· ·· ··
-        bit     7       [IY+$FF]        C       `·· ·· ·· ·· ·· ··
-        bit     7       [IY+$FF]        D       `·· ·· ·· ·· ·· ··
-        bit     7       [IY+$FF]        E       `·· ·· ·· ·· ·· ··
-        bit     7       [IY+$FF]        H       `·· ·· ·· ·· ·· ··
-        bit     7       [IY+$FF]        L       `·· ·· ·· ·· ·· ··
+        bit     0       [IX+$FF]        A       `·· ·· FF ·· ·· ··
+        bit     0       [IX+$FF]        B       `·· ·· FF ·· ·· ··
+        bit     0       [IX+$FF]        C       `·· ·· FF ·· ·· ··
+        bit     0       [IX+$FF]        D       `·· ·· FF ·· ·· ··
+        bit     0       [IX+$FF]        E       `·· ·· FF ·· ·· ··
+        bit     0       [IX+$FF]        H       `·· ·· FF ·· ·· ··
+        bit     0       [IX+$FF]        L       `·· ·· FF ·· ·· ··
+        bit     0       [IY+$FF]        A       `·· ·· FF ·· ·· ··
+        bit     0       [IY+$FF]        B       `·· ·· FF ·· ·· ··
+        bit     0       [IY+$FF]        C       `·· ·· FF ·· ·· ··
+        bit     0       [IY+$FF]        D       `·· ·· FF ·· ·· ··
+        bit     0       [IY+$FF]        E       `·· ·· FF ·· ·· ··
+        bit     0       [IY+$FF]        H       `·· ·· FF ·· ·· ··
+        bit     0       [IY+$FF]        L       `·· ·· FF ·· ·· ··
+        bit     1       [IX+$FF]        A       `·· ·· FF ·· ·· ··
+        bit     1       [IX+$FF]        B       `·· ·· FF ·· ·· ··
+        bit     1       [IX+$FF]        C       `·· ·· FF ·· ·· ··
+        bit     1       [IX+$FF]        D       `·· ·· FF ·· ·· ··
+        bit     1       [IX+$FF]        E       `·· ·· FF ·· ·· ··
+        bit     1       [IX+$FF]        H       `·· ·· FF ·· ·· ··
+        bit     1       [IX+$FF]        L       `·· ·· FF ·· ·· ··
+        bit     1       [IY+$FF]        A       `·· ·· FF ·· ·· ··
+        bit     1       [IY+$FF]        B       `·· ·· FF ·· ·· ··
+        bit     1       [IY+$FF]        C       `·· ·· FF ·· ·· ··
+        bit     1       [IY+$FF]        D       `·· ·· FF ·· ·· ··
+        bit     1       [IY+$FF]        E       `·· ·· FF ·· ·· ··
+        bit     1       [IY+$FF]        H       `·· ·· FF ·· ·· ··
+        bit     1       [IY+$FF]        L       `·· ·· FF ·· ·· ··
+        bit     2       [IX+$FF]        A       `·· ·· FF ·· ·· ··
+        bit     2       [IX+$FF]        B       `·· ·· FF ·· ·· ··
+        bit     2       [IX+$FF]        C       `·· ·· FF ·· ·· ··
+        bit     2       [IX+$FF]        D       `·· ·· FF ·· ·· ··
+        bit     2       [IX+$FF]        E       `·· ·· FF ·· ·· ··
+        bit     2       [IX+$FF]        H       `·· ·· FF ·· ·· ··
+        bit     2       [IX+$FF]        L       `·· ·· FF ·· ·· ··
+        bit     2       [IY+$FF]        A       `·· ·· FF ·· ·· ··
+        bit     2       [IY+$FF]        B       `·· ·· FF ·· ·· ··
+        bit     2       [IY+$FF]        C       `·· ·· FF ·· ·· ··
+        bit     2       [IY+$FF]        D       `·· ·· FF ·· ·· ··
+        bit     2       [IY+$FF]        E       `·· ·· FF ·· ·· ··
+        bit     2       [IY+$FF]        H       `·· ·· FF ·· ·· ··
+        bit     2       [IY+$FF]        L       `·· ·· FF ·· ·· ··
+        bit     3       [IX+$FF]        A       `·· ·· FF ·· ·· ··
+        bit     3       [IX+$FF]        B       `·· ·· FF ·· ·· ··
+        bit     3       [IX+$FF]        C       `·· ·· FF ·· ·· ··
+        bit     3       [IX+$FF]        D       `·· ·· FF ·· ·· ··
+        bit     3       [IX+$FF]        E       `·· ·· FF ·· ·· ··
+        bit     3       [IX+$FF]        H       `·· ·· FF ·· ·· ··
+        bit     3       [IX+$FF]        L       `·· ·· FF ·· ·· ··
+        bit     3       [IY+$FF]        A       `·· ·· FF ·· ·· ··
+        bit     3       [IY+$FF]        B       `·· ·· FF ·· ·· ··
+        bit     3       [IY+$FF]        C       `·· ·· FF ·· ·· ··
+        bit     3       [IY+$FF]        D       `·· ·· FF ·· ·· ··
+        bit     3       [IY+$FF]        E       `·· ·· FF ·· ·· ··
+        bit     3       [IY+$FF]        H       `·· ·· FF ·· ·· ··
+        bit     3       [IY+$FF]        L       `·· ·· FF ·· ·· ··
+        bit     4       [IX+$FF]        A       `·· ·· FF ·· ·· ··
+        bit     4       [IX+$FF]        B       `·· ·· FF ·· ·· ··
+        bit     4       [IX+$FF]        C       `·· ·· FF ·· ·· ··
+        bit     4       [IX+$FF]        D       `·· ·· FF ·· ·· ··
+        bit     4       [IX+$FF]        E       `·· ·· FF ·· ·· ··
+        bit     4       [IX+$FF]        H       `·· ·· FF ·· ·· ··
+        bit     4       [IX+$FF]        L       `·· ·· FF ·· ·· ··
+        bit     4       [IY+$FF]        A       `·· ·· FF ·· ·· ··
+        bit     4       [IY+$FF]        B       `·· ·· FF ·· ·· ··
+        bit     4       [IY+$FF]        C       `·· ·· FF ·· ·· ··
+        bit     4       [IY+$FF]        D       `·· ·· FF ·· ·· ··
+        bit     4       [IY+$FF]        E       `·· ·· FF ·· ·· ··
+        bit     4       [IY+$FF]        H       `·· ·· FF ·· ·· ··
+        bit     4       [IY+$FF]        L       `·· ·· FF ·· ·· ··
+        bit     5       [IX+$FF]        A       `·· ·· FF ·· ·· ··
+        bit     5       [IX+$FF]        B       `·· ·· FF ·· ·· ··
+        bit     5       [IX+$FF]        C       `·· ·· FF ·· ·· ··
+        bit     5       [IX+$FF]        D       `·· ·· FF ·· ·· ··
+        bit     5       [IX+$FF]        E       `·· ·· FF ·· ·· ··
+        bit     5       [IX+$FF]        H       `·· ·· FF ·· ·· ··
+        bit     5       [IX+$FF]        L       `·· ·· FF ·· ·· ··
+        bit     5       [IY+$FF]        A       `·· ·· FF ·· ·· ··
+        bit     5       [IY+$FF]        B       `·· ·· FF ·· ·· ··
+        bit     5       [IY+$FF]        C       `·· ·· FF ·· ·· ··
+        bit     5       [IY+$FF]        D       `·· ·· FF ·· ·· ··
+        bit     5       [IY+$FF]        E       `·· ·· FF ·· ·· ··
+        bit     5       [IY+$FF]        H       `·· ·· FF ·· ·· ··
+        bit     5       [IY+$FF]        L       `·· ·· FF ·· ·· ··
+        bit     6       [IX+$FF]        A       `·· ·· FF ·· ·· ··
+        bit     6       [IX+$FF]        B       `·· ·· FF ·· ·· ··
+        bit     6       [IX+$FF]        C       `·· ·· FF ·· ·· ··
+        bit     6       [IX+$FF]        D       `·· ·· FF ·· ·· ··
+        bit     6       [IX+$FF]        E       `·· ·· FF ·· ·· ··
+        bit     6       [IX+$FF]        H       `·· ·· FF ·· ·· ··
+        bit     6       [IX+$FF]        L       `·· ·· FF ·· ·· ··
+        bit     6       [IY+$FF]        A       `·· ·· FF ·· ·· ··
+        bit     6       [IY+$FF]        B       `·· ·· FF ·· ·· ··
+        bit     6       [IY+$FF]        C       `·· ·· FF ·· ·· ··
+        bit     6       [IY+$FF]        D       `·· ·· FF ·· ·· ··
+        bit     6       [IY+$FF]        E       `·· ·· FF ·· ·· ··
+        bit     6       [IY+$FF]        H       `·· ·· FF ·· ·· ··
+        bit     6       [IY+$FF]        L       `·· ·· FF ·· ·· ··
+        bit     7       [IX+$FF]        A       `·· ·· FF ·· ·· ··
+        bit     7       [IX+$FF]        B       `·· ·· FF ·· ·· ··
+        bit     7       [IX+$FF]        C       `·· ·· FF ·· ·· ··
+        bit     7       [IX+$FF]        D       `·· ·· FF ·· ·· ··
+        bit     7       [IX+$FF]        E       `·· ·· FF ·· ·· ··
+        bit     7       [IX+$FF]        H       `·· ·· FF ·· ·· ··
+        bit     7       [IX+$FF]        L       `·· ·· FF ·· ·· ··
+        bit     7       [IY+$FF]        A       `·· ·· FF ·· ·· ··
+        bit     7       [IY+$FF]        B       `·· ·· FF ·· ·· ··
+        bit     7       [IY+$FF]        C       `·· ·· FF ·· ·· ··
+        bit     7       [IY+$FF]        D       `·· ·· FF ·· ·· ··
+        bit     7       [IY+$FF]        E       `·· ·· FF ·· ·· ··
+        bit     7       [IY+$FF]        H       `·· ·· FF ·· ·· ··
+        bit     7       [IY+$FF]        L       `·· ·· FF ·· ·· ··
 }
 
 PROC    :call           SECTION ::default       `PX OP OF CB LO HI
@@ -525,8 +525,8 @@ PROC    :ld             SECTION ::default       `PX OP OF CB LO HI
         ld      A       [BC]                    `·· 0A ·· ·· ·· ··
         ld      A       [DE]                    `·· 1A ·· ·· ·· ··
         ld      A       [HL]                    `·· 7E ·· ·· ·· ··
-        ld      A       [IX+$FF]                `DD 7E ·· ·· FF ··
-        ld      A       [IY+$FF]                `FD 7E ·· ·· FF ··
+        ld      A       [IX+$FF]                `DD 7E FF ·· ·· ··
+        ld      A       [IY+$FF]                `FD 7E FF ·· ·· ··
         ld      A       $FF                     `·· 3E ·· ·· FF ··
         ld      A       [$FFFF]                 `·· 3A ·· ·· FF FF
         `
@@ -576,7 +576,7 @@ PROC    :ld             SECTION ::default       `PX OP OF CB LO HI
         ld      D       [HL]                    `·· 56 ·· ·· ·· ··
         ld      D       [IX+$FF]                `DD 56 FF ·· ·· ··
         ld      D       [IY+$FF]                `FD 56 FF ·· ·· ··
-        ld      D       $FF                     `·· 16 ·· ·· ·· ··
+        ld      D       $FF                     `·· 16 ·· ·· FF ··
         `
         ld      E       A                       `·· 5F ·· ·· ·· ··
         ld      E       B                       `·· 58 ·· ·· ·· ··
@@ -1170,8 +1170,8 @@ PROC    :set            SECTION ::default       `PX OP OF CB LO HI
         set     1       H                       `·· CB ·· CC ·· ··
         set     1       L                       `·· CB ·· CD ·· ··
         set     1       [HL]                    `·· CB ·· CE ·· ··
-        set     1       [IX+$FF]                `DD CB ·· CE ·· ··
-        set     1       [IY+$FF]                `FD CB ·· CE ·· ··
+        set     1       [IX+$FF]                `DD CB FF CE ·· ··
+        set     1       [IY+$FF]                `FD CB FF CE ·· ··
         set     2       A                       `·· CB ·· D7 ·· ··
         set     2       B                       `·· CB ·· D0 ·· ··
         set     2       C                       `·· CB ·· D1 ·· ··
@@ -1180,8 +1180,8 @@ PROC    :set            SECTION ::default       `PX OP OF CB LO HI
         set     2       H                       `·· CB ·· D4 ·· ··
         set     2       L                       `·· CB ·· D5 ·· ··
         set     2       [HL]                    `·· CB ·· D6 ·· ··
-        set     2       [IX+$FF]                `DD CB ·· D6 ·· ··
-        set     2       [IY+$FF]                `FD CB ·· D6 ·· ··
+        set     2       [IX+$FF]                `DD CB FF D6 ·· ··
+        set     2       [IY+$FF]                `FD CB FF D6 ·· ··
         set     3       A                       `·· CB ·· DF ·· ··
         set     3       B                       `·· CB ·· D8 ·· ··
         set     3       C                       `·· CB ·· D9 ·· ··
@@ -1190,8 +1190,8 @@ PROC    :set            SECTION ::default       `PX OP OF CB LO HI
         set     3       H                       `·· CB ·· DC ·· ··
         set     3       L                       `·· CB ·· DD ·· ··
         set     3       [HL]                    `·· CB ·· DE ·· ··
-        set     3       [IX+$FF]                `DD CB ·· DE ·· ··
-        set     3       [IY+$FF]                `FD CB ·· DE ·· ··
+        set     3       [IX+$FF]                `DD CB FF DE ·· ··
+        set     3       [IY+$FF]                `FD CB FF DE ·· ··
         set     4       A                       `·· CB ·· E7 ·· ··
         set     4       B                       `·· CB ·· E0 ·· ··
         set     4       C                       `·· CB ·· E1 ·· ··
@@ -1200,8 +1200,8 @@ PROC    :set            SECTION ::default       `PX OP OF CB LO HI
         set     4       H                       `·· CB ·· E4 ·· ··
         set     4       L                       `·· CB ·· E5 ·· ··
         set     4       [HL]                    `·· CB ·· E6 ·· ··
-        set     4       [IX+$FF]                `DD CB ·· E6 ·· ··
-        set     4       [IY+$FF]                `FD CB ·· E6 ·· ··
+        set     4       [IX+$FF]                `DD CB FF E6 ·· ··
+        set     4       [IY+$FF]                `FD CB FF E6 ·· ··
         set     5       A                       `·· CB ·· EF ·· ··
         set     5       B                       `·· CB ·· E8 ·· ··
         set     5       C                       `·· CB ·· E9 ·· ··
@@ -1210,8 +1210,8 @@ PROC    :set            SECTION ::default       `PX OP OF CB LO HI
         set     5       H                       `·· CB ·· EC ·· ··
         set     5       L                       `·· CB ·· ED ·· ··
         set     5       [HL]                    `·· CB ·· EE ·· ··
-        set     5       [IX+$FF]                `DD CB ·· EE ·· ··
-        set     5       [IY+$FF]                `FD CB ·· EE ·· ··
+        set     5       [IX+$FF]                `DD CB FF EE ·· ··
+        set     5       [IY+$FF]                `FD CB FF EE ·· ··
         set     6       A                       `·· CB ·· F7 ·· ··
         set     6       B                       `·· CB ·· F0 ·· ··
         set     6       C                       `·· CB ·· F1 ·· ··
@@ -1220,8 +1220,8 @@ PROC    :set            SECTION ::default       `PX OP OF CB LO HI
         set     6       H                       `·· CB ·· F4 ·· ··
         set     6       L                       `·· CB ·· F5 ·· ··
         set     6       [HL]                    `·· CB ·· F6 ·· ··
-        set     6       [IX+$FF]                `DD CB ·· F6 ·· ··
-        set     6       [IY+$FF]                `FD CB ·· F6 ·· ··
+        set     6       [IX+$FF]                `DD CB FF F6 ·· ··
+        set     6       [IY+$FF]                `FD CB FF F6 ·· ··
         set     7       A                       `·· CB ·· FF ·· ··
         set     7       B                       `·· CB ·· F8 ·· ··
         set     7       C                       `·· CB ·· F9 ·· ··
@@ -1230,8 +1230,8 @@ PROC    :set            SECTION ::default       `PX OP OF CB LO HI
         set     7       H                       `·· CB ·· FC ·· ··
         set     7       L                       `·· CB ·· FD ·· ··
         set     7       [HL]                    `·· CB ·· FE ·· ··
-        set     7       [IX+$FF]                `DD CB ·· FE ·· ··
-        set     7       [IY+$FF]                `FD CB ·· FE ·· ··
+        set     7       [IX+$FF]                `DD CB FF FE ·· ··
+        set     7       [IY+$FF]                `FD CB FF FE ·· ··
         `undocumented triple-parameter instructions:
         set     0       [IX+$FF]        A       `DD CB FF ·· ·· ··
         set     0       [IX+$FF]        B       `DD CB FF ·· ·· ··

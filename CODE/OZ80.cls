@@ -4377,215 +4377,6 @@ Finish:
     Call NextToken
 End Sub
 
-'Z80_GetParameter : Fetch the type / value of a Z80 instruction parameter
-'=======================================================================================
-'ReturnParam    | An `oz80_Param` structure to populate
-'---------------+-----------------------------------------------------------------------
-'Returns        | The error number
-'=======================================================================================
-Private Function Z80_GetParameter( _
-    ByRef ReturnParam As oz80Param _
-) As OZ80_ERROR
-    'Default to "no Value", it could be a Register
-    Let ReturnParam.Value = INDEFINITE
-    
-    '-----------------------------------------------------------------------------------
-    'A memory reference, such as `[IX+$FF]` _
-     -----------------------------------------------------------------------------------
-    If TokenKind = TOKEN_SQUARE_OPEN Then
-        'ERROR: File ends just as the memory expression is opened
-        If NextTokenError() Then GoTo Finish
-        
-        'The first item in the memory expression can be a register _
-         ...............................................................................
-        If TokenIsRegister(TokenKind) Then
-            'Copy the register type to the parameter being built
-            Let ReturnParam.Token = TokenKind
-            
-            'The `IN` & `OUT` instructions accept only the C register, _
-             though in reality this is register pair BC
-            If TokenKind = TOKEN_Z80_C Then
-                Let ReturnParam.Mask = MASK_MEM_BC
-                Let ReturnParam.LogText = PARAMTEXT_MEM_BC
-            
-            '`LD` accepts registers BC & DE
-            ElseIf TokenKind = TOKEN_Z80_BC Then
-                Let ReturnParam.Mask = MASK_MEM_BC
-                Let ReturnParam.LogText = PARAMTEXT_MEM_BC
-            ElseIf TokenKind = TOKEN_Z80_DE Then
-                Let ReturnParam.Mask = MASK_MEM_DE
-                Let ReturnParam.LogText = PARAMTEXT_MEM_DE
-            
-            'HL / IX & IY
-            ElseIf TokenKind = TOKEN_Z80_HL Then
-                Let ReturnParam.Mask = MASK_MEM_HL
-                Let ReturnParam.LogText = PARAMTEXT_MEM_HL
-                
-            'IX/IY can have an additional expression, e.g. `ld A, [IX+$FF]`
-            ElseIf TokenKind = TOKEN_Z80_IX Then
-                Let ReturnParam.Mask = MASK_MEM_IX
-                Let ReturnParam.LogText = PARAMTEXT_MEM_IX
-                GoTo AddExpr
-            ElseIf TokenKind = TOKEN_Z80_IY Then
-                Let ReturnParam.Mask = MASK_MEM_IY
-                Let ReturnParam.LogText = PARAMTEXT_MEM_IY
-                GoTo AddExpr
-                
-            ElseIf TokenKind = TOKEN_Z80_SP Then
-                Let ReturnParam.Mask = MASK_MEM_SP
-                Let ReturnParam.LogText = PARAMTEXT_MEM_SP
-            Else
-                'ERROR: register not allowed here
-                Stop
-            End If
-            
-            'ERROR: File ends before the memory expression is closed
-            If EOF Then Call RaiseError( _
-                OZ80_ERROR_FILE_END, STR_ERR_FILE_END _
-            ): GoTo Finish
-            
-            Call NextToken
-            GoTo EndScope
-            
-AddExpr:    'Look for the `+` following the register name
-            If NextTokenError() Then GoTo Finish
-                        
-            'If present, skip over it and check for an expression
-            If TokenKind = TOKEN_OPERATOR_ADD Then
-                'ERROR: Something must follow the "+"!
-                If NextTokenError() Then GoTo Finish
-                
-                'Remember where this Expression begins, should it be deferred
-                Let ReturnParam.Expression = TokenIndex
-                
-                'Try and calculate the Expression
-                '(If there was an error in the Expression, the error event _
-                  will already have been raised, we only need to fold upwards)
-                If ParseExpression(ReturnParam.Value) Then GoTo Finish
-                
-                'TODO: Error if number is over 16-bit
-                'TODO: Issue warning for rounding
-                'TODO: Validate maximum 8-bit? Where?
-                
-                If ReturnParam.Value = INDEFINITE Then
-                    Let ReturnParam.Defer = 1
-                    'TODO: Special text for indefinite?
-                ElseIf ReturnParam.Mask = MASK_MEM_IX Then
-                    Let ReturnParam.LogText = PARAMTEXT_MEM_IX_VAL + ReturnParam.Value
-                ElseIf ReturnParam.Mask = MASK_MEM_IY Then
-                    Let ReturnParam.LogText = PARAMTEXT_MEM_IY_VAL + ReturnParam.Value
-                Else
-                    Let ReturnParam.LogText = PARAMTEXT_MEM_VAL16 + ReturnParam.Value
-                End If
-                
-                'If this is a value for an IX/IY memory reference, _
-                 select the appropriate cached text for logging
-                If TokenKind = TOKEN_SQUARE_CLOSE Then
-                    Call NextToken
-                    GoTo Finish
-                End If
-                
-                'ERROR: Unexpected token in memory expression
-                Stop
-            End If
-        
-        '...............................................................................
-        Else
-            'Is it an expression at all?
-            'TODO: ERROR: Not a valid expression
-            If Not TokenIsExpression(TokenKind) Then Stop
-        
-            'Besides registers, memory addresses are allowed
-            Let ReturnParam.Token = TOKEN_NUMBER
-            
-            'Remember where this Expression begins, should it be deferred
-            Let ReturnParam.Expression = TokenIndex
-            
-            'Try and calculate the expression
-            '(If there was an error in the Expression, the error event _
-              will already have been raised, we only need to fold upwards)
-            If ParseExpression(ReturnParam.Value) Then GoTo Finish
-            
-            'TODO: Error if number is over 16-bit
-            'TODO: Issue warning for rounding
-            
-            If ReturnParam.Value = INDEFINITE Then
-                Let ReturnParam.Defer = 1
-            Else
-                Let ReturnParam.LogText = PARAMTEXT_MEM_VAL16 + ReturnParam.Value
-            End If
-            
-            'Any number will class as 16-bit since it's the maximum allowed
-            Let ReturnParam.Mask = MASK_MEM_VAL
-        End If
-    
-EndScope:
-        '...............................................................................
-        If TokenKind = TOKEN_SQUARE_CLOSE Then
-            Call NextToken
-            GoTo Finish
-        End If
-        'ERROR: Unexpected token in memory expression
-        Stop
-    
-    '-----------------------------------------------------------------------------------
-    'A Register _
-     -----------------------------------------------------------------------------------
-    ElseIf TokenIsRegister(TokenKind) _
-        Or TokenIsFlag(TokenKind) _
-    Then
-        'Copy the register type to the parameter being built
-        Let ReturnParam.Token = TokenKind
-        
-        'Set the index for the cached text prepared for the register name
-        Let ReturnParam.LogText = PARAMTEXT_REGS + (TokenKind - [_TOKEN_REGS_BEGIN])
-        
-        'Map the register token to the mask bit; token numbers are sequential _
-         whilst parameter masks are bit combinations allowing rapid comparisons _
-         of parameters with allowed options
-        Let ReturnParam.Mask = TokenRegister(TokenKind)
-        
-        'Now move beyond the register token
-        Call NextToken
-    
-    '-----------------------------------------------------------------------------------
-    'Anything else classes as a calculable expression _
-     -----------------------------------------------------------------------------------
-    ElseIf TokenIsExpression(TokenKind) Then
-        'We manually build a number token, since we don't want to use the first _
-         token of the expression -- it might be a label for instance and we can _
-         only send registers or numbers to be assembled into opcodes
-        Let ReturnParam.Token = TOKEN_NUMBER
-        Let ReturnParam.Mask = MASK_VAL
-        
-        'Remember where this Expression begins, should it be deferred
-        Let ReturnParam.Expression = TokenIndex
-                
-        'Try and calculate the expression
-        '(If there was an error in the Expression, the error event _
-          will already have been raised, we only need to fold upwards)
-        If ParseExpression(ReturnParam.Value) Then GoTo Finish
-        
-        'TODO: Error if number is over 16-bit
-        'TODO: Issue warning for rounding
-        
-        If ReturnParam.Value = INDEFINITE Then
-            Let ReturnParam.Defer = 1
-        Else
-            Let ReturnParam.LogText = PARAMTEXT_VAL16 + ReturnParam.Value
-        End If
-        
-    '-----------------------------------------------------------------------------------
-    Else
-        'ERROR: Not a Z80 parameter
-        Call RaiseError(OZ80_ERROR_INVALID, "TODO")
-    End If
-
-Finish:
-    'Return the error number
-    Let Z80_GetParameter = My_Error
-End Function
-
 'Z80_Assemble : Assemble bytes from a Z80 instruction and parameters
 '=======================================================================================
 Private Sub Z80_Assemble()
@@ -4599,7 +4390,7 @@ Private Sub Z80_Assemble()
     
     'Skip over the Z80 instruction token now that we know it. _
      If the file ends it's an error because the Chunk has not been closed
-    If NextTokenError Then GoTo Finish
+    If NextTokenError() Then GoTo Finish
     
     'Set up the disassembly log template
     Dim LogStr As String:   Let LogStr = LOG_ASM
@@ -4612,7 +4403,7 @@ Private Sub Z80_Assemble()
         ), 20 _
     )
     
-    'Initialse variables to hold each piece of the assembly
+    'Initialse variables to hold pieces of the assembly
     Dim Prefix As Long, Offset As Double
     Let Prefix = 0: Let Offset = INDEFINITE
     
@@ -4790,7 +4581,7 @@ iADC:
     '`ADC A, A|B|C|D|E|H|IXH|IYH|L|IXL|IYL|[HL|IX+$8|IY+$8]`
     If Z80_TestParams(Instruction, MASK_REG_A, MASK_REGS_ABCDEIXYHL_MEM_HLIXY) Then
         Let Opcode = X2 Or Y1 Or OpcodeZ_Register(Instruction.Param2.Mask)
-        GoTo Output
+        GoTo OutputOffset
     '`ADC A, $8`
     ElseIf Z80_TestParams(Instruction, MASK_REG_A, MASK_VAL) Then
         Let Opcode = X3 Or Y1 Or Z6: GoTo Output8
@@ -4823,7 +4614,7 @@ iADD:
         GoTo Output0
     '`ADD A, A|B|C|D|E|H|IXH|IYH|L|IYH|IYL|[HL|IX+$8|IY+$8]`
     ElseIf Z80_TestParams(Instruction, MASK_REG_A, MASK_REGS_ABCDEIXYHL_MEM_HLIXY) Then
-        Let Opcode = X2 Or OpcodeZ_Register(Instruction.Param2.Mask): GoTo Output
+        Let Opcode = X2 Or OpcodeZ_Register(Instruction.Param2.Mask): GoTo OutputOffset
     '`ADD A, $8`
     ElseIf Z80_TestParams(Instruction, MASK_REG_A, MASK_VAL) Then
         Let Opcode = X3 Or Z6: GoTo Output8
@@ -4837,7 +4628,7 @@ iAND:
     '`AND A|B|C|D|E|H|IXH|IYH|L|IXL|IYL|[HL|IX+$8|IY+$8]`
     If Z80_TestParams(Instruction, MASK_REGS_ABCDEIXYHL_MEM_HLIXY) Then
         Let Opcode = X2 Or Y4 Or OpcodeZ_Register(Instruction.Param1.Mask)
-        GoTo Output
+        GoTo OutputOffset
     '`AND $8`
     ElseIf Z80_TestParams(Instruction, MASK_VAL) Then
         Let Opcode = X3 Or Y4 Or Z6: GoTo Output8
@@ -4887,7 +4678,7 @@ iCP:
     '`CP A|B|C|D|E|H|IXH|IYH|L|IXL|IYL|[HL|IX+$8|IY+$8]`
     If Z80_TestParams(Instruction, MASK_REGS_ABCDEIXYHL_MEM_HLIXY) Then
         Let Opcode = X2 Or Y7 Or OpcodeZ_Register(Instruction.Param1.Mask)
-        GoTo Output
+        GoTo OutputOffset
     '`CP $8`
     ElseIf Z80_TestParams(Instruction, MASK_VAL) Then
         Let Opcode = X3 Or Y7 Or Z6: GoTo Output8
@@ -4943,7 +4734,7 @@ iDEC:
     '`DEC A|B|C|D|E|H|IXH|IYH|L|IXL|IYL|[HL|IX+$8|IY+$8]`
     ElseIf Z80_TestParams(Instruction, MASK_REGS_ABCDEIXYHL_MEM_HLIXY) Then
         Let Opcode = OpcodeY_Register(Instruction.Param1.Mask) Or Z5
-        GoTo Output
+        GoTo OutputOffset
     End If
     'ERROR: Wrong parameters for Z80 instruction
     GoTo InvalidParams
@@ -4962,7 +4753,7 @@ iDJNZ:
         Let Opcode = Y2
         'TODO: Address translation
         Let Instruction.Value = 0
-        GoTo Output
+        GoTo Output8
     End If
     'ERROR: Wrong parameters for Z80 instruction
     GoTo InvalidParams
@@ -5031,7 +4822,7 @@ iIN:
      ...................................................................................
     '`IN A, [$8]`
     If Z80_TestParams(Instruction, MASK_REG_A, MASK_MEM_VAL) Then
-        Let Opcode = X3 Or Y3 Or Z3: GoTo Output
+        Let Opcode = X3 Or Y3 Or Z3: GoTo Output8
     '`IN A|B|C|D|E|H|L, [C]`
     ElseIf Z80_TestParams(Instruction, MASK_REGS_ABCDEHL, MASK_MEM_BC) Then
         Let Opcode = X1 Or OpcodeY_Register(Instruction.Param1.Mask): GoTo OutputED0
@@ -5050,7 +4841,7 @@ iINC:
         Let Opcode = OpcodeP_RegisterPair(Instruction.Param1.Token) Or Z3: GoTo Output0
     '`INC A|B|C|D|E|H|IXH|IYH|L|IXL|IYL|[HL|IX+$8|IY+$8]`
     ElseIf Z80_TestParams(Instruction, MASK_REGS_ABCDEIXYHL_MEM_HLIXY) Then
-        Let Opcode = OpcodeY_Register(Instruction.Param1.Mask) Or Z4: GoTo Output
+        Let Opcode = OpcodeY_Register(Instruction.Param1.Mask) Or Z4: GoTo OutputOffset
     End If
     'ERROR: Wrong parameters for Z80 instruction
     GoTo InvalidParams
@@ -5104,7 +4895,7 @@ iJR:
         Let Opcode = Y3
         'TODO: Address translation
         Let Instruction.Value = 0
-        GoTo Output
+        GoTo Output8
     '`JR NZ|Z|NC|C, $8` - conditional relative immediate jump
     ElseIf Z80_TestParams(Instruction, MASK_FLAGS_CZ, MASK_VAL) Then
         Let Opcode = OpcodeY_Condition(Instruction.Param1.Token) + Y4
@@ -5148,7 +4939,7 @@ iLD:
         Let Opcode = P3 Or Q1 Or Z2: GoTo Output16
     '`LD A|B|C|D|E|H|IXH|IYH|L|IXL|IYL|[HL|IX+$8|IY+$8], $8`
     ElseIf Z80_TestParams(Instruction, MASK_REGS_ABCDEIXYHL_MEM_HLIXY, MASK_VAL) Then
-        Let Opcode = OpcodeY_Register(Instruction.Param1.Mask) Or Z6: GoTo Output
+        Let Opcode = OpcodeY_Register(Instruction.Param1.Mask) Or Z6: GoTo OutputOff8
     'You can't combine IX and IY use in the same opcode, there's only one prefix, _
      so these two following checks ensure that IX & IY are not used together
     '`LD A|B|C|D|E|H|IXH|L|IXL[HL|IX+$8], A|B|C|D|E|H|IXH|L|IXL`
@@ -5158,7 +4949,7 @@ iLD:
     ) Then
         Let Opcode = X1 Or OpcodeY_Register(Instruction.Param1.Mask) _
                   Or OpcodeZ_Register(Instruction.Param2.Mask)
-        GoTo Output
+        GoTo OutputOffset
     '`LD A|B|C|D|E|H|IYH|L|IYL[HL|IY+$8], A|B|C|D|E|H|IYH|L|IYL`
     ElseIf Z80_TestParams(Instruction, _
         MASK_REGS_ABCDEHL Or MASK_REGS_IYHL Or MASK_MEM_HL Or MASK_MEM_IY, _
@@ -5166,7 +4957,7 @@ iLD:
     ) Then
         Let Opcode = X1 Or OpcodeY_Register(Instruction.Param1.Mask) _
                   Or OpcodeZ_Register(Instruction.Param2.Mask)
-        GoTo Output
+        GoTo OutputOffset
     'You can't have `LD [IX+$8], [IX+$8]!
     '`LD A|B|C|D|E|H|IXH|L|IXL, A|B|C|D|E|H|IXH|L|IXL|[HL|IX+$8]`
     ElseIf Z80_TestParams(Instruction, _
@@ -5175,7 +4966,7 @@ iLD:
     ) Then
         Let Opcode = X1 Or OpcodeY_Register(Instruction.Param1.Mask) _
                   Or OpcodeZ_Register(Instruction.Param2.Mask)
-        GoTo Output
+        GoTo OutputOffset
     '`LD A|B|C|D|E|H|IYH|L|IYL, A|B|C|D|E|H|IYH|L|IYL|[HL|IY+$8]`
     ElseIf Z80_TestParams(Instruction, _
         MASK_REGS_ABCDEHL Or MASK_REGS_IYHL, _
@@ -5183,7 +4974,7 @@ iLD:
     ) Then
         Let Opcode = X1 Or OpcodeY_Register(Instruction.Param1.Mask) _
                   Or OpcodeZ_Register(Instruction.Param2.Mask)
-        GoTo Output
+        GoTo OutputOffset
     '`LD SP, HL|IX|IY`
     ElseIf Z80_TestParams(Instruction, MASK_REG_SP, MASK_REGS_HL_IXY) Then
         Let Opcode = X3 Or P3 Or Q1 Or Z1: GoTo Output0
@@ -5256,7 +5047,7 @@ iOR:
     '`OR A|B|C|D|E|H|IXH|IYH|L|IXL|IYL|[HL|IX+$8|IY+$8]`
     If Z80_TestParams(Instruction, MASK_REGS_ABCDEIXYHL_MEM_HLIXY) Then
         Let Opcode = X2 Or Y6 Or OpcodeZ_Register(Instruction.Param1.Mask)
-        GoTo Output
+        GoTo OutputOffset
     '`OR $8`
     ElseIf Z80_TestParams(Instruction, MASK_VAL) Then
         Let Opcode = X3 Or Y6 Or Z6: GoTo Output8
@@ -5269,7 +5060,7 @@ iOUT:
      ...................................................................................
     '`OUT [$8], A`
     If Z80_TestParams(Instruction, MASK_MEM_VAL, MASK_REG_A) Then
-        Let Opcode = X3 Or Y2 Or Z3: GoTo Output
+        Let Opcode = X3 Or Y2 Or Z3: GoTo Output8
     '`OUT [C], A|B|C|D|E|H|L`
     ElseIf Z80_TestParams(Instruction, MASK_MEM_BC, MASK_REGS_ABCDEHL) Then
         Let Opcode = X1 Or OpcodeY_Register(Instruction.Param2.Mask) Or Z1
@@ -5479,7 +5270,7 @@ iSBC:
     '`SBC A, A|B|C|D|E|H|IXH|IYH|L|IXL|IYL|[HL|IX+$8|IY+$8]`
     If Z80_TestParams(Instruction, MASK_REG_A, MASK_REGS_ABCDEIXYHL_MEM_HLIXY) Then
         Let Opcode = X2 Or Y3 Or OpcodeZ_Register(Instruction.Param2.Mask)
-        GoTo Output
+        GoTo OutputOffset
     '`SBC A, $8`
     ElseIf Z80_TestParams(Instruction, MASK_REG_A, MASK_VAL) Then
         Let Opcode = X3 Or Y3 Or Z6: GoTo Output8
@@ -5568,7 +5359,7 @@ iSUB:
     '`SUB A|B|C|D|E|H|IXH|IYH|L|IXL|IYL|[HL|IX+$8|IY+$8]`
     If Z80_TestParams(Instruction, MASK_REGS_ABCDEIXYHL_MEM_HLIXY) Then
         Let Opcode = X2 Or Y2 Or OpcodeZ_Register(Instruction.Param1.Mask)
-        GoTo Output
+        GoTo OutputOffset
     '`SUB $8`
     ElseIf Z80_TestParams(Instruction, MASK_VAL) Then
         Let Opcode = X3 Or Y2 Or Z6: GoTo Output8
@@ -5582,7 +5373,7 @@ iXOR:
     '`XOR A|B|C|D|E|H|IXH|IYH|L|IXL|IYL|[HL|IX+$8|IY+$8]`
     If Z80_TestParams(Instruction, MASK_REGS_ABCDEIXYHL_MEM_HLIXY) Then
         Let Opcode = X2 Or Y5 Or OpcodeZ_Register(Instruction.Param1.Mask)
-        GoTo Output
+        GoTo OutputOffset
     '`XOR $8`
     ElseIf Z80_TestParams(Instruction, MASK_VAL) Then
         Let Opcode = X3 Or Y5 Or Z6: GoTo Output8
@@ -5593,15 +5384,24 @@ iXOR:
     '-----------------------------------------------------------------------------------
     'Write the assembled bytes to the Chunk
     '-----------------------------------------------------------------------------------
-Output:
-    'Output an Opcode with optional Offset and/or Value:
+Output0:
+    'Output only the Opcode, no Value or Offset required:
     '...................................................................................
     Let Bytes(1) = Opcode
     Call api_RtlMoveMemory(LogPtr + 20, StrPtr(HexStr8(Opcode)), 4)
-    Let ByteCount = 1
     
-    'Is there an offset Value? (e.g. `[IX+$FF]`)
-    If Instruction.HasOffset = 1 Then
+    Let ByteCount = 1
+    GoTo AddBytes
+
+OutputOffset:
+    'Output an Opcode with optional Offset, no Value
+    '...................................................................................
+    Let Bytes(1) = Opcode
+    Call api_RtlMoveMemory(LogPtr + 20, StrPtr(HexStr8(Opcode)), 4)
+    
+    If Instruction.HasOffset = 0 Then
+        Let ByteCount = 1
+    Else
         If Offset = INDEFINITE Then
             Call api_RtlMoveMemory(LogPtr + 26, StrPtr(HexStr8(-1)), 4)
         Else
@@ -5609,28 +5409,7 @@ Output:
             Call api_RtlMoveMemory(LogPtr + 26, StrPtr(HexStr8(Offset)), 4)
         End If
         Let ByteCount = 2
-        
-        If Instruction.HasValue = 1 Then
-            If Instruction.Value = INDEFINITE Then
-                Call api_RtlMoveMemory(LogPtr + 38, StrPtr(HexStr8(-1)), 4)
-            Else
-                Let Bytes(3) = Instruction.Value
-                Call api_RtlMoveMemory(LogPtr + 38, StrPtr(HexStr8(Instruction.Value)), 4)
-            End If
-            Let ByteCount = 3
-        End If
-    Else
-        If Instruction.HasValue = 1 Then
-            If Instruction.Value = INDEFINITE Then
-                Call api_RtlMoveMemory(LogPtr + 38, StrPtr(HexStr8(-1)), 4)
-            Else
-                Let Bytes(2) = Instruction.Value
-                Call api_RtlMoveMemory(LogPtr + 38, StrPtr(HexStr8(Instruction.Value)), 4)
-            End If
-            Let ByteCount = 2
-        End If
     End If
-    
     GoTo AddBytes
     
 Output8:
@@ -5653,13 +5432,38 @@ Output8:
     Let ByteCount = 2
     GoTo AddBytes
     
-Output0:
-    'Output only the Opcode, no Value or Offset required:
+OutputOff8:
+    'Output an Opcode with Value and optional Offset:
     '...................................................................................
     Let Bytes(1) = Opcode
     Call api_RtlMoveMemory(LogPtr + 20, StrPtr(HexStr8(Opcode)), 4)
     
-    Let ByteCount = 1
+    'Is there an offset Value? (e.g. `[IX+$FF]`)
+    If Instruction.HasOffset = 1 Then
+        If Offset = INDEFINITE Then
+            Call api_RtlMoveMemory(LogPtr + 26, StrPtr(HexStr8(-1)), 4)
+        Else
+            Let Bytes(2) = Offset
+            Call api_RtlMoveMemory(LogPtr + 26, StrPtr(HexStr8(Offset)), 4)
+        End If
+        
+        If Instruction.Value = INDEFINITE Then
+            Call api_RtlMoveMemory(LogPtr + 38, StrPtr(HexStr8(-1)), 4)
+        Else
+            Let Bytes(3) = Instruction.Value
+            Call api_RtlMoveMemory(LogPtr + 38, StrPtr(HexStr8(Instruction.Value)), 4)
+        End If
+        Let ByteCount = 3
+    Else
+        If Instruction.Value = INDEFINITE Then
+            Call api_RtlMoveMemory(LogPtr + 38, StrPtr(HexStr8(-1)), 4)
+        Else
+            Let Bytes(2) = Instruction.Value
+            Call api_RtlMoveMemory(LogPtr + 38, StrPtr(HexStr8(Instruction.Value)), 4)
+        End If
+        Let ByteCount = 2
+    End If
+    
     GoTo AddBytes
     
 Output16:
@@ -5808,6 +5612,212 @@ Finish:
     Call Profiler.EventEnd(EVENT_Z80ASSEMBLE)
     '*** TIMER END ***
 End Sub
+
+'Z80_GetParameter : Fetch the type / value of a Z80 instruction parameter
+'=======================================================================================
+'ReturnParam    | An `oz80_Param` structure to populate
+'---------------+-----------------------------------------------------------------------
+'Returns        | The error number
+'=======================================================================================
+Private Function Z80_GetParameter( _
+    ByRef ReturnParam As oz80Param _
+) As OZ80_ERROR
+    'Default to "no Value", it could be a Register
+    Let ReturnParam.Value = INDEFINITE
+    
+    '-----------------------------------------------------------------------------------
+    'A memory reference, such as `[IX+$FF]` _
+     -----------------------------------------------------------------------------------
+    If TokenKind = TOKEN_SQUARE_OPEN Then
+        'ERROR: File ends just as the memory expression is opened
+        If NextTokenError() Then GoTo Finish
+        
+        'The first item in the memory expression can be a register _
+         ...............................................................................
+        If TokenIsRegister(TokenKind) Then
+            'Copy the register type to the parameter being built
+            Let ReturnParam.Token = TokenKind
+            
+            'The `IN` & `OUT` instructions accept only the C register, _
+             though in reality this is register pair BC
+            If TokenKind = TOKEN_Z80_C Then
+                Let ReturnParam.Mask = MASK_MEM_BC
+                Let ReturnParam.LogText = PARAMTEXT_MEM_BC
+            
+            '`LD` accepts registers BC & DE
+            ElseIf TokenKind = TOKEN_Z80_BC Then
+                Let ReturnParam.Mask = MASK_MEM_BC
+                Let ReturnParam.LogText = PARAMTEXT_MEM_BC
+            ElseIf TokenKind = TOKEN_Z80_DE Then
+                Let ReturnParam.Mask = MASK_MEM_DE
+                Let ReturnParam.LogText = PARAMTEXT_MEM_DE
+            
+            'HL / IX & IY
+            ElseIf TokenKind = TOKEN_Z80_HL Then
+                Let ReturnParam.Mask = MASK_MEM_HL
+                Let ReturnParam.LogText = PARAMTEXT_MEM_HL
+                
+            'IX/IY can have an additional expression, e.g. `ld A, [IX+$FF]`
+            ElseIf TokenKind = TOKEN_Z80_IX Then
+                Let ReturnParam.Mask = MASK_MEM_IX
+                Let ReturnParam.LogText = PARAMTEXT_MEM_IX
+                GoTo AddExpr
+            ElseIf TokenKind = TOKEN_Z80_IY Then
+                Let ReturnParam.Mask = MASK_MEM_IY
+                Let ReturnParam.LogText = PARAMTEXT_MEM_IY
+                GoTo AddExpr
+                
+            ElseIf TokenKind = TOKEN_Z80_SP Then
+                Let ReturnParam.Mask = MASK_MEM_SP
+                Let ReturnParam.LogText = PARAMTEXT_MEM_SP
+            Else
+                'ERROR: register not allowed here
+                Stop
+            End If
+            
+            'ERROR: File ends before the memory expression is closed
+            If NextTokenError() Then GoTo Finish
+            
+            GoTo EndScope
+            
+AddExpr:    'Look for the `+` following the register name
+            If NextTokenError() Then GoTo Finish
+                        
+            'If present, skip over it and check for an expression
+            If TokenKind = TOKEN_OPERATOR_ADD Then
+                'ERROR: Something must follow the "+"!
+                If NextTokenError() Then GoTo Finish
+                
+                'Remember where this Expression begins, should it be deferred
+                Let ReturnParam.Expression = TokenIndex
+                
+                'Try and calculate the Expression
+                '(If there was an error in the Expression, the error event _
+                  will already have been raised, we only need to fold upwards)
+                If ParseExpression(ReturnParam.Value) Then GoTo Finish
+                
+                'TODO: Error if number is over 16-bit
+                'TODO: Issue warning for rounding
+                'TODO: Validate maximum 8-bit? Where?
+                
+                If ReturnParam.Value = INDEFINITE Then
+                    Let ReturnParam.Defer = 1
+                    'TODO: Special text for indefinite?
+                ElseIf ReturnParam.Mask = MASK_MEM_IX Then
+                    Let ReturnParam.LogText = PARAMTEXT_MEM_IX_VAL + ReturnParam.Value
+                ElseIf ReturnParam.Mask = MASK_MEM_IY Then
+                    Let ReturnParam.LogText = PARAMTEXT_MEM_IY_VAL + ReturnParam.Value
+                Else
+                    Let ReturnParam.LogText = PARAMTEXT_MEM_VAL16 + ReturnParam.Value
+                End If
+                
+                'If this is a value for an IX/IY memory reference, _
+                 select the appropriate cached text for logging
+                If TokenKind = TOKEN_SQUARE_CLOSE Then
+                    Call NextToken
+                    GoTo Finish
+                End If
+                
+                'ERROR: Unexpected token in memory expression
+                Stop
+            End If
+        
+        '...............................................................................
+        Else
+            'Is it an expression at all?
+            'TODO: ERROR: Not a valid expression
+            If Not TokenIsExpression(TokenKind) Then Stop
+        
+            'Besides registers, memory addresses are allowed
+            Let ReturnParam.Token = TOKEN_NUMBER
+            
+            'Remember where this Expression begins, should it be deferred
+            Let ReturnParam.Expression = TokenIndex
+            
+            'Try and calculate the expression
+            '(If there was an error in the Expression, the error event _
+              will already have been raised, we only need to fold upwards)
+            If ParseExpression(ReturnParam.Value) Then GoTo Finish
+            
+            'TODO: Error if number is over 16-bit
+            'TODO: Issue warning for rounding
+            
+            If ReturnParam.Value = INDEFINITE Then
+                Let ReturnParam.Defer = 1
+            Else
+                Let ReturnParam.LogText = PARAMTEXT_MEM_VAL16 + ReturnParam.Value
+            End If
+            
+            'Any number will class as 16-bit since it's the maximum allowed
+            Let ReturnParam.Mask = MASK_MEM_VAL
+        End If
+    
+EndScope:
+        '...............................................................................
+        If TokenKind = TOKEN_SQUARE_CLOSE Then
+            Call NextToken
+            GoTo Finish
+        End If
+        'ERROR: Unexpected token in memory expression
+        Stop
+    
+    '-----------------------------------------------------------------------------------
+    'A Register _
+     -----------------------------------------------------------------------------------
+    ElseIf TokenIsRegister(TokenKind) _
+        Or TokenIsFlag(TokenKind) _
+    Then
+        'Copy the register type to the parameter being built
+        Let ReturnParam.Token = TokenKind
+        
+        'Set the index for the cached text prepared for the register name
+        Let ReturnParam.LogText = PARAMTEXT_REGS + (TokenKind - [_TOKEN_REGS_BEGIN])
+        
+        'Map the register token to the mask bit; token numbers are sequential _
+         whilst parameter masks are bit combinations allowing rapid comparisons _
+         of parameters with allowed options
+        Let ReturnParam.Mask = TokenRegister(TokenKind)
+        
+        'Now move beyond the register token
+        Call NextToken
+    
+    '-----------------------------------------------------------------------------------
+    'Anything else classes as a calculable expression _
+     -----------------------------------------------------------------------------------
+    ElseIf TokenIsExpression(TokenKind) Then
+        'We manually build a number token, since we don't want to use the first _
+         token of the expression -- it might be a Label for instance and we can _
+         only send registers or numbers to be assembled into opcodes
+        Let ReturnParam.Token = TOKEN_NUMBER
+        Let ReturnParam.Mask = MASK_VAL
+        
+        'Remember where this Expression begins, should it be deferred
+        Let ReturnParam.Expression = TokenIndex
+                
+        'Try and calculate the expression
+        '(If there was an error in the Expression, the error event _
+          will already have been raised, we only need to fold upwards)
+        If ParseExpression(ReturnParam.Value) Then GoTo Finish
+        
+        'TODO: Error if number is over 16-bit
+        'TODO: Issue warning for rounding
+        
+        If ReturnParam.Value = INDEFINITE Then
+            Let ReturnParam.Defer = 1
+        Else
+            Let ReturnParam.LogText = PARAMTEXT_VAL16 + ReturnParam.Value
+        End If
+        
+    '-----------------------------------------------------------------------------------
+    Else
+        'ERROR: Not a Z80 parameter
+        Call RaiseError(OZ80_ERROR_INVALID, "TODO")
+    End If
+
+Finish:
+    'Return the error number
+    Let Z80_GetParameter = My_Error
+End Function
 
 'Z80_TestParams : Check if parameters are of the right type desired
 '=======================================================================================

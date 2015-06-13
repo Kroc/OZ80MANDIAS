@@ -248,7 +248,7 @@ Private Sub Log( _
 '
 '    Call SendMessageString( _
 '        Me.txtLog.hWnd, EM_REPLACESEL, _
-'        ByVal 0, Text _
+'        ByVal 0, Text & vbCrLf _
 '    )
 '
 '    Call SendMessage( _
@@ -263,5 +263,5 @@ Private Sub Log( _
 '    Call SendMessage( _
 '        Me.txtLog.hWnd, WM_SETREDRAW, 1, ByVal 0 _
 '    )
-'    DoEvents
+    DoEvents
 End Sub

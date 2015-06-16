@@ -6,17 +6,17 @@ DEF RAM $#SMS.VRAM      $0000   $3FFF
 
 `header:
 `--------------------------------------------------------------------------------------
-HASH    #SMS.HEADER
+TYPE    #SMS.HEADER
 [`property name         `value  `size           `default content
-.ID                             BYTE x 8        "TMR SEGA"
-.RESERVED                       BYTE x 2        "  "
+.ID                             BYTE x 8        `!"TMR SEGA"
+.RESERVED                       BYTE x 2        `!"  "
 .CHECKSUM                       WORD
 .PRODUCT_LOW                    BYTE
 .PRODUCT_MED                    BYTE
 .PRODUCT_HI                     NYBL
-.VERSION                        NYBL            0
-.REGION                         NYBL            4
-.SIZE                           NYBL            $C
+.VERSION                        NYBL            `!0
+.REGION                         NYBL            `!4
+.SIZE                           NYBL            `!$C
 ]
 
 `mapper: (bank switching)
@@ -28,7 +28,7 @@ HASH    #SMS.HEADER
 ``
 RAM     $#SMS
 [
-.SLOT                   $FFFC   HASH [
+.SLOT                   $FFFC   TYPE [
         ``bank shifting is documented, but was never used
           <smspower.org/Development/Mappers#ROMBankShifting>``
         .BankShift              BOOL x 2
@@ -73,7 +73,7 @@ RAM     $#SMS
 `--------------------------------------------------------------------------------------
 RAM     $#SMS
 [
-.SMS.JOYPADA            $DC     HASH [
+.SMS.JOYPADA            $DC     TYPE [
         .pad1up                 BOOL
         .pad1down               BOOL
         .pad1left               BOOL
@@ -83,7 +83,7 @@ RAM     $#SMS
         .pad2up                 BOOL
         .pad2down               BOOL
                                 ]
-.SMS.JOYPADB            $DD     HASH [
+.SMS.JOYPADB            $DD     TYPE [
         .pad2left               BOOL
         .pad2right              BOOL
         .pad2button1            BOOL

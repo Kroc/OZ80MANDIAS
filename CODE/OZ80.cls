@@ -184,31 +184,10 @@ End Enum
 
 '/// CLASS /////////////////////////////////////////////////////////////////////////////
 
-'Error number!
-Private My_Error As OZ80_ERROR
-
-'Some APIs are different for Windows XP / Vista+. _
- We fetch the Windows kernel version number during initialisation and store it here
-Private WindowsVersion As Single
-
-'During class initialisation we manually create special 64-bit numbers _
- in these values, which cannot be written out natively in VB6
-Private INDEFINITE As Double
-Private NUMBER_MAX As Double
-Private NUMBER_MIN As Double
-'The min/max numbers that can be multiplied/divided by 1'000 or 1'024 without overflow
-Private NUMBER_MIN_K As Double
-Private NUMBER_MAX_K As Double
-Private NUMBER_MIN_KB As Double
-Private NUMBER_MAX_KB As Double
-
 'Errors:
 '---------------------------------------------------------------------------------------
-
-Public Enum OZ80_WARNING
-    OZ80_WARNING_NONE                   'Skip "0"
-    OZ80_WARNING_ROUND                  'A decimal number had to be round-down
-End Enum
+'Error number!
+Private My_Error As OZ80_ERROR
 
 Public Enum OZ80_ERROR
     OZ80_ERROR_NONE                     'Assembly completed successfully
@@ -251,7 +230,7 @@ Private Const STR_ERR_INVALID_NAME As String = _
     vbTab & "!  - Constant, e.g. '!CONSTANT'" & vbCrLf & _
     vbTab & ":  - Label, e.g. ':Procedure'" & vbCrLf & _
     vbTab & ":: - Section, e.g. '::Section'" & vbCrLf & _
-    vbTab & "#  - Hash, e.g. '#Hash'" & vbCrLf & _
+    vbTab & "#  - Type, e.g. '#type'" & vbCrLf & _
     vbTab & ".  - Subroutine/property, e.g. '.loop'" & vbCrLf & _
     vbCrLf & _
     "* The name may contain A-Z, 0-9 and Underscores, with the exceptions below" & vbCrLf & _
@@ -260,8 +239,8 @@ Private Const STR_ERR_INVALID_NAME As String = _
 Private Const STR_ERR_INVALID_CONSTANT As String = _
     "Not a valid Constant name." & vbCrLf & vbCrLf & "{$}"
 
-Private Const STR_ERR_INVALID_HASH As String = _
-    "Not a valid Hash name." & vbCrLf & vbCrLf & "{$}"
+Private Const STR_ERR_INVALID_TYPE As String = _
+    "Not a valid Type name." & vbCrLf & vbCrLf & "{$}"
 
 Private Const STR_ERR_INVALID_LABEL As String = _
     "Not a valid Label name." & vbCrLf & vbCrLf & "{$}"
@@ -290,78 +269,27 @@ Private Const STR_ERR_INVALID_WORD As String = _
 Private Const STR_ERR_OVERFLOW As String = _
     "Overflow."
 
-'Logging: _
- ---------------------------------------------------------------------------------------
-
-Public Enum OZ80_LOG
-    OZ80_LOG_ERROR                      'Error messages have the highest priority
-    OZ80_LOG_ACTION                     'The key important happenings
-    OZ80_LOG_INFO                       'Optional information, not actions happening
-    OZ80_LOG_STATUS                     'Display variable values &c. when assigned
-    OZ80_LOG_DEBUG                      'Internal information for debugging purposes
+Public Enum OZ80_WARNING
+    OZ80_WARNING_NONE                   'Skip "0"
+    OZ80_WARNING_ROUND                  'A decimal number had to be round-down
 End Enum
 
-'Formatting of output messages
-Private Const LOG_VERSION               As String = "OZ80MANDIAS v{$}.{$},{$}"
-Private Const LOG_PHASE1                As String = "Phase 1: Structural Pass"
-Private Const LOG_PHASE2                As String = "Phase 2: Layout ROM"
-Private Const LOG_PHASE3                As String = "Phase 3: Defered Calculation"
-Private Const LOG_PHASE4                As String = "Phase 4: Post Processing"
-Private Const LOG_ASM_COMPLETE          As String = "Assembly Complete"
-Private Const LOG_TIME                  As String = "Time: {$}s"
-Private Const LOG_SECTION               As String = "SECTION {$}"
-Private Const LOG_LINEDOUBLE            As String = "========================================================================="
-Private Const LOG_FILE_LENGTH           As String = "Length: {$} Characters"
-Private Const LOG_FILE_TOKENS           As String = "Tokens: {$}"
+'---------------------------------------------------------------------------------------
 
-'For diaplying a disassembly
+'Some APIs are different for Windows XP / Vista+. _
+ We fetch the Windows kernel version number during initialisation and store it here
+Private WindowsVersion As Single
 
-Private Const LOG_ASM_COLS              As String = "ADDR | PX OP OF CB LO HI | MNEMONIC  PARAM1    PARAM2    PARAM3"
-Private Const LOG_ASM_HEAD              As String = "-----¦-------------------¦-----------------------------------------------"
-Private Const LOG_ASM                   As String = "···· | ·· ·· ·· ·· ·· ·· | ·········                                     "
-Private Const LOG_ASM_FOOT              As String = "-----+-------------------'-----------------------------.-----------------"
-Private Const LOG_DATA_COLS             As String = "ADDR | 00 01 02 03 04 05 06 07 08 09 0A 0B 0C 0D 0E 0F | 0123456789ABCDEF"
-Private Const LOG_DATA_HEAD             As String = "-----¦-------------------------------------------------¦-----------------"
-Private Const LOG_DATA                  As String = "···· | ·· ·· ·· ·· ·· ·· ·· ·· ·· ·· ·· ·· ·· ·· ·· ·· | ················"
-
-Private Const FORMAT_QUOTE              As String = """"
-Private Const FORMAT_TOKEN              As String = "<tkn> {$} ({$},{$}) [{$}] {$}"
-Private Const FORMAT_TOKEN_CHUNK        As String = "   CHUNK"
-Private Const FORMAT_TOKEN_CONST        As String = "   CONST"
-Private Const FORMAT_TOKEN_EXPR         As String = "    EXPR"
-Private Const FORMAT_TOKEN_FLAG         As String = "    FLAG"
-Private Const FORMAT_TOKEN_KEYWORD      As String = " KEYWORD"
-Private Const FORMAT_TOKEN_LABEL        As String = "   LABEL"
-Private Const FORMAT_TOKEN_NUMBER       As String = "  NUMBER"
-Private Const FORMAT_TOKEN_OPERATOR     As String = "OPERATOR"
-Private Const FORMAT_TOKEN_PREFIX       As String = "  PREFIX"
-Private Const FORMAT_TOKEN_PROPERTY     As String = "PROPERTY"
-Private Const FORMAT_TOKEN_RAM          As String = "     RAM"
-Private Const FORMAT_TOKEN_REGISTER     As String = "REGISTER"
-Private Const FORMAT_TOKEN_SECTION      As String = " SECTION"
-Private Const FORMAT_TOKEN_SQUARE       As String = "HASH/MEM"
-Private Const FORMAT_TOKEN_TEXT         As String = "    TEXT"
-Private Const FORMAT_TOKEN_Z80          As String = "     Z80"
-
-'To save having to create and destroy short strings all the time, _
- we'll keep this one around for formatting log messages
-Private LogMsg As bluString
-
-'Which type of data the Chunk is recording (Z80 assembly or Data). _
- This is used to produce the disassembly log
-Private ChunkMode As CHUNK_MODE
-Private Enum CHUNK_MODE
-    MODE_UNSET
-    MODE_Z80                            'When adding Z80 instructions
-    MODE_DATA                           'When adding data
-End Enum
-
-'When generating the disassembly log, we don't show data as 1-byte per line, _
- but render it in typical hex-bin format of 16 hex-bytes followed by ASCII. _
- We therefore need to prepare a line of 16-bytes before logging it
-Private ChunkDataIndex As Long
-'This will be the current line of disassembled log data (See `LOG_DATA`)
-Private ChunkDataLog As String
+'During class initialisation we manually create special 64-bit numbers _
+ in these values, which cannot be written out natively in VB6
+Private INDEFINITE As Double
+Private NUMBER_MAX As Double
+Private NUMBER_MIN As Double
+'The min/max numbers that can be multiplied/divided by 1'000 or 1'024 without overflow
+Private NUMBER_MIN_K As Double
+Private NUMBER_MAX_K As Double
+Private NUMBER_MIN_KB As Double
+Private NUMBER_MAX_KB As Double
 
 '---------------------------------------------------------------------------------------
 'File Tokenising:
@@ -401,7 +329,7 @@ Private Enum OZ80_SYNTAX
     SYNTAX_CONSTANT = UCS2.EXCLAMATION_MARK         ' ! - Constant identifier
     SYNTAX_LABEL = UCS2.COLON                       ' : - Label identifier
     SYNTAX_PROPERTY = UCS2.FULL_STOP                ' . - Property identifier
-    SYNTAX_HASH = UCS2.NUMBER_SIGN                  ' # - Hash identifier
+    SYNTAX_TYPE = UCS2.NUMBER_SIGN                  ' # - Type identifier
     SYNTAX_RAM = UCS2.DOLLAR_SIGN                   ' $ - RAM constant, "$.abc"
     SYNTAX_MACRO = UCS2.COMMERCIAL_AT               ' @ - Macro identifier
     SYNTAX_FUNCT = UCS2.QUESTION_MARK               ' ? - Function identifier
@@ -479,7 +407,6 @@ Private Const STR_EXX                   As String = "exx"
 Private Const STR_F                     As String = "F"
 Private Const STR_HLT                   As String = "hlt"
 Private Const STR_HALT                  As String = "halt"
-Private Const STR_HASH                  As String = "HASH"
 Private Const STR_HELP                  As String = "HELP"
 Private Const STR_H                     As String = "H"
 Private Const STR_HI                    As String = "HI"
@@ -568,6 +495,7 @@ Private Const STR_SUB                   As String = "sub"
 Private Const STR_SYSTEM                As String = "SYSTEM"
 Private Const STR_TABLE                 As String = "TABLE"
 Private Const STR_TRIP                  As String = "TRIP"
+Private Const STR_TYPE                  As String = "TYPE"
 Private Const STR_WORD                  As String = "WORD"
 Private Const STR_XOR                   As String = "xor"
 Private Const STR_Z                     As String = "Z"
@@ -704,7 +632,6 @@ Private Enum OZ80_TOKEN
     TOKEN_KEYWORD_BOOL                  'Boolean data type (1-bit)
     TOKEN_KEYWORD_BYTE                  'Byte data type
     TOKEN_KEYWORD_DEF                   'Define constant
-    TOKEN_KEYWORD_HASH                  'Define a hash-array
     TOKEN_KEYWORD_HELP                  'Documentation marker
     TOKEN_KEYWORD_HI                    '`HI` function -- high byte of 16-bit Value
     TOKEN_KEYWORD_INCLUDE               'Include another file
@@ -723,30 +650,31 @@ Private Enum OZ80_TOKEN
     TOKEN_KEYWORD_SYSTEM                'System identifier `SYSTEM "SMS"`
     TOKEN_KEYWORD_TABLE                 'Data table
     TOKEN_KEYWORD_TRIP                  'Triple data type (3-bytes)
+    TOKEN_KEYWORD_TYPE                  'Define a custom data Type
     TOKEN_KEYWORD_WORD                  'Word data type (2-bytes)
     [_TOKEN_KEYWORDS_END]
     
     TOKEN_NUMBER
-    'Number prefixes ("K" & "KB")
-    TOKEN_PREFIX_K                      'x1000
-    TOKEN_PREFIX_KB                     'x1024
+    'Number suffixes ("K" & "KB")
+    TOKEN_SUFFIX_K                      'x1000
+    TOKEN_SUFFIX_KB                     'x1024
     
     'Grouping: (i.e. parenthesis, braces)
     TOKEN_BRACES_OPEN                   '"{" Code/data Chunk, `PROC :<label> { ... }`
     TOKEN_BRACES_CLOSE                  '"}"
-    TOKEN_SQUARE_OPEN                   '"[" Hash array and
+    TOKEN_SQUARE_OPEN                   '"[" Data Type and
     TOKEN_SQUARE_CLOSE                  '"]" Memory reference `ld a, [hl]`
     TOKEN_PARENS_OPEN                   '"(" Expression nesting,
     TOKEN_PARENS_CLOSE                  '")" e.g. `HI ($8000 + $80)`
     
     TOKEN_CONST                         'e.g. `!CONST`
-    TOKEN_HASH                          'e.g. `#hash`
     TOKEN_LABEL                         'e.g. `:label`
     TOKEN_PROPERTY_USE
     TOKEN_PROPERTY_NEW
     TOKEN_RAM                           'e.g. `$.ram`
     TOKEN_SECTION                       'e.g. `::section`
     TOKEN_TEXT                          'e.g. `"..."`
+    TOKEN_TYPE                          'e.g. `#type`
     
     [_TOKEN_LAST]                       'Do not go above 255!
 End Enum
@@ -842,8 +770,10 @@ Private TokensLength As Long
 Private TokenStrings As bluArrayStrings
 
 '---------------------------------------------------------------------------------------
-'System:
+'Target System:
 '---------------------------------------------------------------------------------------
+'OZ80 does not aim to be overly generic, but rather target specific systems so as to _
+ avoid requiring the developer to manually implement ROM checksums etc.
 
 'Which target system is selected, e.g. SEGA Master System
 Private My_System As OZ80_SYSTEM
@@ -855,9 +785,9 @@ Public Enum OZ80_SYSTEM
     SYSTEM_SMS                          'SEGA Master System
 End Enum
 
-'--------------------------------------------------------------------------------------
+'---------------------------------------------------------------------------------------
 'Sections:
-'--------------------------------------------------------------------------------------
+'---------------------------------------------------------------------------------------
 'A "Section" is a group of code/data Chunks that will be placed into the ROM together _
  according to special rules for the Slot pattern
 
@@ -888,7 +818,7 @@ Private CurrentSection As String
 '---------------------------------------------------------------------------------------
 
 'The database of named item values. _
- This includes Constants, RAM Names and Hash values
+ This includes Constants, RAM Names and Type values
 Private Values As Scripting.Dictionary
 
 'The database of Label locations (in ROM) and their properties. _
@@ -897,6 +827,35 @@ Private Values As Scripting.Dictionary
 Private Labels As Scripting.Dictionary
 'For normalising Property names, we note which Label is in play
 Private CurrentLabel As String
+
+'---------------------------------------------------------------------------------------
+'Type Definition:
+'---------------------------------------------------------------------------------------
+
+Private Type OZ80Node
+    Above As Long
+    Below As Long
+    
+    Before As Long
+    After As Long
+    
+    Name As String
+    Offset As Long
+    Size As Long
+End Type
+
+Private Type OZ80Type
+    Begin As Long
+    Offset As Long
+    
+    Nodes() As OZ80Node
+    NodeCount As Long
+    
+    Last As Long
+End Type
+
+Private Types() As OZ80Type
+Private TypeCount As Long
 
 '---------------------------------------------------------------------------------------
 'Z80 Parameters: _
@@ -1019,59 +978,6 @@ Private Type oz80Param
     
     LogText As Long                     'When logging, which cached text to use
 End Type
-
-'---------------------------------------------------------------------------------------
-
-'For maximum logging speed, we're going to build a massive (~2.5 MB) cache of the _
- possible Z80 parameters as text
-
-'First we create a big list of indexes that contain all the possible Z80 parameters, _
- this includes all 256 possible 8-bit values and all 65'536 possible 16-bit values _
- as well as the "[IX/IY+$??]" values and direct memory references "[$????]"
-
-Private Enum PARAMTEXT_OFFSETS
-    PARAMTEXT_NONE
-    
-    'The Z80 instruction mneomnics
-    PARAMTEXT_Z80
-    [_PARAMTEXT_Z80] = ([_TOKEN_Z80_END] - [_TOKEN_Z80_BEGIN])
-    
-    'We have 28 distinct names for registers/flags,
-     '"A|AF|B|BC|C|D|DE|E|H|HL|I|IX|IXH|IXL|IY|IYH|IYL|L|M|NC|NZ|P|PC|PE|PO|R|SP|Z"
-    PARAMTEXT_REGS = PARAMTEXT_Z80 + [_PARAMTEXT_Z80] + 1
-    [_PARAMTEXT_REGS] = ([_TOKEN_REGS_END] - [_TOKEN_REGS_BEGIN])
-    
-    'The 8-bit values "$00" to "$FF"
-    PARAMTEXT_VAL8 = PARAMTEXT_REGS + [_PARAMTEXT_REGS] + 1
-    [_PARAMTEXT_VAL8] = &HFF&
-    
-    'The 16-bit values "$0000" to "$FFFF"
-    PARAMTEXT_VAL16 = PARAMTEXT_VAL8 + [_PARAMTEXT_VAL8] + 1
-    [_PARAMTEXT_VAL16] = &HFFFF&
-    
-    'The memory references, registers
-    PARAMTEXT_MEM_BC = PARAMTEXT_VAL16 + [_PARAMTEXT_VAL16] + 1
-    PARAMTEXT_MEM_DE
-    PARAMTEXT_MEM_HL
-    PARAMTEXT_MEM_SP
-    PARAMTEXT_MEM_IX                    '"[IX]" - without 8-bit value
-    PARAMTEXT_MEM_IY                    '"[IY]" - without 8-bit value
-    
-    'The IX memory references, with 8-bit value
-    PARAMTEXT_MEM_IX_VAL
-    [_PARAMTEXT_MEM_IX_VAL] = &HFF&
-    'And the IY counterpart
-    PARAMTEXT_MEM_IY_VAL = PARAMTEXT_MEM_IX_VAL + [_PARAMTEXT_MEM_IX_VAL] + 1
-    [_PARAMTEXT_MEM_IY_VAL] = &HFF&
-    
-    'The 16-bit memory references, i.e. "[$FFFF]"
-    PARAMTEXT_MEM_VAL16 = PARAMTEXT_MEM_IY_VAL + [_PARAMTEXT_MEM_IY_VAL] + 1
-    [_PARAMTEXT_MEM_VAL16] = &HFFFF&
-    
-    [_PARAMTEXT_TOTAL] = PARAMTEXT_MEM_VAL16 + [_PARAMTEXT_MEM_VAL16]
-End Enum
-
-Private ParamText(0 To [_PARAMTEXT_TOTAL]) As String * 10
 
 '---------------------------------------------------------------------------------------
 'Z80 Opcodes:
@@ -1305,6 +1211,133 @@ Private LayoutCount As Long
 Private ROM() As Byte                   'The ROM's binary contents
 Private ROMSize As Long                 'The ROM file size, e.g. 256 KB
 Private ROMUsed As Long                 'Where the current end of the data is
+
+'---------------------------------------------------------------------------------------
+'Logging:
+'---------------------------------------------------------------------------------------
+
+Public Enum OZ80_LOG
+    OZ80_LOG_ERROR                      'Error messages have the highest priority
+    OZ80_LOG_ACTION                     'The key important happenings
+    OZ80_LOG_INFO                       'Optional information, not actions happening
+    OZ80_LOG_STATUS                     'Display variable values &c. when assigned
+    OZ80_LOG_DEBUG                      'Internal information for debugging purposes
+End Enum
+
+'Formatting of output messages
+Private Const LOG_VERSION               As String = "OZ80MANDIAS v{$}.{$},{$}"
+Private Const LOG_PHASE1                As String = "Phase 1: Structural Pass"
+Private Const LOG_PHASE2                As String = "Phase 2: Layout ROM"
+Private Const LOG_PHASE3                As String = "Phase 3: Defered Calculation"
+Private Const LOG_PHASE4                As String = "Phase 4: Post Processing"
+Private Const LOG_ASM_COMPLETE          As String = "Assembly Complete"
+Private Const LOG_TIME                  As String = "Time: {$}s"
+Private Const LOG_SECTION               As String = "SECTION {$}"
+Private Const LOG_LINEDOUBLE            As String = "========================================================================="
+Private Const LOG_FILE_LENGTH           As String = "Length: {$} Characters"
+Private Const LOG_FILE_TOKENS           As String = "Tokens: {$}"
+
+'For diaplying a disassembly
+
+Private Const LOG_ASM_COLS              As String = "ADDR | PX OP OF CB LO HI | MNEMONIC  PARAM1    PARAM2    PARAM3"
+Private Const LOG_ASM_HEAD              As String = "-----¦-------------------¦-----------------------------------------------"
+Private Const LOG_ASM                   As String = "···· | ·· ·· ·· ·· ·· ·· | ·········                                     "
+Private Const LOG_ASM_FOOT              As String = "-----+-------------------'-----------------------------.-----------------"
+Private Const LOG_DATA_COLS             As String = "ADDR | 00 01 02 03 04 05 06 07 08 09 0A 0B 0C 0D 0E 0F | 0123456789ABCDEF"
+Private Const LOG_DATA_HEAD             As String = "-----¦-------------------------------------------------¦-----------------"
+Private Const LOG_DATA                  As String = "···· | ·· ·· ·· ·· ·· ·· ·· ·· ·· ·· ·· ·· ·· ·· ·· ·· | ················"
+
+Private Const FORMAT_QUOTE              As String = """"
+Private Const FORMAT_TOKEN              As String = "<tkn> {$} ({$},{$}) [{$}] {$}"
+Private Const FORMAT_TOKEN_CHUNK        As String = "   CHUNK"
+Private Const FORMAT_TOKEN_CONST        As String = "   CONST"
+Private Const FORMAT_TOKEN_EXPR         As String = "    EXPR"
+Private Const FORMAT_TOKEN_FLAG         As String = "    FLAG"
+Private Const FORMAT_TOKEN_KEYWORD      As String = " KEYWORD"
+Private Const FORMAT_TOKEN_LABEL        As String = "   LABEL"
+Private Const FORMAT_TOKEN_NUMBER       As String = "  NUMBER"
+Private Const FORMAT_TOKEN_OPERATOR     As String = "OPERATOR"
+Private Const FORMAT_TOKEN_PREFIX       As String = "  PREFIX"
+Private Const FORMAT_TOKEN_PROPERTY     As String = "PROPERTY"
+Private Const FORMAT_TOKEN_RAM          As String = "     RAM"
+Private Const FORMAT_TOKEN_REGISTER     As String = "REGISTER"
+Private Const FORMAT_TOKEN_SECTION      As String = " SECTION"
+Private Const FORMAT_TOKEN_SQUARE       As String = "TYPE/MEM"
+Private Const FORMAT_TOKEN_TEXT         As String = "    TEXT"
+Private Const FORMAT_TOKEN_Z80          As String = "     Z80"
+
+'To save having to create and destroy short strings all the time, _
+ we'll keep this one around for formatting log messages
+Private LogMsg As bluString
+
+'Which type of data the Chunk is recording (Z80 assembly or Data). _
+ This is used to produce the disassembly log
+Private ChunkMode As CHUNK_MODE
+Private Enum CHUNK_MODE
+    MODE_UNSET
+    MODE_Z80                            'When adding Z80 instructions
+    MODE_DATA                           'When adding data
+End Enum
+
+'When generating the disassembly log, we don't show data as 1-byte per line, _
+ but render it in typical hex-bin format of 16 hex-bytes followed by ASCII. _
+ We therefore need to prepare a line of 16-bytes before logging it
+Private ChunkDataIndex As Long
+'This will be the current line of disassembled log data (See `LOG_DATA`)
+Private ChunkDataLog As String
+
+'---------------------------------------------------------------------------------------
+
+'For maximum logging speed, we're going to build a massive (~2.5 MB) cache of the _
+ possible Z80 parameters as text
+
+'First we create a big list of indexes that contain all the possible Z80 parameters, _
+ this includes all 256 possible 8-bit values and all 65'536 possible 16-bit values _
+ as well as the "[IX/IY+$??]" values and direct memory references "[$????]"
+
+Private Enum PARAMTEXT_OFFSETS
+    PARAMTEXT_NONE
+    
+    'The Z80 instruction mneomnics
+    PARAMTEXT_Z80
+    [_PARAMTEXT_Z80] = ([_TOKEN_Z80_END] - [_TOKEN_Z80_BEGIN])
+    
+    'We have 28 distinct names for registers/flags,
+     '"A|AF|B|BC|C|D|DE|E|H|HL|I|IX|IXH|IXL|IY|IYH|IYL|L|M|NC|NZ|P|PC|PE|PO|R|SP|Z"
+    PARAMTEXT_REGS = PARAMTEXT_Z80 + [_PARAMTEXT_Z80] + 1
+    [_PARAMTEXT_REGS] = ([_TOKEN_REGS_END] - [_TOKEN_REGS_BEGIN])
+    
+    'The 8-bit values "$00" to "$FF"
+    PARAMTEXT_VAL8 = PARAMTEXT_REGS + [_PARAMTEXT_REGS] + 1
+    [_PARAMTEXT_VAL8] = &HFF&
+    
+    'The 16-bit values "$0000" to "$FFFF"
+    PARAMTEXT_VAL16 = PARAMTEXT_VAL8 + [_PARAMTEXT_VAL8] + 1
+    [_PARAMTEXT_VAL16] = &HFFFF&
+    
+    'The memory references, registers
+    PARAMTEXT_MEM_BC = PARAMTEXT_VAL16 + [_PARAMTEXT_VAL16] + 1
+    PARAMTEXT_MEM_DE
+    PARAMTEXT_MEM_HL
+    PARAMTEXT_MEM_SP
+    PARAMTEXT_MEM_IX                    '"[IX]" - without 8-bit value
+    PARAMTEXT_MEM_IY                    '"[IY]" - without 8-bit value
+    
+    'The IX memory references, with 8-bit value
+    PARAMTEXT_MEM_IX_VAL
+    [_PARAMTEXT_MEM_IX_VAL] = &HFF&
+    'And the IY counterpart
+    PARAMTEXT_MEM_IY_VAL = PARAMTEXT_MEM_IX_VAL + [_PARAMTEXT_MEM_IX_VAL] + 1
+    [_PARAMTEXT_MEM_IY_VAL] = &HFF&
+    
+    'The 16-bit memory references, i.e. "[$FFFF]"
+    PARAMTEXT_MEM_VAL16 = PARAMTEXT_MEM_IY_VAL + [_PARAMTEXT_MEM_IY_VAL] + 1
+    [_PARAMTEXT_MEM_VAL16] = &HFFFF&
+    
+    [_PARAMTEXT_TOTAL] = PARAMTEXT_MEM_VAL16 + [_PARAMTEXT_MEM_VAL16]
+End Enum
+
+Private ParamText(0 To [_PARAMTEXT_TOTAL]) As String * 10
 
 '/// EVENTS ////////////////////////////////////////////////////////////////////////////
 
@@ -1580,7 +1613,6 @@ Private Sub Class_Initialize()
     Let TokenNames(TOKEN_KEYWORD_BOOL) = STR_BOOL
     Let TokenNames(TOKEN_KEYWORD_BYTE) = STR_BYTE
     Let TokenNames(TOKEN_KEYWORD_DEF) = STR_DEF
-    Let TokenNames(TOKEN_KEYWORD_HASH) = STR_HASH
     Let TokenNames(TOKEN_KEYWORD_HELP) = STR_HELP
     Let TokenNames(TOKEN_KEYWORD_HI) = STR_HI
     Let TokenNames(TOKEN_KEYWORD_INCLUDE) = STR_INCLUDE
@@ -1599,10 +1631,11 @@ Private Sub Class_Initialize()
     Let TokenNames(TOKEN_KEYWORD_SYSTEM) = STR_SYSTEM
     Let TokenNames(TOKEN_KEYWORD_TABLE) = STR_TABLE
     Let TokenNames(TOKEN_KEYWORD_TRIP) = STR_TRIP
+    Let TokenNames(TOKEN_KEYWORD_TYPE) = STR_TYPE
     Let TokenNames(TOKEN_KEYWORD_WORD) = STR_WORD
     
-    Let TokenNames(TOKEN_PREFIX_K) = STR_K
-    Let TokenNames(TOKEN_PREFIX_KB) = STR_KB
+    Let TokenNames(TOKEN_SUFFIX_K) = STR_K
+    Let TokenNames(TOKEN_SUFFIX_KB) = STR_KB
     
     Let TokenNames(TOKEN_BRACES_OPEN) = Chr$(SYNTAX_BRACES_OPEN)
     Let TokenNames(TOKEN_BRACES_CLOSE) = Chr$(SYNTAX_BRACES_CLOSE)
@@ -1690,11 +1723,11 @@ Private Sub Class_Initialize()
         'Check what token category it belongs to
         '...............................................................................
         Let TokenIsInstruction(t) = (t >= [_TOKEN_Z80_BEGIN]) And _
-                                  (t <= [_TOKEN_Z80_END])
+                                    (t <= [_TOKEN_Z80_END])
         Let TokenIsOperator(t) = (t > [_TOKEN_OPERATORS_BEGIN]) And _
-                               (t < [_TOKEN_OPERATORS_END])
+                                 (t < [_TOKEN_OPERATORS_END])
         Let TokenIsKeyword(t) = (t > [_TOKEN_KEYWORDS_BEGIN]) And _
-                              (t < [_TOKEN_KEYWORDS_END])
+                                (t < [_TOKEN_KEYWORDS_END])
         
         'Registers and flags are more complex as there's some overlap
         '...............................................................................
@@ -1743,7 +1776,6 @@ Private Sub Class_Initialize()
         '...............................................................................
         ElseIf (t = TOKEN_PARENS_OPEN) Or _
                (t = TOKEN_CONST) Or _
-               (t = TOKEN_HASH) Or _
                (t = TOKEN_KEYWORD_HI) Or _
                (t = TOKEN_LABEL) Or _
                (t = TOKEN_KEYWORD_LO) Or _
@@ -1751,7 +1783,8 @@ Private Sub Class_Initialize()
                (t = TOKEN_OPERATOR_SUB) Or _
                (t = TOKEN_PROPERTY_USE) Or _
                (t = TOKEN_RAM) Or _
-               (t = TOKEN_SECTION) _
+               (t = TOKEN_SECTION) Or _
+               (t = TOKEN_TYPE) _
         Then
             Let TokenIsExpression(t) = True
             Let TokenIsParameter(t) = True
@@ -1971,7 +2004,7 @@ End Property
 'Assemble : Compile a Z80 binary from a given starting OZ80 source code file
 '=======================================================================================
 'FilePath       | Source code file to begin with
-'---------------+-----------------------------------------------------------------------
+'---------------¦-----------------------------------------------------------------------
 'Returns        | The error number
 '=======================================================================================
 Public Function Assemble( _
@@ -2090,12 +2123,13 @@ Finish:
     Let Assemble = My_Error
 End Function
 
-'/// ASSEMBLING ////////////////////////////////////////////////////////////////////////
+'/// TOKENISING ////////////////////////////////////////////////////////////////////////
+'/// The first process is read the text and turn these into machine tokens
 
 'File_Assemble : Tokenise a source code file and then begin assembling it
 '=======================================================================================
 'FilePath       | File path to the source code file (".oz80")
-'---------------+-----------------------------------------------------------------------
+'---------------¦-----------------------------------------------------------------------
 'Returns        | The error number
 '=======================================================================================
 Private Function File_Assemble( _
@@ -2287,7 +2321,7 @@ End Sub
 'File_Tokenise : Break the source file into words and convert to machine tokens
 '=======================================================================================
 'FilePath       | Path to the source file to tokenise into this class instance
-'---------------+-----------------------------------------------------------------------
+'---------------¦-----------------------------------------------------------------------
 'Returns        | The error number
 '=======================================================================================
 Private Function File_Tokenise( _
@@ -2631,7 +2665,7 @@ TokenWord:
      ........................................................................... `!` ...
     ElseIf Asc1 = SYNTAX_CONSTANT Then
         'ERROR: Invalid Constant name?
-        If Not IsValidName() Then Call RaiseError( _
+        If Not File_Tokenise_IsValidName() Then Call RaiseError( _
             OZ80_ERROR_INVALID, STR_ERR_INVALID_CONSTANT, STR_ERR_INVALID_NAME _
         ): GoTo Finish
         
@@ -2659,25 +2693,25 @@ TokenWord:
         Let Token = TOKEN_NUMBER
         Let Value = Number
         
-    'Hash name? _
+    'Type name? _
      ........................................................................... `#` ...
-    ElseIf Asc1 = SYNTAX_HASH Then
-        'ERROR: Invalid hash name?
-        If Not IsValidName() Then Call RaiseError( _
-            OZ80_ERROR_INVALID, STR_ERR_INVALID_HASH, STR_ERR_INVALID_NAME _
+    ElseIf Asc1 = SYNTAX_TYPE Then
+        'ERROR: Invalid type name?
+        If Not File_Tokenise_IsValidName() Then Call RaiseError( _
+            OZ80_ERROR_INVALID, STR_ERR_INVALID_TYPE, STR_ERR_INVALID_NAME _
         ): GoTo Finish
         
-        'TODO: Define hash name
+        'TODO: Define type name
         'Add the index key to the token so that we can retrieve the string later
-        Let Token = TOKEN_HASH
+        Let Token = TOKEN_TYPE
         Let Value = TokenStrings.Add(Word.Text)
     
     'RAM name, e.g. `$.gamevar`, `$#RAM_BANK.gamevar` _
      ........................................................................... `$` ...
     ElseIf Asc1 = SYNTAX_RAM _
-    And (Asc2 = ASC_NUL Or Asc2 = SYNTAX_PROPERTY Or Asc2 = SYNTAX_HASH) Then
+    And (Asc2 = ASC_NUL Or Asc2 = SYNTAX_PROPERTY Or Asc2 = SYNTAX_TYPE) Then
         'ERROR: Invalid RAM name?
-        If Not IsValidName() Then Call RaiseError( _
+        If Not File_Tokenise_IsValidName() Then Call RaiseError( _
             OZ80_ERROR_INVALID, STR_ERR_INVALID_RAM, STR_ERR_INVALID_NAME _
         ): GoTo Finish
         
@@ -2717,7 +2751,7 @@ TokenWord:
             Let Value = TokenStrings.Add(Word.Text)
         
         'A label cannot begin with a number but must otherwise be A-Z, 0-9 and "_"
-        ElseIf Not IsValidName() Then
+        ElseIf Not File_Tokenise_IsValidName() Then
             'ERROR: Not a valid Label name
             Call RaiseError( _
                 OZ80_ERROR_INVALID, STR_ERR_INVALID_LABEL, STR_ERR_INVALID_NAME _
@@ -2743,7 +2777,7 @@ TokenWord:
             Let Value = TokenStrings.Add(Word.Text)
         
         'A property cannot begin with a number but must otherwise be A-Z, 0-9 and "_"
-        ElseIf Not IsValidName() Then
+        ElseIf Not File_Tokenise_IsValidName() Then
             'ERROR: Invalid Property name
             Call RaiseError( _
                 OZ80_ERROR_INVALID, STR_ERR_INVALID_PROPERTY, STR_ERR_INVALID_NAME _
@@ -2831,7 +2865,6 @@ TokenWord:
             Let Token = TOKEN_Z80_HALT
         ElseIf Word.Equals(STR_HALT) Then Let Token = TOKEN_Z80_HALT
         'Keywords
-        ElseIf Word.Equals(STR_HASH) Then Let Token = TOKEN_KEYWORD_HASH
         ElseIf Word.Equals(STR_HELP) Then Let Token = TOKEN_KEYWORD_HELP
         ElseIf Word.Equals(STR_HI) Then Let Token = TOKEN_KEYWORD_HI
         'Registers
@@ -2875,10 +2908,10 @@ TokenWord:
         'Number suffixes K & KB
         If (Asc2 = ASC_NUL) Then
             'Just `K`
-            Let Token = TOKEN_PREFIX_K
+            Let Token = TOKEN_SUFFIX_K
         'B must be next for `KB`
         ElseIf (Asc2 = ASC_B) And (Asc3 = ASC_NUL) Then
-            Let Token = TOKEN_PREFIX_KB
+            Let Token = TOKEN_SUFFIX_KB
         'There are no `K` registers
         Else: GoTo WordError: End If
                 
@@ -2992,6 +3025,7 @@ TokenWord:
         'Keywords
         If Word.Equals(STR_TABLE) Then
             Let Token = TOKEN_KEYWORD_TABLE
+        ElseIf Word.Equals(STR_TYPE) Then Let Token = TOKEN_KEYWORD_TYPE
         ElseIf Word.Equals(STR_TRIP) Then Let Token = TOKEN_KEYWORD_TRIP
         'There is no `T` register
         Else: GoTo WordError: End If
@@ -3196,7 +3230,7 @@ Private Function FormatToken( _
         Let Format_Msg.Text = TokenNames(TokenKind)
         Let Format_TokenType = FORMAT_TOKEN_FLAG
         
-    ElseIf TokenKind = TOKEN_HASH Then
+    ElseIf TokenKind = TOKEN_TYPE Then
         '...............................................................................
         Let Format_Msg.Text = TokenStrings.Item(TokenValue)
         Call Format_Msg.Wrap(FORMAT_QUOTE)
@@ -3230,8 +3264,8 @@ Private Function FormatToken( _
         Let Format_Msg.Text = TokenNames(TokenKind)
         Let Format_TokenType = FORMAT_TOKEN_OPERATOR
         
-    ElseIf TokenKind = TOKEN_PREFIX_K _
-        Or TokenKind = TOKEN_PREFIX_KB Then
+    ElseIf TokenKind = TOKEN_SUFFIX_K _
+        Or TokenKind = TOKEN_SUFFIX_KB Then
         '...............................................................................
         Let Format_Msg.Text = TokenNames(TokenKind)
         Let Format_TokenType = FORMAT_TOKEN_PREFIX
@@ -3282,11 +3316,11 @@ Private Function FormatToken( _
     Call Profiler.EventEnd(EVENT_FORMATTOKEN)
 End Function
 
-'IsValidName : Check validity for named items
+'File_Tokenise_IsValidName : Check validity for named items
 '=======================================================================================
 'Returns        | True if the captured word conforms to name item syntax
 '=======================================================================================
-Private Function IsValidName( _
+Private Function File_Tokenise_IsValidName( _
 ) As Boolean
     'Variable, label and property names can contain A-Z, 0-9 underscore and dot with _
      the exceptions that the first letter cannot be a number or a dot, two dots cannot _
@@ -3295,11 +3329,11 @@ Private Function IsValidName( _
     Let WordChar0 = Word.Char(0)
     
     'The first letter must be the type identifier; _
-     `!CONST`, `:label`, `.property`, `#hash`, `$.RAM`, `?function`, `@macro`
+     `!CONST`, `:label`, `.property`, `#type`, `$.RAM`, `?function`, `@macro`
     If WordChar0 <> SYNTAX_CONSTANT And _
        WordChar0 <> SYNTAX_LABEL And _
        WordChar0 <> SYNTAX_PROPERTY And _
-       WordChar0 <> SYNTAX_HASH And _
+       WordChar0 <> SYNTAX_TYPE And _
        WordChar0 <> SYNTAX_RAM And _
        WordChar0 <> SYNTAX_FUNCT And _
        WordChar0 <> SYNTAX_MACRO _
@@ -3314,7 +3348,7 @@ Private Function IsValidName( _
     'TODO: Could change this function to use bluString's CharPull
     If (WordChar0 = SYNTAX_LABEL And Word.Char(1) = SYNTAX_LABEL) _
     Or (WordChar0 = SYNTAX_RAM And Word.Char(1) = SYNTAX_PROPERTY) _
-    Or (WordChar0 = SYNTAX_RAM And Word.Char(1) = SYNTAX_HASH) _
+    Or (WordChar0 = SYNTAX_RAM And Word.Char(1) = SYNTAX_TYPE) _
     Then
         Let Begin = 2
     Else
@@ -3349,13 +3383,13 @@ Private Function IsValidName( _
         End If
     Next i
     
-    Let IsValidName = True
+    Let File_Tokenise_IsValidName = True
 End Function
 
 'NestIn : Track an additional level of bracket nesting
 '=======================================================================================
 'BracketType    | Token number to represent "{", "(" or "["
-'---------------+-----------------------------------------------------------------------
+'---------------¦-----------------------------------------------------------------------
 'Returns        | An error number, should the nesting be invalid
 '=======================================================================================
 Private Function NestIn( _
@@ -3372,7 +3406,7 @@ End Function
 '=======================================================================================
 'BracketOpen    | Token number for the opening bracket "{", "(" or "["
 'BracketClose   | Token number for the closing bracket "}", ")" or "]"
-'---------------+-----------------------------------------------------------------------
+'---------------¦-----------------------------------------------------------------------
 'Returns        | An error number, should the nesting be invalid
 '=======================================================================================
 Private Function NestOut( _
@@ -3436,13 +3470,13 @@ End Function
 '         |                                               '
 '<root>   | DEF         <def>                             ' Define ...
 '         |                                               '
-'         | ENUM        !{name}    [<expr>]     <hash>    ' Enumerate Constants
+'         | ENUM        !{name}    [<expr>]     <type>    ' Enumerate Constants
 '         |                                               '
 '         | <if>                                          '
 '         |                                               '
 '         | INCLUDE     <text>                            '
 '         |                                               '
-'         | HASH        #{name}     <hash>                '
+'         | TYPE        #{name}     <type>                '
 '         |                                               '
 '         | PROC        :{name}    [HELP        <text>]   '
 '         |                        [PARAMS      <params>] '
@@ -3512,13 +3546,13 @@ Continue:
             Call RaiseError(OZ80_ERROR_EXPECTED, "TODO")
         End If
     
-    'Define a Hash:
+    'Define a Type:
     '-----------------------------------------------------------------------------------
-    '`HASH #<hash> [ ... ]`
+    '`TYPE #<type> [ ... ]`
     '-----------------------------------------------------------------------------------
-    ElseIf TokenKind = TOKEN_KEYWORD_HASH Then
+    ElseIf TokenKind = TOKEN_KEYWORD_TYPE Then
         'Hand off to the function that will process this
-        Call ProcessHash
+        Call DefineType
     
     'Inlcude another source file:
     '-----------------------------------------------------------------------------------
@@ -3542,7 +3576,7 @@ Continue:
     '-----------------------------------------------------------------------------------
     ElseIf TokenKind = TOKEN_KEYWORD_RAM Then
         'Hand off to the function that will process this
-        Call DefineRAMHash
+        Call DefineRAMType
     
     'Define the starting Procedure:
     '-----------------------------------------------------------------------------------
@@ -3617,20 +3651,172 @@ Private Sub DefineConst()
     Call Values.Add(ConstName, Value)
 End Sub
 
-'ProcessHash : Process a Hash block
+'DefineType : Define a Type block
 '=======================================================================================
-'HASH       #<name>     [ ... ]
+'TYPE       #<name>     [ ... ]
 '=======================================================================================
-Private Sub ProcessHash()
+Private Sub DefineType()
     'ERROR: The file ended before the first parameter
     If NextTokenError() Then Exit Sub
     
-    Call NextToken
+    Dim Name As String
+    Let Name = TokenText
     
-    If TokenKind = TOKEN_SQUARE_OPEN Then
-        Let TokenIndex = TokenValue
-        Call NextToken
+    'Skip the param
+    If NextTokenError() Then Exit Sub
+    
+    'Create the new Type object
+    Let TypeCount = TypeCount + 1
+    ReDim Preserve Types(1 To TypeCount) As OZ80Type
+    
+    Call ScopeType(TypeCount, Name)
+End Sub
+
+'=======================================================================================
+'ScopeType : Walks a Type block and defines the structure within
+'=======================================================================================
+'BaseName       | The name of the Type to build off of
+'=======================================================================================
+Private Sub ScopeType( _
+    ByRef TypeIndex As Long, _
+    ByVal Name As String _
+)
+    If TokenKind <> TOKEN_SQUARE_OPEN Then
+        Call RaiseError(OZ80_ERROR_EXPECTED, "TODO"): Exit Sub
     End If
+    
+    If NextTokenError() Then Exit Sub
+    
+Continue:
+    '-----------------------------------------------------------------------------------
+    With Types(TypeIndex)
+    
+    'Type definitions should begin with a property
+    If TokenKind <> TOKEN_PROPERTY_NEW Then
+        Call RaiseError(OZ80_ERROR_EXPECTED, "TODO"): Exit Sub
+    End If
+    
+    'Define this property
+    Let .NodeCount = .NodeCount + 1
+    ReDim Preserve .Nodes(1 To .NodeCount) As OZ80Node
+    
+    'This new node follows the previous
+    Let .Nodes(.NodeCount).Before = .Last
+    If .Last > 0 Then
+        Let .Nodes(.Last).After = .NodeCount
+        Let .Nodes(.NodeCount).Offset = .Nodes(.Last).Offset
+    End If
+    'This new node is now the latest
+    Let .Last = .NodeCount
+    Let .Nodes(.Last).Offset = .Offset
+    Let .Nodes(.Last).Name = Name & TokenText
+    
+    If NextTokenError() Then Exit Sub
+    
+    'Next word could be a Value
+    If TokenIsExpression(TokenKind) Then
+        Dim Value As Double
+        If ParseExpression(Value) Then Exit Sub
+        
+        If Value = INDEFINITE Then
+            Stop
+        Else
+            'TODO: Sanity check
+            Let .Nodes(.Last).Offset = Value
+        End If
+    End If
+    
+    'Next word will be the unit size
+    Dim UnitBits As Long
+    If TokenKind = TOKEN_KEYWORD_TYPE Then
+        
+        Dim Index As Long
+        Let Index = .Last
+        
+        If NextTokenError() Then Exit Sub
+        
+        If TokenKind = TOKEN_TYPE Then
+            'TODO: Import the existing type
+            If NextTokenError() Then Exit Sub
+        Else
+            'Walk the type within this type...
+            Call ScopeType(TypeIndex, .Nodes(.Last).Name)
+        End If
+        
+        If My_Error Then Exit Sub
+        
+        Let .Nodes(Index).Below = .Last
+        Let .Nodes(.Last).Above = Index
+        
+    '...................................................................................
+    Else
+        If TokenKind = TOKEN_KEYWORD_BYTE Then
+            Let UnitBits = 8
+            'TODO
+        ElseIf TokenKind = TOKEN_KEYWORD_WORD Then
+            Let UnitBits = 16
+            'TODO
+        ElseIf TokenKind = TOKEN_KEYWORD_TRIP Then
+            Let UnitBits = 24
+            'TODO
+        ElseIf TokenKind = TOKEN_KEYWORD_LONG Then
+            Let UnitBits = 32
+            'TODO
+        ElseIf TokenKind = TOKEN_KEYWORD_NYBL Then
+            Let UnitBits = 4
+            'TODO
+        ElseIf TokenKind = TOKEN_KEYWORD_BOOL Then
+            Let UnitBits = 1
+            'TODO
+        Else
+            Stop
+        End If
+        
+        'Check for multiples
+        If NextTokenError() Then Exit Sub
+        
+        If TokenKind = TOKEN_OPERATOR_REP Then
+            If NextTokenError() Then Exit Sub
+            
+            If ParseExpression(Value) Then Exit Sub
+            
+            If Value = INDEFINITE Then
+                'Stop
+            Else
+                'TODO: Overflow check
+                Let .Nodes(.Last).Size = UnitBits * Value
+            End If
+        Else
+            Let .Nodes(.Last).Size = UnitBits
+        End If
+        
+        Let .Offset = .Nodes(.Last).Offset + UnitBits \ 8
+        
+        'Is there a default value?
+        If TokenIsList(TokenKind) Then
+            Dim Default As Scripting.Dictionary
+            Set Default = GetListAsDictionary()
+        End If
+        
+        'Add the Type Property to the global value database
+        'TODO
+        Call Values.Add(.Nodes(.Last).Name, .Nodes(.Last).Offset)
+    End If
+    
+    Call RaiseMessage(OZ80_LOG_ACTION, .Nodes(.Last).Name & " x " & (UnitBits \ 8) & " = " & .Nodes(.Last).Offset)
+    
+    End With
+    '-----------------------------------------------------------------------------------
+    
+    If TokenKind = TOKEN_SQUARE_CLOSE Then
+        Call NextToken
+    Else
+        GoTo Continue
+    End If
+End Sub
+
+Private Sub TypeImport()
+    '
 End Sub
 
 'ProcessInclude : Process an Include statement
@@ -4030,36 +4216,6 @@ Finish:
     Let CurrentLabel = vbNullString
 End Sub
 
-'DefineRAMBank : Define a RAM Block
-'=======================================================================================
-'DEF RAM    $#{name}    <expr>      <expr>
-'=======================================================================================
-Private Sub DefineRAMBank()
-    'ERROR: The file ended before the first parameter
-    If NextTokenError() Then Exit Sub
-    
-    'TODO: Implementation
-    Call NextToken
-    Call NextToken
-    Call NextToken
-End Sub
-
-'DefineRAMHash : Process a RAM block
-'=======================================================================================
-'RAM       [<expr>]     [ ... ]
-'=======================================================================================
-Private Sub DefineRAMHash()
-    'ERROR: The file ended before the first parameter
-    If NextTokenError() Then Exit Sub
-    
-    'TODO: Implementation
-    Call NextToken
-    If TokenKind = TOKEN_SQUARE_OPEN Then
-        Let TokenIndex = TokenValue
-        Call NextToken
-    End If
-End Sub
-
 'DefineSection : Define a Section
 '=======================================================================================
 'DEF SECTION    ::<section>    [SLOT   <list>]
@@ -4174,6 +4330,46 @@ ErrIndefinite:
      able to define the indefinite Values (i.e. Label locations in ROM) once _
      the whole code is parsed and we use the Sections to layout the ROM
     Call RaiseError(OZ80_ERROR_INDEFINITE, "TODO")
+End Sub
+
+'DefineRAMBank : Define a RAM Block
+'=======================================================================================
+'DEF RAM    $#{name}    <expr>      <expr>
+'=======================================================================================
+Private Sub DefineRAMBank()
+    'ERROR: The file ended before the first parameter
+    If NextTokenError() Then Exit Sub
+    
+    'TODO: Implementation
+    Call NextToken
+    Call NextToken
+    Call NextToken
+End Sub
+
+'DefineRAMType : Process a RAM block
+'=======================================================================================
+'RAM       [<expr>]     [ ... ]
+'=======================================================================================
+Private Sub DefineRAMType()
+    'ERROR: The file ended before the first parameter
+    If NextTokenError() Then Exit Sub
+    
+    Dim Name As String
+    Let Name = TokenText
+    
+    'Skip the param
+    If NextTokenError() Then Exit Sub
+    
+    'Create the new Type object
+    Let TypeCount = TypeCount + 1
+    ReDim Preserve Types(1 To TypeCount) As OZ80Type
+    
+    Call ScopeType(TypeCount, Name)
+    
+'    If TokenKind = TOKEN_SQUARE_OPEN Then
+'        Let TokenIndex = TokenValue
+'        Call NextToken
+'    End If
 End Sub
 
 'DefineStart : Define the System's boot Procedure
@@ -4521,6 +4717,117 @@ Finish:
     Call NextToken
 End Sub
 
+'Chunk_AddBYTE
+'=======================================================================================
+'Value          | The "BYTE" to add to the current Chunk
+'=======================================================================================
+Private Sub Chunk_AddBYTE( _
+    ByRef Value As Double _
+)
+    With Chunks(Chunk)
+        'Increase the Chunk accordingly
+        Let .Size = .Size + 1
+    
+        'If the Chunk's buffer is full then double the buffer size to compensate. _
+        This will cause the buffer to grow exponentially, i.e. 2 KB, 4 KB, 8 KB, ...
+        If .Size >= .Buffer Then
+            Let .Buffer = .Buffer * 2
+            ReDim Preserve .Data(1 To .Buffer) As Byte
+        End If
+        
+        'Store the byte
+        Let .Data(.Size) = Value And &HFF&
+    End With
+    
+    'Add this to the disassembly log
+    Call Chunk_LogByte(Value And &HFF&)
+End Sub
+
+'Chunk_AddWORD
+'=======================================================================================
+'Value          | The "WORD" (2-bytes) to add to the current Chunk
+'=======================================================================================
+Private Sub Chunk_AddWORD( _
+    ByRef Value As Double _
+)
+    With Chunks(Chunk)
+        'Increase the Chunk accordingly
+        Let .Size = .Size + 2
+    
+        'If the Chunk's buffer is full then double the buffer size to compensate. _
+        This will cause the buffer to grow exponentially, i.e. 2 KB, 4 KB, 8 KB, ...
+        If .Size >= .Buffer Then
+            Let .Buffer = .Buffer * 2
+            ReDim Preserve .Data(1 To .Buffer) As Byte
+        End If
+        
+        'Store the bytes, low then high (Little Endian)
+        Let .Data(.Size - 1) = Value And &HFF&
+        Let .Data(.Size) = (Value \ &H100&) And &HFF&
+    End With
+    
+    'Add this to the disassembly log
+    Call Chunk_LogByte(Value And &HFF&)
+    Call Chunk_LogByte((Value \ &H100&) And &HFF&)
+End Sub
+
+'Chunk_LogByte
+'=======================================================================================
+'Value          | The byte to add to the current disassembly line
+'=======================================================================================
+Private Sub Chunk_LogByte( _
+    ByRef Value As Byte _
+)
+    'If we've just come from Z80 instructions, we'll need to switch to the data _
+     columns in the disassembly log
+    If ChunkMode <> MODE_DATA Then
+        'Start a new disassembly log line
+        Let ChunkDataLog = LOG_DATA
+        'Include the current address on the log line
+        Call api_RtlMoveMemory( _
+            DestinationPointer:=StrPtr(ChunkDataLog), _
+                 SourcePointer:=StrPtr(HexStr16(Chunks(Chunk).Size - 1)), _
+                        Length:=8 _
+        )
+        'Bytes will be logged according to the current offset _
+         (so that the data is displayed aligned to 16 bytes)
+        Let ChunkDataIndex = (Chunks(Chunk).Size - 1) Mod 16
+        
+        If ChunkMode <> MODE_UNSET Then
+            Call Chunks(Chunk).LogASM.Log(LOG_ASM_FOOT)
+        End If
+        Call Chunks(Chunk).LogASM.Log(LOG_DATA_COLS)
+        Call Chunks(Chunk).LogASM.Log(LOG_DATA_HEAD)
+        Let ChunkMode = MODE_DATA
+    End If
+    
+    'Place the byte into the disassembly line
+    Call api_RtlMoveMemory( _
+        DestinationPointer:=StrPtr(ChunkDataLog) + 14 + (ChunkDataIndex * 6), _
+        SourcePointer:=StrPtr(HexStr8(Value)), Length:=4 _
+    )
+    
+    'TODO: Adding the ASCII disply of bytes will require a Unicode textbox
+    
+    'If we've reached the end of a disassembly line then log it and start a new one
+    If ChunkDataIndex = 15 Then
+        'Add the prepared line to the log
+        Call Chunks(Chunk).LogASM.Log(ChunkDataLog)
+        'Start the next line
+        Let ChunkDataLog = LOG_DATA
+        Let ChunkDataIndex = 0
+        'Include the next address on the log line
+        Call api_RtlMoveMemory( _
+            DestinationPointer:=StrPtr(ChunkDataLog), _
+                 SourcePointer:=StrPtr(HexStr16(Chunks(Chunk).Size)), _
+                        Length:=8 _
+        )
+    Else
+        'Move on to the next byte in the line
+        Let ChunkDataIndex = ChunkDataIndex + 1
+    End If
+End Sub
+
 'Z80_Assemble : Assemble bytes from a Z80 instruction and parameters
 '=======================================================================================
 Private Sub Z80_Assemble()
@@ -4541,11 +4848,9 @@ Private Sub Z80_Assemble()
     Dim LogPtr As Long:     Let LogPtr = StrPtr(LogStr)
     
     'We already know the instruction, so we can add that to the disassembly now
-    Call api_RtlMoveMemory( _
-        LogPtr + 54, StrPtr( _
-            ParamText(PARAMTEXT_Z80 + (Mnemonic - [_TOKEN_Z80_BEGIN])) _
-        ), 20 _
-    )
+    Call api_RtlMoveMemory(LogPtr + 54, StrPtr( _
+        ParamText(PARAMTEXT_Z80 + (Mnemonic - [_TOKEN_Z80_BEGIN])) _
+    ), 20)
     
     'Initialse variables to hold pieces of the assembly
     Dim Prefix As Long, Offset As Double
@@ -4939,11 +5244,6 @@ iBIT:
     If Z80_TestParams(Instruction, PARAM_VAL, PARAM_REGS_ABCDEHL_MEM_HLIXY) Then
         Let Opcode = X1 Or OpcodeY_Bit(Instruction.Param1.Value) _
                   Or OpcodeZ_Register(Instruction.Param2.Mask)
-        GoTo OutputCB
-    '`BIT 0-7, [IX+$8|IY+$8], A|B|C|D|E|H|L` - Undocumented set bit & copy to register
-    ElseIf Z80_TestParams(Instruction, PARAM_VAL, PARAM_MEM_IXY, PARAM_REGS_ABCDEHL) Then
-        Let Opcode = X1 Or OpcodeY_Bit(Instruction.Param1.Value) _
-                  Or OpcodeZ_Register(Instruction.Param3.Mask)
         GoTo OutputCB
     End If
     'ERROR: Wrong parameters for Z80 instruction
@@ -5930,7 +6230,7 @@ End Sub
 'Z80_GetParameter : Fetch the type / value of a Z80 instruction parameter
 '=======================================================================================
 'ReturnParam    | An `oz80_Param` structure to populate
-'---------------+-----------------------------------------------------------------------
+'---------------¦-----------------------------------------------------------------------
 'Returns        | The error number
 '=======================================================================================
 Private Function Z80_GetParameter( _
@@ -6139,7 +6439,7 @@ End Function
 '[Test1]        | A bit-pattern of allowed parameters to check parameter 1 against
 '[Test2]        | A bit-pattern of allowed parameters to check parameter 2 against
 '[Test3]        | A bit-pattern of allowed parameters to check parameter 3 against
-'---------------+-----------------------------------------------------------------------
+'---------------¦-----------------------------------------------------------------------
 'Returns        | True if all given parameters fulfill the tests, False otherwise
 '=======================================================================================
 Private Function Z80_TestParams( _
@@ -6219,7 +6519,7 @@ End Function
 'GetText : Reads a list, interpretting Values as Unicode points
 '=======================================================================================
 'ReturnText     | A bluString object that will be populated with the text
-'---------------+-----------------------------------------------------------------------
+'---------------¦-----------------------------------------------------------------------
 'Returns        | The error number
 '=======================================================================================
 Private Function GetText( _
@@ -6296,7 +6596,7 @@ End Function
 'ReturnValue    | Gets set to the calculated Value, or `INDEFINITE`.
 '               | Note that this is a 64-bit floating-pointer number, so it's up to
 '               | the caller to validate the number according to their needs
-'---------------+-----------------------------------------------------------------------
+'---------------¦-----------------------------------------------------------------------
 'Returns        | The error number
 '=======================================================================================
 Private Function ParseExpression( _
@@ -6393,7 +6693,7 @@ End Function
 'ReturnValue    | Gets set to the calculated Value, or `INDEFINITE`.
 '               | Note that this is a 64-bit floating-pointer number, so it's up to
 '               | the caller to validate the number according to their needs
-'---------------+-----------------------------------------------------------------------
+'---------------¦-----------------------------------------------------------------------
 'Returns        | The error number
 '=======================================================================================
 Private Function ParseValue( _
@@ -6504,9 +6804,9 @@ GetNumber:
         Else
             Call NextToken
             
-            'Check for a number prefix, e.g. `KB`
+            'Check for a number suffixes, e.g. `KB`
             '...........................................................................
-            If TokenKind = TOKEN_PREFIX_K Then
+            If TokenKind = TOKEN_SUFFIX_K Then
                 'Check for min/max number you can multiply by 1'000 without overflowing
                 If (ReturnValue < NUMBER_MIN_K) Or (ReturnValue > NUMBER_MAX_K) Then
                     Call RaiseError(OZ80_ERROR_OVERFLOW, STR_ERR_OVERFLOW)
@@ -6518,7 +6818,7 @@ GetNumber:
                 Call NextToken
                 
             '...........................................................................
-            ElseIf TokenKind = TOKEN_PREFIX_KB Then
+            ElseIf TokenKind = TOKEN_SUFFIX_KB Then
                 'Check for min/max number you can multiply by 1'024 without overflowing
                 If (ReturnValue < NUMBER_MIN_KB) Or (ReturnValue > NUMBER_MAX_KB) Then
                     Call RaiseError(OZ80_ERROR_OVERFLOW, STR_ERR_OVERFLOW)
@@ -6550,9 +6850,9 @@ GetNumber:
     'RAM Names
     '-----------------------------------------------------------------------------------
     ElseIf TokenKind = TOKEN_RAM _
-        Or TokenKind = TOKEN_HASH _
+        Or TokenKind = TOKEN_TYPE _
     Then
-        'Has the RAM Name / Hash value been defined?
+        'Has the RAM Name / Type value been defined?
         If Not Values.Exists(TokenText) Then
             'Return Indefinite
             Let ReturnValue = INDEFINITE
@@ -6819,7 +7119,7 @@ End Function
 '=======================================================================================
 'ChunkRef       | Which Chunk to add to the ROM
 '[ChunkAddr]    | Where specifically to put the Chunk, otherwise find a place
-'---------------+-----------------------------------------------------------------------
+'---------------¦-----------------------------------------------------------------------
 'Returns        | The error number
 '=======================================================================================
 Private Function ROM_AddChunk( _
@@ -7015,121 +7315,10 @@ End Function
 '/// GENERIC ///////////////////////////////////////////////////////////////////////////
 '/// Functions used anywhere throughout the class
 
-'Chunk_AddBYTE
-'=======================================================================================
-'Value          | The "BYTE" to add to the current Chunk
-'=======================================================================================
-Private Sub Chunk_AddBYTE( _
-    ByRef Value As Double _
-)
-    With Chunks(Chunk)
-        'Increase the Chunk accordingly
-        Let .Size = .Size + 1
-    
-        'If the Chunk's buffer is full then double the buffer size to compensate. _
-        This will cause the buffer to grow exponentially, i.e. 2 KB, 4 KB, 8 KB, ...
-        If .Size >= .Buffer Then
-            Let .Buffer = .Buffer * 2
-            ReDim Preserve .Data(1 To .Buffer) As Byte
-        End If
-        
-        'Store the byte
-        Let .Data(.Size) = Value And &HFF&
-    End With
-    
-    'Add this to the disassembly log
-    Call Chunk_LogByte(Value And &HFF&)
-End Sub
-
-'Chunk_AddWORD
-'=======================================================================================
-'Value          | The "WORD" (2-bytes) to add to the current Chunk
-'=======================================================================================
-Private Sub Chunk_AddWORD( _
-    ByRef Value As Double _
-)
-    With Chunks(Chunk)
-        'Increase the Chunk accordingly
-        Let .Size = .Size + 2
-    
-        'If the Chunk's buffer is full then double the buffer size to compensate. _
-        This will cause the buffer to grow exponentially, i.e. 2 KB, 4 KB, 8 KB, ...
-        If .Size >= .Buffer Then
-            Let .Buffer = .Buffer * 2
-            ReDim Preserve .Data(1 To .Buffer) As Byte
-        End If
-        
-        'Store the bytes, low then high (Little Endian)
-        Let .Data(.Size - 1) = Value And &HFF&
-        Let .Data(.Size) = (Value \ &H100&) And &HFF&
-    End With
-    
-    'Add this to the disassembly log
-    Call Chunk_LogByte(Value And &HFF&)
-    Call Chunk_LogByte((Value \ &H100&) And &HFF&)
-End Sub
-
-'Chunk_LogByte
-'=======================================================================================
-'Value          | The byte to add to the current disassembly line
-'=======================================================================================
-Private Sub Chunk_LogByte( _
-    ByRef Value As Byte _
-)
-    'If we've just come from Z80 instructions, we'll need to switch to the data _
-     columns in the disassembly log
-    If ChunkMode <> MODE_DATA Then
-        'Start a new disassembly log line
-        Let ChunkDataLog = LOG_DATA
-        'Include the current address on the log line
-        Call api_RtlMoveMemory( _
-            DestinationPointer:=StrPtr(ChunkDataLog), _
-                 SourcePointer:=StrPtr(HexStr16(Chunks(Chunk).Size - 1)), _
-                        Length:=8 _
-        )
-        'Bytes will be logged according to the current offset _
-         (so that the data is displayed aligned to 16 bytes)
-        Let ChunkDataIndex = (Chunks(Chunk).Size - 1) Mod 16
-        
-        If ChunkMode <> MODE_UNSET Then
-            Call Chunks(Chunk).LogASM.Log(LOG_ASM_FOOT)
-        End If
-        Call Chunks(Chunk).LogASM.Log(LOG_DATA_COLS)
-        Call Chunks(Chunk).LogASM.Log(LOG_DATA_HEAD)
-        Let ChunkMode = MODE_DATA
-    End If
-    
-    'Place the byte into the disassembly line
-    Call api_RtlMoveMemory( _
-        DestinationPointer:=StrPtr(ChunkDataLog) + 14 + (ChunkDataIndex * 6), _
-        SourcePointer:=StrPtr(HexStr8(Value)), Length:=4 _
-    )
-    
-    'TODO: Adding the ASCII disply of bytes will require a Unicode textbox
-    
-    'If we've reached the end of a disassembly line then log it and start a new one
-    If ChunkDataIndex = 15 Then
-        'Add the prepared line to the log
-        Call Chunks(Chunk).LogASM.Log(ChunkDataLog)
-        'Start the next line
-        Let ChunkDataLog = LOG_DATA
-        Let ChunkDataIndex = 0
-        'Include the next address on the log line
-        Call api_RtlMoveMemory( _
-            DestinationPointer:=StrPtr(ChunkDataLog), _
-                 SourcePointer:=StrPtr(HexStr16(Chunks(Chunk).Size)), _
-                        Length:=8 _
-        )
-    Else
-        'Move on to the next byte in the line
-        Let ChunkDataIndex = ChunkDataIndex + 1
-    End If
-End Sub
-
 'ChunkExists : Test if a Chunk is in the array by the Label name
 '=======================================================================================
 'LabelName      | Fully-qualified Label Name for the Chunk, e.g. "::Section:Label"
-'---------------+-----------------------------------------------------------------------
+'---------------¦-----------------------------------------------------------------------
 'Returns        | True if the Chunk exists, False otherwise
 '=======================================================================================
 Private Property Get ChunkExists( _
@@ -7211,7 +7400,7 @@ End Sub
 'Number         | Error number to set on the Class and raise via Event
 'Message        | A context-specific error message
 '[FormatValues] | A list of values to replace string markers "{$}" in the error message
-'---------------+-----------------------------------------------------------------------
+'---------------¦-----------------------------------------------------------------------
 'Returns        | The same error number, for simple tail recursion
 '=======================================================================================
 Private Function RaiseError( _

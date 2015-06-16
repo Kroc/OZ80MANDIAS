@@ -3,7 +3,7 @@
    for MaSS1VE: The Master System Sonic 1 Visual Editor <github.com/Kroc/MaSS1VE>
    ================================================================================= ``
 
-HASH    #levelHeader
+TYPE    #levelHeader
 [
 .solidity                       BYTE            `solidity data index
 .floorWidth                     WORD            `width of the floor in blocks
@@ -34,7 +34,7 @@ HASH    #levelHeader
 
 `--------------------------------------------------------------------------------------
 
-HASH    #mob                    `26 bytes
+TYPE    #mob                    `26 bytes
 [
 .type                           BYTE    `IX+$00    - the object type index number
 .Xsubpixel                      BYTE    `IX+$01    - sub-pixel accuracy of X position
@@ -55,7 +55,7 @@ HASH    #mob                    `26 bytes
 .unknown15                      BYTE    
 .unknown16                      BYTE    
 .unknown17                      BYTE    
-.flags                          HASH [  `various object flags
+.flags                          TYPE [  `various object flags
         .unknown0               BOOL
         .unknown1               BOOL
         .unknown2               BOOL
@@ -72,7 +72,7 @@ HASH    #mob                    `26 bytes
 
 ``the programmers use the IY register as a short-cut to $D200
   to access commonly used variables and flags``   
-HASH    #vars                           `$D200:
+TYPE    #vars                           `$D200:
 [       
 `program flow control / loading flags?
 .flags0                         BYTE    `IY+$00
@@ -179,7 +179,7 @@ RAM     $
   commonly used RAM variables exist. therefore these use the `[iy+#VARS.abc]`
   form of addressing. for the sake of completeness, we'll also define the
   absolute location of these variables too, i.e. `$.VARS.abc```
-.VARS                           HASH #vars                                      `$D200
+.VARS                           TYPE #vars                                      `$D200
 
 ``these temporary variables are reused throughout, some times for passing
   extra parameters to a function and sometimes as extra working space within
@@ -439,7 +439,7 @@ RAM     $
 ``the level's header is copied here, though little of it seems actually used;
   other addresses are used as duplicates of these values. NOTE: 40 bytes are
   copied instead of 37, the header was probably reduced during development)``
-.LEVEL_HEADER                   HASH #levelHeader                               `$D354
+.LEVEL_HEADER                   TYPE #levelHeader                               `$D354
                                 `.solidity                               `$D354 `UNUSED
                                 `.floorWidth                             `$D355 `UNUSED
                                 `.floorHeight                            `$D357 `UNUSED
@@ -480,7 +480,7 @@ RAM     $
 `--------------------------------------------------------------------------------------
 
 `the player is a mob like any other and has reserved parameters in memory
-.SONIC                          HASH #mob                                       `$D3FC
+.SONIC                          TYPE #mob                                       `$D3FC
                                 `.type                                          `$D3FC
                                 `.Xsubpixel                                     `$D3FD
                                 `.X                                             `$D3FE

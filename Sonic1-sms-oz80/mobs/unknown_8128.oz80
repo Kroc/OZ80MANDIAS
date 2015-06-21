@@ -9,8 +9,8 @@ PARAMS  IX;mob          HELP ""Address of the current mob being processed
         ld      [$.TEMP6],hl
         call    :detectCollisionWithSonic
         call    nc,:hitPlayer._35fd
-        ld      l,[ix+#mob.Xspeed.lo]
-        ld      h,[ix+#mob.Xspeed.hi]
+        ld      l,[ix+#mob.Xspeed+0]
+        ld      h,[ix+#mob.Xspeed+1]
         ld      a,[ix+#mob.Xdirection]
         ld      de,$0002
         ld      c,$00
@@ -20,11 +20,11 @@ PARAMS  IX;mob          HELP ""Address of the current mob being processed
         ld      de,$fffe
 ._1     add     hl,de
         adc     a,c
-        ld      [ix+#mob.Xspeed.lo],l
-        ld      [ix+#mob.Xspeed.hi],h
+        ld      [ix+#mob.Xspeed+0],l
+        ld      [ix+#mob.Xspeed+1],h
         ld      [ix+#mob.Xdirection],a
-        ld      l,[ix+#mob.Yspeed.lo]
-        ld      h,[ix+#mob.Yspeed.hi]
+        ld      l,[ix+#mob.Yspeed+0]
+        ld      h,[ix+#mob.Yspeed+1]
         ld      a,[ix+#mob.Ydirection]
         ld      de,$0020
         add     hl,de
@@ -35,8 +35,8 @@ PARAMS  IX;mob          HELP ""Address of the current mob being processed
         jr      c,._2
         ld      hl,$0300
         ld      c,$00
-._2     ld      [ix+#mob.Yspeed.lo],l
-        ld      [ix+#mob.Yspeed.hi],h
+._2     ld      [ix+#mob.Yspeed+0],l
+        ld      [ix+#mob.Yspeed+1],h
         ld      [ix+#mob.Ydirection],c
         ld      a,[$.FRAMECOUNT]
         and     $01
@@ -59,8 +59,8 @@ PARAMS  IX;mob          HELP ""Address of the current mob being processed
         rst     :rst_playSFX
         
 ._4     xor     a;zero
-        ld      [ix+#mob.Xspeed.lo],a;zero
-        ld      [ix+#mob.Xspeed.hi],a;zero
+        ld      [ix+#mob.Xspeed+0],a;zero
+        ld      [ix+#mob.Xspeed+1],a;zero
         ld      [ix+#mob.Xdirection],a;zero
         
         ld      bc,._82c6

@@ -16,12 +16,12 @@ PARAMS  IX;mob          HELP ""Address of the current mob being processed
         ret     z
         ld      hl,$fffb
         xor     a;zero
-        ld      [$.SONIC.Yspeed.lo],a;zero
-        ld      [$.SONIC.Yspeed.hi],hl
+        ld      [$.SONIC.Yspeed+0],a;zero
+        ld      [$.SONIC.Yspeed+1],hl
         ld      hl,$0003
         xor     a;zero
-        ld      [$.SONIC.Xspeed.lo],a;zero
-        ld      [$.SONIC.Xspeed.hi],hl
+        ld      [$.SONIC.Xspeed+0],a;zero
+        ld      [$.SONIC.Xspeed+1],hl
         ld      hl,$.SONIC.flags
         res     1,[hl]
         set     6,[iy+#vars.flags6]

@@ -2,18 +2,18 @@ PROC    :_9be8                                  SECTION ::mobs                  
         `==============================================================================
 PARAMS  IX;mob          HELP ""Address of the current mob being processed
 {
-        ld      [ix+#mob.Xspeed.lo],$80
-        ld      [ix+#mob.Xspeed.hi],$01
+        ld      [ix+#mob.Xspeed+0],$80
+        ld      [ix+#mob.Xspeed+1],$01
         ld      [ix+#mob.Xdirection],$00
-        ld      [ix+#mob.spriteLayout.lo],._9c69.lo
-        ld      [ix+#mob.spriteLayout.hi],._9c69.hi
+        ld      [ix+#mob.spriteLayout+0],LO ._9c69
+        ld      [ix+#mob.spriteLayout+1],HI ._9c69
         
 ._9bfc  set     5,[ix+#mob.flags]               `mob does not collide with the floor
         bit     0,[ix+#mob.flags]
         jr      nz,._1
-        ld      a,[ix+#mob.X.lo]
+        ld      a,[ix+#mob.X+0]
         ld      [ix+#mob.unknown11],a
-        ld      a,[ix+#mob.X.hi]
+        ld      a,[ix+#mob.X+1]
         ld      [ix+$12],a
         ld      a,$18
         rst     :rst_playSFX
@@ -37,18 +37,18 @@ PARAMS  IX;mob          HELP ""Address of the current mob being processed
         ld      [ix+#mob.Xsubpixel],a;zero
         ld      [ix+#mob.unknown13],a;zero
         ld      a,[ix+#mob.unknown11]
-        ld      [ix+#mob.X.lo],a
+        ld      [ix+#mob.X+0],a
         ld      a,[ix+$12]
-        ld      [ix+#mob.X.hi],a
+        ld      [ix+#mob.X+1],a
         ld      a,$18
         rst     :rst_playSFX
         ret
         
 ._3     xor     a;zero
-        ld      [ix+#mob.spriteLayout.lo],a;zero
-        ld      [ix+#mob.spriteLayout.hi],a;zero
-        ld      [ix+#mob.Xspeed.lo],a;zero
-        ld      [ix+#mob.Xspeed.hi],a;zero
+        ld      [ix+#mob.spriteLayout+0],a;zero
+        ld      [ix+#mob.spriteLayout+1],a;zero
+        ld      [ix+#mob.Xspeed+0],a;zero
+        ld      [ix+#mob.Xspeed+1],a;zero
         ld      [ix+#mob.Xdirection],a;zero
         ret
 

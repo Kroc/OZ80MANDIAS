@@ -50,11 +50,11 @@ RAM     $#SMS
   stored in video RAM ("VRAM"), composites the display and outputs it to the display
 ``
 
-RAM     $#SMS
+RAM     $#SMS.VDP
 [    
-.VDP.SCANLINE           $7E     BYTE            `read current vertical scanline
-.VDP.DATA               $BE     BYTE            `graphics data port
-.VDP.CONTROL            $BF     BYTE            `graphics control port
+.SCANLINE               $7E     BYTE            `read current vertical scanline
+.DATA                   $BE     BYTE            `graphics data port
+.CONTROL                $BF     BYTE            `graphics control port
 ]
 
 RAM     $#SMS.VRAM
@@ -64,16 +64,16 @@ RAM     $#SMS.VRAM
 
 `sound:
 `--------------------------------------------------------------------------------------
-RAM     $#SMS
+RAM     $#SMS.PSG
 [
-.SMS.PSG.DATA           $7F     BYTE            `write-only data port for sound chip
+.DATA                   $7F     BYTE            `write-only data port for sound chip
 ]
 
 `input:
 `--------------------------------------------------------------------------------------
-RAM     $#SMS
+RAM     $#SMS.JOY
 [
-.SMS.JOYPADA            $DC     TYPE [
+.A                      $DC     TYPE [
         .pad1up                 BOOL
         .pad1down               BOOL
         .pad1left               BOOL
@@ -83,7 +83,7 @@ RAM     $#SMS
         .pad2up                 BOOL
         .pad2down               BOOL
                                 ]
-.SMS.JOYPADB            $DD     TYPE [
+.B                      $DD     TYPE [
         .pad2left               BOOL
         .pad2right              BOOL
         .pad2button1            BOOL

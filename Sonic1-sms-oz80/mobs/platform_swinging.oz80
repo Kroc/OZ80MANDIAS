@@ -15,12 +15,12 @@ PARAMS  IX;mob          HELP ""Address of the current mob being processed
         ld      [$.D26D],hl
         bit     0,[ix+#mob.flags]
         jr      nz,._1
-        ld      l,[ix+#mob.X.lo]
-        ld      h,[ix+#mob.X.hi]
+        ld      l,[ix+#mob.X+0]
+        ld      h,[ix+#mob.X+1]
         ld      [ix+$12],l
         ld      [ix+#mob.unknown13],h
-        ld      l,[ix+#mob.Y.lo]
-        ld      h,[ix+#mob.Y.hi]
+        ld      l,[ix+#mob.Y+0]
+        ld      h,[ix+#mob.Y+1]
         ld      [ix+#mob.unknown14],l
         ld      [ix+#mob.unknown15],h
         ld      [ix+#mob.unknown11],$e0
@@ -28,8 +28,8 @@ PARAMS  IX;mob          HELP ""Address of the current mob being processed
         set     1,[ix+#mob.flags]
 ._1     ld      [ix+#mob.width],$1a
         ld      [ix+#mob.height],$10
-        ld      l,[ix+#mob.X.lo]
-        ld      h,[ix+#mob.X.hi]
+        ld      l,[ix+#mob.X+0]
+        ld      h,[ix+#mob.X+1]
         ld      [$.TEMP1],hl
         ld      hl,._682f
         ld      e,[ix+#mob.unknown11]
@@ -45,8 +45,8 @@ PARAMS  IX;mob          HELP ""Address of the current mob being processed
         ld      l,[ix+$12]
         ld      h,[ix+#mob.unknown13]
         add     hl,de
-        ld      [ix+#mob.X.lo],l
-        ld      [ix+#mob.X.hi],h
+        ld      [ix+#mob.X+0],l
+        ld      [ix+#mob.X+1],h
         ld      de,[$.TEMP1]
         and     a
         sbc     hl,de
@@ -61,8 +61,8 @@ PARAMS  IX;mob          HELP ""Address of the current mob being processed
         ld      l,[ix+#mob.unknown14]
         ld      h,[ix+#mob.unknown15]
         add     hl,de
-        ld      [ix+#mob.Y.lo],l
-        ld      [ix+#mob.Y.hi],h
+        ld      [ix+#mob.Y+0],l
+        ld      [ix+#mob.Y+1],h
         
         ld      a,[$.SONIC.Ydirection]
         and     a
@@ -84,8 +84,8 @@ PARAMS  IX;mob          HELP ""Address of the current mob being processed
         and     a
         jr      z,._5
         ld      hl,:object_platform_spriteLayouts._6923
-._5     ld      [ix+#mob.spriteLayout.lo],l
-        ld      [ix+#mob.spriteLayout.hi],h
+._5     ld      [ix+#mob.spriteLayout+0],l
+        ld      [ix+#mob.spriteLayout+1],h
         bit     1,[ix+#mob.flags]
         jr      nz,._6
         ld      a,[ix+#mob.unknown11]

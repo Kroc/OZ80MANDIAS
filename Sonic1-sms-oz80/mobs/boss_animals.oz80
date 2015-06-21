@@ -9,16 +9,16 @@ PARAMS  IX;mob          HELP ""Address of the current mob being processed
         ld      [ix+#mob.height],16
         bit     7,[ix+#mob.flags]
         jr      z,._1
-        ld      [ix+#mob.Yspeed.lo],$00
-        ld      [ix+#mob.Yspeed.hi],$fd
+        ld      [ix+#mob.Yspeed+0],$00
+        ld      [ix+#mob.Yspeed+1],$fd
         ld      [ix+#mob.Ydirection],$ff
 ._1     ld      de,$0012
         ld      a,[$.LEVEL_SOLIDITY]
         cp      $03
         jr      nz,._2
         ld      de,$0038
-._2     ld      l,[ix+#mob.Yspeed.lo]
-        ld      h,[ix+#mob.Yspeed.hi]
+._2     ld      l,[ix+#mob.Yspeed+0]
+        ld      h,[ix+#mob.Yspeed+1]
         ld      a,[ix+#mob.Ydirection]
         add     hl,de
         adc     a,$00
@@ -29,16 +29,16 @@ PARAMS  IX;mob          HELP ""Address of the current mob being processed
         jr      c,._3
         ld      hl,$0200
         ld      c,$00
-._3     ld      [ix+#mob.Yspeed.lo],l
-        ld      [ix+#mob.Yspeed.hi],h
+._3     ld      [ix+#mob.Yspeed+0],l
+        ld      [ix+#mob.Yspeed+1],h
         ld      [ix+#mob.Ydirection],c
         ld      hl,$FE00
         ld      a,[$.LEVEL_SOLIDITY]
         cp      $03
         jr      nz,._4
         ld      hl,$FE80
-._4     ld      [ix+#mob.Xspeed.lo],l
-        ld      [ix+#mob.Xspeed.hi],h
+._4     ld      [ix+#mob.Xspeed+0],l
+        ld      [ix+#mob.Xspeed+1],h
         ld      [ix+#mob.Xdirection],$ff
         ld      bc,._7629
         ld      a,[$.LEVEL_SOLIDITY]
@@ -51,8 +51,8 @@ PARAMS  IX;mob          HELP ""Address of the current mob being processed
 ._5     ld      de,._7638
         call    :_7c41
         
-._7612  ld      l,[ix+#mob.X.lo]
-        ld      h,[ix+#mob.X.hi]
+._7612  ld      l,[ix+#mob.X+0]
+        ld      h,[ix+#mob.X+1]
         ld      de,$0010
         add     hl,de
         ld      de,[$.CAMERA_X]
@@ -109,17 +109,17 @@ PARAMS  IX;mob          HELP ""Address of the current mob being processed
         dec     a
         jr      z,._1
         ld      hl,:_77b1
-._1     ld      [ix+#mob.spriteLayout.lo],l
-        ld      [ix+#mob.spriteLayout.hi],h
+._1     ld      [ix+#mob.spriteLayout+0],l
+        ld      [ix+#mob.spriteLayout+1],h
         bit     7,[ix+#mob.flags]
         jr      z,._4
         
         xor     a;zero
-        ld      [ix+#mob.Yspeed.lo],a;zero
-        ld      [ix+#mob.Yspeed.hi],$01
+        ld      [ix+#mob.Yspeed+0],a;zero
+        ld      [ix+#mob.Yspeed+1],$01
         ld      [ix+#mob.Ydirection],a;zero
-        ld      [ix+#mob.Xspeed.lo],a;zero
-        ld      [ix+#mob.Xspeed.hi],a;zero
+        ld      [ix+#mob.Xspeed+0],a;zero
+        ld      [ix+#mob.Xspeed+1],a;zero
         ld      [ix+#mob.Xdirection],a;zero
         
         ld      hl,:_7752
@@ -134,8 +134,8 @@ PARAMS  IX;mob          HELP ""Address of the current mob being processed
         dec     a
         jr      z,._2
         ld      hl,:_77a3
-._2     ld      [ix+#mob.spriteLayout.lo],l
-        ld      [ix+#mob.spriteLayout.hi],h
+._2     ld      [ix+#mob.spriteLayout+0],l
+        ld      [ix+#mob.spriteLayout+1],h
         inc     [ix+#mob.unknown11]
         ld      a,[ix+#mob.unknown11]
         cp      $08
@@ -145,11 +145,11 @@ PARAMS  IX;mob          HELP ""Address of the current mob being processed
         and     a
         jr      z,._3
         ld      hl,$fffe
-._3     ld      [ix+#mob.Yspeed.lo],$00
-        ld      [ix+#mob.Yspeed.hi],l
+._3     ld      [ix+#mob.Yspeed+0],$00
+        ld      [ix+#mob.Yspeed+1],l
         ld      [ix+#mob.Ydirection],h
-._4     ld      l,[ix+#mob.Yspeed.lo]
-        ld      h,[ix+#mob.Yspeed.hi]
+._4     ld      l,[ix+#mob.Yspeed+0]
+        ld      h,[ix+#mob.Yspeed+1]
         ld      a,[ix+#mob.Ydirection]
         ld      de,$0028
         add     hl,de
@@ -161,11 +161,11 @@ PARAMS  IX;mob          HELP ""Address of the current mob being processed
         jr      c,._5
         ld      hl,$0200
         ld      c,$00
-._5     ld      [ix+#mob.Yspeed.lo],l
-        ld      [ix+#mob.Yspeed.hi],h
+._5     ld      [ix+#mob.Yspeed+0],l
+        ld      [ix+#mob.Yspeed+1],h
         ld      [ix+#mob.Ydirection],c
-        ld      [ix+#mob.Xspeed.lo],$80
-        ld      [ix+#mob.Xspeed.hi],$fe
+        ld      [ix+#mob.Xspeed+0],$80
+        ld      [ix+#mob.Xspeed+1],$fe
         ld      [ix+#mob.Xdirection],$ff
         ld      [ix+#mob.unknown11],$00
         jp      :mob_boss_freeBird._7612

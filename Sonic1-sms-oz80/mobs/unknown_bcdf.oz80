@@ -15,8 +15,8 @@ PARAMS  IX;mob          HELP ""Address of the current mob being processed
 ._1     ld      a,[ix+#mob.unknown11]
         cp      $c8
         jp      c,._6
-        ld      e,[ix+#mob.X.lo]
-        ld      d,[ix+#mob.X.hi]
+        ld      e,[ix+#mob.X+0]
+        ld      d,[ix+#mob.X+1]
         ld      hl,[$.CAMERA_X]
         ld      bc,$fff4
         add     hl,bc
@@ -31,8 +31,8 @@ PARAMS  IX;mob          HELP ""Address of the current mob being processed
         ld      hl,[$.SONIC.X]
         and     a
         sbc     hl,de
-        ld      l,[ix+#mob.Xspeed.lo]
-        ld      h,[ix+#mob.Xspeed.hi]
+        ld      l,[ix+#mob.Xspeed+0]
+        ld      h,[ix+#mob.Xspeed+1]
         ld      a,[ix+#mob.Xdirection]
         jr      nc,._2
         ld      c,$ff
@@ -49,11 +49,11 @@ PARAMS  IX;mob          HELP ""Address of the current mob being processed
         ld      de,$0018
 ._3     add     hl,de
         adc     a,c
-        ld      [ix+#mob.Xspeed.lo],l
-        ld      [ix+#mob.Xspeed.hi],h
+        ld      [ix+#mob.Xspeed+0],l
+        ld      [ix+#mob.Xspeed+1],h
         ld      [ix+#mob.Xdirection],a
-        ld      e,[ix+#mob.Y.lo]
-        ld      d,[ix+#mob.Y.hi]
+        ld      e,[ix+#mob.Y+0]
+        ld      d,[ix+#mob.Y+1]
         ld      hl,[$.CAMERA_Y]
         ld      bc,$fff4
         add     hl,bc
@@ -69,8 +69,8 @@ PARAMS  IX;mob          HELP ""Address of the current mob being processed
         ld      hl,[$.SONIC.Y]
         and     a
         sbc     hl,de
-        ld      l,[ix+#mob.Yspeed.lo]
-        ld      h,[ix+#mob.Yspeed.hi]
+        ld      l,[ix+#mob.Yspeed+0]
+        ld      h,[ix+#mob.Yspeed+1]
         ld      a,[ix+#mob.Ydirection]
         jr      nc,._4
         ld      c,$ff
@@ -87,8 +87,8 @@ PARAMS  IX;mob          HELP ""Address of the current mob being processed
         ld      de,$0005
 ._5     add     hl,de
         adc     a,c
-        ld      [ix+#mob.Yspeed.lo],l
-        ld      [ix+#mob.Yspeed.hi],h
+        ld      [ix+#mob.Yspeed+0],l
+        ld      [ix+#mob.Yspeed+1],h
         ld      [ix+#mob.Ydirection],a
         jr      ._7
 ._6     inc     [ix+#mob.unknown11]

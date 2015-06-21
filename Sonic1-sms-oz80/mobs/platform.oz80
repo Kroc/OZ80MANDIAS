@@ -8,8 +8,8 @@ PARAMS  IX;mob          HELP ""Address of the current mob being processed
         
         ld      [ix+#mob.width], 26
         ld      [ix+#mob.height],16
-        ld      [ix+#mob.spriteLayout.lo],:object_platform_spriteLayouts._6911.lo
-        ld      [ix+#mob.spriteLayout.hi],:object_platform_spriteLayouts._6911.hi
+        ld      [ix+#mob.spriteLayout+0],LO :object_platform_spriteLayouts._6911
+        ld      [ix+#mob.spriteLayout+1],HI :object_platform_spriteLayouts._6911
         
         ld      a,[$.SONIC.Ydirection]
         and     a
@@ -22,14 +22,14 @@ PARAMS  IX;mob          HELP ""Address of the current mob being processed
         
         ld      de,$0000
         
-        ld      a,[ix+#mob.Y.lo]
+        ld      a,[ix+#mob.Y+0]
         and     %00011111                       `MOD 32
         cp      $10
         jr      nc,._1
         
         ld      e,$80
-._1     ld      [ix+#mob.Yspeed.lo],e
-        ld      [ix+#mob.Yspeed.hi],d
+._1     ld      [ix+#mob.Yspeed+0],e
+        ld      [ix+#mob.Yspeed+1],d
         ld      [ix+#mob.Ydirection],$00
         ld      bc,$0010
         call    :_LABEL_7CC1_12
@@ -38,14 +38,14 @@ PARAMS  IX;mob          HELP ""Address of the current mob being processed
 ._2     ld      c,$00
         ld      l,c
         ld      h,c
-        ld      a,[ix+#mob.Y.lo]
+        ld      a,[ix+#mob.Y+0]
         and     %00011111
         jr      z,._3
         
         ld      hl,$ffc0
         dec     c
-._3     ld      [ix+#mob.Yspeed.lo],l
-        ld      [ix+#mob.Yspeed.hi],h
+._3     ld      [ix+#mob.Yspeed+0],l
+        ld      [ix+#mob.Yspeed+1],h
         ld      [ix+#mob.Ydirection],c
         ret
 }

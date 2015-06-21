@@ -19,8 +19,8 @@ PARAMS  IX;mob          HELP ""Address of the current mob being processed
         call    :increaseRings
         
 ._5b29  xor     a;zero                          `set A to 0
-        ld      [ix+#mob.spriteLayout.lo],a;zero
-        ld      [ix+#mob.spriteLayout.hi],a;zero
+        ld      [ix+#mob.spriteLayout+0],a;zero
+        ld      [ix+#mob.spriteLayout+1],a;zero
         ret     
         
         `------------------------------------------------------------------------------
@@ -28,31 +28,31 @@ PARAMS  IX;mob          HELP ""Address of the current mob being processed
 ._1     ld      hl,$5180                        `$15180 - blinking items art
 ._5b34
         call    :loadPowerUpIcon
-        ld      [ix+#mob.spriteLayout.lo],._5bbf.lo
-        ld      [ix+#mob.spriteLayout.hi],._5bbf.hi
+        ld      [ix+#mob.spriteLayout+0],LO ._5bbf
+        ld      [ix+#mob.spriteLayout+1],HI ._5bbf
         ld      a,[$.FRAMECOUNT]
         and     $07
         cp      $05
         ret     nc
-        ld      [ix+#mob.spriteLayout.lo],._5bcc.lo
-        ld      [ix+#mob.spriteLayout.hi],._5bcc.hi
+        ld      [ix+#mob.spriteLayout+0],LO ._5bcc
+        ld      [ix+#mob.spriteLayout+1],HI ._5bcc
         ld      l,[ix+#mob.Xsubpixel]
-        ld      h,[ix+#mob.X.lo]
-        ld      a,[ix+#mob.X.hi]
-        ld      e,[ix+#mob.Xspeed.lo]
-        ld      d,[ix+#mob.Xspeed.hi]
+        ld      h,[ix+#mob.X+0]
+        ld      a,[ix+#mob.X+1]
+        ld      e,[ix+#mob.Xspeed+0]
+        ld      d,[ix+#mob.Xspeed+1]
         add     hl,de
         adc     a,[ix+#mob.Xdirection]
         ld      l,h
         ld      h,a
         ld      [$.TEMP1],hl
         ld      l,[ix+#mob.Ysubpixel]
-        ld      h,[ix+#mob.Y.lo]
-        ld      a,[ix+#mob.Y.hi]
+        ld      h,[ix+#mob.Y+0]
+        ld      a,[ix+#mob.Y+1]
         bit     7,[ix+#mob.flags]
         jr      nz,._2
-        ld      e,[ix+#mob.Yspeed.lo]
-        ld      d,[ix+#mob.Yspeed.hi]
+        ld      e,[ix+#mob.Yspeed+0]
+        ld      d,[ix+#mob.Yspeed+1]
         add     hl,de
         adc     a,[ix+#mob.Ydirection]
 ._2     ld      l,h
@@ -70,14 +70,14 @@ PARAMS  IX;mob          HELP ""Address of the current mob being processed
         call    :_3581
         bit     1,[ix+#mob.flags]
         ret     z
-        ld      l,[ix+#mob.Yspeed.lo]
-        ld      h,[ix+#mob.Yspeed.hi]
+        ld      l,[ix+#mob.Yspeed+0]
+        ld      h,[ix+#mob.Yspeed+1]
         ld      a,[ix+#mob.Ydirection]
         ld      de,$0040
         add     hl,de
         adc     a,$00
-        ld      [ix+#mob.Yspeed.lo],l
-        ld      [ix+#mob.Yspeed.hi],h
+        ld      [ix+#mob.Yspeed+0],l
+        ld      [ix+#mob.Yspeed+1],h
         ld      [ix+#mob.Ydirection],a
         ret
         
@@ -152,8 +152,8 @@ PARAMS  IX;mob          HELP ""Address of the current mob being processed
         ld      [hl],a
         
         xor     a;zero                          `set A to 0
-        ld      [ix+#mob.spriteLayout.lo],a;zero
-        ld      [ix+#mob.spriteLayout.hi],a;zero
+        ld      [ix+#mob.spriteLayout+0],a;zero
+        ld      [ix+#mob.spriteLayout+1],a;zero
         
         ld      a,$09
         rst     :rst_playSFX
@@ -187,8 +187,8 @@ PARAMS  IX;mob          HELP ""Address of the current mob being processed
         jr      c,._5
         dec     c
         ld      de,$ffc0
-._5     ld      [ix+#mob.Yspeed.lo],e
-        ld      [ix+#mob.Yspeed.hi],d
+._5     ld      [ix+#mob.Yspeed+0],e
+        ld      [ix+#mob.Yspeed+1],d
         ld      [ix+#mob.Ydirection],c
         inc     [ix+#mob.unknown13]
         ld      a,[ix+#mob.unknown13]
@@ -209,8 +209,8 @@ PARAMS  IX;mob          HELP ""Address of the current mob being processed
         jp      :mob_powerUp_ring._5b34
         
 ._7     set     1,[ix+#mob.flags]
-        ld      [ix+#mob.Xspeed.lo],$80
-        ld      [ix+#mob.Xspeed.hi],$00
+        ld      [ix+#mob.Xspeed+0],$80
+        ld      [ix+#mob.Xspeed+1],$00
         ld      [ix+#mob.Xdirection],$00
         jr      ._3
         
@@ -297,16 +297,16 @@ PARAMS  IX;mob          HELP ""Address of the current mob being processed
         ld      hl,$.D32E
         add     hl,de
         ex      de,hl                           `DE is $.D32E + level number * 2
-        ld      l,[ix+#mob.X.lo]
-        ld      h,[ix+#mob.X.hi]
+        ld      l,[ix+#mob.X+0]
+        ld      h,[ix+#mob.X+1]
         add     hl,hl
         add     hl,hl
         add     hl,hl
         ld      a,h
         ld      [de],a
         inc     de
-        ld      l,[ix+#mob.Y.lo]
-        ld      h,[ix+#mob.Y.hi]
+        ld      l,[ix+#mob.Y+0]
+        ld      h,[ix+#mob.Y+1]
         add     hl,hl
         add     hl,hl
         add     hl,hl
@@ -361,16 +361,16 @@ PARAMS  IX;mob          HELP ""Address of the current mob being processed
         jr      z,._2
 ._1     ld      de,$0004
         ld      bc,$0000
-._2     ld      l,[ix+#mob.X.lo]
-        ld      h,[ix+#mob.X.hi]
+._2     ld      l,[ix+#mob.X+0]
+        ld      h,[ix+#mob.X+1]
         add     hl,de
-        ld      [ix+#mob.X.lo],l
-        ld      [ix+#mob.X.hi],h
-        ld      l,[ix+#mob.Y.lo]
-        ld      h,[ix+#mob.Y.hi]
+        ld      [ix+#mob.X+0],l
+        ld      [ix+#mob.X+1],h
+        ld      l,[ix+#mob.Y+0]
+        ld      h,[ix+#mob.Y+1]
         add     hl,bc
-        ld      [ix+#mob.Y.lo],l
-        ld      [ix+#mob.Y.hi],h
+        ld      [ix+#mob.Y+0],l
+        ld      [ix+#mob.Y+1],h
         set     0,[ix+#mob.flags]
         ret
 
@@ -386,8 +386,8 @@ PARAMS  IX;mob          HELP ""Address of the current mob being processed
         and     $01
         jr      nz,._2
         ld      de,[$.SONIC.X]
-        ld      c,[ix+#mob.X.lo]
-        ld      b,[ix+#mob.X.hi]
+        ld      c,[ix+#mob.X+0]
+        ld      b,[ix+#mob.X+1]
         ld      hl,$ffee
         add     hl,bc
         and     a
@@ -401,8 +401,8 @@ PARAMS  IX;mob          HELP ""Address of the current mob being processed
         ld      a,[$.SONIC.flags]
         and     $04
         jr      nz,._1
-        ld      l,[ix+#mob.Y.lo]
-        ld      h,[ix+#mob.Y.hi]
+        ld      l,[ix+#mob.Y+0]
+        ld      h,[ix+#mob.Y+1]
         ld      a,[$.SONIC.width]
         ld      c,a
         xor     a;zero
@@ -427,8 +427,8 @@ PARAMS  IX;mob          HELP ""Address of the current mob being processed
         and     a
         ret
 
-._3     ld      [ix+#mob.Yspeed.lo],$80
-        ld      [ix+#mob.Yspeed.hi],$fe
+._3     ld      [ix+#mob.Yspeed+0],$80
+        ld      [ix+#mob.Yspeed+1],$fe
         ld      [ix+#mob.Ydirection],$ff
         ld      hl,$0400
         xor     a;zero
@@ -443,8 +443,8 @@ PARAMS  IX;mob          HELP ""Address of the current mob being processed
         ld      de,$000c
         add     hl,de
         ex      de,hl
-        ld      l,[ix+#mob.X.lo]
-        ld      h,[ix+#mob.X.hi]
+        ld      l,[ix+#mob.X+0]
+        ld      h,[ix+#mob.X+1]
         ld      bc,$000a
         add     hl,bc
         ld      bc,$ffeb
@@ -452,8 +452,8 @@ PARAMS  IX;mob          HELP ""Address of the current mob being processed
         sbc     hl,de
         jr      nc,._5
         ld      bc,$0015
-._5     ld      l,[ix+#mob.X.lo]
-        ld      h,[ix+#mob.X.hi]
+._5     ld      l,[ix+#mob.X+0]
+        ld      h,[ix+#mob.X+1]
         add     hl,bc
         ld      [$.SONIC.X],hl
         
@@ -461,8 +461,8 @@ PARAMS  IX;mob          HELP ""Address of the current mob being processed
         ld      [$.SONIC.Xsubpixel],a;zero
         ld      l;zero,a;zero
         ld      h;zero,a;zero
-        ld      [$.SONIC.Xspeed.lo],a;zero
-        ld      [$.SONIC.Xspeed.hi],hl;zero
+        ld      [$.SONIC.Xspeed+0],a;zero
+        ld      [$.SONIC.Xspeed+1],hl;zero
         scf     
         ret
 
@@ -482,8 +482,8 @@ PARAMS  IX;mob          HELP ""Address of the current mob being processed
         call    :_5da8
         
         xor     a;zero
-        ld      [ix+#mob.spriteLayout.lo],a;zero
-        ld      [ix+#mob.spriteLayout.hi],a;zero
+        ld      [ix+#mob.spriteLayout+0],a;zero
+        ld      [ix+#mob.spriteLayout+1],a;zero
         
         ld      hl,$0202
         ld      [$.TEMP6],hl
@@ -508,16 +508,16 @@ PARAMS  IX;mob          HELP ""Address of the current mob being processed
 ._2     ld      a,[$.FRAMECOUNT]
         rrca    
         jr      c,._3
-        ld      [ix+#mob.spriteLayout.lo],._5f10.lo
-        ld      [ix+#mob.spriteLayout.hi],._5f10.hi
-._3     ld      l,[ix+#mob.Yspeed.lo]
-        ld      h,[ix+#mob.Yspeed.hi]
+        ld      [ix+#mob.spriteLayout+0],LO ._5f10
+        ld      [ix+#mob.spriteLayout+1],HI ._5f10
+._3     ld      l,[ix+#mob.Yspeed+0]
+        ld      h,[ix+#mob.Yspeed+1]
         ld      a,[ix+#mob.Ydirection]
         ld      de,$0020
         add     hl,de
         adc     a,$00
-        ld      [ix+#mob.Yspeed.lo],l
-        ld      [ix+#mob.Yspeed.hi],h
+        ld      [ix+#mob.Yspeed+0],l
+        ld      [ix+#mob.Yspeed+1],h
         ld      [ix+#mob.Ydirection],a
         ld      hl,$5400                        `$15400 - emerald in blinking items art
         call    :loadPowerUpIcon

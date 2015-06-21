@@ -15,14 +15,14 @@ PARAMS  IX;mob          HELP ""Address of the current mob being processed
         dec     a
         dec     d
 ._1     ld      l,[ix+#mob.Ysubpixel]
-        ld      h,[ix+#mob.Y.lo]
+        ld      h,[ix+#mob.Y+0]
         add     hl,de
-        adc     a,[ix+#mob.Y.hi]
+        adc     a,[ix+#mob.Y+1]
         ld      [ix+#mob.Ysubpixel],l
-        ld      [ix+#mob.Y.lo],h
-        ld      [ix+#mob.Y.hi],a
+        ld      [ix+#mob.Y+0],h
+        ld      [ix+#mob.Y+1],a
         ld      l,h
-        ld      h,[ix+#mob.Y.hi]
+        ld      h,[ix+#mob.Y+1]
         ld      a,[$.FRAMECOUNT]
         and     $0f
         jr      nz,._2

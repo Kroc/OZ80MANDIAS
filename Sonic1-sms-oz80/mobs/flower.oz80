@@ -9,11 +9,11 @@ PARAMS  IX;mob          HELP ""Address of the current mob being processed
         ld      [ix+$12],$00
         set     0,[ix+#mob.flags]
 ._1     ld      bc,$0000
-        ld      l,[ix+#mob.X.lo]
-        ld      h,[ix+#mob.X.hi]
+        ld      l,[ix+#mob.X+0]
+        ld      h,[ix+#mob.X+1]
         ld      [$.D2AB],hl
-        ld      l,[ix+#mob.Y.lo]
-        ld      h,[ix+#mob.Y.hi]
+        ld      l,[ix+#mob.Y+0]
+        ld      h,[ix+#mob.Y+1]
         ld      a,[$.FRAMECOUNT]
         rrca    
         jr      nc,._2

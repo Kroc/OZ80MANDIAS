@@ -7,15 +7,15 @@ PARAMS  IX;mob          HELP ""Address of the current mob being processed
         set     5,[ix+#mob.flags]               `mob does not collide with the floor
         ld      [ix+#mob.width],$1c
         ld      [ix+#mob.height],$06
-        ld      [ix+#mob.spriteLayout.lo],._9b6e.lo
-        ld      [ix+#mob.spriteLayout.hi],._9b6e.hi
+        ld      [ix+#mob.spriteLayout+0],LO ._9b6e
+        ld      [ix+#mob.spriteLayout+1],HI ._9b6e
         ld      hl,$0001
         ld      a,[ix+$12]
         cp      $60
         jr      nc,._1
         ld      hl,$ffff
-._1     ld      [ix+#mob.Xspeed.lo],$00
-        ld      [ix+#mob.Xspeed.hi],l
+._1     ld      [ix+#mob.Xspeed+0],$00
+        ld      [ix+#mob.Xspeed+1],l
         ld      [ix+#mob.Xdirection],h
         inc     a
         cp      $c0

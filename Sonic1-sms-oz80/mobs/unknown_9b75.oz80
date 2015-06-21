@@ -9,8 +9,8 @@ PARAMS  IX;mob          HELP ""Address of the current mob being processed
         ld      [$.TEMP6],hl
         call    :detectCollisionWithSonic
         jr      c,._2
-        ld      l,[ix+#mob.X.lo]
-        ld      h,[ix+#mob.X.hi]
+        ld      l,[ix+#mob.X+0]
+        ld      h,[ix+#mob.X+1]
         ld      a,l
         add     a,a
         rl      h
@@ -19,8 +19,8 @@ PARAMS  IX;mob          HELP ""Address of the current mob being processed
         add     a,a
         rl      h
         ld      e,h
-        ld      l,[ix+#mob.Y.lo]
-        ld      h,[ix+#mob.Y.hi]
+        ld      l,[ix+#mob.Y+0]
+        ld      h,[ix+#mob.Y+1]
         ld      a,l
         add     a,a
         rl      h
@@ -52,8 +52,8 @@ PARAMS  IX;mob          HELP ""Address of the current mob being processed
         djnz    .loop
         
 ._2     xor     a;zero
-        ld      [ix+#mob.spriteLayout.lo],a;zero
-        ld      [ix+#mob.spriteLayout.hi],a;zero
+        ld      [ix+#mob.spriteLayout+0],a;zero
+        ld      [ix+#mob.spriteLayout+1],a;zero
         ret
 
 ._9bd9  BYTE $7D, $1A, $15, $7D, $01, $14, $01, $3C, $18, $01, $02

@@ -166,7 +166,7 @@ RAM     $
 .FLOORLAYOUT                    BYTE x 4 KB                                     `$C000
 
 `X/Y/I data for the 64 sprites
-.SPRITETABLE                    BYTE x 64*3                                     `$D000
+.SPRITETABLE                    BYTE x 64*4                                     `$D000
 
 ``when the screen scrolls and new tiles need to be filled in, they are pulled
   from these caches which have the necessary tiles already in horizontal
@@ -365,8 +365,9 @@ RAM     $
 
 ``the previous song played is checked during level load to avoid starting
   the same song again (for example, when teleporting in Scrap Brain)``
-.PREVIOUS_MUSIC                 BYTE                                            `$D2D2
+.PREVIOUS_MUSIC                 BYTE                                            `$D2D1
 
+.D2D2                           BYTE                                            `UNUSED
 .D2D3                           BYTE `UNKNOWN                                   `$D2D3
 
 .LEVEL_SOLIDITY                 BYTE                                            `$D2D4

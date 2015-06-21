@@ -5,8 +5,8 @@ PROC    :mob_platform_flipper                   SECTION ::mobs                  
 PARAMS  IX;mob          HELP ""Address of the current mob being processed
 {
         set     5,[ix+#mob.flags]               `mob does not collide with the floor
-        ld      [ix+#mob.spriteLayout.lo],._9a7e.lo
-        ld      [ix+#mob.spriteLayout.hi],._9a7e.hi
+        ld      [ix+#mob.spriteLayout+0],LO ._9a7e
+        ld      [ix+#mob.spriteLayout+1],HI ._9a7e
         bit     5,[iy+#vars.joypad]
         jr      nz,._1
         ld      a,[ix+#mob.unknown11]
@@ -48,8 +48,8 @@ PARAMS  IX;mob          HELP ""Address of the current mob being processed
         
 ._3     cp      $04
         jp      nc,._4
-        ld      [ix+#mob.spriteLayout.lo],._9a90.lo
-        ld      [ix+#mob.spriteLayout.hi],._9a90.hi
+        ld      [ix+#mob.spriteLayout+0],LO ._9a90
+        ld      [ix+#mob.spriteLayout+1],HI ._9a90
         ld      hl,$080f
         ld      [$.TEMP6],hl
         ld      [ix+#mob.width],$1e
@@ -113,8 +113,8 @@ PARAMS  IX;mob          HELP ""Address of the current mob being processed
         ld      [$.SONIC.Xdirection],a
         ret
         
-._4     ld      [ix+#mob.spriteLayout.lo],._9aa2.lo
-        ld      [ix+#mob.spriteLayout.hi],._9aa2.hi
+._4     ld      [ix+#mob.spriteLayout+0],LO ._9aa2
+        ld      [ix+#mob.spriteLayout+1],HI ._9aa2
         ld      hl,$021a
         ld      [$.TEMP6],hl
         ld      [ix+#mob.width],$1e
@@ -178,19 +178,19 @@ PARAMS  IX;mob          HELP ""Address of the current mob being processed
         ld      b,$00
         ld      c,[hl]
         bit     7,c
-        jr      z,._1
+        jr      z,._5
         dec     b
-._1     ld      l,[ix+#mob.Y.lo]
-        ld      h,[ix+#mob.Y.hi]
+._5     ld      l,[ix+#mob.Y+0]
+        ld      h,[ix+#mob.Y+1]
         add     hl,bc
         ld      [$.SONIC.Y],hl
-        ld      a,[$.SONIC.Yspeed.hi]
+        ld      a,[$.SONIC.Yspeed+1]
         cp      $03
-        jr      nc,._2
+        jr      nc,._6
         scf     
         ret
         
-._2     ld      de,$0001
+._6     ld      de,$0001
         ld      hl,[$.SONIC.Yspeed]
         ld      a,l
         cpl     

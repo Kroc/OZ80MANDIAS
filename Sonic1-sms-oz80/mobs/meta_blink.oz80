@@ -20,24 +20,24 @@ PARAMS  IX;mob          HELP ""Address of the current mob being processed
         ld      d,[hl]
         inc     hl
         ld      a,[hl]
-        ld      [ix+#mob.spriteLayout.lo],e
-        ld      [ix+#mob.spriteLayout.hi],d
+        ld      [ix+#mob.spriteLayout+0],e
+        ld      [ix+#mob.spriteLayout+1],d
         ld      [$.D302],a
         jr      ._2
         
-._1     ld      [ix+#mob.spriteLayout.lo],a
-        ld      [ix+#mob.spriteLayout.hi],a
-._2     ld      l,[ix+#mob.Yspeed.lo]
-        ld      h,[ix+#mob.Yspeed.hi]
+._1     ld      [ix+#mob.spriteLayout+0],a
+        ld      [ix+#mob.spriteLayout+1],a
+._2     ld      l,[ix+#mob.Yspeed+0]
+        ld      h,[ix+#mob.Yspeed+1]
         ld      a,[ix+#mob.Ydirection]
         ld      de,$0020
         add     hl,de
         adc     a,$00
-        ld      [ix+#mob.Yspeed.lo],l
-        ld      [ix+#mob.Yspeed.hi],h
+        ld      [ix+#mob.Yspeed+0],l
+        ld      [ix+#mob.Yspeed+1],h
         ld      [ix+#mob.Ydirection],a
-        ld      e,[ix+#mob.Y.lo]
-        ld      d,[ix+#mob.Y.hi]
+        ld      e,[ix+#mob.Y+0]
+        ld      d,[ix+#mob.Y+1]
         ld      hl,[$.CAMERA_Y]
         inc     h
         xor     a;zero
@@ -47,8 +47,8 @@ PARAMS  IX;mob          HELP ""Address of the current mob being processed
         res     0,[iy+#vars.flags9]
         ret
         
-._3     ld      [ix+#mob.Xspeed.lo],a
-        ld      [ix+#mob.Xspeed.hi],a
+._3     ld      [ix+#mob.Xspeed+0],a
+        ld      [ix+#mob.Xspeed+1],a
         ld      [ix+#mob.Xdirection],a
         dec     [ix+#mob.unknown11]
         ret     nz

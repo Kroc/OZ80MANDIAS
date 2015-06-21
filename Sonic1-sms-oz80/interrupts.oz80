@@ -14,10 +14,10 @@ START
                                                  `$0038 will be called at 50/60Hz 
         
         `wait for the scanline to reach 176 (no idea why)
-.loop   in      a;scanline, [$.VDP.SCANLINE]
+.loop   in      a;scanline, [$#SMS.VDP.SCANLINE]
         cp      176
         jr      nz, .loop
-        jp      :init
+        jp      ::interrupts:init
 }
 
 `______________________________________________________________________________________
@@ -26,26 +26,26 @@ START
 PROC    :rst_playMusic                          INTERRUPT $18   
 PARAMS  a;songIndex
 {
-        jp      :playMusic
+        jp      ::interrupts:playMusic
 }
 
 `the `RST $20` Z80 instruction jumps here
 PROC    :rst_muteSound                          INTERRUPT $20
 {
-        jp      :muteSound
+        jp      ::interrupts:muteSound
 }
 
 `the `RST $28` Z80 instruction jumps here
 PROC    :rst_playSFX                            INTERRUPT $28
 PARAMS  a;SFXIndex
 {
-        jp      :playSFX
+        jp      ::interrupts:playSFX
 }
 
 `the hardware interrupt generator jumps here
 PROC    :IRQ                                    INTERRUPT $38
 {
-        jp      :interruptHandler
+        jp      ::interrupts:interruptHandler
         
         `this short copyright message is wedged between the IRQ
          `and NMI routines in the original ROM
@@ -87,7 +87,7 @@ PROC    :interruptHandler                       SECTION ::interrupts            
         push    af', hl', de', bc'
         
         `get the status of the VDP
-        in      a;vdpStatus, [$.VDP.CONTROL]
+        in      a;vdpStatus, [$#SMS.VDP.CONTROL]
         
         bit     7, [iy+#vars.flags6]            `check the underwater flag
         jr      z, ._1                          `if off, skip ahead
@@ -117,16 +117,16 @@ PROC    :interruptHandler                       SECTION ::interrupts            
         ``set the line interrupt to fire at line 10 (top of the screen),
           we will then set another interrupt to fire where we want the split to occur``
         ld      a, 10
-        out     [$.VDP.CONTROL], a
-        ld      a, $.VDP_REGISTER_10
-        out     [$.VDP.CONTROL], a
+        out     [$#SMS.VDP.CONTROL], a
+        ld      a, !VDP_REGISTER_10
+        out     [$#SMS.VDP.CONTROL], a
         
         `enable line interrupt IRQs (bit 5 of VDP register 0)
         ld      a, [$.VDPREGISTER_0]
         or      %00010000
-        out     [$.VDP.CONTROL], a
-        ld      a, $.VDP_REGISTER_0
-        out     [$.VDP.CONTROL], a
+        out     [$#SMS.VDP.CONTROL], a
+        ld      a, $#SMS.VDP_REGISTER_0
+        out     [$#SMS.VDP.CONTROL], a
         
         `initialise the step counter for the water line raster split
         ld      a, 3

@@ -7,18 +7,18 @@ PARAMS  IX;mob          HELP ""Address of the current mob being processed
         set     5,[ix+#mob.flags]               `mob does not collide with the floor
         bit     0,[ix+#mob.flags]
         jr      nz,._1
-        ld      l,[ix+#mob.X.lo]
-        ld      h,[ix+#mob.X.hi]
+        ld      l,[ix+#mob.X+0]
+        ld      h,[ix+#mob.X+1]
         ld      de,$000c
         add     hl,de
-        ld      [ix+#mob.X.lo],l
-        ld      [ix+#mob.X.hi],h
+        ld      [ix+#mob.X+0],l
+        ld      [ix+#mob.X+1],h
         set     0,[ix+#mob.flags]
-._1     ld      l,[ix+#mob.X.lo]
-        ld      h,[ix+#mob.X.hi]
+._1     ld      l,[ix+#mob.X+0]
+        ld      h,[ix+#mob.X+1]
         ld      [$.TEMP1],hl
-        ld      l,[ix+#mob.Y.lo]
-        ld      h,[ix+#mob.Y.hi]
+        ld      l,[ix+#mob.Y+0]
+        ld      h,[ix+#mob.Y+1]
         ld      [$.TEMP3],hl
         ld      hl,$0000
         ld      [$.TEMP4],hl
@@ -83,8 +83,8 @@ PARAMS  IX;mob          HELP ""Address of the current mob being processed
 ._6     pop     bc
         djnz    .loop
         
-        ld      [ix+#mob.spriteLayout.lo],b
-        ld      [ix+#mob.spriteLayout.hi],b
+        ld      [ix+#mob.spriteLayout+0],b
+        ld      [ix+#mob.spriteLayout+1],b
         ld      d,[hl]
         ld      e,$04
         ld      [$.TEMP6],de

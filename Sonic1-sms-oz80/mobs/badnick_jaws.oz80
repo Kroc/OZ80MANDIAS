@@ -8,8 +8,8 @@ PARAMS  IX;mob          HELP ""Address of the current mob being processed
         ld      a,[ix+#mob.unknown11]
         cp      $80
         jr      nc,._1
-        ld      [ix+#mob.Xspeed.lo],$20
-        ld      [ix+#mob.Xspeed.hi],$00
+        ld      [ix+#mob.Xspeed+0],$20
+        ld      [ix+#mob.Xspeed+1],$00
         ld      [ix+#mob.Xdirection],$00
         ld      [ix+#mob.width], 20
         ld      [ix+#mob.height],12
@@ -24,8 +24,8 @@ PARAMS  IX;mob          HELP ""Address of the current mob being processed
         call    :_7c41
         jr      ._2
         
-._1     ld      [ix+#mob.Xspeed.lo],$e0
-        ld      [ix+#mob.Xspeed.hi],$ff
+._1     ld      [ix+#mob.Xspeed+0],$e0
+        ld      [ix+#mob.Xspeed+1],$ff
         ld      [ix+#mob.Xdirection],$ff
         ld      [ix+#mob.width],$0c
         ld      [ix+#mob.height],$0c

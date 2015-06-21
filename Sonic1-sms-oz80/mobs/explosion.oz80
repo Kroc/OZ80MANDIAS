@@ -42,11 +42,11 @@ PARAMS  IX;mob          HELP ""Address of the current mob being processed
         ld      [$.SONIC.Ydirection],a
         
 ._1     xor     a;zero                          `set A to 0
-        ld      [ix+#mob.Xspeed.lo],a;zero
-        ld      [ix+#mob.Xspeed.hi],a;zero
+        ld      [ix+#mob.Xspeed+0],a;zero
+        ld      [ix+#mob.Xspeed+1],a;zero
         ld      [ix+#mob.Xdirection],a;zero
-        ld      [ix+#mob.Yspeed.lo],a;zero
-        ld      [ix+#mob.Yspeed.hi],a;zerp
+        ld      [ix+#mob.Yspeed+0],a;zero
+        ld      [ix+#mob.Yspeed+1],a;zerp
         ld      [ix+#mob.Ydirection],a;zero
         ld      de,._69be
         ld      bc,._69b7

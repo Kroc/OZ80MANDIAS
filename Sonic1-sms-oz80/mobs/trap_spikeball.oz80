@@ -9,14 +9,14 @@ PARAMS  IX;mob          HELP ""Address of the current mob being processed
         ld      [ix+#mob.height],12
         bit     0,[ix+#mob.flags]
         jr      nz,._1
-        ld      l,[ix+#mob.X.lo]
-        ld      h,[ix+#mob.X.hi]
+        ld      l,[ix+#mob.X+0]
+        ld      h,[ix+#mob.X+1]
         ld      de,$0008
         add     hl,de
         ld      [ix+#mob.unknown12],l
         ld      [ix+#mob.unknown13],h
-        ld      l,[ix+#mob.Y.lo]
-        ld      h,[ix+#mob.Y.hi]
+        ld      l,[ix+#mob.Y+0]
+        ld      h,[ix+#mob.Y+1]
         ld      de,$0008
         add     hl,de
         ld      [ix+#mob.unknown14],l
@@ -41,19 +41,19 @@ PARAMS  IX;mob          HELP ""Address of the current mob being processed
 ._3     ld      l,[ix+#mob.unknown12]
         ld      h,[ix+#mob.unknown13]
         add     hl,de
-        ld      [ix+#mob.X.lo],l
-        ld      [ix+#mob.X.hi],h
+        ld      [ix+#mob.X+0],l
+        ld      [ix+#mob.X+1],h
         ld      l,[ix+#mob.unknown14]
         ld      h,[ix+#mob.unknown15]
         add     hl,bc
-        ld      [ix+#mob.Y.lo],l
-        ld      [ix+#mob.Y.hi],h
+        ld      [ix+#mob.Y+0],l
+        ld      [ix+#mob.Y+1],h
         ld      hl,$0204
         ld      [$.TEMP6],hl
         call    :detectCollisionWithSonic
         call    nc,:hitPlayer._35fd
-        ld      [ix+#mob.spriteLayout.lo],._8987.lo
-        ld      [ix+#mob.spriteLayout.hi],._8987.hi
+        ld      [ix+#mob.spriteLayout+0],LO ._8987
+        ld      [ix+#mob.spriteLayout+1],HI ._8987
         inc     [ix+#mob.unknown11]
         ld      a,[ix+#mob.unknown11]
         cp      $b4

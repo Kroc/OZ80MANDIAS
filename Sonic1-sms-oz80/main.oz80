@@ -278,7 +278,7 @@ PARAMS  HL;dataAddr     HELP ""Relative address from the beginning of the intend
 ._6     `restore the pages to the original banks at the beginning of the procedure
         pop     de
         ld      [$.SLOT1], de
-        ld      [$.SMS.SLOT1], de
+        ld      [$#SMS.SLOT1], de
         
         ei
         res     1, [iy+#vars.flags9]

@@ -61,8 +61,8 @@
 ``
 
 
-DEF SYSTEM      "sms"
-INCLUDE         "system.sms.oz80"
+DEF SYSTEM  "sms"
+INCLUDE     "system.sms.oz80"
 
 
 
@@ -119,6 +119,6 @@ INCLUDE "mobs.oz80"
 `======================================================================================
 `music code and song data
 
-`INCLUDE "SOUND\sound_driver.asm"
+`INCLUDE "sound\driver.oz80"
 `INCLUDE "SOUND\music.asm"
 

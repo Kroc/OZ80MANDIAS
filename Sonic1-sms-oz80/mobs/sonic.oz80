@@ -349,7 +349,7 @@ PARAMS  IX;mob          HELP ""Address of the current mob being processed
         ld      c,a
         jp      p,._11
         ld      a,[$.SONIC.Xspeed]
-        or      [ix+#mob.Xspeed.hi]
+        or      [ix+#mob.Xspeed+1]
         or      [ix+#mob.Xdirection]
         jr      z,._11
         ld      c,$00
@@ -562,7 +562,7 @@ PARAMS  IX;mob          HELP ""Address of the current mob being processed
         call    nz,._4e4d
         ld      [$.SONIC.spriteLayout],hl
         ld      c,$10
-        ld      a,[$.SONIC.Xspeed.hi]
+        ld      a,[$.SONIC.Xspeed+1]
         and     a
         jp      p,._25
         neg     
@@ -570,9 +570,9 @@ PARAMS  IX;mob          HELP ""Address of the current mob being processed
 ._25    cp      $10
         jr      c,._26
         ld      a,c
-        ld      [$.SONIC.Xspeed.hi],a
+        ld      [$.SONIC.Xspeed+1],a
 ._26    ld      c,$10
-        ld      a,[$.SONIC.Yspeed.hi]
+        ld      a,[$.SONIC.Yspeed+1]
         and     a
         jp      p,._27
         neg     
@@ -580,7 +580,7 @@ PARAMS  IX;mob          HELP ""Address of the current mob being processed
 ._27    cp      $10
         jr      c,._28
         ld      a,c
-        ld      [$.SONIC.Yspeed.hi],a
+        ld      [$.SONIC.Yspeed+1],a
 ._28    ld      de,[$.SONIC.Y]
         ld      hl,$0010
         and     a
@@ -614,8 +614,8 @@ PARAMS  IX;mob          HELP ""Address of the current mob being processed
         jp      p,._31
         
         xor     a;zero
-        ld      [$.SONIC.Xspeed.lo],a;zero
-        ld      [$.SONIC.Xspeed.hi],a;zero
+        ld      [$.SONIC.Xspeed+0],a;zero
+        ld      [$.SONIC.Xspeed+1],a;zero
         ld      [$.SONIC.Xdirection],a;zero
         jp      ._31
         
@@ -637,14 +637,14 @@ PARAMS  IX;mob          HELP ""Address of the current mob being processed
         ld      a,[$.SONIC.Xdirection]
         and     a
         jp      m,._31
-        ld      hl,[$.SONIC.Xspeed.hi]
+        ld      hl,[$.SONIC.Xspeed+1]
         or      h
         or      l
         jr      z,._31
         
         xor     a;zero                          `set A to 0
-        ld      [$.SONIC.Xspeed.lo],a;zero
-        ld      [$.SONIC.Xspeed.hi],a;zero
+        ld      [$.SONIC.Xspeed+0],a;zero
+        ld      [$.SONIC.Xspeed+1],a;zero
         ld      [$.SONIC.Xdirection],a;zero
         
 ._31    ld      a,[$.SONIC.flags]
@@ -1207,10 +1207,10 @@ PARAMS  IX;mob          HELP ""Address of the current mob being processed
         xor     A;zero
         ld      L;zero          A;zero
         ld      H;zero          A;zero
-        ld      [$.SONIC.Xspeed.lo] A;zero
-        ld      [$.SONIC.Xspeed.hi] HL;zero
-        ld      [$.SONIC.Yspeed.lo] A;zero
-        ld      [$.SONIC.Yspeed.hi] HL;zero
+        ld      [$.SONIC.Xspeed+0] A;zero
+        ld      [$.SONIC.Xspeed+1] HL;zero
+        ld      [$.SONIC.Yspeed+0] A;zero
+        ld      [$.SONIC.Yspeed+1] HL;zero
         
         ld      [ix+#mob.unknown14],$0f
         jp      ._4c39
@@ -1305,8 +1305,8 @@ PARAMS  IX;mob          HELP ""Address of the current mob being processed
         res     6,[iy+#vars.flags6]
         
         xor     A;zero
-        ld      [$.SONIC.Xspeed.lo]     A;zero
-        ld      [$.SONIC.Xspeed.hi]     A;zero
+        ld      [$.SONIC.Xspeed+0]     A;zero
+        ld      [$.SONIC.Xspeed+1]     A;zero
         ld      [$.SONIC.Xdirection]    A;zero
         
         ret
@@ -1468,14 +1468,14 @@ PARAMS  IX;mob          HELP ""Address of the current mob being processed
         ld      hl,[$.SONIC.X]
         ld      de,$0002
         add     hl,de
-        ld      [ix+#mob.X.lo],l
-        ld      [ix+#mob.X.hi],h
+        ld      [ix+#mob.X+0],l
+        ld      [ix+#mob.X+1],h
         ld      [ix+#mob.Ysubpixel],a;zero
         ld      hl,[$.SONIC.Y]
         ld      de,$000e
         add     hl,de
-        ld      [ix+#mob.Y.lo],l
-        ld      [ix+#mob.Y.hi],h
+        ld      [ix+#mob.Y+0],l
+        ld      [ix+#mob.Y+1],h
         pop     ix
         set     0,[iy+#vars.unknown_0D]
         jp      ._4c39
@@ -1719,7 +1719,7 @@ INDEX   ._54c6
         `jump ramp?
         
 INDEX   ._54ce
-        ld      a,[ix+#mob.X.lo]
+        ld      a,[ix+#mob.X+0]
         add     a,$0c
         and     $1f
         cp      $1a
@@ -1732,15 +1732,15 @@ INDEX   ._54ce
         and     $02
         ret     z
         
-._73    ld      l,[ix+#mob.Xspeed.lo]
-        ld      h,[ix+#mob.Xspeed.hi]
+._73    ld      l,[ix+#mob.Xspeed+0]
+        ld      h,[ix+#mob.Xspeed+1]
         bit     7,[ix+#mob.Xdirection]
         ret     nz
         ld      de,$0301
         and     a
         sbc     hl,de
         ret     c
-        ld      l,[ix+#mob.Xspeed.hi]
+        ld      l,[ix+#mob.Xspeed+1]
         ld      h,[ix+#mob.Xdirection]
         add     hl,hl
         ld      a,l
@@ -1750,8 +1750,8 @@ INDEX   ._54ce
         cpl     
         ld      h,a
         inc     hl
-        ld      [ix+#mob.Yspeed.lo],$00
-        ld      [ix+#mob.Yspeed.hi],l
+        ld      [ix+#mob.Yspeed+0],$00
+        ld      [ix+#mob.Yspeed+1],l
         ld      [ix+#mob.Ydirection],h
         
         ld      a,$05
@@ -1764,14 +1764,14 @@ INDEX   ._54ce
         `horizontal spring? (facing left)
         
 INDEX   ._550f
-        ld      a,[ix+#mob.X.lo]
+        ld      a,[ix+#mob.X+0]
         add     a,$0c
         and     $1f
         cp      $10
         ret     c
         
-        ld      [ix+#mob.Xspeed.lo],$00
-        ld      [ix+#mob.Xspeed.hi],$F8
+        ld      [ix+#mob.Xspeed+0],$00
+        ld      [ix+#mob.Xspeed+1],$F8
         ld      [ix+#mob.Xdirection],$FF
         set     1,[ix+#mob.flags]
         
@@ -1785,7 +1785,7 @@ INDEX   ._550f
         `vertical spring?
         
 INDEX   ._552d 
-        ld      a,[ix+#mob.X.lo]
+        ld      a,[ix+#mob.X+0]
         add     a,$0c
         and     $1f
         cp      $10
@@ -1799,8 +1799,8 @@ INDEX   ._552d
         ret     nz
         
         res     6,[iy+#vars.flags6]
-        ld      [ix+#mob.Yspeed.lo],$00
-        ld      [ix+#mob.Yspeed.hi],$F4
+        ld      [ix+#mob.Yspeed+0],$00
+        ld      [ix+#mob.Yspeed+1],$F4
         ld      [ix+#mob.Ydirection],$FF
         
         ld      a,$04
@@ -1812,15 +1812,15 @@ INDEX   ._552d
         `referenced by table at `_58e5` - index $05
         
 INDEX   ._5556
-        ld      a,[ix+#mob.X.lo]
+        ld      a,[ix+#mob.X+0]
         add     a,$0c
         and     $1f
         cp      $10
         ret     nc
         
         res     6,[iy+#vars.flags6]
-        ld      [ix+#mob.Xspeed.lo],$00
-        ld      [ix+#mob.Xspeed.hi],$08
+        ld      [ix+#mob.Xspeed+0],$00
+        ld      [ix+#mob.Xspeed+1],$08
         ld      [ix+#mob.Xdirection],$00
         res     1,[ix+#mob.flags]
         
@@ -1837,12 +1837,12 @@ INDEX   ._5578
         ret     z
         
         ld      hl,[$.SONIC.Xsubpixel]
-        ld      a,[$.SONIC.X.hi]
+        ld      a,[$.SONIC.X+1]
         ld      de,$fe80
         add     hl,de
         adc     a,$ff
         ld      [$.SONIC.Xsubpixel],hl
-        ld      [$.SONIC.X.hi],a
+        ld      [$.SONIC.X+1],a
         ret
 
         `====================================================================[$5590]===
@@ -1853,12 +1853,12 @@ INDEX   ._5590
         ret     z
         
         ld      hl,[$.SONIC.Xsubpixel]
-        ld      a,[$.SONIC.X.hi]
+        ld      a,[$.SONIC.X+1]
         ld      de,$0200
         add     hl,de
         adc     a,$00
         ld      [$.SONIC.Xsubpixel],hl
-        ld      [$.SONIC.X.hi],a
+        ld      [$.SONIC.X+1],a
         ret
 
         `====================================================================[$55A8]===
@@ -1880,7 +1880,7 @@ INDEX   ._55a8
         `vertical spring? (up-centre)
         
 INDEX   ._55b6
-        ld      a,[ix+#mob.X.lo]
+        ld      a,[ix+#mob.X+0]
         add     a,$0c
         and     $1f
         cp      $08
@@ -1897,8 +1897,8 @@ INDEX   ._55b6
         ret     nz
         
         res     6,[iy+#vars.flags6]
-        ld      [ix+#mob.Yspeed.lo],$00
-        ld      [ix+#mob.Yspeed.hi],$f4
+        ld      [ix+#mob.Yspeed+0],$00
+        ld      [ix+#mob.Yspeed+1],$f4
         ld      [ix+#mob.Ydirection],$ff
         
         ld      a,$04
@@ -2013,8 +2013,8 @@ INDEX   ._565c
 INDEX   ._567c
         xor     a;zero                          `set A to 0
         ld      hl,$0005
-        ld      [$.SONIC.Xspeed.lo],a;zero
-        ld      [$.SONIC.Xspeed.hi],hl
+        ld      [$.SONIC.Xspeed+0],a;zero
+        ld      [$.SONIC.Xspeed+1],hl
         res     1,[ix+#mob.flags]
 ._568a  ld      a,$06
         ld      [$.D28C],a
@@ -2025,7 +2025,7 @@ INDEX   ._567c
         or      $0f
         ld      [iy+#vars.joypad],a
         ld      hl,$0004
-        ld      [$.SONIC.Yspeed.hi],hl
+        ld      [$.SONIC.Yspeed+1],hl
         res     0,[ix+#mob.flags]
         res     2,[ix+#mob.flags]
         ret
@@ -2036,8 +2036,8 @@ INDEX   ._567c
 INDEX   ._56a6
         xor     A;zero
         ld      HL,$0006
-        ld      [$.SONIC.Xspeed.lo],A;zero
-        ld      [$.SONIC.Xspeed.hi],HL
+        ld      [$.SONIC.Xspeed+0],A;zero
+        ld      [$.SONIC.Xspeed+1],HL
         res     1,[IX+#mob.flags]
         jr      ._568a
 
@@ -2047,8 +2047,8 @@ INDEX   ._56a6
 INDEX   ._56b6
         xor     a;zero
         ld      hl,$fffb
-        ld      [$.SONIC.Xspeed.lo],a;zero
-        ld      [$.SONIC.Xspeed.hi],hl
+        ld      [$.SONIC.Xspeed+0],a;zero
+        ld      [$.SONIC.Xspeed+1],hl
         set     1,[ix+#mob.flags]
         jr      ._568a
 
@@ -2058,8 +2058,8 @@ INDEX   ._56b6
 INDEX   ._56c6
         xor     a;zero
         ld      hl,$FFFA
-        ld      [$.SONIC.Xspeed.lo],a;zero
-        ld      [$.SONIC.Xspeed.hi],hl
+        ld      [$.SONIC.Xspeed+0],a;zero
+        ld      [$.SONIC.Xspeed+1],hl
         set     1,[ix+#mob.flags]
         jr      ._568a
         
@@ -2159,8 +2159,8 @@ INDEX   ._56d6
         `referenced by table at `_58e5` - index $12
         
 INDEX   ._5761
-        ld      [ix+#mob.Yspeed.lo],$00
-        ld      [ix+#mob.Yspeed.hi],$f6
+        ld      [ix+#mob.Yspeed+0],$00
+        ld      [ix+#mob.Yspeed+1],$f6
         ld      [ix+#mob.Ydirection],$ff
         
         ld      a,$04
@@ -2172,8 +2172,8 @@ INDEX   ._5761
         `referenced by table at `_58e5` - index $13
         
 INDEX   ._5771
-        ld      [ix+#mob.Yspeed.lo],$00
-        ld      [ix+#mob.Yspeed.hi],$F4
+        ld      [ix+#mob.Yspeed+0],$00
+        ld      [ix+#mob.Yspeed+1],$F4
         ld      [ix+#mob.Ydirection],$FF
         
         ld      a,$04
@@ -2185,8 +2185,8 @@ INDEX   ._5771
         `referenced by table at `_58e5` - index $14
         
 INDEX   ._5781
-        ld      [ix+#mob.Yspeed.lo],$00
-        ld      [ix+#mob.Yspeed.hi],$F2
+        ld      [ix+#mob.Yspeed+0],$00
+        ld      [ix+#mob.Yspeed+1],$F2
         ld      [ix+#mob.Ydirection],$FF
         
         ld      a,$04
@@ -2386,16 +2386,16 @@ INDEX   ._5883
         xor     a;zero                          `set A to 0
         ld      [ix+#mob.type],$2E              `falling bridge piece
         ld      [ix+#mob.Xsubpixel],a;zero
-        ld      [ix+#mob.X.lo],c
-        ld      [ix+#mob.X.hi],b
+        ld      [ix+#mob.X+0],c
+        ld      [ix+#mob.X+1],b
         ld      [ix+#mob.Ysubpixel],a;zero
-        ld      [ix+#mob.Y.lo],e
-        ld      [ix+#mob.Y.hi],d
-        ld      [ix+#mob.Xspeed.lo],a;zero
-        ld      [ix+#mob.Xspeed.hi],a;zerp
+        ld      [ix+#mob.Y+0],e
+        ld      [ix+#mob.Y+1],d
+        ld      [ix+#mob.Xspeed+0],a;zero
+        ld      [ix+#mob.Xspeed+1],a;zerp
         ld      [ix+#mob.Xdirection],a;zero
-        ld      [ix+#mob.Yspeed.lo],a;zero
-        ld      [ix+#mob.Yspeed.hi],a;zero
+        ld      [ix+#mob.Yspeed+0],a;zero
+        ld      [ix+#mob.Yspeed+1],a;zero
         ld      [ix+#mob.Ydirection],a;zero
         ld      [ix+#mob.flags],a;zero
         

@@ -3340,8 +3340,8 @@ PARAMS  IX;mob          HELP ""Address of the current mob being processed
         add     hl,hl                           `x8 ...
         add     hl,hl                           `x16 ...
         add     hl,hl                           `x32
-        ld      [ix+#mob.X.lo],l
-        ld      [ix+#mob.X.hi],h
+        ld      [ix+#mob.X+0],l
+        ld      [ix+#mob.X+1],h
         exx     
         
         `--- Y position ---------------------------------------------------------------
@@ -3357,8 +3357,8 @@ PARAMS  IX;mob          HELP ""Address of the current mob being processed
         add     hl,hl                           `x8 ...
         add     hl,hl                           `x16 ...
         add     hl,hl                           `x32
-        ld      [ix+#mob.Y.lo],l
-        ld      [ix+#mob.Y.hi],h
+        ld      [ix+#mob.Y+0],l
+        ld      [ix+#mob.Y+1],h
         
         `transfer IX (object address) to HL
         push    ix

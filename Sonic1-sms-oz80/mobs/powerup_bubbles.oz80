@@ -16,11 +16,11 @@ PARAMS  IX;mob          HELP ""Address of the current mob being processed
         add     hl,de
         bit     0,[hl]
         call    nz,:_91eb
-._1     ld      l,[ix+#mob.X.lo]
-        ld      h,[ix+#mob.X.hi]
+._1     ld      l,[ix+#mob.X+0]
+        ld      h,[ix+#mob.X+1]
         ld      [$.TEMP1],hl
-        ld      l,[ix+#mob.Y.lo]
-        ld      h,[ix+#mob.Y.hi]
+        ld      l,[ix+#mob.Y+0]
+        ld      h,[ix+#mob.Y+1]
         ld      [$.TEMP3],hl
         ld      a,[ix+#mob.unknown11]
         add     a,a

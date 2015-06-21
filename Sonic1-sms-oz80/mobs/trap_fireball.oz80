@@ -10,20 +10,20 @@ PARAMS  IX;mob          HELP ""Address of the current mob being processed
         ld      [ix+#mob.height],10
         bit     0,[ix+#mob.flags]
         jr      nz,._1
-        ld      l,[ix+#mob.X.lo]
-        ld      h,[ix+#mob.X.hi]
+        ld      l,[ix+#mob.X+0]
+        ld      h,[ix+#mob.X+1]
         ld      de,$000a
         add     hl,de
-        ld      [ix+#mob.X.lo],l
-        ld      [ix+#mob.X.hi],h
+        ld      [ix+#mob.X+0],l
+        ld      [ix+#mob.X+1],h
         ld      [ix+$12],l
         ld      [ix+#mob.unknown13],h
-        ld      l,[ix+#mob.Y.lo]
-        ld      h,[ix+#mob.Y.hi]
+        ld      l,[ix+#mob.Y+0]
+        ld      h,[ix+#mob.Y+1]
         ld      de,$0008
         add     hl,de
-        ld      [ix+#mob.Y.lo],l
-        ld      [ix+#mob.Y.hi],h
+        ld      [ix+#mob.Y+0],l
+        ld      [ix+#mob.Y+1],h
         ld      [ix+#mob.unknown14],l
         ld      [ix+#mob.unknown15],h
         ld      [ix+#mob.unknown11],$96
@@ -42,10 +42,10 @@ PARAMS  IX;mob          HELP ""Address of the current mob being processed
         jr      z,._3
         
 ._2     xor     a;zero
-        ld      [ix+#mob.spriteLayout.lo],a;zero
-        ld      [ix+#mob.spriteLayout.hi],a;zero
-        ld      [ix+#mob.Xspeed.lo],a;zero
-        ld      [ix+#mob.Xspeed.hi],a;zero
+        ld      [ix+#mob.spriteLayout+0],a;zero
+        ld      [ix+#mob.spriteLayout+1],a;zero
+        ld      [ix+#mob.Xspeed+0],a;zero
+        ld      [ix+#mob.Xspeed+1],a;zero
         ld      [ix+#mob.Xdirection],a;zero
         ret
         
@@ -56,20 +56,20 @@ PARAMS  IX;mob          HELP ""Address of the current mob being processed
 ._4     xor     a;zero
         bit     1,[ix+#mob.flags]
         jr      nz,._5
-        ld      [ix+#mob.Xspeed.lo],$00
-        ld      [ix+#mob.Xspeed.hi],$ff
+        ld      [ix+#mob.Xspeed+0],$00
+        ld      [ix+#mob.Xspeed+1],$ff
         ld      [ix+#mob.Xdirection],$ff
-        ld      [ix+#mob.spriteLayout.lo],._8d39.lo
-        ld      [ix+#mob.spriteLayout.hi],._8d39.hi
+        ld      [ix+#mob.spriteLayout+0],LO ._8d39
+        ld      [ix+#mob.spriteLayout+1],HI ._8d39
         jr      ._6
         
-._5     ld      [ix+#mob.Xspeed.lo],a
-        ld      [ix+#mob.Xspeed.hi],$01
+._5     ld      [ix+#mob.Xspeed+0],a
+        ld      [ix+#mob.Xspeed+1],$01
         ld      [ix+#mob.Xdirection],a
-        ld      [ix+#mob.spriteLayout.lo],._8d41.lo
-        ld      [ix+#mob.spriteLayout.hi],._8d41.hi
-._6     ld      [ix+#mob.Yspeed.lo],a
-        ld      [ix+#mob.Yspeed.hi],a
+        ld      [ix+#mob.spriteLayout+0],LO ._8d41
+        ld      [ix+#mob.spriteLayout+1],HI ._8d41
+._6     ld      [ix+#mob.Yspeed+0],a
+        ld      [ix+#mob.Yspeed+1],a
         ld      [ix+#mob.Ydirection],a
         bit     6,[ix+#mob.flags]
         jr      nz,._7
@@ -79,8 +79,8 @@ PARAMS  IX;mob          HELP ""Address of the current mob being processed
         ld      [$.TEMP6],hl
         call    :detectCollisionWithSonic
         call    nc,:hitPlayer._35fd
-        ld      e,[ix+#mob.X.lo]
-        ld      d,[ix+#mob.X.hi]
+        ld      e,[ix+#mob.X+0]
+        ld      d,[ix+#mob.X+1]
         ld      hl,[$.CAMERA_X]
         ld      bc,$fff0
         add     hl,bc
@@ -93,8 +93,8 @@ PARAMS  IX;mob          HELP ""Address of the current mob being processed
         and     a
         sbc     hl,de
         jr      c,._7
-        ld      e,[ix+#mob.Y.lo]
-        ld      d,[ix+#mob.Y.hi]
+        ld      e,[ix+#mob.Y+0]
+        ld      d,[ix+#mob.Y+1]
         ld      hl,[$.CAMERA_Y]
         ld      bc,$fff0
         add     hl,bc
@@ -111,12 +111,12 @@ PARAMS  IX;mob          HELP ""Address of the current mob being processed
         
 ._7     ld      l,[ix+$12]
         ld      h,[ix+#mob.unknown13]
-        ld      [ix+#mob.X.lo],l
-        ld      [ix+#mob.X.hi],h
+        ld      [ix+#mob.X+0],l
+        ld      [ix+#mob.X+1],h
         ld      l,[ix+#mob.unknown14]
         ld      h,[ix+#mob.unknown15]
-        ld      [ix+#mob.Y.lo],l
-        ld      [ix+#mob.Y.hi],h
+        ld      [ix+#mob.Y+0],l
+        ld      [ix+#mob.Y+1],h
         ld      [ix+#mob.unknown11],$96
         jp      ._2
         

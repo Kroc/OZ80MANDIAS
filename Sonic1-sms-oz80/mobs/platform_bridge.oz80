@@ -11,8 +11,8 @@ PARAMS  IX;mob          HELP ""Address of the current mob being processed
         jr      nz,._2
         
         xor     a;zero
-        ld      [ix+#mob.spriteLayout.lo],a;zero
-        ld      [ix+#mob.spriteLayout.hi],a;zero
+        ld      [ix+#mob.spriteLayout+0],a;zero
+        ld      [ix+#mob.spriteLayout+1],a;zero
         ld      l;zero,a;zero
         ld      h;zero,a;zero
         ld      [$.TEMP1],hl;zero
@@ -31,11 +31,11 @@ PARAMS  IX;mob          HELP ""Address of the current mob being processed
         ld      a,[$.D2AB+1]
         and     $80
         jp      z,._
-        ld      l,[ix+#mob.X.lo]
-        ld      h,[ix+#mob.X.hi]
+        ld      l,[ix+#mob.X+0]
+        ld      h,[ix+#mob.X+1]
         ld      [$.D2AB],hl
-        ld      l,[ix+#mob.Y.lo]
-        ld      h,[ix+#mob.Y.hi]
+        ld      l,[ix+#mob.Y+0]
+        ld      h,[ix+#mob.Y+1]
         ld      de,$000e
         add     hl,de
         ld      [$.D2AD],hl
@@ -44,10 +44,10 @@ PARAMS  IX;mob          HELP ""Address of the current mob being processed
         set     0,[ix+#mob.flags]
         ld      a,$20
         rst     :rst_playSFX
-._2     ld      [ix+#mob.spriteLayout.lo],._8481.lo
-        ld      [ix+#mob.spriteLayout.hi],._8481.hi
-        ld      l,[ix+#mob.Yspeed.lo]
-        ld      h,[ix+#mob.Yspeed.hi]
+._2     ld      [ix+#mob.spriteLayout+0],LO ._8481
+        ld      [ix+#mob.spriteLayout+1],HI ._8481
+        ld      l,[ix+#mob.Yspeed+0]
+        ld      h,[ix+#mob.Yspeed+1]
         ld      a,[ix+#mob.Ydirection]
         ld      de,$0020
         add     hl,de
@@ -57,14 +57,14 @@ PARAMS  IX;mob          HELP ""Address of the current mob being processed
         cp      $04
         jr      c,._3
         ld      h,$04
-._3     ld      [ix+#mob.Yspeed.lo],l
-        ld      [ix+#mob.Yspeed.hi],h
+._3     ld      [ix+#mob.Yspeed+0],l
+        ld      [ix+#mob.Yspeed+1],h
         ld      [ix+#mob.Ydirection],c
         ld      [$.TEMP1],hl
         ld      de,[$.CAMERA_Y]
         inc     d
-        ld      l,[ix+#mob.Y.lo]
-        ld      h,[ix+#mob.Y.hi]
+        ld      l,[ix+#mob.Y+0]
+        ld      h,[ix+#mob.Y+1]
         and     a
         sbc     hl,de
         jr      c,._

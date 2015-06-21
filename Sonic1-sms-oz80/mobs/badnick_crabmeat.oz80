@@ -64,8 +64,8 @@ PARAMS  IX;mob          HELP ""Address of the current mob being processed
         rst     :rst_playSFX
         jp      ._7
         
-._6     ld      [ix+#mob.Xspeed.lo],l
-        ld      [ix+#mob.Xspeed.hi],h
+._6     ld      [ix+#mob.Xspeed+0],l
+        ld      [ix+#mob.Xspeed+1],h
         ld      [ix+#mob.Xdirection],c
         
 ._7     ld      l,[ix+#mob.unknown11]
@@ -74,14 +74,14 @@ PARAMS  IX;mob          HELP ""Address of the current mob being processed
         add     hl,de
         ld      [ix+#mob.unknown11],l
         ld      [ix+$12],h
-        ld      l,[ix+#mob.Yspeed.lo]
-        ld      h,[ix+#mob.Yspeed.hi]
+        ld      l,[ix+#mob.Yspeed+0]
+        ld      h,[ix+#mob.Yspeed+1]
         ld      a,[ix+#mob.Ydirection]
         ld      de,$0020
         add     hl,de
         adc     a,d
-        ld      [ix+#mob.Yspeed.lo],l
-        ld      [ix+#mob.Yspeed.hi],h
+        ld      [ix+#mob.Yspeed+0],l
+        ld      [ix+#mob.Yspeed+1],h
         ld      [ix+#mob.Ydirection],a
         ld      hl,[$.TEMP6]
         ld      a,[hl]

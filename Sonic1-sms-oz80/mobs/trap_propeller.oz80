@@ -7,24 +7,24 @@ PARAMS  IX;mob          HELP ""Address of the current mob being processed
         ld      [ix+#mob.height],$14
         bit     0,[ix+#mob.flags]
         jr      nz,._1
-        ld      l,[ix+#mob.X.lo]
-        ld      h,[ix+#mob.X.hi]
+        ld      l,[ix+#mob.X+0]
+        ld      h,[ix+#mob.X+1]
         ld      de,$000f
         add     hl,de
-        ld      [ix+#mob.X.lo],l
-        ld      [ix+#mob.X.hi],h
-        ld      l,[ix+#mob.Y.lo]
-        ld      h,[ix+#mob.Y.hi]
+        ld      [ix+#mob.X+0],l
+        ld      [ix+#mob.X+1],h
+        ld      l,[ix+#mob.Y+0]
+        ld      h,[ix+#mob.Y+1]
         ld      de,$fffa
         add     hl,de
-        ld      [ix+#mob.Y.lo],l
-        ld      [ix+#mob.Y.hi],h
+        ld      [ix+#mob.Y+0],l
+        ld      [ix+#mob.Y+1],h
         set     0,[ix+#mob.flags]
-._1     ld      l,[ix+#mob.X.lo]
-        ld      h,[ix+#mob.X.hi]
+._1     ld      l,[ix+#mob.X+0]
+        ld      h,[ix+#mob.X+1]
         ld      [$.TEMP1],hl
-        ld      l,[ix+#mob.Y.lo]
-        ld      h,[ix+#mob.Y.hi]
+        ld      l,[ix+#mob.Y+0]
+        ld      h,[ix+#mob.Y+1]
         ld      [$.TEMP3],hl
         ld      e,[ix+#mob.unknown11]
         ld      d,$00
@@ -59,8 +59,8 @@ PARAMS  IX;mob          HELP ""Address of the current mob being processed
         ld      [$.TEMP6],hl
         call    :detectCollisionWithSonic
         call    nc,:hitPlayer._35fd
-        ld      [ix+#mob.spriteLayout.lo],$00
-        ld      [ix+#mob.spriteLayout.hi],$00
+        ld      [ix+#mob.spriteLayout+0],$00
+        ld      [ix+#mob.spriteLayout+1],$00
         ld      a,[ix+#mob.unknown11]
         inc     a
         inc     a

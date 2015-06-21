@@ -27,8 +27,8 @@ PARAMS  IX;mob          HELP ""Address of the current mob being processed
 ._1     ld      hl,[$.CAMERA_X]
         ld      [$.LEVEL_LEFT],hl
         
-        ld      l,[ix+#mob.X.lo]
-        ld      h,[ix+#mob.X.hi]
+        ld      l,[ix+#mob.X+0]
+        ld      h,[ix+#mob.X+1]
         ld      de,$FF90
         add     hl,de
         ld      [$.LEVEL_RIGHT],hl
@@ -47,8 +47,8 @@ PARAMS  IX;mob          HELP ""Address of the current mob being processed
         jr      z,._3
         bit     7,[ix+#mob.flags]
         jr      z,._3
-        ld      e,[ix+#mob.X.lo]
-        ld      d,[ix+#mob.X.hi]
+        ld      e,[ix+#mob.X+0]
+        ld      d,[ix+#mob.X+1]
         ld      hl,[$.SONIC.X]
         and     a
         sbc     hl,de
@@ -65,17 +65,17 @@ PARAMS  IX;mob          HELP ""Address of the current mob being processed
         and     a
         sbc     hl,de
         jr      nc,._3
-        ld      [ix+#mob.Yspeed.lo],$00
-        ld      [ix+#mob.Yspeed.hi],$fe
+        ld      [ix+#mob.Yspeed+0],$00
+        ld      [ix+#mob.Yspeed+1],$fe
         ld      [ix+#mob.Ydirection],$ff
-._3     ld      l,[ix+#mob.Yspeed.lo]
-        ld      h,[ix+#mob.Yspeed.hi]
+._3     ld      l,[ix+#mob.Yspeed+0]
+        ld      h,[ix+#mob.Yspeed+1]
         ld      a,[ix+#mob.Ydirection]
         ld      de,$001a
         add     hl,de
         adc     a,$00
-        ld      [ix+#mob.Yspeed.lo],l
-        ld      [ix+#mob.Yspeed.hi],h
+        ld      [ix+#mob.Yspeed+0],l
+        ld      [ix+#mob.Yspeed+1],h
         ld      [ix+#mob.Ydirection],a
         bit     3,[ix+#mob.unknown11]
         jr      nz,._7
@@ -196,8 +196,8 @@ PARAMS  IX;mob          HELP ""Address of the current mob being processed
         add     hl,de
         ld      de,._61dc
         add     hl,de
-        ld      [ix+#mob.spriteLayout.lo],l
-        ld      [ix+#mob.spriteLayout.hi],h
+        ld      [ix+#mob.spriteLayout+0],l
+        ld      [ix+#mob.spriteLayout+1],h
         bit     1,[ix+#mob.unknown11]
         jr      nz,._13
         inc     [ix+$12]
@@ -216,8 +216,8 @@ PARAMS  IX;mob          HELP ""Address of the current mob being processed
         jr      c,._14
         xor     a;zero
 ._14    ld      [ix+$12],a;zero
-        ld      e,[ix+#mob.Yspeed.lo]
-        ld      d,[ix+#mob.Yspeed.hi]
+        ld      e,[ix+#mob.Yspeed+0]
+        ld      d,[ix+#mob.Yspeed+1]
         ld      a,[ix+#mob.Ydirection]
         and     a
         jp      p,._15
@@ -242,11 +242,11 @@ PARAMS  IX;mob          HELP ""Address of the current mob being processed
         and     a
         sbc     hl,de
         sbc     a,$00
-        ld      [ix+#mob.Yspeed.lo],l
-        ld      [ix+#mob.Yspeed.hi],h
+        ld      [ix+#mob.Yspeed+0],l
+        ld      [ix+#mob.Yspeed+1],h
         ld      [ix+#mob.Ydirection],a
-        ld      l,[ix+#mob.Y.lo]
-        ld      h,[ix+#mob.Y.hi]
+        ld      l,[ix+#mob.Y+0]
+        ld      h,[ix+#mob.Y+1]
         xor     a;zero
         ld      de,$0008
         sbc     hl,de
@@ -259,8 +259,8 @@ PARAMS  IX;mob          HELP ""Address of the current mob being processed
         ld      [ix+#mob.unknown14],l
         ld      [ix+#mob.unknown15],h
         ret     nc
-._16    ld      [ix+#mob.Yspeed.lo],a;zero
-        ld      [ix+#mob.Yspeed.hi],a;zero
+._16    ld      [ix+#mob.Yspeed+0],a;zero
+        ld      [ix+#mob.Yspeed+1],a;zero
         ld      [ix+#mob.Ydirection],a;zero
         res     1,[ix+#mob.unknown11]
         set     2,[ix+#mob.unknown11]

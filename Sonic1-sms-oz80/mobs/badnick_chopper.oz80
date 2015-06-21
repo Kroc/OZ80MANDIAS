@@ -12,29 +12,29 @@ PARAMS  IX;mob          HELP ""Address of the current mob being processed
         jr      z,._1
         dec     [ix+#mob.unknown14]
         xor     a;zero
-        ld      [ix+#mob.spriteLayout.lo],a;zero
-        ld      [ix+#mob.spriteLayout.hi],a;zero
+        ld      [ix+#mob.spriteLayout+0],a;zero
+        ld      [ix+#mob.spriteLayout+1],a;zero
         ret
         
 ._1     bit     0,[ix+#mob.flags]
         jr      nz,._3
         bit     1,[ix+#mob.flags]
         jr      nz,._2
-        ld      l,[ix+#mob.Y.lo]
-        ld      h,[ix+#mob.Y.hi]
+        ld      l,[ix+#mob.Y+0]
+        ld      h,[ix+#mob.Y+1]
         ld      de,$fff4
         add     hl,de
         ld      [ix+$12],l
         ld      [ix+#mob.unknown13],h
-        ld      l,[ix+#mob.X.lo]
-        ld      h,[ix+#mob.X.hi]
+        ld      l,[ix+#mob.X+0]
+        ld      h,[ix+#mob.X+1]
         ld      de,$0008
         add     hl,de
-        ld      [ix+#mob.X.lo],l
-        ld      [ix+#mob.X.hi],h
+        ld      [ix+#mob.X+0],l
+        ld      [ix+#mob.X+1],h
         set     1,[ix+#mob.flags]
-._2     ld      [ix+#mob.Yspeed.lo],$00
-        ld      [ix+#mob.Yspeed.hi],$fc
+._2     ld      [ix+#mob.Yspeed+0],$00
+        ld      [ix+#mob.Yspeed+1],$fc
         ld      [ix+#mob.Ydirection],$ff
         set     0,[ix+#mob.flags]
         ld      a,$12
@@ -42,8 +42,8 @@ PARAMS  IX;mob          HELP ""Address of the current mob being processed
         ld      [ix+#mob.unknown11],$03
         jr      ._5
         
-._3     ld      l,[ix+#mob.Yspeed.lo]
-        ld      h,[ix+#mob.Yspeed.hi]
+._3     ld      l,[ix+#mob.Yspeed+0]
+        ld      h,[ix+#mob.Yspeed+1]
         ld      a,[ix+#mob.Ydirection]
         ld      de,$0010
         add     hl,de
@@ -56,21 +56,21 @@ PARAMS  IX;mob          HELP ""Address of the current mob being processed
         sbc     hl,de
         jr      nc,._4
         ld      de,$0400
-._4     ld      [ix+#mob.Yspeed.lo],e
-        ld      [ix+#mob.Yspeed.hi],d
+._4     ld      [ix+#mob.Yspeed+0],e
+        ld      [ix+#mob.Yspeed+1],d
         ld      [ix+#mob.Ydirection],a
         ld      e,[ix+$12]
         ld      d,[ix+#mob.unknown13]
-        ld      l,[ix+#mob.Y.lo]
-        ld      h,[ix+#mob.Y.hi]
+        ld      l,[ix+#mob.Y+0]
+        ld      h,[ix+#mob.Y+1]
         xor     a
         sbc     hl,de
         jr      c,._5
         ld      [ix+#mob.Ysubpixel],a
-        ld      [ix+#mob.Y.lo],e
-        ld      [ix+#mob.Y.hi],d
-        ld      [ix+#mob.Yspeed.lo],a
-        ld      [ix+#mob.Yspeed.hi],a
+        ld      [ix+#mob.Y+0],e
+        ld      [ix+#mob.Y+1],d
+        ld      [ix+#mob.Yspeed+0],a
+        ld      [ix+#mob.Yspeed+1],a
         ld      [ix+#mob.Ydirection],a
         ld      [ix+#mob.unknown14],$1e
         res     0,[ix+#mob.flags]
@@ -81,8 +81,8 @@ PARAMS  IX;mob          HELP ""Address of the current mob being processed
         and     a
         jr      z,._6
         dec     [ix+#mob.unknown11]
-        ld      [ix+#mob.spriteLayout.lo],._7df7.lo
-        ld      [ix+#mob.spriteLayout.hi],._7df7.hi
+        ld      [ix+#mob.spriteLayout+0],LO ._7df7
+        ld      [ix+#mob.spriteLayout+1],HI ._7df7
 ._6     ld      hl,$0204
         ld      [$.TEMP6],hl
         call    :detectCollisionWithSonic

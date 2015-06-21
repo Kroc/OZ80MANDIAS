@@ -64,11 +64,11 @@ PARAMS  IX;mob          HELP ""Address of the current mob being processed
         
         `move left 1px?
         ld      de,$FFFF
-._4     ld      l,[ix+#mob.X.lo]
-        ld      h,[ix+#mob.X.hi]
+._4     ld      l,[ix+#mob.X+0]
+        ld      h,[ix+#mob.X+1]
         add     hl,de
-        ld      [ix+#mob.X.lo],l
-        ld      [ix+#mob.X.hi],h
+        ld      [ix+#mob.X+0],l
+        ld      [ix+#mob.X+1],h
         ld      a,c
         and     a
         jr      z,._5
@@ -87,7 +87,7 @@ PARAMS  IX;mob          HELP ""Address of the current mob being processed
         jr      z,._6
         
         ld      hl,:object_platform_spriteLayouts._6923
-._6     ld      [ix+#mob.spriteLayout.lo],l
-        ld      [ix+#mob.spriteLayout.hi],h
+._6     ld      [ix+#mob.spriteLayout+0],l
+        ld      [ix+#mob.spriteLayout+1],h
         ret
 }

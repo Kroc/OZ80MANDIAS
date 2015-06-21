@@ -18,28 +18,28 @@ PARAMS  IX;mob          HELP ""Address of the current mob being processed
         ld      hl,$0404
         ld      [$.TEMP1],hl
         call    nc,:hitPlayer
-        ld      l,[ix+#mob.Yspeed.lo]
-        ld      h,[ix+#mob.Yspeed.hi]
+        ld      l,[ix+#mob.Yspeed+0]
+        ld      h,[ix+#mob.Yspeed+1]
         ld      a,[ix+#mob.Ydirection]
         ld      de,$0020
         add     hl,de
         adc     a,$00
-        ld      [ix+#mob.Yspeed.lo],l
-        ld      [ix+#mob.Yspeed.hi],h
+        ld      [ix+#mob.Yspeed+0],l
+        ld      [ix+#mob.Yspeed+1],h
         ld      [ix+#mob.Ydirection],a
         ld      a,[ix+#mob.unknown11]
         cp      $50
         jr      c,._1
-        ld      [ix+#mob.Xspeed.lo],$40
-        ld      [ix+#mob.Xspeed.hi],$00
+        ld      [ix+#mob.Xspeed+0],$40
+        ld      [ix+#mob.Xspeed+1],$00
         ld      [ix+#mob.Xdirection],$00
         ld      de,._837e
         ld      bc,._8379
         call    :_7c41
         jp      ._2
         
-._1     ld      [ix+#mob.Xspeed.lo],$c0
-        ld      [ix+#mob.Xspeed.hi],$ff
+._1     ld      [ix+#mob.Xspeed+0],$c0
+        ld      [ix+#mob.Xspeed+1],$ff
         ld      [ix+#mob.Xdirection],$ff
         ld      de,._837e
         ld      bc,._8374

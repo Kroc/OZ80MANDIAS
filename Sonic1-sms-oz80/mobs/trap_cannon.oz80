@@ -5,12 +5,12 @@ PARAMS  IX;mob          HELP ""Address of the current mob being processed
         set     5,[ix+#mob.flags]               `mob does not collide with the floor
         bit     0,[ix+#mob.flags]
         jr      nz,._1
-        ld      l,[ix+#mob.X.lo]
-        ld      h,[ix+#mob.X.hi]
+        ld      l,[ix+#mob.X+0]
+        ld      h,[ix+#mob.X+1]
         ld      de,$fffc
         add     hl,de
-        ld      [ix+#mob.X.lo],l
-        ld      [ix+#mob.X.hi],h
+        ld      [ix+#mob.X+0],l
+        ld      [ix+#mob.X+1],h
         call    :_LABEL_625_57
         ld      [ix+#mob.unknown11],a
         set     0,[ix+#mob.flags]
@@ -20,10 +20,10 @@ PARAMS  IX;mob          HELP ""Address of the current mob being processed
         call    :findEmptyMob
         jr      c,._2
         push    ix
-        ld      e,[ix+#mob.X.lo]
-        ld      d,[ix+#mob.X.hi]
-        ld      c,[ix+#mob.Y.lo]
-        ld      b,[ix+#mob.Y.hi]
+        ld      e,[ix+#mob.X+0]
+        ld      d,[ix+#mob.X+1]
+        ld      c,[ix+#mob.Y+0]
+        ld      b,[ix+#mob.Y+1]
         push    hl
         pop     ix
         xor     a;zero                          `set A to 0
@@ -31,13 +31,13 @@ PARAMS  IX;mob          HELP ""Address of the current mob being processed
         ld      [ix+#mob.Xsubpixel],a;zero
         ld      hl,$0004
         add     hl,de
-        ld      [ix+#mob.X.lo],l
-        ld      [ix+#mob.X.hi],h
+        ld      [ix+#mob.X+0],l
+        ld      [ix+#mob.X+1],h
         ld      [ix+#mob.Ysubpixel],a;zero
         ld      hl,$0010
         add     hl,bc
-        ld      [ix+#mob.Y.lo],l
-        ld      [ix+#mob.Y.hi],h
+        ld      [ix+#mob.Y+0],l
+        ld      [ix+#mob.Y+1],h
         pop     ix
         ld      a,$1c
         rst     :rst_playSFX
@@ -54,8 +54,8 @@ PARAMS  IX;mob          HELP ""Address of the current mob being processed
         inc     [ix+#mob.unknown11]
         ret
         
-._3     ld      [ix+#mob.spriteLayout.lo],a
-        ld      [ix+#mob.spriteLayout.hi],a
+._3     ld      [ix+#mob.spriteLayout+0],a
+        ld      [ix+#mob.spriteLayout+1],a
         inc     [ix+#mob.unknown11]
         ret
         
@@ -86,8 +86,8 @@ PARAMS  IX;mob          HELP ""Address of the current mob being processed
         ld      hl,[$.CAMERA_X]
         ld      de,$0110
         add     hl,de
-        ld      e,[ix+#mob.X.lo]
-        ld      d,[ix+#mob.X.hi]
+        ld      e,[ix+#mob.X+0]
+        ld      d,[ix+#mob.X+1]
         and     a
         sbc     hl,de
         jr      nc,._1
@@ -97,14 +97,14 @@ PARAMS  IX;mob          HELP ""Address of the current mob being processed
         call    :detectCollisionWithSonic
         call    nc,:hitPlayer._35fd
         xor     a;zero
-        ld      [ix+#mob.Xspeed.lo],$80
-        ld      [ix+#mob.Xspeed.hi],$02
+        ld      [ix+#mob.Xspeed+0],$80
+        ld      [ix+#mob.Xspeed+1],$02
         ld      [ix+#mob.Xdirection],a;zero
-        ld      [ix+#mob.Yspeed.lo],a;zero
-        ld      [ix+#mob.Yspeed.hi],a;zero
+        ld      [ix+#mob.Yspeed+0],a;zero
+        ld      [ix+#mob.Yspeed+1],a;zero
         ld      [ix+#mob.Ydirection],a;zero
-        ld      [ix+#mob.spriteLayout.lo],LO ._ae81
-        ld      [ix+#mob.spriteLayout.hi],HI ._ae81
+        ld      [ix+#mob.spriteLayout+0],LO ._ae81
+        ld      [ix+#mob.spriteLayout+1],HI ._ae81
         ret
         
 ._ae81  `sprite layout                                                          `$AE81

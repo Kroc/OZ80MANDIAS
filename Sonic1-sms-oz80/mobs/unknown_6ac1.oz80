@@ -9,27 +9,27 @@ PARAMS  IX;mob          HELP ""Address of the current mob being processed
         ld      [$.TEMP6],hl
         call    :detectCollisionWithSonic
         call    nc,:hitPlayer._35fd
-        ld      l,[ix+#mob.Yspeed.lo]
-        ld      h,[ix+#mob.Yspeed.hi]
+        ld      l,[ix+#mob.Yspeed+0]
+        ld      h,[ix+#mob.Yspeed+1]
         ld      a,[ix+#mob.Ydirection]
         ld      e,[ix+#mob.unknown13]
         ld      d,[ix+#mob.unknown14]
         add     hl,de
         adc     a,$00
-        ld      [ix+#mob.Yspeed.lo],l
-        ld      [ix+#mob.Yspeed.hi],h
+        ld      [ix+#mob.Yspeed+0],l
+        ld      [ix+#mob.Yspeed+1],h
         ld      [ix+#mob.Ydirection],a
-        ld      l,[ix+#mob.X.lo]
-        ld      h,[ix+#mob.X.hi]
+        ld      l,[ix+#mob.X+0]
+        ld      h,[ix+#mob.X+1]
         ld      [$.TEMP1],hl
-        ld      l,[ix+#mob.Y.lo]
-        ld      h,[ix+#mob.Y.hi]
+        ld      l,[ix+#mob.Y+0]
+        ld      h,[ix+#mob.Y+1]
         ld      [$.TEMP3],hl
         ld      hl,$0000
         ld      [$.TEMP4],hl
         ld      [$.TEMP6],hl
-        ld      [ix+#mob.spriteLayout.lo],l
-        ld      [ix+#mob.spriteLayout.hi],h
+        ld      [ix+#mob.spriteLayout+0],l
+        ld      [ix+#mob.spriteLayout+1],h
         ld      hl,._6b72
         ld      a,[$.CURRENT_LEVEL]
         cp      $05
@@ -44,8 +44,8 @@ PARAMS  IX;mob          HELP ""Address of the current mob being processed
         add     hl,de
         ld      a,[hl]
         call    :_3581
-        ld      c,[ix+#mob.X.lo]
-        ld      b,[ix+#mob.X.hi]
+        ld      c,[ix+#mob.X+0]
+        ld      b,[ix+#mob.X+1]
         ld      l,c
         ld      h,b
         ld      de,$fff8
@@ -58,8 +58,8 @@ PARAMS  IX;mob          HELP ""Address of the current mob being processed
         ex      de,hl
         sbc     hl,bc
         jr      c,._2
-        ld      c,[ix+#mob.Y.lo]
-        ld      b,[ix+#mob.Y.hi]
+        ld      c,[ix+#mob.Y+0]
+        ld      b,[ix+#mob.Y+1]
         ld      l,c
         ld      h,b
         ld      de,$0010

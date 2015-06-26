@@ -126,8 +126,8 @@ Private Enum LCMAP
     LCMAP_TRADITIONAL_CHINESE = &H4000000
 End Enum
 
-'Unicode character properties: _
- ---------------------------------------------------------------------------------------
+'Unicode character properties:
+'---------------------------------------------------------------------------------------
 'Returns an array of Unicode character properties for a string _
  <msdn.microsoft.com/en-us/library/windows/desktop/dd318119(v=vs.85).aspx>
 Private Declare Function api_GetStringTypeW Lib "kernel32" Alias "GetStringTypeW" ( _
@@ -623,7 +623,6 @@ Private Enum OZ80_TOKEN
     TOKEN_OPERATOR_REP                  'Repeat "x"
     TOKEN_OPERATOR_OR                   'Bitwise OR "|"
     TOKEN_OPERATOR_AND                  'Bitwise AND "&"
-    TOKEN_OPERATOR_NOT                  'Bitwise NOT "!"
     TOKEN_OPERATOR_XOR                  'Bitwise XOR "~"
     [_TOKEN_OPERATORS_END]
     
@@ -855,8 +854,22 @@ Private Types() As OZ80Type
 Private TypeCount As Long
 
 '---------------------------------------------------------------------------------------
-'Z80 Parameters: _
- ---------------------------------------------------------------------------------------
+'Z80 Instructions:
+'---------------------------------------------------------------------------------------
+'There are up to three parameters for Z80 instructions. _
+ These can be Registers, Values or Z80 Memory References
+
+Private Type oz80Param
+    Mask As OZ80_PARAM                  'Bit-pattern (as below) identifiying features
+    Token As OZ80_TOKEN
+    
+    Value As Double                     'Value of the Param, could be 'INDEFINITE'
+    Expression As Long                  'The Token index where the Value Expression is
+    Defer As Long                       'If the Expression needs to be deferred
+    
+    LogText As Long                     'When logging, which cached text to use
+End Type
+
 'In order to compare the hundreds of permutations of parameters for Z80 instructions, _
  we assign each parameter type a single bit. We can thus check very quickly if a given _
  parameter falls within an allowed list of accepted types
@@ -965,71 +978,21 @@ Private Enum OZ80_PARAM
     PARAM_ANY_VAL = PARAM_VAL Or PARAM_MEM_VAL
 End Enum
 
-Private Type oz80Param
-    Mask As OZ80_PARAM                  'Bit-pattern (as above) identifiying features
-    Token As OZ80_TOKEN
-    
-    Value As Double                     'Value of the Param, could be 'INDEFINITE'
-    Expression As Long                  'The Token index where the Value Expression is
-    Defer As Long                       'If the Expression needs to be deferred
-    
-    LogText As Long                     'When logging, which cached text to use
-End Type
-
-'---------------------------------------------------------------------------------------
-'Z80 Opcodes:
-'---------------------------------------------------------------------------------------
-'Z80 opcodes are made up of various bit patterns that can be broken down into the
-'following layout: (this information from <z80.info/decoding.htm>)
-
-'             .-+-+-+-+-+-+-+-.
-' Bit Number: |7|6|5|4|3|2|1|0|
-'             ¦-+-+-+-+-+-+-+-¦
-'  Component: | X |  Y  |  Z  |
-'             '---+---+-+-----'
-'                 | P |Q|
-'                 '---+-'
-
-'Here we encode these component's bit numbers so we can easily build opcodes. _
- A set of look-up tables translate instructions / registers into component parts
-
-Private Enum OZ80_OPCODE
-    X0 = 0:         X1 = 2 ^ 6:     X2 = 2 ^ 7:     X3 = X1 Or X2
-    
-    Y0 = 0:         Y1 = 2 ^ 3:     Y2 = 2 ^ 4:     Y3 = Y1 Or Y2
-    Y4 = 2 ^ 5:     Y5 = Y4 Or Y1:  Y6 = Y4 Or Y2:  Y7 = Y4 Or Y3
-    
-    P0 = 0:         P1 = 2 ^ 4:     P2 = 2 ^ 5:     P3 = P1 Or P2
-
-    Q0 = 0:         Q1 = Y1
-    
-    Z0 = 0:         Z1 = 2 ^ 0:     Z2 = 2 ^ 1:     Z3 = Z1 Or Z2
-    Z4 = 2 ^ 2:     Z5 = Z4 Or Z1:  Z6 = Z4 Or Z2:  Z7 = Z4 Or Z3
-End Enum
-
-'A look-up table to convert a token for a register into the bit mask for it
-Private TokenRegister([_TOKEN_REGS_BEGIN] To [_TOKEN_REGS_END]) As Long
-
-'Look-up tables for converting certain z80 parameters into opcode-components
-Private OpcodeP_RegisterPair([_TOKEN_REGS_BEGIN] To [_TOKEN_REGS_END]) As Long
-Private OpcodeY_Condition([_TOKEN_REGS_BEGIN] To [_TOKEN_REGS_END]) As Long
-Private OpcodeY_RST(0 To &H38&) As Long
-Private OpcodeY_Bit(0 To 7) As Long
-'Sure this is a waste of memory, but it is fast as we don't have to convert _
- bit-powers to linear numbers for many instructions being assembled
-Private OpcodeY_Register([_PARAM_REGS_BEGIN] To [_PARAM_REGS_END]) As Long
-Private OpcodeZ_Register([_PARAM_REGS_BEGIN] To [_PARAM_REGS_END]) As Long
-
 Private Type oz80Instruction
     Param1 As oz80Param                 'The first parameter, if present
     Param2 As oz80Param                 'The second parameter, if present
     Param3 As oz80Param                 'The third parameter, if present (undocumented)
+    
+    'So that we don't need to check Param 1 & 2 several times, we extract the Value _
+     from the relevant one (if present)
     Value As Double
     
     HasValue As Long
     HasOffset As Long
 End Type
 
+'This is unused at this moment, but represents a further attempt to fit all _
+ combinations of the three parameters in a single bit-mask
 Private Enum OZ80_MASK
     'Param 1 Bits
     '...................................................................................
@@ -1127,30 +1090,48 @@ Private Enum OZ80_MASK
 End Enum
 
 '---------------------------------------------------------------------------------------
-'Deferred Expressions:
+'Z80 Opcodes:
 '---------------------------------------------------------------------------------------
-'Certain Values cannot be known until the size of all Chunks has been determined first. _
- When such a Value is encountered, the Expression is 'deferred' until after ROM Layout
+'Z80 opcodes are made up of various bit patterns that can be broken down into the
+'following layout: (this information from <z80.info/decoding.htm>)
 
-Private Type oz80Deferred
-    File As Long                        'File index number
-    TokenIndex As Long                  'Token index number, within said File
-    
-    ChunkID As Long                     'Which Chunk to write the Value to
-    BinaryOffset As Long                'Which starting byte within the Chunk
-    
-    Kind As OZ80_DEFERRED               'Which type of data to output
-    From As Long                        'The address to calculate relative from
-End Type
+'             .-+-+-+-+-+-+-+-.
+' Bit Number: |7|6|5|4|3|2|1|0|
+'             ¦-+-+-+-+-+-+-+-¦
+'  Component: | X |  Y  |  Z  |
+'             '---+---+-+-----'
+'                 | P |Q|
+'                 '---+-'
 
-Private Enum OZ80_DEFERRED
-    ASM_VAL8                            'An 8-bit value
-    ASM_JR                              'A relative jump (8-bits)
-    ASM_JP                              'An absolute jump (16-bits)
+'Here we encode these component's bit numbers so we can easily build opcodes. _
+ A set of look-up tables translate instructions / registers into component parts
+
+Private Enum OZ80_OPCODE
+    X0 = 0:         X1 = 2 ^ 6:     X2 = 2 ^ 7:     X3 = X1 Or X2
+    
+    Y0 = 0:         Y1 = 2 ^ 3:     Y2 = 2 ^ 4:     Y3 = Y1 Or Y2
+    Y4 = 2 ^ 5:     Y5 = Y4 Or Y1:  Y6 = Y4 Or Y2:  Y7 = Y4 Or Y3
+    
+    P0 = 0:         P1 = 2 ^ 4:     P2 = 2 ^ 5:     P3 = P1 Or P2
+
+    Q0 = 0:         Q1 = Y1
+    
+    Z0 = 0:         Z1 = 2 ^ 0:     Z2 = 2 ^ 1:     Z3 = Z1 Or Z2
+    Z4 = 2 ^ 2:     Z5 = Z4 Or Z1:  Z6 = Z4 Or Z2:  Z7 = Z4 Or Z3
 End Enum
 
-Private Deferred() As oz80Deferred
-Private DeferredCount As Long
+'A look-up table to convert a token for a register into the bit mask for it
+Private TokenRegister([_TOKEN_REGS_BEGIN] To [_TOKEN_REGS_END]) As Long
+
+'Look-up tables for converting certain z80 parameters into opcode-components
+Private OpcodeP_RegisterPair([_TOKEN_REGS_BEGIN] To [_TOKEN_REGS_END]) As Long
+Private OpcodeY_Condition([_TOKEN_REGS_BEGIN] To [_TOKEN_REGS_END]) As Long
+Private OpcodeY_RST(0 To &H38&) As Long
+Private OpcodeY_Bit(0 To 7) As Long
+'Sure this is a waste of memory, but it is fast as we don't have to convert _
+ bit-powers to linear numbers for many instructions being assembled
+Private OpcodeY_Register([_PARAM_REGS_BEGIN] To [_PARAM_REGS_END]) As Long
+Private OpcodeZ_Register([_PARAM_REGS_BEGIN] To [_PARAM_REGS_END]) As Long
 
 '---------------------------------------------------------------------------------------
 'ROM Layout:
@@ -1160,16 +1141,21 @@ Private DeferredCount As Long
  placed into the output ROM file
 
 Private Type oz80Chunk
+    FullName As String                  'Fully-qualified Label name
     LabelName As String                 'Quick-access to the full Label name
+    SectionName As String               'Quick-access to the Chunk's assigned Section
+    SectionID As Long                   'Index number to `Sections` array
+    
     Data() As Byte                      'The binary content of the Chunk
     Buffer As Long                      'Buffer size for the data (power of 2)
     Size As Long                        'Length of the actual data in bytes
-    Section As Long
+    
     Address As Long
     TableIndex As Long                  'Current `INDEX` number in the Chunk
-    LogASM As bluLog                    'Disassembly log
     'TODO: Replace this with something much, much faster
     Properties As Scripting.Dictionary
+    
+    LogASM As bluLog                    'Disassembly log
 End Type
 'We'll erase a Chunk by setting it to this empty instance
 Private EmptyChunk As oz80Chunk
@@ -1213,6 +1199,32 @@ Private LayoutCount As Long
 Private ROM() As Byte                   'The ROM's binary contents
 Private ROMSize As Long                 'The ROM file size, e.g. 256 KB
 Private ROMUsed As Long                 'Where the current end of the data is
+
+'---------------------------------------------------------------------------------------
+'Deferred Expressions:
+'---------------------------------------------------------------------------------------
+'Certain Values cannot be known until the size of all Chunks has been determined first. _
+ When such a Value is encountered, the Expression is 'deferred' until after ROM Layout
+
+Private Type oz80Deferred
+    File As Long                        'File index number
+    TokenIndex As Long                  'Token index number, within said File
+    
+    ChunkID As Long                     'Which Chunk to write the Value to
+    BinaryOffset As Long                'Which starting byte within the Chunk
+    
+    Kind As OZ80_DEFERRED               'Which type of data to output
+    From As Long                        'The address to calculate relative from
+End Type
+
+Private Enum OZ80_DEFERRED
+    ASM_VAL8                            'An 8-bit value
+    ASM_JR                              'A relative jump (8-bits)
+    ASM_JP                              'An absolute jump (16-bits)
+End Enum
+
+Private Deferred() As oz80Deferred
+Private DeferredCount As Long
 
 '---------------------------------------------------------------------------------------
 'Logging:
@@ -2026,16 +2038,16 @@ Public Function Assemble( _
     Call Reset
     
     '-----------------------------------------------------------------------------------
-    'Phase 1: First Pass & Assemble _
+    'Phase 1: Parse & Assemble _
      -----------------------------------------------------------------------------------
     Call RaiseMessage(OZ80_LOG_ACTION, LOG_PHASE1)
     
     'Start with parsing the given file; the assembler does not work with the original _
      text directly. If there was a problem parsing the file, an error message will _
      already have been raised by an event, we only need to exit
-    
-    'Now walk the File that's been created, assembling it as we go. _
-     If an `INCLUDE` is occurred, it will be tokenised and assembled there and then
+     
+    'Source code is first parsed into tokens and then executed, once an `INCLUDE` _
+     statement occurs, the next file is parsed and executed
     If FileAssemble(FilePath) Then GoTo Finish
     
     '-----------------------------------------------------------------------------------
@@ -2051,6 +2063,8 @@ Public Function Assemble( _
     'Phase 3: Calculate Deferred Expressions _
      -----------------------------------------------------------------------------------
     Call RaiseMessage(OZ80_LOG_ACTION, LOG_PHASE3)
+    
+    
     
     Call RaiseMessage(OZ80_LOG_INFO, LOG_LINEDOUBLE)
     Dim Key As Variant
@@ -2075,13 +2089,10 @@ Public Function Assemble( _
         '(this will cache the Token data)
         Call NextToken
         
-        Dim SectionName As String
-        If Chunks(.ChunkID).Section <> -1 _
-            Then Let SectionName = Sections(Chunks(.ChunkID).Section).SectionName _
-            Else Let SectionName = vbNullString
-        
         Dim Value As Double
-        If ParseExpression(Value, Chunks(.ChunkID).LabelName, SectionName) Then
+        If ParseExpression(Value, _
+            Chunks(.ChunkID).LabelName, Chunks(.ChunkID).SectionName _
+        ) Then
             'TODO: Unexpected; considering the Expression will already have _
                    been walked when it was deferred!
             Stop
@@ -3148,7 +3159,8 @@ TokenWord:
     '-----------------------------------------------------------------------------------
 NextWord:
     With Files(File)
-        'Add the information gleaned to the current token and move to the next empty slot
+        'Add the information gleaned to the current token _
+         and move to the next empty slot
         With .Tokens(TokenIndex)
             Let .Kind = Token
             Let .Line = TokenLine
@@ -3947,56 +3959,56 @@ Continue:
         Else GoTo Continue
 End Sub
 
-'ScopeType_Import
-'=======================================================================================
-'=======================================================================================
-Private Sub ScopeType_Import( _
-    ByRef DstType As OZ80Type, _
-    ByRef SrcType As OZ80Type, _
-    ByRef BaseOffset As Long _
-)
-    Dim CopyNodeIndex As Long
-    Let CopyNodeIndex = 1
-    
-    With DstType
-    Do
-        With SrcType.Nodes(CopyNodeIndex)
-            Let LogMsg.Text = "     |      |       |                                                    "
-            Call LogMsg.Overwrite(0, HexStr16(BaseOffset \ 8))
-            Call LogMsg.Overwrite(22, .Name)
-            Call LogMsg.Overwrite(7, TokenNames(.Unit))
-            
-            'Copy the Property across
-            Let DstType.Nodes(DstType.Last).Offset = BaseOffset
-            Let DstType.Nodes(DstType.Last).Name = DstType.Name & .Name
-            Let DstType.Nodes(DstType.Last).Size = .Size
-            Let BaseOffset = BaseOffset + .Size
-            Let CopyNodeIndex = .After
-            
-            Call RaiseMessage(OZ80_LOG_INFO, LogMsg.Text)
-        End With
-        
-        'Add the Type Property to the global value database
-'        Call Values.Add(.Name & .Nodes(.Last).Name, .Nodes(.Last).Offset \ 8)
-        
-        If CopyNodeIndex = 0 Then Exit Do
-        
-        'Create the next node
-        Let .NodeCount = .NodeCount + 1
-        ReDim Preserve .Nodes(1 To .NodeCount) As OZ80Node
-        
-        'This new node follows the previous
-        If .Last <> 0 Then
-            'Link the two nodes together,
-            Let .Nodes(.NodeCount).Before = .Last
-            Let .Nodes(.Last).After = .NodeCount
-        End If
-        
-        'This new node is now the latest
-        Let .Last = .NodeCount
-    Loop
-    End With
-End Sub
+''ScopeType_Import
+''=======================================================================================
+''=======================================================================================
+'Private Sub ScopeType_Import( _
+'    ByRef DstType As OZ80Type, _
+'    ByRef SrcType As OZ80Type, _
+'    ByRef BaseOffset As Long _
+')
+'    Dim CopyNodeIndex As Long
+'    Let CopyNodeIndex = 1
+'
+'    With DstType
+'    Do
+'        With SrcType.Nodes(CopyNodeIndex)
+'            Let LogMsg.Text = "     |      |       |                                                    "
+'            Call LogMsg.Overwrite(0, HexStr16(BaseOffset \ 8))
+'            Call LogMsg.Overwrite(22, .Name)
+'            Call LogMsg.Overwrite(7, TokenNames(.Unit))
+'
+'            'Copy the Property across
+'            Let DstType.Nodes(DstType.Last).Offset = BaseOffset
+'            Let DstType.Nodes(DstType.Last).Name = DstType.Name & .Name
+'            Let DstType.Nodes(DstType.Last).Size = .Size
+'            Let BaseOffset = BaseOffset + .Size
+'            Let CopyNodeIndex = .After
+'
+'            Call RaiseMessage(OZ80_LOG_INFO, LogMsg.Text)
+'        End With
+'
+'        'Add the Type Property to the global value database
+''        Call Values.Add(.Name & .Nodes(.Last).Name, .Nodes(.Last).Offset \ 8)
+'
+'        If CopyNodeIndex = 0 Then Exit Do
+'
+'        'Create the next node
+'        Let .NodeCount = .NodeCount + 1
+'        ReDim Preserve .Nodes(1 To .NodeCount) As OZ80Node
+'
+'        'This new node follows the previous
+'        If .Last <> 0 Then
+'            'Link the two nodes together,
+'            Let .Nodes(.NodeCount).Before = .Last
+'            Let .Nodes(.Last).After = .NodeCount
+'        End If
+'
+'        'This new node is now the latest
+'        Let .Last = .NodeCount
+'    Loop
+'    End With
+'End Sub
 
 'ProcessInclude : Process an Include statement
 '=======================================================================================
@@ -7197,6 +7209,16 @@ GetNumber:
     '-----------------------------------------------------------------------------------
     Else
         Debug.Print TokenNames(TokenKind)
+        
+        'If there's a Z80 register in an Value, it's probably because the user has used _
+         parentheses for a Z80 memory reference instead of square brackets
+        If TokenIsRegister(TokenKind) = True Then
+            Call RaiseError(OZ80_ERROR_INVALID, _
+                "Z80 registers are not valid within expressions. Remeber that Z80 " & _
+                "memory references use square brackets, not parentheses." _
+            ): GoTo ErrOut
+        End If
+        
         Stop
     End If
     
@@ -7216,39 +7238,46 @@ End Function
 '=======================================================================================
 Private Sub Chunk_Begin( _
              ByRef LabelName As String, _
-    Optional ByRef SectionIndex As Long = -1, _
+    Optional ByRef SectionID As Long = -1, _
     Optional ByRef Address As Double = -1 _
 )
+    'Get the Section name if a SectionID is provided
     Dim SectionName As String
-    If SectionIndex <> -1 Then Let SectionName = Sections(SectionIndex).SectionName
+    If SectionID <> -1 Then Let SectionName = Sections(SectionID).SectionName
     
     'Register the Label name in the database
-    Call AddUpdateLabel(SectionName & LabelName, Address)
+    Dim FullName As String
+    Let FullName = SectionName & LabelName
+    Call AddUpdateLabel(FullName, Address)
     
     Let ChunkCount = ChunkCount + 1
     ReDim Preserve Chunks(1 To ChunkCount) As oz80Chunk
     
     'Apply the details we have
     Let Chunk = ChunkCount
-    Let Chunks(Chunk).LabelName = LabelName
-    Let Chunks(Chunk).Address = CLng(Address)
-    Let Chunks(Chunk).Section = SectionIndex
-    
-    If SectionIndex >= 0 Then
-        Dim SectionChunks As Long
-        Let SectionChunks = Sections(SectionIndex).ChunkCount + 1
-        ReDim Preserve Sections(SectionIndex).Chunks(1 To SectionChunks) As Long
-        Let Sections(SectionIndex).Chunks(SectionChunks) = ChunkCount
-        Let Sections(SectionIndex).ChunkCount = SectionChunks
-    End If
-    
-    'Create a buffer of 1K to hold the assembled data
-    Let Chunks(Chunk).Buffer = 1024
-    ReDim Chunks(Chunk).Data(1 To 1024) As Byte
-    'As we assemble, we'll also provide a disassembly listing
-    Set Chunks(Chunk).LogASM = New bluLog
-    
-    Set Chunks(Chunk).Properties = New Scripting.Dictionary
+    With Chunks(Chunk)
+        Let .FullName = FullName
+        Let .LabelName = LabelName
+        Let .SectionName = SectionName
+        Let .SectionID = SectionID
+        Let .Address = CLng(Address)
+        
+        If SectionID >= 0 Then
+            Dim SectionChunks As Long
+            Let SectionChunks = Sections(SectionID).ChunkCount + 1
+            ReDim Preserve Sections(SectionID).Chunks(1 To SectionChunks) As Long
+            Let Sections(SectionID).Chunks(SectionChunks) = ChunkCount
+            Let Sections(SectionID).ChunkCount = SectionChunks
+        End If
+        
+        'Create a buffer of 1K to hold the assembled data
+        Let .Buffer = 1024
+        ReDim .Data(1 To 1024) As Byte
+        'As we assemble, we'll also provide a disassembly listing
+        Set .LogASM = New bluLog
+        
+        Set .Properties = New Scripting.Dictionary
+    End With
 End Sub
 
 'AddUpdateLabel: Blindly adds to or updates the Label database
@@ -7572,59 +7601,57 @@ AddLink:
     End If
     
     '-----------------------------------------------------------------------------------
+    With Chunks(ChunkRef)
     
-    Dim SectionName As String
-    If Chunks(ChunkRef).Section <> -1 Then
-        Let SectionName = Sections(Chunks(ChunkRef).Section).SectionName
-    End If
-    
-    'Set the ROM address on the Chunk for use in the second pass
-    Let Chunks(ChunkRef).Address = ChunkAddr
-    'Update the Label database with the new address
-    Call AddUpdateLabel(SectionName & Chunks(ChunkRef).LabelName, CDbl(ChunkAddr))
-    
-    'TODO: Calculate Bank and apply to Chunk?
-    
-    If ChunkEnd > ROMUsed Then Let ROMUsed = ChunkEnd
-    'Is this going to fit in the ROM?
-    If ROMUsed >= ROMSize Then
-        'Keep doubling the ROM size until the contents fits
-        Do While ROMUsed >= ROMSize: Let ROMSize = ROMSize * 2: Loop
-        'TODO: Check for ROM too big (hard limit -- 32 MB -- and user limit)
-        ReDim Preserve ROM(0 To ROMSize - 1) As Byte
-    End If
-    
-    'Copy the Chunk bytes into the ROM
-    Call api_RtlMoveMemory( _
-        DestinationPointer:=VarPtr(ROM(ChunkAddr)), _
-             SourcePointer:=VarPtr(Chunks(ChunkRef).Data(1)), _
-                    Length:=ChunkSize _
-    )
+        'Set the ROM address on the Chunk
+        Let .Address = ChunkAddr
+        'Update the Label database with the new address
+        Call AddUpdateLabel(.FullName, CDbl(ChunkAddr))
         
-    Call RaiseMessage(OZ80_LOG_INFO, _
-        "${$}:{$} | {$} | {$}", _
-        HexStr8((ChunkAddr And &HFF0000) \ &H10000), _
-        HexStr16(ChunkAddr And &HFFFF&), _
-        Right$("      " & Format$(ChunkSize, "#,0"), 6), _
-        SectionName & Chunks(ChunkRef).LabelName _
-    )
-    
-    'Walk through the local properties in the Chunk and update their addresses too
-    'TODO: Replace this Dictionary with something much faster
-    Dim Key As Variant
-    For Each Key In Chunks(ChunkRef).Properties
-        Call AddUpdateLabel( _
-            SectionName & Chunks(ChunkRef).LabelName & Key, _
-            Chunks(ChunkRef).Address + Chunks(ChunkRef).Properties(Key) _
+        'TODO: Calculate Bank and apply to Chunk?
+        
+        If ChunkEnd > ROMUsed Then Let ROMUsed = ChunkEnd
+        'Is this going to fit in the ROM?
+        If ROMUsed >= ROMSize Then
+            'Keep doubling the ROM size until the contents fits
+            Do While ROMUsed >= ROMSize: Let ROMSize = ROMSize * 2: Loop
+            'TODO: Check for ROM too big (hard limit -- 32 MB -- and user limit)
+            ReDim Preserve ROM(0 To ROMSize - 1) As Byte
+        End If
+        
+        'Copy the Chunk bytes into the ROM
+        Call api_RtlMoveMemory( _
+            DestinationPointer:=VarPtr(ROM(ChunkAddr)), _
+                 SourcePointer:=VarPtr(.Data(1)), _
+                        Length:=ChunkSize _
         )
+        
         Call RaiseMessage(OZ80_LOG_INFO, _
             "${$}:{$} | {$} | {$}", _
-            HexStr8((Chunks(ChunkRef).Address + Chunks(ChunkRef).Properties(Key) And &HFF0000) \ &H10000), _
-            HexStr16(Chunks(ChunkRef).Address + Chunks(ChunkRef).Properties(Key) And &HFFFF&), _
-            "     .", _
-            SectionName & Chunks(ChunkRef).LabelName & Key _
+            HexStr8((ChunkAddr And &HFF0000) \ &H10000), _
+            HexStr16(ChunkAddr And &HFFFF&), _
+            Right$("      " & Format$(ChunkSize, "#,0"), 6), _
+            .FullName _
         )
-    Next
+        
+        'Walk through the local properties in the Chunk and update their addresses too
+        'TODO: Replace this Dictionary with something much faster
+        Dim Key As Variant
+        For Each Key In .Properties
+            Call AddUpdateLabel( _
+                .FullName & Key, _
+                .Address + .Properties(Key) _
+            )
+            Call RaiseMessage(OZ80_LOG_INFO, _
+                "${$}:{$} | {$} | {$}", _
+                HexStr8((.Address + .Properties(Key) And &HFF0000) \ &H10000), _
+                HexStr16(.Address + .Properties(Key) And &HFFFF&), _
+                "     .", _
+                .FullName & Key _
+            )
+        Next
+    
+    End With
     
 Finish:
     Let ROM_AddChunk = My_Error
@@ -7672,6 +7699,11 @@ Private Function GetChunk( _
 End Function
 
 'DeferExpression
+'=======================================================================================
+'Kind           | Where the deferred Expression needs to be applied, ie. ROM / CONST ...
+'File           | Which file number the Expression is located within
+'TokenIndex     | Which Token within the file the Expression begins
+'BinaryOffset   | For Z80 use, where in the ROM to write the calculated Value
 '=======================================================================================
 Private Sub DeferExpression( _
     ByRef Kind As OZ80_DEFERRED, _
@@ -7750,14 +7782,14 @@ Private Function RaiseError( _
     'Get the generic title for an error number
     Dim Title As String
     Select Case Number
-        Case OZ80_ERROR_DUPLICATE: Let Title = ERR_TITLE_DUPLICATE
-        Case OZ80_ERROR_EXPECTED: Let Title = ERR_TITLE_EXPECTED
-        Case OZ80_ERROR_FILE_END: Let Title = ERR_TITLE_FILE_END
-        Case OZ80_ERROR_FILE_NOTFOUND: Let Title = ERR_TITLE_FILE_NOTFOUND
-        Case OZ80_ERROR_FILE_READ: Let Title = ERR_TITLE_FILE_READ
-        Case OZ80_ERROR_INDEFINITE: Let Title = ERR_TITLE_INDEFINITE
-        Case OZ80_ERROR_OVERFLOW: Let Title = ERR_TITLE_OVERFLOW
-        Case OZ80_ERROR_UNDEFINED: Let Title = ERR_TITLE_UNDEFINED
+        Case OZ80_ERROR_DUPLICATE:      Let Title = ERR_TITLE_DUPLICATE
+        Case OZ80_ERROR_EXPECTED:       Let Title = ERR_TITLE_EXPECTED
+        Case OZ80_ERROR_FILE_END:       Let Title = ERR_TITLE_FILE_END
+        Case OZ80_ERROR_FILE_NOTFOUND:  Let Title = ERR_TITLE_FILE_NOTFOUND
+        Case OZ80_ERROR_FILE_READ:      Let Title = ERR_TITLE_FILE_READ
+        Case OZ80_ERROR_INDEFINITE:     Let Title = ERR_TITLE_INDEFINITE
+        Case OZ80_ERROR_OVERFLOW:       Let Title = ERR_TITLE_OVERFLOW
+        Case OZ80_ERROR_UNDEFINED:      Let Title = ERR_TITLE_UNDEFINED
     End Select
     
     'If no file has yet been processed, we won't be returning a file name

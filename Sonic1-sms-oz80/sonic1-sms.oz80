@@ -119,6 +119,5 @@ INCLUDE "mobs.oz80"
 `======================================================================================
 `music code and song data
 
-`INCLUDE "sound\driver.oz80"
-`INCLUDE "SOUND\music.asm"
+INCLUDE "sound\sound.oz80"
 

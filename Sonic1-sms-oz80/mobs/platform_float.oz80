@@ -1,10 +1,20 @@
-`platform - float up (Labyrinth)
+;; Sonic 1 Master System Disassembly <github.com/Kroc/Sonic1-SMS-OZ80>
+   for MaSS1VE: The Master System Sonic 1 Visual Editor <github.com/Kroc/MaSS1VE>
+   using OZ80MANDIAS, a high-level Z80 assembler <github.com/Kroc/OZ80MANDIAS>
+   -------------------------------------------------------------------------------------
+   created by Kroc Camen <kroc@camendesign.com> and given to the Public Domain;
+   you may do anything you like with this code as long as you respect the TradeMarks
+   and (any) Copyrights within. absolutely no warranty implied
+   =====================================================================================
+;;
 
-PROC    :mob_platform_float                     SECTION ::mobs                  `$90C0
-        `==============================================================================
-PARAMS  IX;mob          HELP ""Address of the current mob being processed
+;platform - float up (Labyrinth)
+
+PROC    :mob_platform_float                     SECTION ::mobs                  ;$90C0
+        ;==============================================================================
+PARAMS  IX`mob          HELP ""Address of the current mob being processed
 {
-        set     5,[ix+#mob.flags]               `mob does not collide with the floor
+        set     5,[ix+#mob.flags]               ;mob does not collide with the floor
         ld      [ix+#mob.width], 30
         ld      [ix+#mob.height],28
         ld      [ix+#mob.spriteLayout+0],LO ._91de
@@ -101,16 +111,16 @@ PARAMS  IX;mob          HELP ""Address of the current mob being processed
         ld      [ix+#mob.Y+0],l
         ld      [ix+#mob.Y+1],h
         
-        xor     a;zero                          `set A to 0
-        ld      [ix+#mob.Xsubpixel],a;zero
-        ld      [ix+#mob.Ysubpixel],a;zero
-        ld      [ix+#mob.Yspeed+0],a;zero
-        ld      [ix+#mob.Yspeed+1],a;zero
-        ld      [ix+#mob.Ydirection],a;zero
+        xor     a`zero                          ;set A to 0
+        ld      [ix+#mob.Xsubpixel],a`zero
+        ld      [ix+#mob.Ysubpixel],a`zero
+        ld      [ix+#mob.Yspeed+0],a`zero
+        ld      [ix+#mob.Yspeed+1],a`zero
+        ld      [ix+#mob.Ydirection],a`zero
         res     0,[ix+#mob.flags]
         ret
         
-        `------------------------------------------------------------------------------
+        ;------------------------------------------------------------------------------
         
 ._5     ld      hl,$0e02
         ld      [$.TEMP6],hl
@@ -130,9 +140,9 @@ PARAMS  IX;mob          HELP ""Address of the current mob being processed
         call    :_LABEL_7CC1_12
         ret
         
-        `------------------------------------------------------------------------------
+        ;------------------------------------------------------------------------------
 
-        `sprite layout
+        ;sprite layout
 ._91de  BYTE $FE, $FF, $FF, $FF, $FF, $FF
         BYTE $16, $18, $1A, $1C, $FF, $FF
         BYTE $FF

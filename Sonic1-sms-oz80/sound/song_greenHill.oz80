@@ -1,13 +1,23 @@
-TABLE   :S1_Music_GreenHill                     SECTION ::sound                 `$C7D0
-        `===============================================================================
-{
-    WORD    .channel1 - :                       `offset to channel 1
-    WORD    .channel2 - :                       `offset to channel 2
-    WORD    .channel3 - :                       `offset to channel 3
-    WORD    .channel4 - :                       `offset to channel 4
-    WORD    $0000							    `unused
+;; Sonic 1 Master System Disassembly <github.com/Kroc/Sonic1-SMS-OZ80>
+   for MaSS1VE: The Master System Sonic 1 Visual Editor <github.com/Kroc/MaSS1VE>
+   using OZ80MANDIAS, a high-level Z80 assembler <github.com/Kroc/OZ80MANDIAS>
+   -------------------------------------------------------------------------------------
+   created by Kroc Camen <kroc@camendesign.com> and given to the Public Domain;
+   you may do anything you like with this code as long as you respect the TradeMarks
+   and (any) Copyrights within. absolutely no warranty implied
+   =====================================================================================
+;;
 
-.channel1:  `---------------------------------------------------------------------------
+TABLE   :S1_Music_GreenHill                     SECTION ::sound                 ;$C7D0
+        ;===============================================================================
+{
+    WORD    .channel1 - :                       ;offset to channel 1
+    WORD    .channel2 - :                       ;offset to channel 2
+    WORD    .channel3 - :                       ;offset to channel 3
+    WORD    .channel4 - :                       ;offset to channel 4
+    WORD    $0000							    ;unused
+
+.channel1:  ;---------------------------------------------------------------------------
     BYTE    $80 $01 $00 $01 $00
     BYTE    $82 $FF $14 $96 $00 $32 $0A
     BYTE    $85 $FF
@@ -40,7 +50,7 @@ TABLE   :S1_Music_GreenHill                     SECTION ::sound                 
     BYTE    $27 $00 $24 $00 $24 $00 $20 $00
     BYTE    $FF
 
-.channel2   `---------------------------------------------------------------------------
+.channel2   ;---------------------------------------------------------------------------
     BYTE    $82 $FF $1E $96 $00 $32 $0A
     BYTE    $81 $0D
     BYTE    $8A $0C
@@ -88,7 +98,7 @@ TABLE   :S1_Music_GreenHill                     SECTION ::sound                 
     BYTE    $07 $00 $04 $00 $04 $00 $05 $00 $05 $00 $06 $00 $07 $00
     BYTE    $FF
 
-.channel3   `---------------------------------------------------------------------------
+.channel3   ;---------------------------------------------------------------------------
     BYTE    $82 $FF $1E $82 $00 $32 $0A
     BYTE    $81 $09
     BYTE    $8A $06
@@ -154,7 +164,7 @@ TABLE   :S1_Music_GreenHill                     SECTION ::sound                 
     BYTE    $81 $09 $24 $00
     BYTE    $81 $05 $27 $00
     BYTE    $87 $03
-    WORD    .f - :                              `$A2 $03
+    WORD    .f - :                              ;$A2 $03
     BYTE    $81 $09 $30 $00
     BYTE    $81 $05 $24 $00
     BYTE    $81 $09 $29 $00
@@ -210,7 +220,7 @@ TABLE   :S1_Music_GreenHill                     SECTION ::sound                 
     BYTE    $81 $09 $23 $00
     BYTE    $81 $05 $30 $00
     BYTE    $87 $04
-    WORD    .i - :                              `$B2 $04
+    WORD    .i - :                              ;$B2 $04
     BYTE    $86
 .j  BYTE    $81 $09 $30 $00
     BYTE    $81 $05 $30 $00
@@ -221,10 +231,10 @@ TABLE   :S1_Music_GreenHill                     SECTION ::sound                 
     BYTE    $81 $09 $29 $00
     BYTE    $81 $05 $34 $00
     BYTE    $87 $04
-    WORD    .j - :                              `$D7 $04
+    WORD    .j - :                              ;$D7 $04
     BYTE    $FF
 
-.channel4   `---------------------------------------------------------------------------
+.channel4   ;---------------------------------------------------------------------------
     BYTE    $81 $09
     BYTE    $8A $06
     BYTE    $8A $0C
@@ -238,7 +248,7 @@ TABLE   :S1_Music_GreenHill                     SECTION ::sound                 
     BYTE    $81 $0C $71 $00
     BYTE    $81 $09 $70 $00
     BYTE    $87 $0F
-    WORD    .k - :                              `$1C $05
+    WORD    .k - :                              ;$1C $05
     BYTE    $70 $00
     BYTE    $81 $0C $71 $00 $71 $00 $71 $00
     BYTE    $FF

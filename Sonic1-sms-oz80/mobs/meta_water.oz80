@@ -1,8 +1,18 @@
-PROC    :mob_meta_water                         SECTION ::mobs                  `$8D48
-        `==============================================================================
-PARAMS  IX;mob          HELP ""Address of the current mob being processed
+;; Sonic 1 Master System Disassembly <github.com/Kroc/Sonic1-SMS-OZ80>
+   for MaSS1VE: The Master System Sonic 1 Visual Editor <github.com/Kroc/MaSS1VE>
+   using OZ80MANDIAS, a high-level Z80 assembler <github.com/Kroc/OZ80MANDIAS>
+   -------------------------------------------------------------------------------------
+   created by Kroc Camen <kroc@camendesign.com> and given to the Public Domain;
+   you may do anything you like with this code as long as you respect the TradeMarks
+   and (any) Copyrights within. absolutely no warranty implied
+   =====================================================================================
+;;
+
+PROC    :mob_meta_water                         SECTION ::mobs                  ;$8D48
+        ;==============================================================================
+PARAMS  IX`mob          HELP ""Address of the current mob being processed
 {
-        set     5,[ix+#mob.flags]               `mob does not collide with the floor
+        set     5,[ix+#mob.flags]               ;mob does not collide with the floor
         ld      a,[ix+#mob.unknown11]
         ld      e,a
         ld      d,$00
@@ -43,7 +53,7 @@ PARAMS  IX;mob          HELP ""Address of the current mob being processed
         sbc     hl,de
         jr      nc,._3
         ld      hl,$00b4
-        xor     a;zero
+        xor     a`zero
         sbc     hl,de
         jr      c,._3
         ld      a,e
@@ -104,7 +114,7 @@ PARAMS  IX;mob          HELP ""Address of the current mob being processed
         ld      [iy+#vars.spriteUpdateCount],a
         ret
         
-        `------------------------------------------------------------------------------
+        ;------------------------------------------------------------------------------
 
 ._8e16  BYTE $00 $40 $80 $C0 $10 $50 $90 $D0 $20 $60 $A0 $E0 $30 $70 $B0 $F0
         BYTE $08 $48 $88 $C8 $18 $58 $98 $D8 $28 $68 $A8 $E8 $38 $78 $B8 $F8

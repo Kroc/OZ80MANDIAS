@@ -1,19 +1,29 @@
-`badnick - chopper
+;; Sonic 1 Master System Disassembly <github.com/Kroc/Sonic1-SMS-OZ80>
+   for MaSS1VE: The Master System Sonic 1 Visual Editor <github.com/Kroc/MaSS1VE>
+   using OZ80MANDIAS, a high-level Z80 assembler <github.com/Kroc/OZ80MANDIAS>
+   -------------------------------------------------------------------------------------
+   created by Kroc Camen <kroc@camendesign.com> and given to the Public Domain;
+   you may do anything you like with this code as long as you respect the TradeMarks
+   and (any) Copyrights within. absolutely no warranty implied
+   =====================================================================================
+;;
 
-PROC    :mob_badnick_chopper                    SECTION ::mobs                  `$7CF6
-        `==============================================================================
-PARAMS  IX;mob          HELP ""Address of the current mob being processed
+;badnick - chopper
+
+PROC    :mob_badnick_chopper                    SECTION ::mobs                  ;$7CF6
+        ;==============================================================================
+PARAMS  IX`mob          HELP ""Address of the current mob being processed
 {
-        set     5,[ix+#mob.flags]               `mob does not collide with the floor
+        set     5,[ix+#mob.flags]               ;mob does not collide with the floor
         ld      [ix+#mob.width],$08
         ld      [ix+#mob.height],$0c
         ld      a,[ix+#mob.unknown14]
         and     a
         jr      z,._1
         dec     [ix+#mob.unknown14]
-        xor     a;zero
-        ld      [ix+#mob.spriteLayout+0],a;zero
-        ld      [ix+#mob.spriteLayout+1],a;zero
+        xor     a`zero
+        ld      [ix+#mob.spriteLayout+0],a`zero
+        ld      [ix+#mob.spriteLayout+1],a`zero
         ret
         
 ._1     bit     0,[ix+#mob.flags]
@@ -93,7 +103,7 @@ PARAMS  IX;mob          HELP ""Address of the current mob being processed
 
 ._7ddc  BYTE $00, $04, $01, $04, $FF
 
-        `this looks like sprite layout data, but isn't quite normal
+        ;this looks like sprite layout data, but isn't quite normal
 ._7de1  BYTE $60, $62, $FF, $FF, $FF, $FF
         BYTE $FF, $FF, $FF, $FF, $FF, $FF
         BYTE $FF, $FF, $FF, $FF, $FF, $FF

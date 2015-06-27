@@ -1,13 +1,23 @@
-`wooden platform - moving (Green Hill)
+;; Sonic 1 Master System Disassembly <github.com/Kroc/Sonic1-SMS-OZ80>
+   for MaSS1VE: The Master System Sonic 1 Visual Editor <github.com/Kroc/MaSS1VE>
+   using OZ80MANDIAS, a high-level Z80 assembler <github.com/Kroc/OZ80MANDIAS>
+   -------------------------------------------------------------------------------------
+   created by Kroc Camen <kroc@camendesign.com> and given to the Public Domain;
+   you may do anything you like with this code as long as you respect the TradeMarks
+   and (any) Copyrights within. absolutely no warranty implied
+   =====================================================================================
+;;
 
-PROC    :mob_platform_leftRight                 SECTION ::mobs                  `$6D65
-        `==============================================================================
-PARAMS  IX;mob          HELP ""Address of the current mob being processed
+;wooden platform - moving (Green Hill)
+
+PROC    :mob_platform_leftRight                 SECTION ::mobs                  ;$6D65
+        ;==============================================================================
+PARAMS  IX`mob          HELP ""Address of the current mob being processed
 {
-        set     5,[ix+#mob.flags]               `mob does not collide with the floor
+        set     5,[ix+#mob.flags]               ;mob does not collide with the floor
         
         ld      a,[$.CURRENT_LEVEL]
-        cp      $07                             `Jungle act 2?
+        cp      $07                             ;Jungle act 2?
         jr      z,._1
         
         ld      hl,$0020
@@ -42,7 +52,7 @@ PARAMS  IX;mob          HELP ""Address of the current mob being processed
         call    :_LABEL_7CC1_12
         ld      c,$01
         
-        `move right 1px
+        ;move right 1px
 ._2     ld      l,[ix+$12]
         ld      h,[ix+#mob.unknown13]
         inc     hl
@@ -50,19 +60,19 @@ PARAMS  IX;mob          HELP ""Address of the current mob being processed
         ld      [ix+#mob.unknown13],h
         
         ld      de,$00A0
-        xor     a;zero                          `set A to 0
+        xor     a`zero                          ;set A to 0
         sbc     hl,de
         jr      c,._3
         
-        ld      [ix+$12],a;zero
-        ld      [ix+#mob.unknown13],a;zero
+        ld      [ix+$12],a`zero
+        ld      [ix+#mob.unknown13],a`zero
         inc     [ix+#mob.unknown14]
         
 ._3     ld      de,$0001
         bit     0,[ix+#mob.unknown14]
         jr      z,._4
         
-        `move left 1px?
+        ;move left 1px?
         ld      de,$FFFF
 ._4     ld      l,[ix+#mob.X+0]
         ld      h,[ix+#mob.X+1]

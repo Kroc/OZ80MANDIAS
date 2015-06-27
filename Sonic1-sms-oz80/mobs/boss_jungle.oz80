@@ -1,8 +1,18 @@
-PROC    :mob_boss_jungle                        SECTION ::mobs                  `$8053
-        `==============================================================================
-PARAMS  IX;mob          HELP ""Address of the current mob being processed
+;; Sonic 1 Master System Disassembly <github.com/Kroc/Sonic1-SMS-OZ80>
+   for MaSS1VE: The Master System Sonic 1 Visual Editor <github.com/Kroc/MaSS1VE>
+   using OZ80MANDIAS, a high-level Z80 assembler <github.com/Kroc/OZ80MANDIAS>
+   -------------------------------------------------------------------------------------
+   created by Kroc Camen <kroc@camendesign.com> and given to the Public Domain;
+   you may do anything you like with this code as long as you respect the TradeMarks
+   and (any) Copyrights within. absolutely no warranty implied
+   =====================================================================================
+;;
+
+PROC    :mob_boss_jungle                        SECTION ::mobs                  ;$8053
+        ;==============================================================================
+PARAMS  IX`mob          HELP ""Address of the current mob being processed
 {
-        set     5,[ix+#mob.flags]               `mob does not collide with the floor
+        set     5,[ix+#mob.flags]               ;mob does not collide with the floor
         ld      [ix+#mob.width], 32
         ld      [ix+#mob.height],28
         bit     0,[ix+#mob.flags]
@@ -15,7 +25,7 @@ PARAMS  IX;mob          HELP ""Address of the current mob being processed
         ld      a,[$.SONIC.flags]
         rlca    
         ret     nc
-        `boss sprite set
+        ;boss sprite set
         ld      hl,$aeb1
         ld      de,$2000
         ld      a,9
@@ -25,14 +35,14 @@ PARAMS  IX;mob          HELP ""Address of the current mob being processed
         ld      a,%00000010
         call    :loadPaletteOnInterrupt
         
-        ld      a,#index_music_boss1
+        ld      a,:S1_MusicPointers.boss1.index ;=$0B
         rst     :rst_playMusic
         
-        xor     a;zero
-        ld      [$.D2EC],a;zero
+        xor     a`zero
+        ld      [$.D2EC],a`zero
         
-        `there's a routine at `_7c8c` for setting the scroll positions that should
-         `have been used here?
+        ;there's a routine at `_7c8c` for setting the scroll positions that should
+         ;have been used here?
         ld      hl,[$.CAMERA_X]
         ld      [$.LEVEL_LEFT],hl
         ld      [$.LEVEL_RIGHT],hl
@@ -58,12 +68,12 @@ PARAMS  IX;mob          HELP ""Address of the current mob being processed
         ld      l,[ix+#mob.Y+0]
         ld      h,[ix+#mob.Y+1]
         ld      de,$0058
-        xor     a;zero
+        xor     a`zero
         sbc     hl,de
         ret     c
-        ld      [ix+#mob.Yspeed+0],a;zero
-        ld      [ix+#mob.Yspeed+1],a;zero
-        ld      [ix+#mob.Ydirection],a;zero
+        ld      [ix+#mob.Yspeed+0],a`zero
+        ld      [ix+#mob.Yspeed+1],a`zero
+        ld      [ix+#mob.Ydirection],a`zero
         set     0,[ix+#mob.unknown11]
 ._2     ld      a,[ix+$12]
         and     a
@@ -98,10 +108,10 @@ PARAMS  IX;mob          HELP ""Address of the current mob being processed
         ld      [ix+$12],$67
         jp      ._8
         
-._4     xor     a;zero
-        ld      [ix+#mob.Xspeed+0],a;zero
-        ld      [ix+#mob.Xspeed+1],a;zero
-        ld      [ix+#mob.Xdirection],a;zero
+._4     xor     a`zero
+        ld      [ix+#mob.Xspeed+0],a`zero
+        ld      [ix+#mob.Xspeed+1],a`zero
+        ld      [ix+#mob.Xdirection],a`zero
         ld      hl,$0001
         dec     [ix+$12]
         jr      z,._5
@@ -134,27 +144,27 @@ PARAMS  IX;mob          HELP ""Address of the current mob being processed
         push    ix
         push    hl
         pop     ix
-        ld      [ix+#mob.type],$2B              `unknown object
-        xor     a;zero                          `set A to 0
-        ld      [ix+#mob.Xsubpixel],a;zero
+        ld      [ix+#mob.type],$2B              ;unknown object
+        xor     a`zero                          ;set A to 0
+        ld      [ix+#mob.Xsubpixel],a`zero
         ld      hl,$000b
         add     hl,de
         ld      [ix+#mob.X+0],l
         ld      [ix+#mob.X+1],h
-        ld      [ix+#mob.Ysubpixel],a;zero
+        ld      [ix+#mob.Ysubpixel],a`zero
         ld      hl,$0030
         add     hl,bc
         ld      [ix+#mob.Y+0],l
         ld      [ix+#mob.Y+1],h
-        ld      [ix+#mob.Xspeed+0],a;zero
-        ld      [ix+#mob.Xspeed+1],a;zero
-        ld      [ix+#mob.Xdirection],a;zero
-        ld      [ix+#mob.Yspeed+0],a;zero
-        ld      [ix+#mob.Yspeed+1],a;zero
-        ld      [ix+#mob.Ydirection],a;zero
-        ld      [ix+#mob.unknown11],a;zero
-        ld      [ix+#mob.unknown16],a;zero
-        ld      [ix+#mob.unknown17],a;zero
+        ld      [ix+#mob.Xspeed+0],a`zero
+        ld      [ix+#mob.Xspeed+1],a`zero
+        ld      [ix+#mob.Xdirection],a`zero
+        ld      [ix+#mob.Yspeed+0],a`zero
+        ld      [ix+#mob.Yspeed+1],a`zero
+        ld      [ix+#mob.Ydirection],a`zero
+        ld      [ix+#mob.unknown11],a`zero
+        ld      [ix+#mob.unknown16],a`zero
+        ld      [ix+#mob.unknown17],a`zero
         call    :_LABEL_625_57
         and     $3f
         add     a,$64
@@ -166,7 +176,7 @@ PARAMS  IX;mob          HELP ""Address of the current mob being processed
         call    :_79fa
         ret
 
-        `sprite layout
+        ;sprite layout
 ._81f4  BYTE $20, $22, $24, $26, $28, $FF
         BYTE $40, $42, $44, $46, $48, $FF
         BYTE $60, $54, $56, $58, $68, $FF

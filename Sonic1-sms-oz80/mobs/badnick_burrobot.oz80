@@ -1,12 +1,22 @@
-`badnick - Burrobot (Labyrinth)
+;; Sonic 1 Master System Disassembly <github.com/Kroc/Sonic1-SMS-OZ80>
+   for MaSS1VE: The Master System Sonic 1 Visual Editor <github.com/Kroc/MaSS1VE>
+   using OZ80MANDIAS, a high-level Z80 assembler <github.com/Kroc/OZ80MANDIAS>
+   -------------------------------------------------------------------------------------
+   created by Kroc Camen <kroc@camendesign.com> and given to the Public Domain;
+   you may do anything you like with this code as long as you respect the TradeMarks
+   and (any) Copyrights within. absolutely no warranty implied
+   =====================================================================================
+;;
 
-PROC    :mob_badnick_burrobot                   SECTION ::mobs                  `$8F6D
-        `==============================================================================
-PARAMS  IX;mob          HELP ""Address of the current mob being processed
+;badnick - Burrobot (Labyrinth)
+
+PROC    :mob_badnick_burrobot                   SECTION ::mobs                  ;$8F6D
+        ;==============================================================================
+PARAMS  IX`mob          HELP ""Address of the current mob being processed
 {
         ld      [ix+#mob.width], 12
         ld      [ix+#mob.height],32
-        ld      hl,$0202                        `loads $.TEMP6 & $.TEMP7 with $02
+        ld      hl,$0202                        ;loads $.TEMP6 & $.TEMP7 with $02
         ld      [$.TEMP6],hl
         call    :detectCollisionWithSonic
         
@@ -86,13 +96,13 @@ PARAMS  IX;mob          HELP ""Address of the current mob being processed
         res     0,[ix+#mob.flags]
         ret
         
-        `------------------------------------------------------------------------------
+        ;------------------------------------------------------------------------------
 ._9045  BYTE $00, $04, $01, $04, $FF
 ._904a  BYTE $02, $04, $03, $04, $FF
 ._904f  BYTE $04, $04, $04, $04, $FF
 ._9054  BYTE $05, $04, $05, $04, $FF
 
-        `sprite layout
+        ;sprite layout
 ._9059  BYTE $44, $46, $FF, $FF, $FF, $FF
         BYTE $64, $66, $FF, $FF, $FF, $FF
         BYTE $FF, $FF, $FF, $FF, $FF, $FF

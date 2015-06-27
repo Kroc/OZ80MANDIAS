@@ -1,13 +1,23 @@
-TABLE   :S1_Music_Bridge                        SECTION ::sound                 `$D74A
-        `===============================================================================
+;; Sonic 1 Master System Disassembly <github.com/Kroc/Sonic1-SMS-OZ80>
+   for MaSS1VE: The Master System Sonic 1 Visual Editor <github.com/Kroc/MaSS1VE>
+   using OZ80MANDIAS, a high-level Z80 assembler <github.com/Kroc/OZ80MANDIAS>
+   -------------------------------------------------------------------------------------
+   created by Kroc Camen <kroc@camendesign.com> and given to the Public Domain;
+   you may do anything you like with this code as long as you respect the TradeMarks
+   and (any) Copyrights within. absolutely no warranty implied
+   =====================================================================================
+;;
+
+TABLE   :S1_Music_Bridge                        SECTION ::sound                 ;$D74A
+        ;===============================================================================
 {
-    WORD    .channel1 - :                       `$000A
-    WORD    .channel2 - :                       `$00FB
-    WORD    .channel3 - :                       `$01BC
-    WORD    .channel4 - :                       `$03E0
+    WORD    .channel1 - :                       ;$000A
+    WORD    .channel2 - :                       ;$00FB
+    WORD    .channel3 - :                       ;$01BC
+    WORD    .channel4 - :                       ;$03E0
     WORD    $0000
         
-.channel1   `---------------------------------------------------------------------------
+.channel1   ;---------------------------------------------------------------------------
     BYTE    $80 $01 $00 $01 $00
     BYTE    $85 $FF
     BYTE    $82 $FF $14 $A0 $00 $32 $01
@@ -39,7 +49,7 @@ TABLE   :S1_Music_Bridge                        SECTION ::sound                 
     BYTE    $81 $0C $25 $30 $8D $25 $30 $8D $25 $30 $8D $25 $30 $7F $00
     BYTE    $FF
         
-.channel2   `---------------------------------------------------------------------------
+.channel2   ;---------------------------------------------------------------------------
     BYTE    $82 $FF $1E $82 $00 $32 $01
     BYTE    $8A $0C
     BYTE    $81 $0D
@@ -56,21 +66,21 @@ TABLE   :S1_Music_Bridge                        SECTION ::sound                 
 .a  BYTE    $86
 .b  BYTE    $01 $00 $01 $00 $11 $00 $01 $00
     BYTE    $87 $02
-    WORD    .b - :                              `$89 $01
+    WORD    .b - :                              ;$89 $01
     BYTE    $86
 .c  BYTE    $03 $00 $03 $00 $13 $00 $03 $00
     BYTE    $87 $02
-    WORD    .c - :                              `$96 $01
+    WORD    .c - :                              ;$96 $01
     BYTE    $87 $03
-    WORD    .a - :                              `$88 $01
+    WORD    .a - :                              ;$88 $01
     BYTE    $86
 .d  BYTE    $05 $00 $05 $00 $15 $00 $05 $00
     BYTE    $87 $03
-    WORD    .d - :                              `$A7 $01
+    WORD    .d - :                              ;$A7 $01
     BYTE    $05 $00 $00 $00 $02 $00 $04 $00
     BYTE    $FF
         
-.channel3   `---------------------------------------------------------------------------
+.channel3   ;---------------------------------------------------------------------------
     BYTE    $82 $FF $14 $96 $00 $32 $01
     BYTE    $83 $14 $01 $04 $05 $00
     BYTE    $81 $08
@@ -106,7 +116,7 @@ TABLE   :S1_Music_Bridge                        SECTION ::sound                 
     BYTE    $81 $04 $11 $00
     BYTE    $81 $08
     BYTE    $87 $02
-    WORD    .f - :                              `$48 $02
+    WORD    .f - :                              ;$48 $02
     BYTE    $86
 .g  BYTE    $13 $00
     BYTE    $81 $04 $0A $00
@@ -126,9 +136,9 @@ TABLE   :S1_Music_Bridge                        SECTION ::sound                 
     BYTE    $81 $04 $13 $00
     BYTE    $81 $08
     BYTE    $87 $02
-    WORD    .g - :                              `$8D $02
+    WORD    .g - :                              ;$8D $02
     BYTE    $87 $02
-    WORD    .e - :                              `$47 $02
+    WORD    .e - :                              ;$47 $02
     BYTE    $86
 .h  BYTE    $15 $00
     BYTE    $81 $04 $11 $00
@@ -148,7 +158,7 @@ TABLE   :S1_Music_Bridge                        SECTION ::sound                 
     BYTE    $81 $04 $15 $00
     BYTE    $81 $08
     BYTE    $87 $02
-    WORD    .h - :                              `$D6 $02
+    WORD    .h - :                              ;$D6 $02
     BYTE    $17 $00
     BYTE    $81 $04 $11 $00
     BYTE    $81 $08 $13 $00
@@ -201,10 +211,10 @@ TABLE   :S1_Music_Bridge                        SECTION ::sound                 
     BYTE    $81 $04 $25 $00
     BYTE    $81 $08
     BYTE    $87 $04
-    WORD    .i - :                              `$9B $03
+    WORD    .i - :                              ;$9B $03
     BYTE    $FF
         
-.channel4   `---------------------------------------------------------------------------
+.channel4   ;---------------------------------------------------------------------------
     BYTE    $8A $0C
     BYTE    $88
     BYTE    $86
@@ -212,7 +222,7 @@ TABLE   :S1_Music_Bridge                        SECTION ::sound                 
     BYTE    $81 $0C $71 $00
     BYTE    $81 $09 $70 $00
     BYTE    $87 $0F
-    WORD    .j - :                              `$E4 $03
+    WORD    .j - :                              ;$E4 $03
     BYTE    $81 $09 $70 $00 $70 $00
     BYTE    $81 $0C $71 $00 $71 $06 $71 $06
     BYTE    $FF

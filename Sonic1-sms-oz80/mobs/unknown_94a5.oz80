@@ -1,8 +1,18 @@
-PROC    :_94a5                                  SECTION ::mobs                  `$94A5
-        `==============================================================================
-PARAMS  IX;mob          HELP ""Address of the current mob being processed
+;; Sonic 1 Master System Disassembly <github.com/Kroc/Sonic1-SMS-OZ80>
+   for MaSS1VE: The Master System Sonic 1 Visual Editor <github.com/Kroc/MaSS1VE>
+   using OZ80MANDIAS, a high-level Z80 assembler <github.com/Kroc/OZ80MANDIAS>
+   -------------------------------------------------------------------------------------
+   created by Kroc Camen <kroc@camendesign.com> and given to the Public Domain;
+   you may do anything you like with this code as long as you respect the TradeMarks
+   and (any) Copyrights within. absolutely no warranty implied
+   =====================================================================================
+;;
+
+PROC    :_94a5                                  SECTION ::mobs                  ;$94A5
+        ;==============================================================================
+PARAMS  IX`mob          HELP ""Address of the current mob being processed
 {
-        set     5,[ix+#mob.flags]               `mob does not collide with the floor
+        set     5,[ix+#mob.flags]               ;mob does not collide with the floor
         ld      [ix+#mob.width], 8
         ld      [ix+#mob.height],10
         ld      hl,$0404
@@ -44,7 +54,7 @@ PARAMS  IX;mob          HELP ""Address of the current mob being processed
         set     0,[ix+#mob.flags]
         ret
         
-        `------------------------------------------------------------------------------
+        ;------------------------------------------------------------------------------
         
 ._3     ld      c,[ix+#mob.X+0]
         ld      b,[ix+#mob.X+1]
@@ -73,8 +83,8 @@ PARAMS  IX;mob          HELP ""Address of the current mob being processed
         and     a
         sbc     hl,bc
         jr      nc,._5
-._4     ld      [ix+#mob.type],$FF              `remove object
-._5     xor     a;zero
+._4     ld      [ix+#mob.type],$FF              ;remove object
+._5     xor     a`zero
         ld      hl,$0002
         bit     2,[ix+#mob.flags]
         jr      nz,._6
@@ -197,28 +207,28 @@ PARAMS  IX;mob          HELP ""Address of the current mob being processed
         push    ix
         push    hl
         pop     ix
-        xor     a;zero                          `set A to 0
-        ld      [ix+#mob.type],$2A              `unknown object
+        xor     a`zero                          ;set A to 0
+        ld      [ix+#mob.type],$2A              ;unknown object
         ld      hl,[$.TEMP1]
-        ld      [ix+#mob.Xsubpixel],a;zero
+        ld      [ix+#mob.Xsubpixel],a`zero
         ld      [ix+#mob.X+0],l
         ld      [ix+#mob.X+1],h
         ld      hl,[$.TEMP3]
-        ld      [ix+#mob.Ysubpixel],a;zero
+        ld      [ix+#mob.Ysubpixel],a`zero
         ld      [ix+#mob.Y+0],l
         ld      [ix+#mob.Y+1],h
-        ld      [ix+#mob.unknown11],a;zero
-        ld      [ix+$12],a;zero
-        ld      [ix+#mob.Xspeed+0],a;zero
-        ld      [ix+#mob.Xspeed+1],a;zero
-        ld      [ix+#mob.Xdirection],a;zero
-        ld      [ix+#mob.Yspeed+0],a;zero
-        ld      [ix+#mob.Yspeed+1],a;zero
-        ld      [ix+#mob.Ydirection],a;zero
+        ld      [ix+#mob.unknown11],a`zero
+        ld      [ix+$12],a`zero
+        ld      [ix+#mob.Xspeed+0],a`zero
+        ld      [ix+#mob.Xspeed+1],a`zero
+        ld      [ix+#mob.Xdirection],a`zero
+        ld      [ix+#mob.Yspeed+0],a`zero
+        ld      [ix+#mob.Yspeed+1],a`zero
+        ld      [ix+#mob.Ydirection],a`zero
         pop     ix
         ret
 
-        `sprite layout
+        ;sprite layout
 ._9688  BYTE $3C, $3E, $FF, $FF, $FF, $FF
         BYTE $FF, $FF, $38, $3A, $FF, $FF
         BYTE $FF, $FF, $FF, $FF

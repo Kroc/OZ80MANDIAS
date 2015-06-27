@@ -1,8 +1,18 @@
-PROC    :mob_flower                             SECTION ::mobs                  `$7AED
-        `==============================================================================
-PARAMS  IX;mob          HELP ""Address of the current mob being processed
+;; Sonic 1 Master System Disassembly <github.com/Kroc/Sonic1-SMS-OZ80>
+   for MaSS1VE: The Master System Sonic 1 Visual Editor <github.com/Kroc/MaSS1VE>
+   using OZ80MANDIAS, a high-level Z80 assembler <github.com/Kroc/OZ80MANDIAS>
+   -------------------------------------------------------------------------------------
+   created by Kroc Camen <kroc@camendesign.com> and given to the Public Domain;
+   you may do anything you like with this code as long as you respect the TradeMarks
+   and (any) Copyrights within. absolutely no warranty implied
+   =====================================================================================
+;;
+
+PROC    :mob_flower                             SECTION ::mobs                  ;$7AED
+        ;==============================================================================
+PARAMS  IX`mob          HELP ""Address of the current mob being processed
 {
-        set     5,[ix+#mob.flags]               `mob does not collide with the floor
+        set     5,[ix+#mob.flags]               ;mob does not collide with the floor
         bit     0,[ix+#mob.flags]
         jr      nz,._1
         ld      [ix+#mob.unknown11],$32

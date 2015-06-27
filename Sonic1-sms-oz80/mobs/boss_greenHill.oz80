@@ -1,10 +1,20 @@
-`boss (Green Hill)
+;; Sonic 1 Master System Disassembly <github.com/Kroc/Sonic1-SMS-OZ80>
+   for MaSS1VE: The Master System Sonic 1 Visual Editor <github.com/Kroc/MaSS1VE>
+   using OZ80MANDIAS, a high-level Z80 assembler <github.com/Kroc/OZ80MANDIAS>
+   -------------------------------------------------------------------------------------
+   created by Kroc Camen <kroc@camendesign.com> and given to the Public Domain;
+   you may do anything you like with this code as long as you respect the TradeMarks
+   and (any) Copyrights within. absolutely no warranty implied
+   =====================================================================================
+;;
 
-PROC    :mob_boss_greenHill                     SECTION ::mobs                  `$700C
-        `==============================================================================
-PARAMS  IX;mob          HELP ""Address of the current mob being processed
+;boss (Green Hill)
+
+PROC    :mob_boss_greenHill                     SECTION ::mobs                  ;$700C
+        ;==============================================================================
+PARAMS  IX`mob          HELP ""Address of the current mob being processed
 {
-        set     5,[ix+#mob.flags]               `mob does not collide with the floor
+        set     5,[ix+#mob.flags]               ;mob does not collide with the floor
         ld      [ix+#mob.width], 32
         ld      [ix+#mob.height],28
         call    :_7ca6
@@ -17,7 +27,7 @@ PARAMS  IX;mob          HELP ""Address of the current mob being processed
         ld      [ix+#mob.Y+0],l
         ld      [ix+#mob.Y+1],h
         
-        `boss sprite set
+        ;boss sprite set
         ld      hl,$aeb1
         ld      de,$2000
         ld      a,9
@@ -27,12 +37,12 @@ PARAMS  IX;mob          HELP ""Address of the current mob being processed
         ld      a,%00000010
         call    :loadPaletteOnInterrupt
         
-        ld      a,#index_music_boss1
+        ld      a,:S1_MusicPointers.boss1.index ;=$0B
         rst     :rst_playMusic
         
-        xor     a;zero
-        ld      [$.D2EC],a;zero
-        ld      [ix+$12],a;zero
+        xor     a`zero
+        ld      [$.D2EC],a`zero
+        ld      [ix+$12],a`zero
         ld      [ix+#mob.unknown14],$a1
         ld      [ix+#mob.unknown15],$72
         
@@ -136,9 +146,9 @@ PARAMS  IX;mob          HELP ""Address of the current mob being processed
         add     hl,de
         ld      e,[ix+#mob.Y+0]
         ld      d,[ix+#mob.Y+1]
-        xor     a;zero
+        xor     a`zero
         sbc     hl,de
-        ld      c,a;zero
+        ld      c,a`zero
         ld      l,c
         ld      h,c
         jp      nc,._9
@@ -159,9 +169,9 @@ PARAMS  IX;mob          HELP ""Address of the current mob being processed
         add     hl,de
         ld      e,[ix+#mob.Y+0]
         ld      d,[ix+#mob.Y+1]
-        xor     a;zero
+        xor     a`zero
         sbc     hl,de
-        ld      c,a;zero
+        ld      c,a`zero
         ld      l,c
         ld      h,c
         jp      nc,._9
@@ -196,18 +206,18 @@ PARAMS  IX;mob          HELP ""Address of the current mob being processed
         add     hl,de
         ld      e,[ix+#mob.Y+0]
         ld      d,[ix+#mob.Y+1]
-        xor     a;zero
+        xor     a`zero
         sbc     hl,de
-        ld      c,a;zero
+        ld      c,a`zero
         ld      l,c
         ld      h,c
         jp      c,._9
         ld      l,[ix+#mob.X+0]
         ld      h,[ix+#mob.X+1]
         ld      de,[$.LEVEL_LEFT]
-        xor     a;zero
+        xor     a`zero
         sbc     hl,de
-        ld      c,a;zero
+        ld      c,a`zero
         ld      l,c
         ld      h,c
         jr      c,._8
@@ -264,7 +274,7 @@ PARAMS  IX;mob          HELP ""Address of the current mob being processed
         BYTE $01 $00 $01 $04 $01 $01 $01 $04 $01 $01 $01 $04 $01 $FF $02 $02
         BYTE $01 $05 $01 $02 $01 $05 $01 $03 $01 $05 $01 $03 $01 $05 $01 $FF
 
-        `sprite layout
+        ;sprite layout
 ._72f8  BYTE $20, $22, $24, $26, $28, $FF
         BYTE $40, $42, $44, $46, $48, $FF
         BYTE $60, $62, $64, $66, $68, $FF

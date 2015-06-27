@@ -1,29 +1,39 @@
-PROC    :mob_Sonic                              SECTION ::mobs                  `$48C8
-        `==============================================================================
-PARAMS  IX;mob          HELP ""Address of the current mob being processed
-        IY;vars         HELP ""Address of the common variables (used throughout)
+;; Sonic 1 Master System Disassembly <github.com/Kroc/Sonic1-SMS-OZ80>
+   for MaSS1VE: The Master System Sonic 1 Visual Editor <github.com/Kroc/MaSS1VE>
+   using OZ80MANDIAS, a high-level Z80 assembler <github.com/Kroc/OZ80MANDIAS>
+   -------------------------------------------------------------------------------------
+   created by Kroc Camen <kroc@camendesign.com> and given to the Public Domain;
+   you may do anything you like with this code as long as you respect the TradeMarks
+   and (any) Copyrights within. absolutely no warranty implied
+   =====================================================================================
+;;
+
+PROC    :mob_Sonic                              SECTION ::mobs                  ;$48C8
+        ;===============================================================================
+PARAMS  IX`mob          HELP ""Address of the current mob being processed
+        IY`vars         HELP ""Address of the common variables (used throughout)
 {       
         res     1,[iy+#vars.unknown0]
         
         bit     7,[ix+#mob.flags]
         call    nz,._4e88
         
-        `flag to update the Sonic sprite frame
+        ;flag to update the Sonic sprite frame
         set     7,[iy+#vars.timeLightningFlags]
         
-        `is Sonic dead?
+        ;is Sonic dead?
         bit     0,[iy+#vars.scrollRingFlags]
         jp      nz,._543c
         
-        `reduce this number until it hits 0. appears to only be set when changing
-         `direction from left to right; something to do with acceleration/skidding?
+        ;reduce this number until it hits 0. appears to only be set when changing
+         ;direction from left to right; something to do with acceleration/skidding?
         ld      a,[$.SONIC.unknown16]
         and     a
         call    nz,._4ff0
         
-        res     5,[ix+#mob.flags]               `Sonic adheres to the floor
+        res     5,[ix+#mob.flags]               ;Sonic adheres to the floor
         
-        bit     6,[iy+#vars.flags6]             `is Sonic in damage state?
+        bit     6,[iy+#vars.flags6]             ;is Sonic in damage state?
         call    nz,._510a
         
         ld      a,[$.D28C]
@@ -36,8 +46,8 @@ PARAMS  IX;mob          HELP ""Address of the current mob being processed
         bit     0,[iy+#vars.unknown0]
         call    nz,._4ff5
         
-        `is Sonic underwater?
-        bit     4,[ix+#mob.flags]               `mob underwater?
+        ;is Sonic underwater?
+        bit     4,[ix+#mob.flags]               ;mob underwater?
         call    nz,.drownTimer
         
         ld      a,[$.D28B]
@@ -54,7 +64,7 @@ PARAMS  IX;mob          HELP ""Address of the current mob being processed
         bit     7,[iy+#vars.unknown0]
         call    nz,._529c
         
-        bit     4,[ix+#mob.flags]               `mob underwater?
+        bit     4,[ix+#mob.flags]               ;mob underwater?
         jp      z,._1
         
         ld      hl,._4ddd
@@ -127,109 +137,109 @@ PARAMS  IX;mob          HELP ""Address of the current mob being processed
         and     $03
         call    z,._4fec
         
-._5     bit     1,[iy+#vars.joypad]             `joypad up?
+._5     bit     1,[iy+#vars.joypad]             ;joypad up?
         call    z,._50c1
         
-        bit     1,[iy+#vars.joypad]             `joypad not up?
+        bit     1,[iy+#vars.joypad]             ;joypad not up?
         call    nz,._50e3
         
-        `handle collision with tile underneath Sonic:
-        `------------------------------------------------------------------------------
+        ;handle collision with tile underneath Sonic:
+        ;-------------------------------------------------------------------------------
         
-        ld      A;bank          15
-        ld      [$.SMS.SLOT2]   A;bank
-        ld      [$.SLOT2]       A;bank
+        ld      A`bank          15
+        ld      [$.SMS.SLOT2]   A`bank
+        ld      [$.SLOT2]       A`bank
         
-        `$3F9ED = 
-        `0010, 00C4, 0154, 01F4, 02B4, 0374, 044C, 04CC
-        `  (180) (144) (160) (192) (192) (216) (128)
+        ;$3F9ED = 
+        ;0010, 00C4, 0154, 01F4, 02B4, 0374, 044C, 04CC
+        ;  (180) (144) (160) (192) (192) (216) (128)
         
-        `locate which block is underneath Sonic?
-        ld      BC;xoff         12
-        ld      DE;yoff         16
+        ;locate which block is underneath Sonic?
+        ld      BC`xoff         12
+        ld      DE`yoff         16
         call    :getFloorLayoutRAMAddressForMob
         
-        `get the block index from the Floor Layout address returned
-        ld      E;block         [HL;addr]
-        ld      D;zero          0
+        ;get the block index from the Floor Layout address returned
+        ld      E`block         [HL`addr]
+        ld      D`zero          0
         
-        `get the solidity index for the current level
-        ld      A;solidity      [$.LEVEL_SOLIDITY]
-        `double it to look it up in a list of pointers (2 bytes each)
-        add     A;solidity      A;solidity
-        `transfer it into HL so as to add it to the pointer table address
-        ld      L;solidity      A;solidity
-        ld      H;solidity      D;zero
-        `access the table of data offsets at $3F9ED (bank 15)
-        ld      BC;table        $B9ED           `=$3F9ED
-        `lookup the solidity index in the table of offsets
-        add     HL;solidity     BC;table
-        `read the 2-byte offset value into HL
-        ld      A;offset        [HL;table]
-        inc     HL;table
-        ld      H;offset        [HL;table]
-        ld      L;offset        A;offset
-        `make an absolute address: $3F9ED + offset for solidity + block index
-        add     HL;offset       DE;block
-        add     HL;offset       BC;table
-        `read the byte of data for the particular block index
-        ld      A;data          [HL;data]
-        `if it's higher than the number of solidity types, skip ahead
-        cp      $1C                             `=number of entries in ._58e5
+        ;get the solidity index for the current level
+        ld      A`solidity      [$.LEVEL_SOLIDITY]
+        ;double it to look it up in a list of pointers (2 bytes each)
+        add     A`solidity      A`solidity
+        ;transfer it into HL so as to add it to the pointer table address
+        ld      L`solidity      A`solidity
+        ld      H`solidity      D`zero
+        ;access the table of data offsets at $3F9ED (bank 15)
+        ld      BC`table        $B9ED           ;=$3F9ED
+        ;lookup the solidity index in the table of offsets
+        add     HL`solidity     BC`table
+        ;read the 2-byte offset value into HL
+        ld      A`offset        [HL`table]
+        inc     HL`table
+        ld      H`offset        [HL`table]
+        ld      L`offset        A`offset
+        ;make an absolute address: $3F9ED + offset for solidity + block index
+        add     HL`offset       DE`block
+        add     HL`offset       BC`table
+        ;read the byte of data for the particular block index
+        ld      A`data          [HL`data]
+        ;if it's higher than the number of solidity types, skip ahead
+        cp      $1C                             ;=number of entries in ._58e5
         jr      nc,._6
         
-        `double the data byte read
-         `and transfer to HL for 16-bit use
-        add     a;data,a;data
-        ld      l,a;data
-        ld      h,d;zero
+        ;double the data byte read
+         ;and transfer to HL for 16-bit use
+        add     a`data,a`data
+        ld      l,a`data
+        ld      h,d`zero
         ld      de,._58e5
         add     hl,de
-        `load HL with the address in the lookup table
+        ;load HL with the address in the lookup table
         ld      a,[hl]
         inc     hl
         ld      h,[hl]
         ld      l,a
         
-        `load DE with the callback address
-        ld      DE;callback     ._6
+        ;load DE with the callback address
+        ld      DE`callback     ._6
         
-        ld      A;bank, 2
-        ld      [$.SMS.SLOT2]   A;bank
-        ld      [$.SLOT2]       A;bank
+        ld      A`bank, 2
+        ld      [$.SMS.SLOT2]   A`bank
+        ld      [$.SLOT2]       A`bank
         
-        `keep a copy of the callback address
-         `and jump to the specific solidity routine for the tile under Sonic
-        push    DE;callback
+        ;keep a copy of the callback address
+         ;and jump to the specific solidity routine for the tile under Sonic
+        push    DE`callback
         jp      [HL]
         
-        `has Sonic fallen out of the level?
-        `------------------------------------------------------------------------------
+        ;has Sonic fallen out of the level?
+        ;-------------------------------------------------------------------------------
         
-._6     ld      HL;sonicY       [$.SONIC.Y]
-        ld      DE;sonicH       $0024           `height of Sonic?
-        add     HL;sonicY       DE;sonicH
+._6     ld      HL`sonicY       [$.SONIC.Y]
+        ld      DE`sonicH       $0024           ;height of Sonic?
+        add     HL`sonicY       DE`sonicH
         ex      DE, HL
-        ld      HL;levelBottom  [$.LEVEL_BOTTOM]
-        ld      BC;screenH      $00C0           `height of the screen
-        add     HL;levelBottom  BC;screenH
-        xor     A;flags                         `set A to zero, clearing the carry flag
-        sbc     HL;levelBottom  DE;sonicY
-        call    c,:hitPlayer.kill               `if over, die!
+        ld      HL`levelBottom  [$.LEVEL_BOTTOM]
+        ld      BC`screenH      $00C0           ;height of the screen
+        add     HL`levelBottom  BC`screenH
+        xor     A`flags                         ;set A to zero, clearing the carry flag
+        sbc     HL`levelBottom  DE`sonicY
+        call    c,:hitPlayer.kill               ;if over, die!
         
-        `idle timer:
-        `-------------------------------------------------------------------------------
+        ;idle timer:
+        ;-------------------------------------------------------------------------------
         
-        ld      hl,$0000                        `reset the idle timer?
+        ld      hl,$0000                        ;reset the idle timer?
         ld      a,[iy+#vars.joypad]
-        cp      $ff                             `is any button being pressed?
-        jr      nz,._7                          `skip the idle timer update
+        cp      $ff                             ;is any button being pressed?
+        jr      nz,._7                          ;skip the idle timer update
         
-        `is player moving left or right?
-        ld      de,[$.SONIC.Xspeed]             `get the horizontal speed
-        ld      a,e                             `shift E into A for next instruction
-        or      d                               `combine E & D
-        jr      nz,._7                          `if it's not zero, skip
+        ;is player moving left or right?
+        ld      de,[$.SONIC.Xspeed]             ;get the horizontal speed
+        ld      a,e                             ;shift E into A for next instruction
+        or      d                               ;combine E & D
+        jr      nz,._7                          ;if it's not zero, skip
         
         ld      a,[$.SONIC.flags]
         rlca    
@@ -238,17 +248,17 @@ PARAMS  IX;mob          HELP ""Address of the current mob being processed
         ld      HL,[$.IDLE_TIME]
         inc     HL
         
-        `update the idle timer
+        ;update the idle timer
 ._7     ld      [$.IDLE_TIME],HL
         
-        `-------------------------------------------------------------------------------
+        ;-------------------------------------------------------------------------------
         
         bit     7,[iy+#vars.flags6]
         call    nz,._50e8
         
         ld      [ix+#mob.unknown14],$05
         ld      hl,[$.IDLE_TIME]
-        ld      de,$0168                        `idle time until waiting animation
+        ld      de,$0168                        ;idle time until waiting animation
         and     a
         sbc     hl,de
         call    nc,._5105
@@ -302,7 +312,7 @@ PARAMS  IX;mob          HELP ""Address of the current mob being processed
         push    hl
         push    de
         ld      de,[$.D240]
-        xor     a;zero
+        xor     a`zero
         sbc     hl,de
         pop     de
         pop     hl
@@ -332,7 +342,7 @@ PARAMS  IX;mob          HELP ""Address of the current mob being processed
         ld      h,a
         inc     hl
         ld      de,[$.D240]
-        xor     a;zero
+        xor     a`zero
         sbc     hl,de
         pop     de
         pop     hl
@@ -407,8 +417,8 @@ PARAMS  IX;mob          HELP ""Address of the current mob being processed
         jp      ._15
         
 ._14    set     3,[ix+#mob.flags]
-._15    xor     a;zero
-        ld      [$.D28E],a;zero
+._15    xor     a`zero
+        ld      [$.D28E],a`zero
 ._4bac
         bit     7,h
         jr      nz,._16
@@ -530,7 +540,7 @@ PARAMS  IX;mob          HELP ""Address of the current mob being processed
         ld      bc,:sound_update
         bit     1,[ix+#mob.flags]
         jr      z,._24
-        ld      bc,:_7000                       `immediate $7000 or label?
+        ld      bc,:_7000                       ;immediate $7000 or label?
 ._24    bit     5,[iy+#vars.flags6]
         call    nz,._5206
         ld      a,[$.D302]
@@ -613,14 +623,14 @@ PARAMS  IX;mob          HELP ""Address of the current mob being processed
         and     a
         jp      p,._31
         
-        xor     a;zero
-        ld      [$.SONIC.Xspeed+0],a;zero
-        ld      [$.SONIC.Xspeed+1],a;zero
-        ld      [$.SONIC.Xdirection],a;zero
+        xor     a`zero
+        ld      [$.SONIC.Xspeed+0],a`zero
+        ld      [$.SONIC.Xspeed+1],a`zero
+        ld      [$.SONIC.Xdirection],a`zero
         jp      ._31
         
 ._30    ld      hl,[$.LEVEL_RIGHT]
-        ld      de,$00f8                        `248 -- screen width less 8?
+        ld      de,$00f8                        ;248 -- screen width less 8?
         add     hl,de
         
         ex      de,hl
@@ -642,10 +652,10 @@ PARAMS  IX;mob          HELP ""Address of the current mob being processed
         or      l
         jr      z,._31
         
-        xor     a;zero                          `set A to 0
-        ld      [$.SONIC.Xspeed+0],a;zero
-        ld      [$.SONIC.Xspeed+1],a;zero
-        ld      [$.SONIC.Xdirection],a;zero
+        xor     A`zero                          ;set A to 0
+        ld      [$.SONIC.Xspeed+0]      A`zero
+        ld      [$.SONIC.Xspeed+1]      A`zero
+        ld      [$.SONIC.Xdirection]    A`zero
         
 ._31    ld      a,[$.SONIC.flags]
         ld      [$.D2B9],a
@@ -689,16 +699,16 @@ PARAMS  IX;mob          HELP ""Address of the current mob being processed
         ld      [$.SONIC.unknown13],a
         ret     
         
-        `--------------------------------------------------------------------[$4DCB]---
+        ;-------------------------------------------------------------------------------
 
-._4dcb  BYTE    $10, $00, $30, $00, $08, $00, $00, $08, $02
-._4dd4  BYTE    $10, $00, $30, $00, $02, $00, $00, $08, $02
-._4ddd  BYTE    $04, $00, $0c, $00, $02, $00, $00, $02, $01
-._4de6  BYTE    $10, $00, $30, $00, $08, $00, $00, $08, $02
+._4dcb  BYTE    $10, $00, $30, $00, $08, $00, $00, $08, $02                     ;$4DCB
+._4dd4  BYTE    $10, $00, $30, $00, $02, $00, $00, $08, $02                     ;$4DD4
+._4ddd  BYTE    $04, $00, $0c, $00, $02, $00, $00, $02, $01                     ;$4DDD
+._4de6  BYTE    $10, $00, $30, $00, $08, $00, $00, $08, $02                     ;$4DE6
 
-        `--------------------------------------------------------------------[$4DEF]---
+        ;-------------------------------------------------------------------------------
 
-._4def  ex      de,hl
+._4def  ex      de,hl                                                           ;$4DEF
         
         ld      hl,[$.SONIC.Y]
         ld      bc,[$.CAMERA_Y]
@@ -749,26 +759,26 @@ PARAMS  IX;mob          HELP ""Address of the current mob being processed
         ld      hl,._595d
         ld      [$.D2AF],hl
         
-        `add one ring to the ring count
+        ;add one ring to the ring count
         ld      a,$01
         call    :increaseRings
         
         ret
 
-        `--------------------------------------------------------------------[$4E48]---
+        ;-------------------------------------------------------------------------------
 
-._4e48  ld      d,a
-        ld      bc,:_7000                       `immediate $7000 or label?
+._4e48  ld      d,a                                                             ;$4E48
+        ld      bc,:_7000                       ;immediate $7000 or label?
         ret
 
-        `--------------------------------------------------------------------[$4E4D]---
+        ;-------------------------------------------------------------------------------
 
-._4e4d  ld      hl,$0000
+._4e4d  ld      hl,$0000                                                        ;$4E4D
         ret
 
-        `--------------------------------------------------------------------[$4E51]---
+        ;-------------------------------------------------------------------------------
 
-._4e51  dec     a
+._4e51  dec     a                                                               ;$4E51
         ld      [$.D321],a
         ld      hl,[$.D31D]
         ld      [$.TEMP1],hl
@@ -790,14 +800,14 @@ PARAMS  IX;mob          HELP ""Address of the current mob being processed
         call    :_3581
         ret
 
-        `--------------------------------------------------------------------[$4E88]---
+        ;-------------------------------------------------------------------------------
 
-._4e88  set     1,[iy+#vars.unknown0]
+._4e88  set     1,[iy+#vars.unknown0]                                           ;$4E88
         ret
 
-        `--------------------------------------------------------------------[$4E8D]---
+        ;-------------------------------------------------------------------------------
 
-._4e8d  ld      hl,[$.SONIC.X]
+._4e8d  ld      hl,[$.SONIC.X]                                                  ;$4E8D
         ld      [$.TEMP1],hl
         ld      hl,[$.SONIC.Y]
         ld      [$.TEMP3],hl
@@ -837,12 +847,12 @@ PARAMS  IX;mob          HELP ""Address of the current mob being processed
         djnz    ._37
         ret
 
-        `--------------------------------------------------------------------[$4EDD]---
+        ;-------------------------------------------------------------------------------
         
-        `is Sonic moving?
-._4edd  ld      HL;speed        [$.SONIC.Xspeed]
-        ld      A;speed         H;speed
-        or      L;speed
+        ;is Sonic moving?
+._4edd  ld      HL`speed        [$.SONIC.Xspeed]                                ;$4EDD
+        ld      A`speed         H`speed
+        or      L`speed
         ret     nz
         
         ld      a,[$.SONIC.flags]
@@ -863,9 +873,9 @@ PARAMS  IX;mob          HELP ""Address of the current mob being processed
         
         ret
 
-        `--------------------------------------------------------------------[$4F01]---
+        ;-------------------------------------------------------------------------------
         
-._4f01  res     1,[ix+#mob.flags]
+._4f01  res     1,[ix+#mob.flags]                                               ;$4F01
         bit     7,b
         jr      nz,._39
         ld      de,[$.TEMP1]
@@ -875,7 +885,7 @@ PARAMS  IX;mob          HELP ""Address of the current mob being processed
         exx     
         pop     hl
         ld      de,[$.D240]
-        xor     a;zero
+        xor     a`zero
         sbc     hl,de
         exx     
         jp      c,._4b1b
@@ -888,7 +898,7 @@ PARAMS  IX;mob          HELP ""Address of the current mob being processed
         ld      [ix+#mob.unknown14],a
         jp      ._4b1b
         
-        `------------------------------------------------------------------------------
+        ;------------------------------------------------------------------------------
         
 ._39    set     1,[ix+#mob.flags]
         ld      [ix+#mob.unknown14],$0a
@@ -910,7 +920,7 @@ PARAMS  IX;mob          HELP ""Address of the current mob being processed
         res     1,[ix+#mob.flags]
         ld      [ix+#mob.unknown14],$01
         jp      ._4b1b
-._4f5c
+._4f5c                                                                          ;$4F5C
         set     1,[ix+#mob.flags]
         ld      a,l
         or      h
@@ -938,7 +948,7 @@ PARAMS  IX;mob          HELP ""Address of the current mob being processed
         ld      h,a
         inc     hl
         ld      de,[$.D240]
-        xor     a;zero
+        xor     a`zero
         sbc     hl,de
         exx     
         jp      c,._4b1b
@@ -981,9 +991,9 @@ PARAMS  IX;mob          HELP ""Address of the current mob being processed
         ld      [ix+#mob.unknown14],$01
         jp      ._4b1b
 
-        `--------------------------------------------------------------------[$4FD3]---
+        ;-------------------------------------------------------------------------------
         
-._4fd3  bit     0,[ix+#mob.flags]
+._4fd3  bit     0,[ix+#mob.flags]                                               ;$4FD3
         ret     nz
         ld      hl,[$.D2B7]
         ld      a,h
@@ -999,20 +1009,20 @@ PARAMS  IX;mob          HELP ""Address of the current mob being processed
         ld      [$.D2B7],hl
         ret
 
-        `--------------------------------------------------------------------[$4FEC]---
+        ;-------------------------------------------------------------------------------
         
-._4fec  dec     [ix+#mob.unknown15]
+._4fec  dec     [ix+#mob.unknown15]                                             ;$4FEC
         ret
 
-        `--------------------------------------------------------------------[$4FF0]---
+        ;-------------------------------------------------------------------------------
 
-._4ff0  dec     a
+._4ff0  dec     a                                                               ;$4FF0
         ld      [$.SONIC.unknown16],a
         ret
 
-        `--------------------------------------------------------------------[$4FF5]---
+        ;-------------------------------------------------------------------------------
         
-._4ff5  ld      a,[$.FRAMECOUNT]
+._4ff5  ld      a,[$.FRAMECOUNT]                                                ;$4FF5
         and     $03
         ret     nz
         ld      hl,$.D28D
@@ -1025,19 +1035,19 @@ PARAMS  IX;mob          HELP ""Address of the current mob being processed
         
         ret
 
-        `--------------------------------------------------------------------[$5009]---
-.drownTimer
-        `check for specific solidity data for this level
+.drownTimer                                                                     ;$5009
+        ;-------------------------------------------------------------------------------
+        ;check for specific solidity data for this level
         ld      A,[$.LEVEL_SOLIDITY]
-        cp      $03                             `labyrinth?
+        cp      $03                             ;labyrinth?
         ret     nz
         
-        `is this labyrinth act 3?
+        ;is this labyrinth act 3?
         ld      a,[$.CURRENT_LEVEL]
         cp      $0B
-        ret     z                               `yes? not applicable
+        ret     z                               ;yes? not applicable
         
-        `increase drown timer...
+        ;increase drown timer...
         ld      hl,[$.D29B]
         inc     hl
         ld      [$.D29B],hl
@@ -1046,30 +1056,30 @@ PARAMS  IX;mob          HELP ""Address of the current mob being processed
         sbc     hl,de
         ret     c
         
-        `count down 1 every 256 frames
+        ;count down 1 every 256 frames
         ld      a,$05
         sub     h
         jr      nc,._42
         
-        res     5,[iy+#vars.flags6]             `remove shield
-        res     6,[iy+#vars.flags6]             `clear damage state
+        res     5,[iy+#vars.flags6]             ;remove shield
+        res     6,[iy+#vars.flags6]             ;clear damage state
         res     0,[iy+#vars.unknown0]
         set     3,[iy+#vars.unknown0]
-        set     0,[iy+#vars.scrollRingFlags]    `mark player as dead
+        set     0,[iy+#vars.scrollRingFlags]    ;mark player as dead
         ld      a,$c0
         ld      [$.D287],a
         
-        `drowned!
-        ld      a,#index_music_death
+        ;drowned!
+        ld      a,:S1_MusicPointers.death.index ;=$0A
         rst     :rst_playMusic
         
         call    :_91eb
         call    :_91eb
         call    :_91eb
         call    :_91eb
-        xor     a;zero
+        xor     a`zero
         
-        `layout the oxygen countdown number
+        ;layout the oxygen countdown number
 ._42    ld      e,a
         add     a,a
         add     a,$80
@@ -1110,26 +1120,26 @@ PARAMS  IX;mob          HELP ""Address of the current mob being processed
         
         ret
 
-._5097  BYTE    $01, $07, $0f, $1f, $3f, $7f
+._5097  BYTE    $01, $07, $0f, $1f, $3f, $7f                                    ;$5097
 
-        `--------------------------------------------------------------------[$509D]---
+        ;-------------------------------------------------------------------------------
         
-._509d  ld      a,$10
+._509d  ld      a,$10                                                           ;$509D
         ld      [$.D28E],a
         ld      a,$00
         rst     :rst_playSFX
         ret
 
-        `--- UNUSED! (8 bytes) ----------------------------------------------[$50A6]---
+        ;--- UNUSED! (8 bytes) ---------------------------------------------------------
         
-        xor     a;zero
-        ld      [$.SONIC.Xsubpixel],a;zero
+        xor     a`zero                                                          ;$50A6
+        ld      [$.SONIC.Xsubpixel],a`zero
         ld      [$.SONIC.X],de
         ret
 
-        `--------------------------------------------------------------------[$50AF]---
+        ;-------------------------------------------------------------------------------
 
-._50af  exx     
+._50af  exx                                                                     ;$50AF
         ld      hl,[$.SONIC.Y]
         ld      [$.D2D9],hl
         exx     
@@ -1138,9 +1148,9 @@ PARAMS  IX;mob          HELP ""Address of the current mob being processed
         res     2,[ix+#mob.flags]
         ret
 
-        `--------------------------------------------------------------------[$50C1]---
+        ;-------------------------------------------------------------------------------
         
-._50c1  bit     2,[ix+#mob.flags]
+._50c1  bit     2,[ix+#mob.flags]                                               ;$50C1
         ret     nz
         
         bit     0,[ix+#mob.flags]
@@ -1161,56 +1171,59 @@ PARAMS  IX;mob          HELP ""Address of the current mob being processed
 ._44    set     2,[iy+#vars.timeLightningFlags]
         ret
 
-        `--------------------------------------------------------------------[$50E3]---
+        ;-------------------------------------------------------------------------------
         
-._50e3  res     2,[iy+#vars.timeLightningFlags]
+._50e3  res     2,[iy+#vars.timeLightningFlags]                                 ;$50E3
         ret
 
-        `--------------------------------------------------------------------[$50E8]---
+        ;-------------------------------------------------------------------------------
         
-._50e8  ld      hl,[$.D2DC]
+._50e8  ld      hl,[$.D2DC]                                                     ;$50E8
         ld      de,[$.SONIC.Y]
         and     a
         sbc     hl,de
         jp      c,._55a8
         ld      hl,$0000
         ld      [$.D29B],hl
-        res     4,[ix+#mob.flags]               `mob not underwater
+        res     4,[ix+#mob.flags]               ;mob not underwater
         ret
 
-        `--------------------------------------------------------------------[$5100]---
+        ;-------------------------------------------------------------------------------
         
-._5100  set     2,[ix+#mob.flags]
+._5100  set     2,[ix+#mob.flags]                                               ;$5100
         ret
 
-        `--------------------------------------------------------------------[$5105]---
+        ;-------------------------------------------------------------------------------
         
-._5105  ld      [ix+#mob.unknown14],$0d
+._5105  ld      [ix+#mob.unknown14],$0D                                         ;$5105
         ret
 
-        `--------------------------------------------------------------------[$510A]---
+        ;-------------------------------------------------------------------------------
         
-._510a  ld      [iy+#vars.joypad],$ff
+._510a  ;clear joypad input                                                     ;$510A
+        ld      [iy+#vars.joypad],$FF
+        
         ld      a,[$.SONIC.flags]
         and     $fa
         ld      [$.SONIC.flags],a
+        
         ret
 
-        `--------------------------------------------------------------------[$5117]---
+        ;-------------------------------------------------------------------------------
         
-._5117  dec     a
+._5117  dec     a                                                               ;$5117
         ld      [$.D28A],a
         jr      z,._46
         cp      $14
         jr      c,._45
         
-        xor     A;zero
-        ld      L;zero          A;zero
-        ld      H;zero          A;zero
-        ld      [$.SONIC.Xspeed+0] A;zero
-        ld      [$.SONIC.Xspeed+1] HL;zero
-        ld      [$.SONIC.Yspeed+0] A;zero
-        ld      [$.SONIC.Yspeed+1] HL;zero
+        xor     A`zero
+        ld      L`zero          A`zero
+        ld      H`zero          A`zero
+        ld      [$.SONIC.Xspeed+0] A`zero
+        ld      [$.SONIC.Xspeed+1] HL`zero
+        ld      [$.SONIC.Yspeed+0] A`zero
+        ld      [$.SONIC.Yspeed+1] HL`zero
         
         ld      [ix+#mob.unknown14],$0f
         jp      ._4c39
@@ -1263,18 +1276,18 @@ PARAMS  IX;mob          HELP ""Address of the current mob being processed
         ld      l,a
         ld      [$.SONIC.Y],hl
         
-        xor     a;zero
-        ld      [$.SONIC.Xsubpixel],a;zero
-        ld      [$.SONIC.Ysubpixel],a;zero
+        xor     a`zero
+        ld      [$.SONIC.Xsubpixel],a`zero
+        ld      [$.SONIC.Ysubpixel],a`zero
         ret
 
-        `--------------------------------------------------------------------[$5193]---
+        ;-------------------------------------------------------------------------------
         
-._5193  xor     a;zero                          `set A to 0
-        ld      l;zero,a;zero
-        ld      h;zero,a;zero
-        ld      [$.SONIC.Yspeed],hl;zero
-        ld      [$.SONIC.Ydirection],a;zero     `set "not jumping"
+._5193  xor     A`zero                          ;set A to 0                     ;$5319
+        ld      L`zero  A`zero
+        ld      H`zero  A`zero
+        ld      [$.SONIC.Yspeed]        HL`zero
+        ld      [$.SONIC.Ydirection]    A`zero  ;set "not jumping"
         
         ld      [ix+#mob.unknown14],$16
         ld      a,[$.SONIC.unknown13]
@@ -1284,17 +1297,17 @@ PARAMS  IX;mob          HELP ""Address of the current mob being processed
         set     2,[ix+#mob.flags]
         jp      ._4c39
 
-        `--------------------------------------------------------------------[$51B3]---
+        ;-------------------------------------------------------------------------------
 
-._51b3  dec     a
+._51b3  dec     a                                                               ;$51B3
         ld      [$.D28C],a
         ld      [ix+#mob.unknown14],$11
         ret
 
-        `--------------------------------------------------------------------[$51BC]---
+        ;-------------------------------------------------------------------------------
         
-._51bc  ld      [ix+#mob.width],$1c
-        ld      [ix+#mob.unknown14],$10
+._51bc  ld      [ix+#mob.width]     28                                          ;$51BC
+        ld      [ix+#mob.unknown14] $10
         
         bit     7,[ix+#mob.Ydirection]
         ret     nz
@@ -1304,16 +1317,16 @@ PARAMS  IX;mob          HELP ""Address of the current mob being processed
         
         res     6,[iy+#vars.flags6]
         
-        xor     A;zero
-        ld      [$.SONIC.Xspeed+0]     A;zero
-        ld      [$.SONIC.Xspeed+1]     A;zero
-        ld      [$.SONIC.Xdirection]    A;zero
+        xor     A`zero
+        ld      [$.SONIC.Xspeed+0]      A`zero
+        ld      [$.SONIC.Xspeed+1]      A`zero
+        ld      [$.SONIC.Xdirection]    A`zero
         
         ret
 
-        `--------------------------------------------------------------------[$51DD]---
+        ;-------------------------------------------------------------------------------
 
-._51dd  ld      a,[$.SONIC.flags]
+._51dd  ld      a,[$.SONIC.flags]                                               ;$51DD
         and     $fa
         ld      [$.SONIC.flags],a
         ld      [ix+#mob.unknown14],$14
@@ -1323,9 +1336,9 @@ PARAMS  IX;mob          HELP ""Address of the current mob being processed
         res     2,[iy+#vars.unknown0]
         ret
 
-        `--------------------------------------------------------------------[$51F3]---
+        ;-------------------------------------------------------------------------------
 
-._51f3  ld      a,[$.SONIC.unknown16]
+._51f3  ld      a,[$.SONIC.unknown16]                                           ;$51F3
         and     a
         ret     nz
         bit     7,[ix+#mob.flags]
@@ -1336,9 +1349,9 @@ PARAMS  IX;mob          HELP ""Address of the current mob being processed
         ld      [$.SONIC.unknown16],a
         ret
 
-        `--------------------------------------------------------------------[$5206]---
+        ;-------------------------------------------------------------------------------
         
-        `every other frame...
+        ;every other frame...                                                   ;$5206
 ._5206  ld      a,[$.FRAMECOUNT]
         and     $01
         ret     nz
@@ -1346,50 +1359,50 @@ PARAMS  IX;mob          HELP ""Address of the current mob being processed
         ld      d,$18
         ret
 
-        `--------------------------------------------------------------------[$520F]---
+        ;-------------------------------------------------------------------------------
         
-._520f  ld      hl,._592b
+._520f  ld      hl,._592b                                                       ;$592B
         ret
 
-        `--------------------------------------------------------------------[$5213]---
+        ;-------------------------------------------------------------------------------
         
-._5213  ld      hl,._5939
+._5213  ld      hl,._5939                                                       ;$5213
         bit     1,[ix+#mob.flags]
         ret     z
         ld      hl,._594b
         ret
 
-        `--------------------------------------------------------------------[$521F]---
+        ;-------------------------------------------------------------------------------
         
-._521f  ld      [ix+#mob.unknown13],$00
+._521f  ld      [ix+#mob.unknown13],$00                                         ;$521F
         ret
 
-        `--------------------------------------------------------------------[$5224]---
+        ;-------------------------------------------------------------------------------
         
-._5224  bit     4,[ix+#mob.flags]               `mob underwater?
+._5224  bit     4,[ix+#mob.flags]               ;mob underwater?                ;$5224
         ret     z
         
         ld      a,[$.FRAMECOUNT]
         and     a
-        call    z,:_91eb                        `do this every 256 frames...?
+        call    z,:_91eb                        ;do this every 256 frames...?
         
         ret
 
-        `--------------------------------------------------------------------[$5231]---
+        ;-------------------------------------------------------------------------------
         
-._5231  dec     a
+._5231  dec     a                                                               ;$5231
         ld      [$.D2E1],a
         cp      $06
         jr      c,._51
         cp      $0a
         ret     c
         
-._51    ld      a;updates,[iy+#vars.spriteUpdateCount]
-        ld      hl;addr,[$.SPRITETABLE_ADDR]    `get current sprite-table address
-        push    af;updates                      `remember no. of sprite updates pending
-        push    hl;addr                         `remember current sprite-table address
-        ld      hl;addr,$.SPRITETABLE           `load the game's main sprite table
-        ld      [$.SPRITETABLE_ADDR],hl;addr    `and set the pointer to that
+._51    ld      a`updates,[iy+#vars.spriteUpdateCount]
+        ld      hl`addr,[$.SPRITETABLE_ADDR]    ;get current sprite-table address
+        push    af`updates                      ;remember no. of sprite updates pending
+        push    hl`addr                         ;remember current sprite-table address
+        ld      hl`addr,$.SPRITETABLE           ;load the game's main sprite table
+        ld      [$.SPRITETABLE_ADDR],hl`addr    ;and set the pointer to that
         
         ld      de,[$.CAMERA_Y]
         ld      hl,[$.D2E4]
@@ -1400,7 +1413,7 @@ PARAMS  IX;mob          HELP ""Address of the current mob being processed
         ld      hl,[$.D2E2]
         and     a
         sbc     hl,bc
-        ld      bc,._526e                       `address of sprite layout
+        ld      bc,._526e                       ;address of sprite layout
         call    :processSpriteLayout
         
         pop     hl
@@ -1414,12 +1427,12 @@ PARAMS  IX;mob          HELP ""Address of the current mob being processed
         BYTE    $20, $22, $24, $26, $FF, $FF
         BYTE    $FF, $FF, $FF, $FF, $FF, $FF
 
-        `--------------------------------------------------------------------[$5280]---
+        ;-------------------------------------------------------------------------------
         
-._5280  ld      [ix+#mob.unknown14],$09
+._5280  ld      [ix+#mob.unknown14],$09                                         ;$5280
         ret
 
-        `--------------------------------------------------------------------[$5285]---
+        ;--------------------------------------------------------------------[$5285]---
         
 ._5285  dec     a
         ld      [$.D28B],a
@@ -1434,7 +1447,7 @@ PARAMS  IX;mob          HELP ""Address of the current mob being processed
         ld      [iy+#vars.spriteUpdateCount],c
         ret
 
-        `--------------------------------------------------------------------[$529C]---
+        ;--------------------------------------------------------------------[$529C]---
         
 ._529c  ld      [iy+#vars.joypad],$fb
         ld      hl,[$.SONIC.X]
@@ -1460,17 +1473,17 @@ PARAMS  IX;mob          HELP ""Address of the current mob being processed
         push    ix
         push    hl
         pop     ix
-        xor     a;zero                          `set A to 0
-        ld      [ix+#mob.type],$54              `all emeralds animation
-        ld      [ix+#mob.unknown11],a;zero
-        ld      [ix+#mob.flags],a;zero
-        ld      [ix+#mob.Xsubpixel],a;zero
+        xor     a`zero                          ;set A to 0
+        ld      [ix+#mob.type],$54              ;all emeralds animation
+        ld      [ix+#mob.unknown11],a`zero
+        ld      [ix+#mob.flags],a`zero
+        ld      [ix+#mob.Xsubpixel],a`zero
         ld      hl,[$.SONIC.X]
         ld      de,$0002
         add     hl,de
         ld      [ix+#mob.X+0],l
         ld      [ix+#mob.X+1],h
-        ld      [ix+#mob.Ysubpixel],a;zero
+        ld      [ix+#mob.Ysubpixel],a`zero
         ld      hl,[$.SONIC.Y]
         ld      de,$000e
         add     hl,de
@@ -1496,7 +1509,7 @@ PARAMS  IX;mob          HELP ""Address of the current mob being processed
 ._54    ld      [ix+#mob.unknown14],$19
         jp      ._4c39
 
-        `--------------------------------------------------------------------[$532E]---
+        ;--------------------------------------------------------------------[$532E]---
         
 ._532e  ld      a,[ix+#mob.height]
         cp      $18
@@ -1584,7 +1597,7 @@ PARAMS  IX;mob          HELP ""Address of the current mob being processed
         ld      h,a
         inc     hl
 ._63    ld      de,[$.D240]
-        xor     a;zero
+        xor     a`zero
         sbc     hl,de
         pop     hl
         pop     de
@@ -1595,7 +1608,7 @@ PARAMS  IX;mob          HELP ""Address of the current mob being processed
         ld      [ix+#mob.unknown14],$09
         jp      ._4b1b
 
-        `--------------------------------------------------------------------[$5407]---
+        ;--------------------------------------------------------------------[$5407]---
         
 ._5407  bit     7,[ix+#mob.flags]
         jr      z,._65
@@ -1616,18 +1629,18 @@ PARAMS  IX;mob          HELP ""Address of the current mob being processed
 ._66    set     3,[ix+#mob.flags]
         jp      ._4bac
 
-        `--------------------------------------------------------------------[$543C]---
-        `Sonic is dead...
+        ;--------------------------------------------------------------------[$543C]---
+        ;Sonic is dead...
         
-._543c  set     5,[ix+#mob.flags]               `make Sonic pass over the floor
+._543c  set     5,[ix+#mob.flags]               ;make Sonic pass over the floor
         
         ld      a,[$.D287]
         cp      $60
         jr      z,._54aa
         
-        `has Sonic finished falling off the screen?
+        ;has Sonic finished falling off the screen?
         ld      hl,[$.CAMERA_Y]
-        ld      de,$00C0                        `height of screen?
+        ld      de,$00C0                        ;height of screen?
         add     hl,de
         ld      de,[$.SONIC.Y]
         sbc     hl,de
@@ -1639,14 +1652,14 @@ PARAMS  IX;mob          HELP ""Address of the current mob being processed
         ld      a,$01
         ld      [$.D283],a
         
-        `remove a life...
+        ;remove a life...
         ld      hl,$.LIVES
         dec     [hl]
         
         set     2,[iy+#vars.flags6]
         jp      ._54aa
         
-._67    xor     A;zero
+._67    xor     A`zero
         ld      hl,$0080
         
         bit     3,[iy+#vars.unknown0]
@@ -1678,11 +1691,11 @@ PARAMS  IX;mob          HELP ""Address of the current mob being processed
 ._71    ld      [$.SONIC.Yspeed],hl
         ld      [$.SONIC.Ydirection],a
         
-._72    xor     A;zero
-        ld      L;zero,A;zero
-        ld      H;zero,A;zero
-        ld      [$.SONIC.Xspeed],HL;zero
-        ld      [$.SONIC.Xdirection],A;zero
+._72    xor     A`zero
+        ld      L`zero,A`zero
+        ld      H`zero,A`zero
+        ld      [$.SONIC.Xspeed],HL`zero
+        ld      [$.SONIC.Xdirection],A`zero
 
 ._54aa
         ld      [ix+#mob.unknown14],$0b
@@ -1691,32 +1704,32 @@ PARAMS  IX;mob          HELP ""Address of the current mob being processed
         ld      [ix+#mob.unknown14],$15
         jp      ._4c39
 
-        `====================================================================[$54BC]===
-        `referenced by table at `_58e5` - index $00
-        `air
+        ;====================================================================[$54BC]===
+        ;referenced by table at `_58e5` - index $00
+        ;air
         
 INDEX   ._54bc
 
-        `check if the player is underwater
-        bit     7,[iy+#vars.flags6]             `underwater flag
-        ret     nz                              `this solidity is not valid underwater
+        ;check if the player is underwater
+        bit     7,[iy+#vars.flags6]             ;underwater flag
+        ret     nz                              ;this solidity is not valid underwater
         
-        res     4,[ix+#mob.flags]               `mob underwater flag
+        res     4,[ix+#mob.flags]               ;mob underwater flag
         ret
 
-        `====================================================================[$54C6]===
-        `referenced by table at `_58e5` - index $01
-        `spikes?
+        ;====================================================================[$54C6]===
+        ;referenced by table at `_58e5` - index $01
+        ;spikes?
         
 INDEX   ._54c6
         
-        bit     0,[iy+#vars.scrollRingFlags]    `is the player dead?
-        jp      z,:hitPlayer._35fd              `if not, damage them
+        bit     0,[iy+#vars.scrollRingFlags]    ;is the player dead?
+        jp      z,:hitPlayer._35fd              ;if not, damage them
         ret
 
-        `====================================================================[$54CE]===
-        `referenced by table at `_58e5` - index $02
-        `jump ramp?
+        ;====================================================================[$54CE]===
+        ;referenced by table at `_58e5` - index $02
+        ;jump ramp?
         
 INDEX   ._54ce
         ld      a,[ix+#mob.X+0]
@@ -1759,9 +1772,9 @@ INDEX   ._54ce
         
         ret
 
-        `====================================================================[$550F]===
-        `referenced by table at `_58e5` - index $03
-        `horizontal spring? (facing left)
+        ;====================================================================[$550F]===
+        ;referenced by table at `_58e5` - index $03
+        ;horizontal spring? (facing left)
         
 INDEX   ._550f
         ld      a,[ix+#mob.X+0]
@@ -1780,9 +1793,9 @@ INDEX   ._550f
         
         ret
         
-        `====================================================================[$552D]===
-        `referenced by table at `_58e5` - index $04
-        `vertical spring?
+        ;====================================================================[$552D]===
+        ;referenced by table at `_58e5` - index $04
+        ;vertical spring?
         
 INDEX   ._552d 
         ld      a,[ix+#mob.X+0]
@@ -1808,8 +1821,8 @@ INDEX   ._552d
         
         ret
 
-        `====================================================================[$5556]===
-        `referenced by table at `_58e5` - index $05
+        ;====================================================================[$5556]===
+        ;referenced by table at `_58e5` - index $05
         
 INDEX   ._5556
         ld      a,[ix+#mob.X+0]
@@ -1829,8 +1842,8 @@ INDEX   ._5556
         
         ret
 
-        `====================================================================[$5578]===
-        `referenced by table at `_58e5` - index $06
+        ;====================================================================[$5578]===
+        ;referenced by table at `_58e5` - index $06
 
 INDEX   ._5578
         bit     7,[ix+#mob.flags]
@@ -1845,8 +1858,8 @@ INDEX   ._5578
         ld      [$.SONIC.X+1],a
         ret
 
-        `====================================================================[$5590]===
-        `referenced by table at `_58e5` - index $07
+        ;====================================================================[$5590]===
+        ;referenced by table at `_58e5` - index $07
         
 INDEX   ._5590
         bit     7,[ix+#mob.flags]
@@ -1861,23 +1874,23 @@ INDEX   ._5590
         ld      [$.SONIC.X+1],a
         ret
 
-        `====================================================================[$55A8]===
-        `referenced by table at `_58e5` - index $08
-        `water? (non-raster)
+        ;====================================================================[$55A8]===
+        ;referenced by table at `_58e5` - index $08
+        ;water? (non-raster)
         
 INDEX   ._55a8
-        bit     4,[ix+#mob.flags]               `mob underwater?
+        bit     4,[ix+#mob.flags]               ;mob underwater?
         jr      nz,._74
         
-        ld      a,$12                           `splash?
+        ld      a,$12                           ;splash?
         rst     :rst_playSFX
         
-._74    set     4,[ix+#mob.flags]               `set mob underwater
+._74    set     4,[ix+#mob.flags]               ;set mob underwater
         ret
 
-        `====================================================================[$55B6]===
-        `referenced by table at `_58e5` - index $09
-        `vertical spring? (up-centre)
+        ;====================================================================[$55B6]===
+        ;referenced by table at `_58e5` - index $09
+        ;vertical spring? (up-centre)
         
 INDEX   ._55b6
         ld      a,[ix+#mob.X+0]
@@ -1906,8 +1919,8 @@ INDEX   ._55b6
         
         ret
 
-        `====================================================================[$55E2]===
-        `referenced by table at `_58e5` - index $0A
+        ;====================================================================[$55E2]===
+        ;referenced by table at `_58e5` - index $0A
         
 INDEX   ._55e2
         bit     7,[ix+#mob.Ydirection]
@@ -1918,8 +1931,8 @@ INDEX   ._55e2
         
         ret
 
-        `====================================================================[$55EB]===
-        `referenced by table at `_58e5` - index $0B
+        ;====================================================================[$55EB]===
+        ;referenced by table at `_58e5` - index $0B
         
 INDEX   ._55eb
         bit     4,[iy+#vars.flags6]
@@ -1986,8 +1999,8 @@ INDEX   ._55eb
 ._5643  BYTE    $34 $3C $34 $2F $00 $19 $3A $19 $04 $00 $0E $3A $00 $00 $16 $1B
         BYTE    $32 $00 $00 $17 $2F $0C $00 $00 $FF
 
-        `====================================================================[$565C]===
-        `referenced by table at `_58e5` - index $0C
+        ;====================================================================[$565C]===
+        ;referenced by table at `_58e5` - index $0C
 
 INDEX   ._565c
         ld      hl,[$.SONIC.Xspeed]
@@ -1998,17 +2011,17 @@ INDEX   ._565c
         ld      [$.SONIC.Xspeed],hl
         ld      [$.SONIC.Xdirection],a
         
-        bit     4,[ix+#mob.flags]               `mob underwater?
+        bit     4,[ix+#mob.flags]               ;mob underwater?
         jr      nz,._77
         
         ld      a,$12
         rst     :rst_playSFX
         
-._77    set     4,[ix+#mob.flags]               `set mob underwater
+._77    set     4,[ix+#mob.flags]               ;set mob underwater
         ret
 
-        `====================================================================[$567C]===
-        `referenced by table at `_58e5` - index $0D
+        ;====================================================================[$567C]===
+        ;referenced by table at `_58e5` - index $0D
 
 INDEX   ._567c
         xor     a;zero                          `set A to 0
@@ -2019,7 +2032,7 @@ INDEX   ._567c
 ._568a  ld      a,$06
         ld      [$.D28C],a
 
-        `--------------------------------------------------------------------[$568F]---
+        ;--------------------------------------------------------------------[$568F]---
 
 ._568f  ld      a,[iy+#vars.joypad]
         or      $0f
@@ -2030,41 +2043,41 @@ INDEX   ._567c
         res     2,[ix+#mob.flags]
         ret
 
-        `====================================================================[$56A6]===
-        `referenced by table at `_58e5` - index $0E
+        ;====================================================================[$56A6]===
+        ;referenced by table at `_58e5` - index $0E
 
 INDEX   ._56a6
-        xor     A;zero
+        xor     A`zero
         ld      HL,$0006
-        ld      [$.SONIC.Xspeed+0],A;zero
+        ld      [$.SONIC.Xspeed+0],A`zero
         ld      [$.SONIC.Xspeed+1],HL
         res     1,[IX+#mob.flags]
         jr      ._568a
 
-        `====================================================================[$56B6]===
-        `referenced by table at `_58e5` - index $0F
+        ;====================================================================[$56B6]===
+        ;referenced by table at `_58e5` - index $0F
         
 INDEX   ._56b6
-        xor     a;zero
+        xor     a`zero
         ld      hl,$fffb
-        ld      [$.SONIC.Xspeed+0],a;zero
+        ld      [$.SONIC.Xspeed+0],a`zero
         ld      [$.SONIC.Xspeed+1],hl
         set     1,[ix+#mob.flags]
         jr      ._568a
 
-        `====================================================================[$56C6]===
-        `referenced by table at `_58e5` - index $10
+        ;====================================================================[$56C6]===
+        ;referenced by table at `_58e5` - index $10
         
 INDEX   ._56c6
-        xor     a;zero
+        xor     a`zero
         ld      hl,$FFFA
-        ld      [$.SONIC.Xspeed+0],a;zero
+        ld      [$.SONIC.Xspeed+0],a`zero
         ld      [$.SONIC.Xspeed+1],hl
         set     1,[ix+#mob.flags]
         jr      ._568a
         
-        `====================================================================[$56D6]===
-        `referenced by table at `_58e5` - index $11
+        ;====================================================================[$56D6]===
+        ;referenced by table at `_58e5` - index $11
         
 INDEX   ._56d6
         ld      a,[$.D2E1]
@@ -2115,8 +2128,8 @@ INDEX   ._56d6
         
         ret
 
-        `--------------------------------------------------------------------[$5727]---
-        `called by functions referenced by `_58e5`
+        ;--------------------------------------------------------------------[$5727]---
+        ;called by functions referenced by `_58e5`
 
 ._5727  ld      hl,[$.SONIC.Xspeed]
         ld      a,[$.SONIC.Xdirection]
@@ -2155,8 +2168,8 @@ INDEX   ._56d6
         ld      [$.SONIC.Xdirection],a
         ret
 
-        `====================================================================[$5761]===
-        `referenced by table at `_58e5` - index $12
+        ;====================================================================[$5761]===
+        ;referenced by table at `_58e5` - index $12
         
 INDEX   ._5761
         ld      [ix+#mob.Yspeed+0],$00
@@ -2168,8 +2181,8 @@ INDEX   ._5761
         
         ret
 
-        `====================================================================[$5771]===
-        `referenced by table at `_58e5` - index $13
+        ;====================================================================[$5771]===
+        ;referenced by table at `_58e5` - index $13
         
 INDEX   ._5771
         ld      [ix+#mob.Yspeed+0],$00
@@ -2181,8 +2194,8 @@ INDEX   ._5771
         
         ret
 
-        `====================================================================[$5781]===
-        `referenced by table at `_58e5` - index $14
+        ;====================================================================[$5781]===
+        ;referenced by table at `_58e5` - index $14
         
 INDEX   ._5781
         ld      [ix+#mob.Yspeed+0],$00
@@ -2194,8 +2207,8 @@ INDEX   ._5781
         
         ret
 
-        `====================================================================[$5791]===
-        `referenced by table at `_58e5` - index $15
+        ;====================================================================[$5791]===
+        ;referenced by table at `_58e5` - index $15
         
 INDEX   ._5791
         ld      a,[$.D2B1]
@@ -2236,8 +2249,8 @@ INDEX   ._5791
         
         ret
 
-        `====================================================================[$57CD]===
-        `referenced by table at `_58e5` - index $16
+        ;====================================================================[$57CD]===
+        ;referenced by table at `_58e5` - index $16
         
 INDEX   ._57cd
         call    ._5727
@@ -2263,8 +2276,8 @@ INDEX   ._57cd
         ld      [$.SONIC.Ydirection],a
         jp      ._57be
 
-        `====================================================================[$57F6]===
-        `referenced by table at `_58e5` - index $17
+        ;====================================================================[$57F6]===
+        ;referenced by table at `_58e5` - index $17
         
 INDEX   ._57f6
         ld      hl,[$.D2E9]
@@ -2276,8 +2289,8 @@ INDEX   ._57f6
         jp      z,:hitPlayer._35fd
         ret
 
-        `====================================================================[$5808]===
-        `referenced by table at `_58e5` - index $18
+        ;====================================================================[$5808]===
+        ;referenced by table at `_58e5` - index $18
         
 INDEX   ._5808
         ld      a,[$.SONIC.flags]
@@ -2320,8 +2333,8 @@ INDEX   ._5808
 ._5849  ld      [hl],c
         ret
 
-        `====================================================================[$584B]===
-        `referenced by table at `_58e5` - index $19
+        ;====================================================================[$584B]===
+        ;referenced by table at `_58e5` - index $19
         
 INDEX   ._584b
         ld      hl,[$.SONIC.X]
@@ -2358,8 +2371,8 @@ INDEX   ._584b
         ld      [hl],c
         ret
 
-        `====================================================================[$5883]===
-        `referenced by table at `_58e5` - index $1A
+        ;====================================================================[$5883]===
+        ;referenced by table at `_58e5` - index $1A
 
 INDEX   ._5883
         ld      hl,[$.SONIC.X]
@@ -2371,8 +2384,8 @@ INDEX   ._5883
         ret     nc
         jp      ._581b
 
-        `--------------------------------------------------------------------[$5893]---
-        `called by functions referenced by `58e5`
+        ;--------------------------------------------------------------------[$5893]---
+        ;called by functions referenced by `58e5`
 
 ._5893  push    bc, de
         call    :findEmptyMob
@@ -2383,57 +2396,57 @@ INDEX   ._5883
         push    ix, hl
         pop     ix
         
-        xor     a;zero                          `set A to 0
-        ld      [ix+#mob.type],$2E              `falling bridge piece
-        ld      [ix+#mob.Xsubpixel],a;zero
+        xor     a`zero                          ;set A to 0
+        ld      [ix+#mob.type],$2E              ;falling bridge piece
+        ld      [ix+#mob.Xsubpixel],a`zero
         ld      [ix+#mob.X+0],c
         ld      [ix+#mob.X+1],b
-        ld      [ix+#mob.Ysubpixel],a;zero
+        ld      [ix+#mob.Ysubpixel],a`zero
         ld      [ix+#mob.Y+0],e
         ld      [ix+#mob.Y+1],d
-        ld      [ix+#mob.Xspeed+0],a;zero
-        ld      [ix+#mob.Xspeed+1],a;zerp
-        ld      [ix+#mob.Xdirection],a;zero
-        ld      [ix+#mob.Yspeed+0],a;zero
-        ld      [ix+#mob.Yspeed+1],a;zero
-        ld      [ix+#mob.Ydirection],a;zero
-        ld      [ix+#mob.flags],a;zero
+        ld      [ix+#mob.Xspeed+0],a`zero
+        ld      [ix+#mob.Xspeed+1],a`zero
+        ld      [ix+#mob.Xdirection],a`zero
+        ld      [ix+#mob.Yspeed+0],a`zero
+        ld      [ix+#mob.Yspeed+1],a`zero
+        ld      [ix+#mob.Ydirection],a`zero
+        ld      [ix+#mob.flags],a`zero
         
         pop     ix
-        and     a;zero
+        and     a`zero
         ret
 
-        `====================================================================[$58D0]===
-        `referenced by table at `_58e5` - index $1B
+        ;====================================================================[$58D0]===
+        ;referenced by table at `_58e5` - index $1B
         
 INDEX   ._58d0
         bit     7,[IX+#mob.flags]
         ret     z
         
-        `is Sonic on the screen (vertically)
-        ld      HL;sonicY   [$.SONIC.Y]
-        ld      DE;cameraY  [$.CAMERA_Y]
-        and     A;flags
-        sbc     HL;sonicY   DE;cameraY
+        ;is Sonic on the screen (vertically)
+        ld      HL`sonicY   [$.SONIC.Y]
+        ld      DE`cameraY  [$.CAMERA_Y]
+        and     A`flags
+        sbc     HL`sonicY   DE`cameraY
         ret     nc
         
-        `clear joypad input
+        ;clear joypad input
         ld      [IY+#vars.joypad],$FF
         ret
         
-        `====================================================================[$58E5]===
-        `lookup table to the functions above
-         `(these probably handle the different solidity values)
+        ;====================================================================[$58E5]===
+        ;lookup table to the functions above
+         ;(these probably handle the different solidity values)
 
 ._58e5  WORD    ._54bc, ._54c6, ._54ce, ._550f, ._552d, ._5556, ._5578, ._5590
         WORD    ._55a8, ._55b6, ._55e2, ._55eb, ._565c, ._567c, ._56a6, ._56b6
         WORD    ._56c6, ._56d6, ._5761, ._5771, ._5781, ._5791, ._57cd, ._57f6
         WORD    ._5808, ._584b, ._5883, ._58d0
 
-        `--------------------------------------------------------------------[$591D]---
-        `sprite layouts
+        ;--------------------------------------------------------------------[$591D]---
+        ;sprite layouts
 
-._591d  `Sonic's sprite layout
+._591d  ;Sonic's sprite layout
         BYTE    $B4 $B6 $B8 $FF $FF $FF
         BYTE    $BA $BC $BE $FF $FF $FF
         BYTE    $FF $FF
@@ -2450,9 +2463,9 @@ INDEX   ._58d0
         BYTE    $BA $BC $BE $FF $FF $FF
         BYTE    $FE $9C $9E $FF $FF $FF
         
-._595d  `unknown data
+._595d  ;unknown data
         BYTE    $00 $00 $00 $00 $00 $00 $00 $00
-._5965  `unknown data
+._5965  ;unknown data
         BYTE    $99 $59 $99 $59 $CB $59 $DD $59 $DF $59 $E2 $59 $E5 $59 $FB $59
         BYTE    $FE $59 $01 $5A $53 $5A $65 $5A $68 $5A $6B $5A $AF $5A $C5 $5A
         BYTE    $CC $5A $D0 $5A $DE $5A $E1 $5A $E4 $5A $E7 $5A $EA $5A $00 $5B

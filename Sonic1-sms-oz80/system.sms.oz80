@@ -4,57 +4,57 @@ DEF RAM $#SMS.SRAM1     $8000   $BFFF
 DEF RAM $#SMS.SRAM2     $8000   $BFFF
 DEF RAM $#SMS.VRAM      $0000   $3FFF
 
-`header:
-`--------------------------------------------------------------------------------------
+;header:
+;--------------------------------------------------------------------------------------
 TYPE    #SMS.HEADER
-[`property name         `value  `size           `default content
-.ID                             BYTE x 8        `!"TMR SEGA"
-.RESERVED                       BYTE x 2        `!"  "
+[;property name         ;value  ;size           ;default content
+.ID                             BYTE x 8        ;!"TMR SEGA"
+.RESERVED                       BYTE x 2        ;!"  "
 .CHECKSUM                       WORD
 .PRODUCT_LOW                    BYTE
 .PRODUCT_MED                    BYTE
 .PRODUCT_HI                     NYBL
-.VERSION                        NYBL            `!0
-.REGION                         NYBL            `!4
-.SIZE                           NYBL            `!$C
+.VERSION                        NYBL            ;!0
+.REGION                         NYBL            ;!4
+.SIZE                           NYBL            ;!$C
 ]
 
-`mapper: (bank switching)
-`--------------------------------------------------------------------------------------
-``the banking of the cartridge ROM into the slots of the Z80 address space is handled
+;mapper: (bank switching)
+;--------------------------------------------------------------------------------------
+;;the banking of the cartridge ROM into the slots of the Z80 address space is handled
   by the mapper chip. for standard SEGA mappers, writing to $FFFC configures the
   mapper and $FFFD/E/F sets the ROM bank number to page into the relevant memory slot.
   for more details, see http://www.smspower.org/Development/Mappers
-``
+;;
 RAM     $#SMS
 [
 .SLOT                   $FFFC   TYPE [
-        ``bank shifting is documented, but was never used
-          <smspower.org/Development/Mappers#ROMBankShifting>``
+        ;;bank shifting is documented, but was never used
+          <smspower.org/Development/Mappers#ROMBankShifting>;;
         .BankShift              BOOL x 2
-        .RAMBank                BOOL            `switches SRAM banks in Slot 2
-        .RAM8000                BOOL            `enable SRAM bank at $8000 (Slot 1)
-        .RAMC000                BOOL            `enable SRAM bank at $C000 (Slot 2)
-        .                       BOOL x 2        `unused bits
-        ``the write-protect bit for the ROM would only be used during
-          development and has no function or purpose for releases``
+        .RAMBank                BOOL            ;switches SRAM banks in Slot 2
+        .RAM8000                BOOL            ;enable SRAM bank at $8000 (Slot 1)
+        .RAMC000                BOOL            ;enable SRAM bank at $C000 (Slot 2)
+        .                       BOOL x 2        ;unused bits
+        ;;the write-protect bit for the ROM would only be used during
+          development and has no function or purpose for releases;;
         .WriteProtect           BOOL ]
-.SLOT0                  $FFFD   BYTE            `Slot 0 ROM Bank
-.SLOT1                  $FFFE   BYTE            `Slot 1 ROM Bank
-.SLOT2                  $FFFF   BYTE            `Slot 2 ROM Bank
+.SLOT0                  $FFFD   BYTE            ;Slot 0 ROM Bank
+.SLOT1                  $FFFE   BYTE            ;Slot 1 ROM Bank
+.SLOT2                  $FFFF   BYTE            ;Slot 2 ROM Bank
 ]
 
-`VDP:
-`--------------------------------------------------------------------------------------
-``the Video Display Processor in the Master System handles the graphics and sprites
+;VDP:
+;--------------------------------------------------------------------------------------
+;;the Video Display Processor in the Master System handles the graphics and sprites
   stored in video RAM ("VRAM"), composites the display and outputs it to the display
-``
+;;
 
 RAM     $#SMS.VDP
 [    
-.SCANLINE               $7E     BYTE            `read current vertical scanline
-.DATA                   $BE     BYTE            `graphics data port
-.CONTROL                $BF     BYTE            `graphics control port
+.SCANLINE               $7E     BYTE            ;read current vertical scanline
+.DATA                   $BE     BYTE            ;graphics data port
+.CONTROL                $BF     BYTE            ;graphics control port
 ]
 
 RAM     $#SMS.VRAM
@@ -62,15 +62,15 @@ RAM     $#SMS.VRAM
 .SCREENNAMETABLE        $3800   WORD
 ]
 
-`sound:
-`--------------------------------------------------------------------------------------
+;sound:
+;--------------------------------------------------------------------------------------
 RAM     $#SMS.PSG
 [
-.DATA                   $7F     BYTE            `write-only data port for sound chip
+.DATA                   $7F     BYTE            ;write-only data port for sound chip
 ]
 
-`input:
-`--------------------------------------------------------------------------------------
+;input:
+;--------------------------------------------------------------------------------------
 RAM     $#SMS.JOY
 [
 .A                      $DC     TYPE [
@@ -88,8 +88,8 @@ RAM     $#SMS.JOY
         .pad2right              BOOL
         .pad2button1            BOOL
         .pad2button2            BOOL
-        .reset                  BOOL            `reset button
-        .                       BOOL            `unused
+        .reset                  BOOL            ;reset button
+        .                       BOOL            ;unused
         .lightgun1              BOOL
         .lightgun2              BOOL
                                 ]

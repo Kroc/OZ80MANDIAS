@@ -1,8 +1,18 @@
-PROC    :_7b95                                  SECTION ::mobs                  `$7B95
-        `==============================================================================
-PARAMS  IX;mob          HELP ""Address of the current mob being processed
+;; Sonic 1 Master System Disassembly <github.com/Kroc/Sonic1-SMS-OZ80>
+   for MaSS1VE: The Master System Sonic 1 Visual Editor <github.com/Kroc/MaSS1VE>
+   using OZ80MANDIAS, a high-level Z80 assembler <github.com/Kroc/OZ80MANDIAS>
+   -------------------------------------------------------------------------------------
+   created by Kroc Camen <kroc@camendesign.com> and given to the Public Domain;
+   you may do anything you like with this code as long as you respect the TradeMarks
+   and (any) Copyrights within. absolutely no warranty implied
+   =====================================================================================
+;;
+
+PROC    :_7b95                                  SECTION ::mobs                  ;$7B95
+        ;==============================================================================
+PARAMS  IX`mob          HELP ""Address of the current mob being processed
 {
-        set     5,[ix+#mob.flags]               `mob does not collide with the floor
+        set     5,[ix+#mob.flags]               ;mob does not collide with the floor
         set     0,[iy+#vars.flags9]
         ld      a,[$.FRAMECOUNT]
         and     $01
@@ -40,10 +50,10 @@ PARAMS  IX;mob          HELP ""Address of the current mob being processed
         ld      d,[ix+#mob.Y+1]
         ld      hl,[$.CAMERA_Y]
         inc     h
-        xor     a;zero
+        xor     a`zero
         sbc     hl,de
         jr      nc,._3
-        ld      [ix+#mob.type],$FF      `remove object?
+        ld      [ix+#mob.type],$FF      ;remove object?
         res     0,[iy+#vars.flags9]
         ret
         
@@ -67,7 +77,7 @@ PARAMS  IX;mob          HELP ""Address of the current mob being processed
         WORD ._7c31 BYTE $1D
         WORD ._7c39 BYTE $1D
         
-        `sprite layout
+        ;sprite layout
 ._7c29  BYTE $B4, $B6, $FF, $FF, $FF, $FF
         BYTE $FF, $FF
 ._7c31  BYTE $B8, $BA, $FF, $FF, $FF, $FF

@@ -1,6 +1,16 @@
-PROC    :_9be8                                  SECTION ::mobs                  `$9BE8
-        `==============================================================================
-PARAMS  IX;mob          HELP ""Address of the current mob being processed
+;; Sonic 1 Master System Disassembly <github.com/Kroc/Sonic1-SMS-OZ80>
+   for MaSS1VE: The Master System Sonic 1 Visual Editor <github.com/Kroc/MaSS1VE>
+   using OZ80MANDIAS, a high-level Z80 assembler <github.com/Kroc/OZ80MANDIAS>
+   -------------------------------------------------------------------------------------
+   created by Kroc Camen <kroc@camendesign.com> and given to the Public Domain;
+   you may do anything you like with this code as long as you respect the TradeMarks
+   and (any) Copyrights within. absolutely no warranty implied
+   =====================================================================================
+;;
+
+PROC    :_9be8                                  SECTION ::mobs                  ;$9BE8
+        ;==============================================================================
+PARAMS  IX`mob          HELP ""Address of the current mob being processed
 {
         ld      [ix+#mob.Xspeed+0],$80
         ld      [ix+#mob.Xspeed+1],$01
@@ -8,7 +18,7 @@ PARAMS  IX;mob          HELP ""Address of the current mob being processed
         ld      [ix+#mob.spriteLayout+0],LO ._9c69
         ld      [ix+#mob.spriteLayout+1],HI ._9c69
         
-._9bfc  set     5,[ix+#mob.flags]               `mob does not collide with the floor
+._9bfc  set     5,[ix+#mob.flags]               ;mob does not collide with the floor
         bit     0,[ix+#mob.flags]
         jr      nz,._1
         ld      a,[ix+#mob.X+0]
@@ -33,9 +43,9 @@ PARAMS  IX;mob          HELP ""Address of the current mob being processed
         ret     c
         cp      $f0
         jr      c,._3
-        xor     a;zero                          `set A to 0
-        ld      [ix+#mob.Xsubpixel],a;zero
-        ld      [ix+#mob.unknown13],a;zero
+        xor     a`zero                          ;set A to 0
+        ld      [ix+#mob.Xsubpixel],a`zero
+        ld      [ix+#mob.unknown13],a`zero
         ld      a,[ix+#mob.unknown11]
         ld      [ix+#mob.X+0],a
         ld      a,[ix+$12]
@@ -44,15 +54,15 @@ PARAMS  IX;mob          HELP ""Address of the current mob being processed
         rst     :rst_playSFX
         ret
         
-._3     xor     a;zero
-        ld      [ix+#mob.spriteLayout+0],a;zero
-        ld      [ix+#mob.spriteLayout+1],a;zero
-        ld      [ix+#mob.Xspeed+0],a;zero
-        ld      [ix+#mob.Xspeed+1],a;zero
-        ld      [ix+#mob.Xdirection],a;zero
+._3     xor     a`zero
+        ld      [ix+#mob.spriteLayout+0],a`zero
+        ld      [ix+#mob.spriteLayout+1],a`zero
+        ld      [ix+#mob.Xspeed+0],a`zero
+        ld      [ix+#mob.Xspeed+1],a`zero
+        ld      [ix+#mob.Xdirection],a`zero
         ret
 
-        `sprite layout
+        ;sprite layout
 ._9c69  BYTE $0C, $0E, $FF, $FF, $FF, $FF
         BYTE $FF
 }

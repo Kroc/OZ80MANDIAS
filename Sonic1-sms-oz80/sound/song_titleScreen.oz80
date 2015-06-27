@@ -1,13 +1,23 @@
-TABLE   :S1_Music_TitleScreen                   SECTION ::sound                 `$E4C3
-        `===============================================================================
+;; Sonic 1 Master System Disassembly <github.com/Kroc/Sonic1-SMS-OZ80>
+   for MaSS1VE: The Master System Sonic 1 Visual Editor <github.com/Kroc/MaSS1VE>
+   using OZ80MANDIAS, a high-level Z80 assembler <github.com/Kroc/OZ80MANDIAS>
+   -------------------------------------------------------------------------------------
+   created by Kroc Camen <kroc@camendesign.com> and given to the Public Domain;
+   you may do anything you like with this code as long as you respect the TradeMarks
+   and (any) Copyrights within. absolutely no warranty implied
+   =====================================================================================
+;;
+
+TABLE   :S1_Music_TitleScreen                   SECTION ::sound                 ;$E4C3
+        ;===============================================================================
 {
-    WORD    .channel1 - :                       `$000A
-    WORD    .channel2 - :                       `$008C
-    WORD    .channel3 - :                       `$00DA
-    WORD    .channel4 - :                       `$013C
+    WORD    .channel1 - :                       ;$000A
+    WORD    .channel2 - :                       ;$008C
+    WORD    .channel3 - :                       ;$00DA
+    WORD    .channel4 - :                       ;$013C
     WORD    $0000
         
-.channel1   `---------------------------------------------------------------------------
+.channel1   ;---------------------------------------------------------------------------
     BYTE    $80 $05 $00 $04 $00
     BYTE    $85 $FF
     BYTE    $81 $0C
@@ -19,7 +29,7 @@ TABLE   :S1_Music_TitleScreen                   SECTION ::sound                 
     BYTE    $86
 .a  BYTE    $14 $06 $7F $06
     BYTE    $87 $03
-    WORD    .a - :                              `$27 $00
+    WORD    .a - :                              ;$27 $00
     BYTE    $81 $0C
     BYTE    $82 $FF $14 $96 $02 $32 $0A
     BYTE    $83 $10 $01 $04 $06 $00
@@ -33,12 +43,12 @@ TABLE   :S1_Music_TitleScreen                   SECTION ::sound                 
     BYTE    $86
 .b  BYTE    $29 $00 $7F $00 $8C $8C $8C
     BYTE    $87 $04
-    WORD    .b - :                              `$7B $00
+    WORD    .b - :                              ;$7B $00
     BYTE    $88
     BYTE    $81 $00 $7F $00
     BYTE    $FF
         
-.channel2   `---------------------------------------------------------------------------
+.channel2   ;---------------------------------------------------------------------------
     BYTE    $82 $FF $1E $96 $0A $0A $0A
     BYTE    $81 $0D
     BYTE    $8A $0C
@@ -52,7 +62,7 @@ TABLE   :S1_Music_TitleScreen                   SECTION ::sound                 
     BYTE    $81 $00 $7F $00
     BYTE    $FF
         
-.channel3   `---------------------------------------------------------------------------
+.channel3   ;---------------------------------------------------------------------------
     BYTE    $82 $FF $14 $82 $02 $32 $0A
     BYTE    $81 $0B
     BYTE    $8A $06
@@ -71,7 +81,7 @@ TABLE   :S1_Music_TitleScreen                   SECTION ::sound                 
     BYTE    $81 $00 $7F $00
     BYTE    $FF
         
-.channel4   `---------------------------------------------------------------------------
+.channel4   ;---------------------------------------------------------------------------
     BYTE    $81 $09
     BYTE    $8A $06 $8A $0C
     BYTE    $70 $00 $71 $00 $71 $00 $71 $00
@@ -85,7 +95,7 @@ TABLE   :S1_Music_TitleScreen                   SECTION ::sound                 
     BYTE    $81 $09 $70 $00 $70 $06
     BYTE    $81 $0B $71 $00
     BYTE    $87 $03
-    WORD    .d - :                              `$4B $01
+    WORD    .d - :                              ;$4B $01
     BYTE    $88
     BYTE    $81 $00 $7F $00
     BYTE    $FF

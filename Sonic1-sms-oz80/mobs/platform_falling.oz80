@@ -1,10 +1,20 @@
-`wooden platform - falling (Green Hill)
+;; Sonic 1 Master System Disassembly <github.com/Kroc/Sonic1-SMS-OZ80>
+   for MaSS1VE: The Master System Sonic 1 Visual Editor <github.com/Kroc/MaSS1VE>
+   using OZ80MANDIAS, a high-level Z80 assembler <github.com/Kroc/OZ80MANDIAS>
+   -------------------------------------------------------------------------------------
+   created by Kroc Camen <kroc@camendesign.com> and given to the Public Domain;
+   you may do anything you like with this code as long as you respect the TradeMarks
+   and (any) Copyrights within. absolutely no warranty implied
+   =====================================================================================
+;;
 
-PROC    :mob_platform_weight                    SECTION ::mobs                  `$6A47
-        `==============================================================================
-PARAMS  IX;mob          HELP ""Address of the current mob being processed
+;wooden platform - falling (Green Hill)
+
+PROC    :mob_platform_weight                    SECTION ::mobs                  ;$6A47
+        ;==============================================================================
+PARAMS  IX`mob          HELP ""Address of the current mob being processed
 {
-        set     5,[ix+#mob.flags]               `mob does not collide with the floor
+        set     5,[ix+#mob.flags]               ;mob does not collide with the floor
         ld      a,[ix+#mob.unknown16]
         add     a,[ix+#mob.unknown17]
         ld      [ix+#mob.unknown17],a
@@ -50,6 +60,6 @@ PARAMS  IX;mob          HELP ""Address of the current mob being processed
         and     a
         sbc     hl,de
         ret     nc
-        ld      [ix+#mob.type],$FF              `remove object?
+        ld      [ix+#mob.type],$FF              ;remove object?
         ret
 }

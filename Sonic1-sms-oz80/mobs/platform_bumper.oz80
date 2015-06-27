@@ -1,10 +1,20 @@
-`moving bumper (Special Stage)
+;; Sonic 1 Master System Disassembly <github.com/Kroc/Sonic1-SMS-OZ80>
+   for MaSS1VE: The Master System Sonic 1 Visual Editor <github.com/Kroc/MaSS1VE>
+   using OZ80MANDIAS, a high-level Z80 assembler <github.com/Kroc/OZ80MANDIAS>
+   -------------------------------------------------------------------------------------
+   created by Kroc Camen <kroc@camendesign.com> and given to the Public Domain;
+   you may do anything you like with this code as long as you respect the TradeMarks
+   and (any) Copyrights within. absolutely no warranty implied
+   =====================================================================================
+;;
 
-PROC    :mob_platform_bumper                    SECTION ::mobs                  `$9AFB
-        `==============================================================================
-PARAMS  IX;mob          HELP ""Address of the current mob being processed
+;moving bumper (Special Stage)
+
+PROC    :mob_platform_bumper                    SECTION ::mobs                  ;$9AFB
+        ;==============================================================================
+PARAMS  IX`mob          HELP ""Address of the current mob being processed
 {
-        set     5,[ix+#mob.flags]               `mob does not collide with the floor
+        set     5,[ix+#mob.flags]               ;mob does not collide with the floor
         ld      [ix+#mob.width],$1c
         ld      [ix+#mob.height],$06
         ld      [ix+#mob.spriteLayout+0],LO ._9b6e
@@ -20,8 +30,8 @@ PARAMS  IX;mob          HELP ""Address of the current mob being processed
         inc     a
         cp      $c0
         jr      c,._2
-        xor     a;zero
-._2     ld      [ix+$12],a;zero
+        xor     a`zero
+._2     ld      [ix+$12],a`zero
         ld      a,[ix+#mob.unknown11]
         and     a
         jr      nz,._3
@@ -56,7 +66,7 @@ PARAMS  IX;mob          HELP ""Address of the current mob being processed
 ._3     dec     [ix+#mob.unknown11]
         ret
         
-        `sprite layout
+        ;sprite layout
 ._9b6e  BYTE $08, $0A, $28, $2A, $FF, $FF
         BYTE $FF
 }

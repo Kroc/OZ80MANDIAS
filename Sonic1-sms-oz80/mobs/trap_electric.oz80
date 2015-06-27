@@ -1,10 +1,20 @@
-`electric sphere (Scrap Brain)
+;; Sonic 1 Master System Disassembly <github.com/Kroc/Sonic1-SMS-OZ80>
+   for MaSS1VE: The Master System Sonic 1 Visual Editor <github.com/Kroc/MaSS1VE>
+   using OZ80MANDIAS, a high-level Z80 assembler <github.com/Kroc/OZ80MANDIAS>
+   -------------------------------------------------------------------------------------
+   created by Kroc Camen <kroc@camendesign.com> and given to the Public Domain;
+   you may do anything you like with this code as long as you respect the TradeMarks
+   and (any) Copyrights within. absolutely no warranty implied
+   =====================================================================================
+;;
 
-PROC    :mob_trap_electric                      SECTION ::mobs                  `$A0E8
-        `==============================================================================
-PARAMS  IX;mob          HELP ""Address of the current mob being processed
+;electric sphere (Scrap Brain)
+
+PROC    :mob_trap_electric                      SECTION ::mobs                  ;$A0E8
+        ;==============================================================================
+PARAMS  IX`mob          HELP ""Address of the current mob being processed
 {
-        set     5,[ix+#mob.flags]               `mob does not collide with the floor
+        set     5,[ix+#mob.flags]               ;mob does not collide with the floor
         ld      [ix+#mob.width],$30
         ld      [ix+#mob.height],$10
         bit     0,[ix+#mob.flags]
@@ -27,7 +37,7 @@ PARAMS  IX;mob          HELP ""Address of the current mob being processed
         jr      c,._3
         jr      nz,._2
         
-        ld      A;sfx           $13
+        ld      A`sfx           $13
         rst     :rst_playSFX
         
 ._2     ld      hl,$0000
@@ -41,9 +51,9 @@ PARAMS  IX;mob          HELP ""Address of the current mob being processed
         
 ._3     cp      $46
         jr      nc,._4
-        xor     a;zero
-        ld      [ix+#mob.spriteLayout+0],a;zero
-        ld      [ix+#mob.spriteLayout+1],a;zero
+        xor     a`zero
+        ld      [ix+#mob.spriteLayout+0],a`zero
+        ld      [ix+#mob.spriteLayout+1],a`zero
         jp      ._5
         
 ._4     ld      de,._a173
@@ -56,12 +66,12 @@ PARAMS  IX;mob          HELP ""Address of the current mob being processed
         ld      [ix+#mob.unknown11],$00
         ret
 
-._a167                                                                          `$A167
+._a167                                                                          ;$A167
         BYTE $00, $01, $01, $01, $02, $01, $FF
-._a16e                                                                          `$A16E
+._a16e                                                                          ;$A16E
         BYTE $02, $01, $03, $01, $FF
 
-._a173  `sprite layout                                                          `$A173
+._a173  ;sprite layout                                                          ;$A173
         BYTE $02, $04, $FF, $FF, $FF, $FF
         BYTE $FF, $FF, $FF, $FF, $FF, $FF
         BYTE $FF, $FF, $FF, $FF, $FF, $FF

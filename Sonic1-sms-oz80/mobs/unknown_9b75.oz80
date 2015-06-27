@@ -1,8 +1,18 @@
-PROC    :_9b75                                  SECTION ::mobs                  `$9B75
-        `==============================================================================
-PARAMS  IX;mob          HELP ""Address of the current mob being processed
+;; Sonic 1 Master System Disassembly <github.com/Kroc/Sonic1-SMS-OZ80>
+   for MaSS1VE: The Master System Sonic 1 Visual Editor <github.com/Kroc/MaSS1VE>
+   using OZ80MANDIAS, a high-level Z80 assembler <github.com/Kroc/OZ80MANDIAS>
+   -------------------------------------------------------------------------------------
+   created by Kroc Camen <kroc@camendesign.com> and given to the Public Domain;
+   you may do anything you like with this code as long as you respect the TradeMarks
+   and (any) Copyrights within. absolutely no warranty implied
+   =====================================================================================
+;;
+
+PROC    :_9b75                                  SECTION ::mobs                  ;$9B75
+        ;==============================================================================
+PARAMS  IX`mob          HELP ""Address of the current mob being processed
 {
-        set     5,[ix+#mob.flags]               `mob does not collide with the floor
+        set     5,[ix+#mob.flags]               ;mob does not collide with the floor
         ld      [ix+#mob.width],$1e
         ld      [ix+#mob.height],$60
         ld      hl,$0000
@@ -51,9 +61,9 @@ PARAMS  IX;mob          HELP ""Address of the current mob being processed
         inc     hl
         djnz    .loop
         
-._2     xor     a;zero
-        ld      [ix+#mob.spriteLayout+0],a;zero
-        ld      [ix+#mob.spriteLayout+1],a;zero
+._2     xor     a`zero
+        ld      [ix+#mob.spriteLayout+0],a`zero
+        ld      [ix+#mob.spriteLayout+1],a`zero
         ret
 
 ._9bd9  BYTE $7D, $1A, $15, $7D, $01, $14, $01, $3C, $18, $01, $02

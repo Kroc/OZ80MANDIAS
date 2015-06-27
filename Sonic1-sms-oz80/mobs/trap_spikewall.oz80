@@ -1,10 +1,20 @@
-`moving spiked wall (Sky Base)
+;; Sonic 1 Master System Disassembly <github.com/Kroc/Sonic1-SMS-OZ80>
+   for MaSS1VE: The Master System Sonic 1 Visual Editor <github.com/Kroc/MaSS1VE>
+   using OZ80MANDIAS, a high-level Z80 assembler <github.com/Kroc/OZ80MANDIAS>
+   -------------------------------------------------------------------------------------
+   created by Kroc Camen <kroc@camendesign.com> and given to the Public Domain;
+   you may do anything you like with this code as long as you respect the TradeMarks
+   and (any) Copyrights within. absolutely no warranty implied
+   =====================================================================================
+;;
 
-PROC    :_b398                                  SECTION ::mobs                  `$B398
-        `==============================================================================
-PARAMS  IX;mob          HELP ""Address of the current mob being processed
+;moving spiked wall (Sky Base)
+
+PROC    :_b398                                  SECTION ::mobs                  ;$B398
+        ;==============================================================================
+PARAMS  IX`mob          HELP ""Address of the current mob being processed
 {
-        set     5,[ix+#mob.flags]               `mob does not collide with the floor
+        set     5,[ix+#mob.flags]               ;mob does not collide with the floor
         bit     0,[ix+#mob.flags]
         jr      nz,._1
         ld      l,[ix+#mob.X+0]
@@ -46,10 +56,10 @@ PARAMS  IX;mob          HELP ""Address of the current mob being processed
         ld      l,[ix+#mob.X+0]
         ld      h,[ix+#mob.X+1]
         ld      de,$0580
-        xor     a;zero
-        ld      [ix+#mob.Xspeed+0],a;zero
-        ld      [ix+#mob.Xspeed+1],a;zero
-        ld      [ix+#mob.Xdirection],a;zero
+        xor     a`zero
+        ld      [ix+#mob.Xspeed+0],a`zero
+        ld      [ix+#mob.Xspeed+1],a`zero
+        ld      [ix+#mob.Xdirection],a`zero
         sbc     hl,de
         ret     nc
         ld      c,[ix+#mob.Y+0]
@@ -67,20 +77,20 @@ PARAMS  IX;mob          HELP ""Address of the current mob being processed
 ._2     ld      de,[$.SONIC.Y]
         ld      hl,$ffe0
         add     hl,bc
-        xor     a;zero
+        xor     a`zero
         sbc     hl,de
         ret     nc
         ld      hl,$002c
         add     hl,bc
-        xor     a;zero
+        xor     a`zero
         sbc     hl,de
         ret     c
         ld      [ix+#mob.Xspeed+0],$80
-        ld      [ix+#mob.Xspeed+1],a;zero
-        ld      [ix+#mob.Xdirection],a;zero
+        ld      [ix+#mob.Xspeed+1],a`zero
+        ld      [ix+#mob.Xdirection],a`zero
         ret
         
-        `sprite layout
+        ;sprite layout
 ._b45b  BYTE $16, $18, $FF, $FF, $FF, $FF
         BYTE $16, $18, $FF, $FF, $FF, $FF
         BYTE $16, $18, $FF, $FF, $FF, $FF

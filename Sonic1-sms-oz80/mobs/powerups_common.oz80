@@ -1,8 +1,18 @@
-`NOTE: the power-ups share code between themselves
+;; Sonic 1 Master System Disassembly <github.com/Kroc/Sonic1-SMS-OZ80>
+   for MaSS1VE: The Master System Sonic 1 Visual Editor <github.com/Kroc/MaSS1VE>
+   using OZ80MANDIAS, a high-level Z80 assembler <github.com/Kroc/OZ80MANDIAS>
+   -------------------------------------------------------------------------------------
+   created by Kroc Camen <kroc@camendesign.com> and given to the Public Domain;
+   you may do anything you like with this code as long as you respect the TradeMarks
+   and (any) Copyrights within. absolutely no warranty implied
+   =====================================================================================
+;;
 
-PROC    :mob_powerUp_ring                       SECTION ::mobs                  `$5B09
-        `==============================================================================
-PARAMS  IX;mob          HELP ""Address of the current mob being processed
+;NOTE: the power-ups share code between themselves
+
+PROC    :mob_powerUp_ring                       SECTION ::mobs                  ;$5B09
+        ;==============================================================================
+PARAMS  IX`mob          HELP ""Address of the current mob being processed
 {       
         ld      [ix+#mob.width], 20
         ld      [ix+#mob.height],24
@@ -14,18 +24,18 @@ PARAMS  IX;mob          HELP ""Address of the current mob being processed
         call    :_5deb
         jr      c,._1
         
-        `Add 10 rings to the ring count
+        ;Add 10 rings to the ring count
 ._5b24  ld      a,$10
         call    :increaseRings
         
-._5b29  xor     a;zero                          `set A to 0
-        ld      [ix+#mob.spriteLayout+0],a;zero
-        ld      [ix+#mob.spriteLayout+1],a;zero
+._5b29  xor     a`zero                          ;set A to 0
+        ld      [ix+#mob.spriteLayout+0],a`zero
+        ld      [ix+#mob.spriteLayout+1],a`zero
         ret     
         
-        `------------------------------------------------------------------------------
+        ;------------------------------------------------------------------------------
         
-._1     ld      hl,$5180                        `$15180 - blinking items art
+._1     ld      hl,$5180                        ;$15180 - blinking items art
 ._5b34
         call    :loadPowerUpIcon
         ld      [ix+#mob.spriteLayout+0],LO ._5bbf
@@ -91,9 +101,9 @@ PARAMS  IX;mob          HELP ""Address of the current mob being processed
         BYTE $FF
 }
 
-PROC    :mob_powerUp_speed                      SECTION ::mobs                  `$5BD9
-        `==============================================================================
-PARAMS  IX;mob          HELP ""Address of the current mob being processed
+PROC    :mob_powerUp_speed                      SECTION ::mobs                  ;$5BD9
+        ;==============================================================================
+PARAMS  IX`mob          HELP ""Address of the current mob being processed
 {       
         ld      [ix+#mob.width], 20
         ld      [ix+#mob.height],24
@@ -115,22 +125,22 @@ PARAMS  IX;mob          HELP ""Address of the current mob being processed
 
 }
 
-PROC    :mob_powerUp_life                       SECTION ::mobs                  `$5C05
-        `==============================================================================
-PARAMS  IX;mob          HELP ""Address of the current mob being processed
+PROC    :mob_powerUp_life                       SECTION ::mobs                  ;$5C05
+        ;==============================================================================
+PARAMS  IX`mob          HELP ""Address of the current mob being processed
 {
         ld      [ix+#mob.width], 20
         ld      [ix+#mob.height],24
         call    :_5da8
         
-        `check if the level has its bit flag set at $.D305+
+        ;check if the level has its bit flag set at $.D305+
         ld      hl,$.D305
         call    :getLevelBitFlag
         ld      a,[hl]
         and     c
-        jr      z,._1                           `if not set, skip ahead
+        jr      z,._1                           ;if not set, skip ahead
         
-        ld      [ix+#mob.type],$FF              `remove object?
+        ld      [ix+#mob.type],$FF              ;remove object?
         jp      :mob_powerUp_ring._5b29
         
 ._1     ld      hl,$0003
@@ -144,37 +154,37 @@ PARAMS  IX;mob          HELP ""Address of the current mob being processed
         ld      hl,$.LIVES
         inc     [hl]
         
-        `set the level's bit flag at $.D305+
+        ;set the level's bit flag at $.D305+
         ld      hl,$.D305
         call    :getLevelBitFlag
         ld      a,[hl]
         or      c
         ld      [hl],a
         
-        xor     a;zero                          `set A to 0
-        ld      [ix+#mob.spriteLayout+0],a;zero
-        ld      [ix+#mob.spriteLayout+1],a;zero
+        xor     a`zero                          ;set A to 0
+        ld      [ix+#mob.spriteLayout+0],a`zero
+        ld      [ix+#mob.spriteLayout+1],a`zero
         
         ld      a,$09
         rst     :rst_playSFX
         
         ld      a,[$.CURRENT_LEVEL]
-        cp      28                              `special stage?
+        cp      28                              ;special stage?
         ret     nc
         
         ld      hl,$.D280
         inc     [hl]
         ret
         
-        `------------------------------------------------------------------------------
+        ;------------------------------------------------------------------------------
 ._2     ld      a,[$.CURRENT_LEVEL]
-        cp      4                               `level 4 (Bridge Act 2)?
+        cp      4                               ;level 4 (Bridge Act 2)?
         jr      z,._4
-        cp      $09                             `level 9 (Labyrinth Act 1)?
+        cp      $09                             ;level 9 (Labyrinth Act 1)?
         jr      z,._6
-        cp      $0c                             `level 12 (Scrap Brain Act 1)?
+        cp      $0c                             ;level 12 (Scrap Brain Act 1)?
         jr      z,._7
-        cp      $11                             `level 11 (Labyrinth Act 3)?
+        cp      $11                             ;level 11 (Labyrinth Act 3)?
         jr      z,._8
         
 ._3     ld      hl,$5280
@@ -217,14 +227,14 @@ PARAMS  IX;mob          HELP ""Address of the current mob being processed
 ._8     ld      a,[$.D280]
         cp      $11
         jr      nc,._3
-        ld      [ix+#mob.type],$FF      `remove object?
+        ld      [ix+#mob.type],$FF      ;remove object?
         jr      ._3
 
 }
 
-PROC    :mob_powerUp_shield                     SECTION ::mobs                  `$5CD7
-        `==============================================================================
-PARAMS  IX;mob          HELP ""Address of the current mob being processed
+PROC    :mob_powerUp_shield                     SECTION ::mobs                  ;$5CD7
+        ;==============================================================================
+PARAMS  IX`mob          HELP ""Address of the current mob being processed
 {       
         ld      [ix+#mob.width], 20
         ld      [ix+#mob.height],24
@@ -243,9 +253,9 @@ PARAMS  IX;mob          HELP ""Address of the current mob being processed
 
 }
 
-PROC    :mob_powerUp_invincibility              SECTION ::mobs                  `$5CFF
-        `==============================================================================
-PARAMS  IX;mob          HELP ""Address of the current mob being processed
+PROC    :mob_powerUp_invincibility              SECTION ::mobs                  ;$5CFF
+        ;==============================================================================
+PARAMS  IX`mob          HELP ""Address of the current mob being processed
 {       
         ld      [ix+#mob.width], 20
         ld      [ix+#mob.height],24
@@ -260,7 +270,7 @@ PARAMS  IX;mob          HELP ""Address of the current mob being processed
         ld      a,$F0
         ld      [$.D28D],a
         
-        ld      a,#index_music_invincibility
+        ld      a,:S1_MusicPointers.invincibility.index ;=$08
         rst     :rst_playMusic
         
         jp      :mob_powerUp_ring._5b29
@@ -270,9 +280,9 @@ PARAMS  IX;mob          HELP ""Address of the current mob being processed
 
 }
 
-PROC    :mob_powerUp_checkpoint                 SECTION ::mobs                  `$5D2F
-        `==============================================================================
-PARAMS  IX;mob          HELP ""Address of the current mob being processed
+PROC    :mob_powerUp_checkpoint                 SECTION ::mobs                  ;$5D2F
+        ;==============================================================================
+PARAMS  IX`mob          HELP ""Address of the current mob being processed
 {       
         ld      [ix+#mob.width], 20
         ld      [ix+#mob.height],24
@@ -296,7 +306,7 @@ PARAMS  IX;mob          HELP ""Address of the current mob being processed
         ld      d,$00
         ld      hl,$.D32E
         add     hl,de
-        ex      de,hl                           `DE is $.D32E + level number * 2
+        ex      de,hl                           ;DE is $.D32E + level number * 2
         ld      l,[ix+#mob.X+0]
         ld      h,[ix+#mob.X+1]
         add     hl,hl
@@ -320,9 +330,9 @@ PARAMS  IX;mob          HELP ""Address of the current mob being processed
 
 }
 
-PROC    :mob_powerUp_continue                   SECTION ::mobs                  `$5D80
-        `==============================================================================
-PARAMS  IX;mob          HELP ""Address of the current mob being processed
+PROC    :mob_powerUp_continue                   SECTION ::mobs                  ;$5D80
+        ;==============================================================================
+PARAMS  IX`mob          HELP ""Address of the current mob being processed
 {       
         ld      [ix+#mob.width], 20
         ld      [ix+#mob.height],24
@@ -341,9 +351,9 @@ PARAMS  IX;mob          HELP ""Address of the current mob being processed
 
 }
 
-PROC    :_5da8                                  SECTION ::mobs                  `$5DA8
-        `==============================================================================
-PARAMS  IX;mob          HELP ""Address of the current mob being processed
+PROC    :_5da8                                  SECTION ::mobs                  ;$5DA8
+        ;==============================================================================
+PARAMS  IX`mob          HELP ""Address of the current mob being processed
 {       
         bit     0,[ix+#mob.flags]
         ret     nz
@@ -376,9 +386,9 @@ PARAMS  IX;mob          HELP ""Address of the current mob being processed
 
 }
 
-PROC    :_5deb                                  SECTION ::mobs                  `$5DEB
-        `==============================================================================
-PARAMS  IX;mob          HELP ""Address of the current mob being processed
+PROC    :_5deb                                  SECTION ::mobs                  ;$5DEB
+        ;==============================================================================
+PARAMS  IX`mob          HELP ""Address of the current mob being processed
 {       
         ld      hl,$0804
         ld      [$.TEMP1],hl
@@ -405,11 +415,11 @@ PARAMS  IX;mob          HELP ""Address of the current mob being processed
         ld      h,[ix+#mob.Y+1]
         ld      a,[$.SONIC.width]
         ld      c,a
-        xor     a;zero
-        ld      b,a;zero
+        xor     a`zero
+        ld      b,a`zero
         sbc     hl,bc
         ld      [$.SONIC.Y],hl
-        ld      [$.D28E],a;zero
+        ld      [$.D28E],a`zero
         ld      a,[$.D2E8]
         ld      hl,[$.D2E6]
         ld      [$.SONIC.Yspeed],hl
@@ -431,7 +441,7 @@ PARAMS  IX;mob          HELP ""Address of the current mob being processed
         ld      [ix+#mob.Yspeed+1],$fe
         ld      [ix+#mob.Ydirection],$ff
         ld      hl,$0400
-        xor     a;zero
+        xor     a`zero
         ld      [$.SONIC.Yspeed],hl
         ld      [$.SONIC.Ydirection],a
         ld      [$.D28E],a
@@ -457,20 +467,20 @@ PARAMS  IX;mob          HELP ""Address of the current mob being processed
         add     hl,bc
         ld      [$.SONIC.X],hl
         
-        xor     a;zero
-        ld      [$.SONIC.Xsubpixel],a;zero
-        ld      l;zero,a;zero
-        ld      h;zero,a;zero
-        ld      [$.SONIC.Xspeed+0],a;zero
-        ld      [$.SONIC.Xspeed+1],hl;zero
+        xor     a`zero
+        ld      [$.SONIC.Xsubpixel],a`zero
+        ld      l`zero,a`zero
+        ld      h`zero,a`zero
+        ld      [$.SONIC.Xspeed+0],a`zero
+        ld      [$.SONIC.Xspeed+1],hl`zero
         scf     
         ret
 
 }
 
-PROC    :mob_powerUp_emerald                    SECTION ::mobs                  `$5EA2
-        `==============================================================================
-PARAMS  IX;mob          HELP ""Address of the current mob being processed
+PROC    :mob_powerUp_emerald                    SECTION ::mobs                  ;$5EA2
+        ;==============================================================================
+PARAMS  IX`mob          HELP ""Address of the current mob being processed
 {       
         ld      hl,$.D30B
         call    :getLevelBitFlag
@@ -481,9 +491,9 @@ PARAMS  IX;mob          HELP ""Address of the current mob being processed
         ld      [ix+#mob.height],17
         call    :_5da8
         
-        xor     a;zero
-        ld      [ix+#mob.spriteLayout+0],a;zero
-        ld      [ix+#mob.spriteLayout+1],a;zero
+        xor     a`zero
+        ld      [ix+#mob.spriteLayout+0],a`zero
+        ld      [ix+#mob.spriteLayout+1],a`zero
         
         ld      hl,$0202
         ld      [$.TEMP6],hl
@@ -499,10 +509,10 @@ PARAMS  IX;mob          HELP ""Address of the current mob being processed
         ld      a,$fe
         ld      [$.D28B],a
         
-        ld      a,#index_music_emerald
+        ld      a,:S1_MusicPointers.emerald.index ;=$14
         rst     :rst_playMusic
         
-._1     ld      [ix+#mob.type],$FF      `remove object?
+._1     ld      [ix+#mob.type],$FF      ;remove object?
         ret
 
 ._2     ld      a,[$.FRAMECOUNT]
@@ -519,7 +529,7 @@ PARAMS  IX;mob          HELP ""Address of the current mob being processed
         ld      [ix+#mob.Yspeed+0],l
         ld      [ix+#mob.Yspeed+1],h
         ld      [ix+#mob.Ydirection],a
-        ld      hl,$5400                        `$15400 - emerald in blinking items art
+        ld      hl,$5400                        ;$15400 - emerald in blinking items art
         call    :loadPowerUpIcon
         ret
 

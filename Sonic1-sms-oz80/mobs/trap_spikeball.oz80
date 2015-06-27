@@ -1,10 +1,20 @@
-`spike ball (Labyrinth)
+;; Sonic 1 Master System Disassembly <github.com/Kroc/Sonic1-SMS-OZ80>
+   for MaSS1VE: The Master System Sonic 1 Visual Editor <github.com/Kroc/MaSS1VE>
+   using OZ80MANDIAS, a high-level Z80 assembler <github.com/Kroc/OZ80MANDIAS>
+   -------------------------------------------------------------------------------------
+   created by Kroc Camen <kroc@camendesign.com> and given to the Public Domain;
+   you may do anything you like with this code as long as you respect the TradeMarks
+   and (any) Copyrights within. absolutely no warranty implied
+   =====================================================================================
+;;
 
-PROC    :mob_trap_spikeBall                     SECTION ::mobs                  `$88FB
-        `==============================================================================
-PARAMS  IX;mob          HELP ""Address of the current mob being processed
+;spike ball (Labyrinth)
+
+PROC    :mob_trap_spikeBall                     SECTION ::mobs                  ;$88FB
+        ;==============================================================================
+PARAMS  IX`mob          HELP ""Address of the current mob being processed
 {
-        set     5,[ix+#mob.flags]               `mob does not collide with the floor
+        set     5,[ix+#mob.flags]               ;mob does not collide with the floor
         ld      [ix+#mob.width], 8
         ld      [ix+#mob.height],12
         bit     0,[ix+#mob.flags]
@@ -61,12 +71,12 @@ PARAMS  IX;mob          HELP ""Address of the current mob being processed
         ld      [ix+#mob.unknown11],$00
         ret
  
-        `sprite layout
+        ;sprite layout
 ._8987  BYTE $60, $62, $FF, $FF, $FF, $FF
         BYTE $FF
 
-        `I imagine this a set of X/Y positions to do the spiked-ball rotation
-._898e  `180 lines, ergo 2deg per frame?
+        ;I imagine this a set of X/Y positions to do the spiked-ball rotation
+._898e  ;180 lines, ergo 2deg per frame?
         BYTE $40, $00
         BYTE $40, $02
         BYTE $40, $04

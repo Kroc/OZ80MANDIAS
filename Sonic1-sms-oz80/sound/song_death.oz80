@@ -1,13 +1,23 @@
-TABLE   :S1_Music_Death                         SECTION ::sound                 `$E991
-        `===============================================================================
+;; Sonic 1 Master System Disassembly <github.com/Kroc/Sonic1-SMS-OZ80>
+   for MaSS1VE: The Master System Sonic 1 Visual Editor <github.com/Kroc/MaSS1VE>
+   using OZ80MANDIAS, a high-level Z80 assembler <github.com/Kroc/OZ80MANDIAS>
+   -------------------------------------------------------------------------------------
+   created by Kroc Camen <kroc@camendesign.com> and given to the Public Domain;
+   you may do anything you like with this code as long as you respect the TradeMarks
+   and (any) Copyrights within. absolutely no warranty implied
+   =====================================================================================
+;;
+
+TABLE   :S1_Music_Death                         SECTION ::sound                 ;$E991
+        ;===============================================================================
 {
-    WORD    .channel1 - :                       `$000A
-    WORD    .channel2 - :                       `$0064
-    WORD    .channel3 - :                       `$009B
-    WORD    .channel4 - :                       `$00E9
+    WORD    .channel1 - :                       ;$000A
+    WORD    .channel2 - :                       ;$0064
+    WORD    .channel3 - :                       ;$009B
+    WORD    .channel4 - :                       ;$00E9
     WORD    $0000
         
-.channel1   `---------------------------------------------------------------------------
+.channel1   ;---------------------------------------------------------------------------
     BYTE    $80 $01 $00 $01 $00
     BYTE    $82 $FF $14 $96 $0A $14 $0A
     BYTE    $85 $FF
@@ -16,7 +26,7 @@ TABLE   :S1_Music_Death                         SECTION ::sound                 
     BYTE    $86
 .a  BYTE    $00 $00 $0C $00 $0E $00 $8C $8C $40 $00 $0C $00 $7F $00 $8C $8C
     BYTE    $87 $03
-    WORD    .a - :                              `$1D $00
+    WORD    .a - :                              ;$1D $00
     BYTE    $8A $06
     BYTE    $81 $0C $30 $18 $30 $0C $31 $12
     BYTE    $83 $0B $01 $FA $FE $FF
@@ -26,10 +36,10 @@ TABLE   :S1_Music_Death                         SECTION ::sound                 
     BYTE    $86
 .b  BYTE    $26 $00 $7F $00 $8C
     BYTE    $87 $08
-    WORD    .b - :                              `$5A $00
+    WORD    .b - :                              ;$5A $00
     BYTE    $FF
         
-.channel2   `---------------------------------------------------------------------------
+.channel2   ;---------------------------------------------------------------------------
     BYTE    $82 $FF $1E $96 $0A $14 $0A
     BYTE    $81 $0D
     BYTE    $8A $0C
@@ -40,7 +50,7 @@ TABLE   :S1_Music_Death                         SECTION ::sound                 
     BYTE    $13 $60
     BYTE    $FF
         
-.channel3   `---------------------------------------------------------------------------
+.channel3   ;---------------------------------------------------------------------------
     BYTE    $82 $FF $14 $82 $0A $14 $0A
     BYTE    $81 $0E
     BYTE    $8A $0C
@@ -57,10 +67,10 @@ TABLE   :S1_Music_Death                         SECTION ::sound                 
     BYTE    $86
 .c  BYTE    $22 $00 $7F $00 $8C
     BYTE    $87 $08
-    WORD    .c - :                              `$DF $00
+    WORD    .c - :                              ;$DF $00
     BYTE    $FF
         
-.channel4   `---------------------------------------------------------------------------
+.channel4   ;---------------------------------------------------------------------------
     BYTE    $81 $09
     BYTE    $8A $06
     BYTE    $7F $06
@@ -81,6 +91,6 @@ TABLE   :S1_Music_Death                         SECTION ::sound                 
     BYTE    $86
 .d  BYTE    $71 $04
     BYTE    $87 $18
-    WORD    .d - :                              `$28 $01
+    WORD    .d - :                              ;$28 $01
     BYTE    $FF
 }

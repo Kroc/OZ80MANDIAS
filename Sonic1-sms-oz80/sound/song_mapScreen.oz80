@@ -1,13 +1,23 @@
-TABLE   :S1_Music_MapScreen                     SECTION ::sound                 `$E63C
-        `===============================================================================
+;; Sonic 1 Master System Disassembly <github.com/Kroc/Sonic1-SMS-OZ80>
+   for MaSS1VE: The Master System Sonic 1 Visual Editor <github.com/Kroc/MaSS1VE>
+   using OZ80MANDIAS, a high-level Z80 assembler <github.com/Kroc/OZ80MANDIAS>
+   -------------------------------------------------------------------------------------
+   created by Kroc Camen <kroc@camendesign.com> and given to the Public Domain;
+   you may do anything you like with this code as long as you respect the TradeMarks
+   and (any) Copyrights within. absolutely no warranty implied
+   =====================================================================================
+;;
+
+TABLE   :S1_Music_MapScreen                     SECTION ::sound                 ;$E63C
+        ;===============================================================================
 {
-    WORD    .channel1 - :                       `$000A
-    WORD    .channel2 - :                       `$004D
-    WORD    .channel3 - :                       `$008B
-    WORD    .channel4 - :                       `$00C2
+    WORD    .channel1 - :                       ;$000A
+    WORD    .channel2 - :                       ;$004D
+    WORD    .channel3 - :                       ;$008B
+    WORD    .channel4 - :                       ;$00C2
     WORD    $0000
         
-.channel1   `---------------------------------------------------------------------------
+.channel1   ;---------------------------------------------------------------------------
     BYTE    $80 $01 $00 $01 $00
     BYTE    $85 $FF
     BYTE    $81 $0D
@@ -18,12 +28,12 @@ TABLE   :S1_Music_MapScreen                     SECTION ::sound                 
     BYTE    $86
 .a  BYTE    $47 $05 $7F $05 $8C $8C
     BYTE    $87 $06
-    WORD    .a - :                              `$3D $00
+    WORD    .a - :                              ;$3D $00
     BYTE    $88
     BYTE    $81 $00 $7F $00
     BYTE    $FF
         
-.channel2   `---------------------------------------------------------------------------
+.channel2   ;---------------------------------------------------------------------------
     BYTE    $81 $0A
     BYTE    $82 $FF $14 $78 $14 $23 $01
     BYTE    $7F $0C
@@ -33,12 +43,12 @@ TABLE   :S1_Music_MapScreen                     SECTION ::sound                 
     BYTE    $86
 .b  BYTE    $47 $05 $7F $05 $8C $8C
     BYTE    $87 $05
-    WORD    .b - :                              `$7B $00
+    WORD    .b - :                              ;$7B $00
     BYTE    $88
     BYTE    $81 $00 $7F $00
     BYTE    $FF
         
-.channel3   `---------------------------------------------------------------------------
+.channel3   ;---------------------------------------------------------------------------
     BYTE    $81 $07
     BYTE    $82 $FF $14 $78 $14 $23 $01
     BYTE    $7F $18
@@ -49,7 +59,7 @@ TABLE   :S1_Music_MapScreen                     SECTION ::sound                 
     BYTE    $81 $00 $7F $00
     BYTE    $FF
         
-.channel4   `---------------------------------------------------------------------------
+.channel4   ;---------------------------------------------------------------------------
     BYTE    $88
     BYTE    $81 $00 $7F $00
     BYTE    $FF

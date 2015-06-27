@@ -1,10 +1,20 @@
-`free animal - bird
+;; Sonic 1 Master System Disassembly <github.com/Kroc/Sonic1-SMS-OZ80>
+   for MaSS1VE: The Master System Sonic 1 Visual Editor <github.com/Kroc/MaSS1VE>
+   using OZ80MANDIAS, a high-level Z80 assembler <github.com/Kroc/OZ80MANDIAS>
+   -------------------------------------------------------------------------------------
+   created by Kroc Camen <kroc@camendesign.com> and given to the Public Domain;
+   you may do anything you like with this code as long as you respect the TradeMarks
+   and (any) Copyrights within. absolutely no warranty implied
+   =====================================================================================
+;;
 
-PROC    :mob_boss_freeBird                      SECTION ::mobs                  `$7594
-        `==============================================================================
-PARAMS  IX;mob          HELP ""Address of the current mob being processed
+;free animal - bird
+
+PROC    :mob_boss_freeBird                      SECTION ::mobs                  ;$7594
+        ;==============================================================================
+PARAMS  IX`mob          HELP ""Address of the current mob being processed
 {
-        res     5,[ix+#mob.flags]               `mob adheres to the floor
+        res     5,[ix+#mob.flags]               ;mob adheres to the floor
         ld      [ix+#mob.width], 12
         ld      [ix+#mob.height],16
         bit     7,[ix+#mob.flags]
@@ -59,14 +69,14 @@ PARAMS  IX;mob          HELP ""Address of the current mob being processed
         and     a
         sbc     hl,de
         ret     nc
-        ld      [ix+#mob.type],$FF      `remove object?
+        ld      [ix+#mob.type],$FF      ;remove object?
         ret
 
 ._7629  BYTE $00, $02, $01, $02, $ff
 ._762e  BYTE $02, $04, $03, $04, $ff
 ._7633  BYTE $04, $03, $05, $03, $ff
 
-        `sprite layout
+        ;sprite layout
 ._7638  BYTE $10, $12, $FF, $FF, $FF, $FF
         BYTE $FF, $FF, $FF, $FF, $FF, $FF
         BYTE $FF, $FF, $FF, $FF, $FF, $FF
@@ -91,11 +101,11 @@ PARAMS  IX;mob          HELP ""Address of the current mob being processed
         BYTE $FF
 }
 
-PROC    :mob_boss_freeRabbit                    SECTION ::mobs                  `$7699
-        `==============================================================================
-PARAMS  IX;mob          HELP ""Address of the current mob being processed
+PROC    :mob_boss_freeRabbit                    SECTION ::mobs                  ;$7699
+        ;==============================================================================
+PARAMS  IX`mob          HELP ""Address of the current mob being processed
 {
-        res     5,[ix+#mob.flags]               `mob adheres to the floor
+        res     5,[ix+#mob.flags]               ;mob adheres to the floor
         ld      [ix+#mob.width], 12
         ld      [ix+#mob.height],32
         ld      hl,:_7760
@@ -114,13 +124,13 @@ PARAMS  IX;mob          HELP ""Address of the current mob being processed
         bit     7,[ix+#mob.flags]
         jr      z,._4
         
-        xor     a;zero
-        ld      [ix+#mob.Yspeed+0],a;zero
+        xor     a`zero
+        ld      [ix+#mob.Yspeed+0],a`zero
         ld      [ix+#mob.Yspeed+1],$01
-        ld      [ix+#mob.Ydirection],a;zero
-        ld      [ix+#mob.Xspeed+0],a;zero
-        ld      [ix+#mob.Xspeed+1],a;zero
-        ld      [ix+#mob.Xdirection],a;zero
+        ld      [ix+#mob.Ydirection],a`zero
+        ld      [ix+#mob.Xspeed+0],a`zero
+        ld      [ix+#mob.Xspeed+1],a`zero
+        ld      [ix+#mob.Xdirection],a`zero
         
         ld      hl,:_7752
         ld      a,[$.LEVEL_SOLIDITY]
@@ -170,7 +180,7 @@ PARAMS  IX;mob          HELP ""Address of the current mob being processed
         ld      [ix+#mob.unknown11],$00
         jp      :mob_boss_freeBird._7612
         
-        `sprite layout
+        ;sprite layout
 ._7752  BYTE $70, $72, $FF, $FF, $FF, $FF
         BYTE $54, $56, $FF, $FF, $FF, $FF
         BYTE $FF, $FF

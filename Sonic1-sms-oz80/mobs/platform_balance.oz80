@@ -1,10 +1,20 @@
-`balance (Bridge)
+;; Sonic 1 Master System Disassembly <github.com/Kroc/Sonic1-SMS-OZ80>
+   for MaSS1VE: The Master System Sonic 1 Visual Editor <github.com/Kroc/MaSS1VE>
+   using OZ80MANDIAS, a high-level Z80 assembler <github.com/Kroc/OZ80MANDIAS>
+   -------------------------------------------------------------------------------------
+   created by Kroc Camen <kroc@camendesign.com> and given to the Public Domain;
+   you may do anything you like with this code as long as you respect the TradeMarks
+   and (any) Copyrights within. absolutely no warranty implied
+   =====================================================================================
+;;
 
-PROC    :mob_platform_balance                   SECTION ::mobs                  `$866C
-        `==============================================================================
-PARAMS  IX;mob          HELP ""Address of the current mob being processed
+;balance (Bridge)
+
+PROC    :mob_platform_balance                   SECTION ::mobs                  ;$866C
+        ;==============================================================================
+PARAMS  IX`mob          HELP ""Address of the current mob being processed
 {
-        set     5,[ix+#mob.flags]               `mob does not collide with the floor
+        set     5,[ix+#mob.flags]               ;mob does not collide with the floor
         bit     0,[ix+#mob.flags]
         jr      nz,._1
         ld      [ix+#mob.unknown11],$1c
@@ -65,7 +75,7 @@ PARAMS  IX;mob          HELP ""Address of the current mob being processed
         ld      [$.SONIC.Yspeed],hl
         
         ld      a,$FF
-        ld      [$.SONIC.Ydirection],a          `set Sonic as currently jumping
+        ld      [$.SONIC.Ydirection],a          ;set Sonic as currently jumping
         
 ._4     ld      a,$1c
         sub     c
@@ -76,13 +86,13 @@ PARAMS  IX;mob          HELP ""Address of the current mob being processed
         jr      z,._6
         ld      a,$04
         rst     :rst_playSFX
-._6     xor     a;zero
-        ld      [ix+#mob.unknown11],a;zero
-        ld      [ix+#mob.unknown12],a;zero
-        ld      [ix+#mob.unknown13],a;zero
-        ld      [ix+#mob.unknown14],a;zero
+._6     xor     a`zero
+        ld      [ix+#mob.unknown11],a`zero
+        ld      [ix+#mob.unknown12],a`zero
+        ld      [ix+#mob.unknown13],a`zero
+        ld      [ix+#mob.unknown14],a`zero
         ld      [ix+#mob.unknown15],$1C
-        ld      [ix+#mob.unknown16],a;zero
+        ld      [ix+#mob.unknown16],a`zero
 ._7     ld      l,[ix+#mob.X+0]
         ld      h,[ix+#mob.X+1]
         ld      [$.TEMP1],hl
@@ -187,14 +197,14 @@ PARAMS  IX;mob          HELP ""Address of the current mob being processed
         add     hl,bc
         ld      a,[$.SONIC.width]
         ld      c,a
-        xor     a;zero
+        xor     a`zero
         sbc     hl,bc
         ld      [$.SONIC.Y],hl
         ld      hl,$.SONIC.flags
         set     7,[hl]
         ret
         
-        `------------------------------------------------------------------------------
+        ;------------------------------------------------------------------------------
 
 ._881a  ld      a,[hl]
         and     a
@@ -209,7 +219,7 @@ PARAMS  IX;mob          HELP ""Address of the current mob being processed
         inc     hl
         jp      ._881a
         
-        `------------------------------------------------------------------------------
+        ;------------------------------------------------------------------------------
 
 ._8830  BYTE $36, $38, $3A, $FF
 ._8834  BYTE $3C, $3E, $FF

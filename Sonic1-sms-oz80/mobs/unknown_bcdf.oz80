@@ -1,8 +1,18 @@
-PROC    :_bcdf                                  SECTION ::mobs                  `$BCDF
-        `==============================================================================
-PARAMS  IX;mob          HELP ""Address of the current mob being processed
+;; Sonic 1 Master System Disassembly <github.com/Kroc/Sonic1-SMS-OZ80>
+   for MaSS1VE: The Master System Sonic 1 Visual Editor <github.com/Kroc/MaSS1VE>
+   using OZ80MANDIAS, a high-level Z80 assembler <github.com/Kroc/OZ80MANDIAS>
+   -------------------------------------------------------------------------------------
+   created by Kroc Camen <kroc@camendesign.com> and given to the Public Domain;
+   you may do anything you like with this code as long as you respect the TradeMarks
+   and (any) Copyrights within. absolutely no warranty implied
+   =====================================================================================
+;;
+
+PROC    :_bcdf                                  SECTION ::mobs                  ;$BCDF
+        ;==============================================================================
+PARAMS  IX`mob          HELP ""Address of the current mob being processed
 {
-        set     5,[ix+#mob.flags]               `mob does not collide with the floor
+        set     5,[ix+#mob.flags]               ;mob does not collide with the floor
         set     5,[iy+#vars.unknown0]
         ld      hl,$0202
         ld      [$.TEMP6],hl
@@ -97,13 +107,13 @@ PARAMS  IX;mob          HELP ""Address of the current mob being processed
         call    :_7c41
         bit     4,[iy+#vars.unknown0]
         ret     nz
-._8     ld      [ix+#mob.type],$FF      `remove object?
+._8     ld      [ix+#mob.type],$FF      ;remove object?
         res     5,[iy+#vars.unknown0]
         ret
         
 ._bdc7  BYTE $00, $01, $01, $01, $02, $01, $FF
 
-        `sprite layout
+        ;sprite layout
 ._bdce  BYTE $44, $46, $FF, $FF, $FF, $FF
         BYTE $FF, $FF, $FF, $FF, $FF, $FF
         BYTE $FF, $FF, $FF, $FF, $FF, $FF

@@ -1,13 +1,23 @@
-TABLE   :S1_Music_Boss                          SECTION ::sound                 `$EAC0
-        `===============================================================================
+;; Sonic 1 Master System Disassembly <github.com/Kroc/Sonic1-SMS-OZ80>
+   for MaSS1VE: The Master System Sonic 1 Visual Editor <github.com/Kroc/MaSS1VE>
+   using OZ80MANDIAS, a high-level Z80 assembler <github.com/Kroc/OZ80MANDIAS>
+   -------------------------------------------------------------------------------------
+   created by Kroc Camen <kroc@camendesign.com> and given to the Public Domain;
+   you may do anything you like with this code as long as you respect the TradeMarks
+   and (any) Copyrights within. absolutely no warranty implied
+   =====================================================================================
+;;
+
+TABLE   :S1_Music_Boss                          SECTION ::sound                 ;$EAC0
+        ;===============================================================================
 {
-    WORD    .channel1 - :                       `$000A
-    WORD    .channel2 - :                       `$014B
-    WORD    .channel3 - :                       `$01B2
-    WORD    .channel4 - :                       `$022A
+    WORD    .channel1 - :                       ;$000A
+    WORD    .channel2 - :                       ;$014B
+    WORD    .channel3 - :                       ;$01B2
+    WORD    .channel4 - :                       ;$022A
     WORD    $0000
         
-.channel1   `---------------------------------------------------------------------------
+.channel1   ;---------------------------------------------------------------------------
     BYTE    $80 $04 $00 $05 $00
     BYTE    $85 $FF
     BYTE    $88
@@ -69,10 +79,10 @@ TABLE   :S1_Music_Boss                          SECTION ::sound                 
     BYTE    $09 $12
     BYTE    $81 $0D
     BYTE    $87 $02
-    WORD    .a - :                              `$F4 $00
+    WORD    .a - :                              ;$F4 $00
     BYTE    $FF
         
-.channel2   `---------------------------------------------------------------------------
+.channel2   ;---------------------------------------------------------------------------
     BYTE    $88
     BYTE    $82 $FF $14 $96 $01 $14 $0A
     BYTE    $81 $0E
@@ -80,17 +90,17 @@ TABLE   :S1_Music_Boss                          SECTION ::sound                 
     BYTE    $86
 .b  BYTE    $02 $00 $02 $00 $00 $00 $0E $00 $0D $00 $0E $00 $00 $00 $01 $00
     BYTE    $87 $02
-    WORD    .b - :                              `$58 $01
+    WORD    .b - :                              ;$58 $01
     BYTE    $86
 .c  BYTE    $07 $00 $07 $00 $06 $00 $05 $00 $04 $00 $05 $00 $06 $00 $07 $00
     BYTE    $87 $02
-    WORD    .c - :                              `$6D $01
+    WORD    .c - :                              ;$6D $01
     BYTE    $8B $09 $0C $8C $09 $06 $0C $12 $0C $12 $0C $12 $0C $12 $0C $12
     BYTE    $0C $12 $0C $12 $8B $09 $0C $8C $09 $06 $0C $12 $0C $12 $0C $12
     BYTE    $0C $0C $0D $06 $7F $0C $0E $06 $7F $0C $00 $06 $7F $0C $01 $06
     BYTE    $FF
         
-.channel3   `---------------------------------------------------------------------------
+.channel3   ;---------------------------------------------------------------------------
     BYTE    $88
     BYTE    $84 $04 $00
     BYTE    $82 $FF $14 $82 $00 $14 $0A
@@ -101,29 +111,29 @@ TABLE   :S1_Music_Boss                          SECTION ::sound                 
     BYTE    $86
 .e  BYTE    $19 $00 $7F $0C
     BYTE    $87 $03
-    WORD    .e - :                              `$C7 $01
+    WORD    .e - :                              ;$C7 $01
     BYTE    $19 $18 $8D $19 $0C $8D $19 $24
     BYTE    $87 $02
-    WORD    .d - :                              `$C2 $01
+    WORD    .d - :                              ;$C2 $01
     BYTE    $86
 .f  BYTE    $7F $0C $22 $00 $7F $12 $22 $00 $7F $0C $22 $00 $7F $0C $22 $0C
     BYTE    $22 $00 $22 $0C $22 $00 $7F $0C $22 $18
     BYTE    $87 $02
-    WORD    .f - :                              `$DC $01
+    WORD    .f - :                              ;$DC $01
     BYTE    $8B $19 $00 $7F $00 $19 $00
     BYTE    $86
 .g  BYTE    $09 $00 $7F $0C
     BYTE    $87 $07
-    WORD    .g - :                              `$02 $02
+    WORD    .g - :                              ;$02 $02
     BYTE    $19 $00 $7F $00 $19 $00
     BYTE    $86
 .h  BYTE    $09 $00 $7F $0C
     BYTE    $87 $03
-    WORD    .h - :                              `$11 $02
+    WORD    .h - :                              ;$11 $02
     BYTE    $09 $0C $0A $00 $7F $0C $0B $00 $7F $0C $10 $00 $7F $0C $11 $00
     BYTE    $FF
         
-.channel4   `---------------------------------------------------------------------------
+.channel4   ;---------------------------------------------------------------------------
     BYTE    $81 $09
     BYTE    $8A $06
     BYTE    $88
@@ -132,7 +142,7 @@ TABLE   :S1_Music_Boss                          SECTION ::sound                 
     BYTE    $81 $0B $71 $0C
     BYTE    $81 $09 $70 $00
     BYTE    $87 $10
-    WORD    .i - :                              `$30 $02
+    WORD    .i - :                              ;$30 $02
     BYTE    $81 $0C $71 $00 $7F $00 $71 $00
     BYTE    $81 $09 $70 $12 $70 $12 $70 $12
     BYTE    $86
@@ -140,7 +150,7 @@ TABLE   :S1_Music_Boss                          SECTION ::sound                 
     BYTE    $81 $0B $71 $0C
     BYTE    $81 $09 $70 $00
     BYTE    $87 $02
-    WORD    .j - :                              `$55 $02
+    WORD    .j - :                              ;$55 $02
     BYTE    $81 $0C $71 $00 $7F $00 $71 $00
     BYTE    $81 $09 $70 $12 $70 $12 $70 $12 $70 $00 $7F $00 $70 $00
     BYTE    $81 $0B $71 $0C

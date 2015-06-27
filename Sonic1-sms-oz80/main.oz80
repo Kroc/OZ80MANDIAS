@@ -1,67 +1,73 @@
-`` Sonic 1 Master System Disassembly, created by Kroc Camen <kroc@camendesign.com>
+;; Sonic 1 Master System Disassembly <github.com/Kroc/Sonic1-SMS-OZ80>
    for MaSS1VE: The Master System Sonic 1 Visual Editor <github.com/Kroc/MaSS1VE>
-   ================================================================================= ``
+   using OZ80MANDIAS, a high-level Z80 assembler <github.com/Kroc/OZ80MANDIAS>
+   -------------------------------------------------------------------------------------
+   created by Kroc Camen <kroc@camendesign.com> and given to the Public Domain;
+   you may do anything you like with this code as long as you respect the TradeMarks
+   and (any) Copyrights within. absolutely no warranty implied
+   =====================================================================================
+;;
 
-PROC    :decompressArt                          SECTION ::main                  `$0405
-        `==============================================================================
-PARAMS  HL;dataAddr     HELP ""Relative address from the beginning of the intended bank
+PROC    :decompressArt                          SECTION ::main                  ;$0405
+        ;==============================================================================
+PARAMS  HL`dataAddr     HELP ""Relative address from the beginning of the intended bank
                              ""(A) to the art data
-        DE;vdpAddr      `VDP register number (D) and value byte (E) to send to the VDP
-        A;bank          HELP ""Bank number for the relative address HL
+        DE`vdpAddr      ;VDP register number (D) and value byte (E) to send to the VDP
+        A`bank          HELP ""Bank number for the relative address HL
 {
-        di                                      `disable interrupts
+        di                                      ;disable interrupts
         
 .calculateBank
-        `--- determine bank number ----------------------------------------------------
-        push    AF;bank                         `put aside the current bank number
+        ;--- determine bank number ----------------------------------------------------
+        push    AF`bank                         ;put aside the current bank number
         
-        `is the HL parameter address below the $40xx range?
-         `--that is, does the relative address extend into the second page?
-        ld      A;dataAddr      H;dataAddr
+        ;is the HL parameter address below the $40xx range?
+         ;--that is, does the relative address extend into the second page?
+        ld      A`dataAddr      H`dataAddr
         cp      HI $4000
         jr      c, ._2
         
-        `remove $40xx (e.g. so $562B becomes $162B)
+        ;remove $40xx (e.g. so $562B becomes $162B)
         sub     HI $4000
-        ld      H;dataAddr      A;dataAddr
+        ld      H`dataAddr      A`dataAddr
         
-        `restore the A parameter (the starting bank number) and increase it so that
-         `HL now represents a relative address from the next bank up. this would mean
-         `that instead of paging in, for example, banks 9 & 10, we would get 10 & 11
-        pop     AF;bank
-        inc     A;bank
+        ;restore the A parameter (the starting bank number) and increase it so that
+         ;HL now represents a relative address from the next bank up. this would mean
+         ;that instead of paging in, for example, banks 9 & 10, we would get 10 & 11
+        pop     AF`bank
+        inc     A`bank
         jp      .calculateBank
         
-        `--- configure the VDP --------------------------------------------------------
+        ;--- configure the VDP --------------------------------------------------------
         
-._2     ld      a, e                            `VDP value byte from the DE parameter
-        out     [$.VDP.CONTROL], a              `send to the VDP
+._2     ld      a, e                            ;VDP value byte from the DE parameter
+        out     [$.VDP.CONTROL], a              ;send to the VDP
         
         ld      a, d
-        or      %01000000                       `add bit 7 (that is, convert A to
-                                                 `a VDP control register number)
-        out     [$.VDP.CONTROL], a              `send it to the VDP
+        or      %01000000                       ;add bit 7 (that is, convert A to
+                                                 ;a VDP control register number)
+        out     [$.VDP.CONTROL], a              ;send it to the VDP
         
-        `--- switch banks -------------------------------------------------------------
+        ;--- switch banks -------------------------------------------------------------
         
-        pop     af                              `restore the A parameter
+        pop     af                              ;restore the A parameter
         
-        `add $4000 to the HL parameter to re-base it for page 1 (Z80:$4000-$7FFF)
+        ;add $4000 to the HL parameter to re-base it for page 1 (Z80:$4000-$7FFF)
         ld      de, $4000
         add     hl, de
         
-        `stash the current page 1/2 bank numbers cached in RAM
+        ;stash the current page 1/2 bank numbers cached in RAM
         ld      de, [$.SLOT1]
         push    de
         
-        `change pages 1 & 2 (Z80:$4000-$BFFF) to banks A & A+1
+        ;change pages 1 & 2 (Z80:$4000-$BFFF) to banks A & A+1
         ld      [$.SMS.SLOT1], a
         ld      [$.SLOT1], a
         inc     a
         ld      [$.SMS.SLOT2], a
         ld      [$.SLOT2], a
         
-        `--- read header --------------------------------------------------------------
+        ;--- read header --------------------------------------------------------------
         
         bit     1, [iy+#vars.flags9]
         jr      nz, ._3
@@ -69,89 +75,89 @@ PARAMS  HL;dataAddr     HELP ""Relative address from the beginning of the intend
         
 ._3     ld      [$.TEMP4], hl
         
-        ``begin reading the compressed art header:
+        ;;begin reading the compressed art header:
           see <info.sonicretro.org/SCHG:Sonic_the_Hedgehog_(8-bit)#Header>
-          for details on the format``
+          for details on the format;;
         
-        `skip the "48 59" art header marker
+        ;skip the "48 59" art header marker
         inc     hl
         inc     hl
         
-        `read the DuplicateRows value into DE and save for later
+        ;read the DuplicateRows value into DE and save for later
         ld      e, [hl]
         inc     hl
         ld      d, [hl]
         inc     hl
         push    de
         
-        `read the ArtData value into DE and save for later
+        ;read the ArtData value into DE and save for later
         ld      e, [hl]
         inc     hl
         ld      d, [hl]
         push    de
         
-        `read the row count (#$0400 for sprites, #$0800 for tiles) into BC
+        ;read the row count (#$0400 for sprites, #$0800 for tiles) into BC
         inc     hl
         ld      c, [hl]
         inc     hl
         ld      b, [hl]
         inc     hl
         
-        ld      [$.TEMP3], bc                   `store the row count in $D210
-        ld      [$.TEMP6], hl                   `where the UniqueRows list begins
+        ld      [$.TEMP3], bc                   ;store the row count in $D210
+        ld      [$.TEMP6], hl                   ;where the UniqueRows list begins
         
-        `swap BC/DE/HL with their shadow values
+        ;swap BC/DE/HL with their shadow values
         exx
         
-        `load BC with the absolute starting address of the art header;
-         `the DuplicateRows and ArtData values are always relative to this
+        ;load BC with the absolute starting address of the art header;
+         ;the DuplicateRows and ArtData values are always relative to this
         ld      bc, [$.TEMP4]
-        `copy it to DE
+        ;copy it to DE
         ld      e, c
         ld      d, b
         
-        pop     hl                              `pull the ArtData value from the stack
-        add     hl, bc                          `get the absolute address of ArtData
-        ld      [$.TEMP1], hl                   `and store that in $D20E
-        `copy it to BC. this will be used to produce a counter from 0 to RowCount
+        pop     hl                              ;pull the ArtData value from the stack
+        add     hl, bc                          ;get the absolute address of ArtData
+        ld      [$.TEMP1], hl                   ;and store that in $D20E
+        ;copy it to BC. this will be used to produce a counter from 0 to RowCount
         ld      c, l
         ld      b, h
         
-        pop     hl                              `load HL with the DuplicateRows value
-        add     hl, de                          `get DuplicateRows absolute address
+        pop     hl                              ;load HL with the DuplicateRows value
+        add     hl, de                          ;get DuplicateRows absolute address
         
-        `swap DE & HL. DE will now be the DuplicateRows absolute address,
-         `and HL will be the absolute address of the art header
+        ;swap DE & HL. DE will now be the DuplicateRows absolute address,
+         ;and HL will be the absolute address of the art header
         ex      de, hl
         
-        `now swap the original values back,
-         `BC will be the row counter
-         `DE will be the ArtData value
+        ;now swap the original values back,
+         ;BC will be the row counter
+         ;DE will be the ArtData value
         exx
         
-        `--- process row --------------------------------------------------------------
+        ;--- process row --------------------------------------------------------------
 .processRow
-        ld      hl, [$.TEMP3]                   `load HL with original row count
-                                                 `($0400 for sprites, $0800 for tiles)
-        xor     a;zero                          `set A to 0 (Carry is reset)
-        sbc     hl, bc                          `subtract counter from row count
-                                                 `(that is, count upwards from 0)
-        push    hl                              `save the counter value
+        ld      hl, [$.TEMP3]                   ;load HL with original row count
+                                                 ;($0400 for sprites, $0800 for tiles)
+        xor     a`zero                          ;set A to 0 (Carry is reset)
+        sbc     hl, bc                          ;subtract counter from row count
+                                                 ;(that is, count upwards from 0)
+        push    hl                              ;save the counter value
         
-        `get the row number in the current tile (0-7):
-        ld      d, a                            `zero-out D
-        ld      a, l                            `load A with the lo-byte of the counter
-        and     %00000111                       `clip to the first three bits (that is,
-                                                 `"mod 8" it so it counts 0-7)
-        ld      e, a                            `load E with this value, making it
-                                                 `a 16-bit number in DE
+        ;get the row number in the current tile (0-7):
+        ld      d, a                            ;zero-out D
+        ld      a, l                            ;load A with the lo-byte of the counter
+        and     %00000111                       ;clip to the first three bits (that is,
+                                                 ;"mod 8" it so it counts 0-7)
+        ld      e, a                            ;load E with this value, making it
+                                                 ;a 16-bit number in DE
         ld      hl, .rowIndexTable
-        add     hl, de                          `add the row number to $04F9
-        ld      a, [hl]                         `get bit mask for the particular row
+        add     hl, de                          ;add the row number to $04F9
+        ld      a, [hl]                         ;get bit mask for the particular row
         
-        pop     de                              `fetch our counter back
+        pop     de                              ;fetch our counter back
         
-        `divide the counter by 4
+        ;divide the counter by 4
         srl     d
         rr      e
         srl     d
@@ -159,25 +165,25 @@ PARAMS  HL;dataAddr     HELP ""Relative address from the beginning of the intend
         srl     d
         rr      e
         
-        ld      hl, [$.TEMP6]                   `the absolute address where the
-                                                 `UniqueRows list begins
-        add     hl, de                          `add the counter, so move along to the
-                                                 `DE'th byte in the UniqueRows list
+        ld      hl, [$.TEMP6]                   ;the absolute address where the
+                                                 ;UniqueRows list begins
+        add     hl, de                          ;add the counter, so move along to the
+                                                 ;DE'th byte in the UniqueRows list
         ld      e, a                    
-        ld      a, [hl]                         `read current byte in UniqueRows list
-        and     e                               `test if the masked bit is set
-        jr      nz, .duplicateRow               `if bit is set, it's a duplicate row,
-                                                 `otherwise continue for a unique row
+        ld      a, [hl]                         ;read current byte in UniqueRows list
+        and     e                               ;test if the masked bit is set
+        jr      nz, .duplicateRow               ;if bit is set, it's a duplicate row,
+                                                 ;otherwise continue for a unique row
         
-        `--- unique row ---------------------------------------------------------------
+        ;--- unique row ---------------------------------------------------------------
         
-        `swap back the BC/DE/HL shadow values
-         `BC will be the absolute address to the ArtData
-         `DE will be the DuplicateRows absolute address
-         `HL will be the absolute address of the art header
+        ;swap back the BC/DE/HL shadow values
+         ;BC will be the absolute address to the ArtData
+         ;DE will be the DuplicateRows absolute address
+         ;HL will be the absolute address of the art header
         exx
         
-        `write 1 row of pixels (4 bytes) to the VDP
+        ;write 1 row of pixels (4 bytes) to the VDP
         ld      a, [bc]
         out     [$.VDP.DATA], a
         inc     bc
@@ -197,54 +203,54 @@ PARAMS  HL;dataAddr     HELP ""Relative address from the beginning of the intend
         out     [$.VDP.DATA], a
         inc     bc
         
-        `swap BC/DE/HL back again
-         `HL is the current byte in the UniqueRows list
+        ;swap BC/DE/HL back again
+         ;HL is the current byte in the UniqueRows list
         exx
         
-        dec     bc                              `decrease the length counter
-        ld      a, b                            `combine the high byte,
-        or      c                               `with the low byte...
-        jp      nz, .processRow                 `loop back if not zero
-        jp      ._5                             `otherwise, skip to finalisation
+        dec     bc                              ;decrease the length counter
+        ld      a, b                            ;combine the high byte,
+        or      c                               ;with the low byte...
+        jp      nz, .processRow                 ;loop back if not zero
+        jp      ._5                             ;otherwise, skip to finalisation
 
 .duplicateRow
-        `--- duplicate row ------------------------------------------------------------
+        ;--- duplicate row ------------------------------------------------------------
         
-        `swap in the BC/DE/HL shadow values
-         `BC will be the absolute address to the ArtData
-         `DE will be the DuplicateRows absolute address
-         `HL will be the absolute address of the art header
+        ;swap in the BC/DE/HL shadow values
+         ;BC will be the absolute address to the ArtData
+         ;DE will be the DuplicateRows absolute address
+         ;HL will be the absolute address of the art header
         exx
         
-        ld      a, [de]                         `read a byte from duplicate rows list
-        inc     de                              `move to the next byte
+        ld      a, [de]                         ;read a byte from duplicate rows list
+        inc     de                              ;move to the next byte
         
-        `swap back the original BC/DE/HL values
+        ;swap back the original BC/DE/HL values
         exx
         
-        `HL will be re-purposed as the index into the art data
+        ;HL will be re-purposed as the index into the art data
         ld      h, $00
-        `check if the byte from the duplicate rows list begins with $F, i.e. $Fxxx
-         `this is used as a marker to specify a two-byte number for indexes over 256
+        ;check if the byte from the duplicate rows list begins with $F, i.e. $Fxxx
+         ;this is used as a marker to specify a two-byte number for indexes over 256
         cp      $F0
-        jr      c, ._4                          `if less than $F0, skip next byte
-        sub     $F0                             `strip the $F0, i.e $F3 = $03
-        ld      h, a                            `set hi-byte for the art data index
-        exx                                     `switch DE to DuplicateRows address
-        ld      a, [de]                         `fetch the next byte
-        inc     de                               `and move forward in the list
-        exx                                     `return BC/DE/HL to before
+        jr      c, ._4                          ;if less than $F0, skip next byte
+        sub     $F0                             ;strip the $F0, i.e $F3 = $03
+        ld      h, a                            ;set hi-byte for the art data index
+        exx                                     ;switch DE to DuplicateRows address
+        ld      a, [de]                         ;fetch the next byte
+        inc     de                               ;and move forward in the list
+        exx                                     ;return BC/DE/HL to before
         
-        `multiply the duplicate row's index number to the art data by 4
-         `--each row of art data is 4 bytes
+        ;multiply the duplicate row's index number to the art data by 4
+         ;--each row of art data is 4 bytes
 ._4     ld      l, a
         add     hl, hl                  
         add     hl, hl
         
-        ld      de, [$.TEMP1]                   `get absolute address to the art data
-        add     hl, de                          `add the index from duplicate row list
+        ld      de, [$.TEMP1]                   ;get absolute address to the art data
+        add     hl, de                          ;add the index from duplicate row list
         
-        `write 1 row of pixels (4 bytes) to the VDP
+        ;write 1 row of pixels (4 bytes) to the VDP
         ld      a, [hl]                 
         out     [$.VDP.DATA], a
         inc     hl
@@ -264,10 +270,10 @@ PARAMS  HL;dataAddr     HELP ""Relative address from the beginning of the intend
         out     [$.VDP.DATA], a
         inc     hl
         
-        `decrease the remaining row count
+        ;decrease the remaining row count
         dec     bc
         
-        `check if all rows have been done
+        ;check if all rows have been done
         ld      a, b
         or      c
         jp      nz, .processRow
@@ -275,7 +281,7 @@ PARAMS  HL;dataAddr     HELP ""Relative address from the beginning of the intend
 ._5     bit     1, [iy+#vars.flags9]
         jr      nz, ._6
         di
-._6     `restore the pages to the original banks at the beginning of the procedure
+._6     ;restore the pages to the original banks at the beginning of the procedure
         pop     de
         ld      [$.SLOT1], de
         ld      [$#SMS.SLOT1], de
@@ -295,73 +301,73 @@ PARAMS  HL;dataAddr     HELP ""Relative address from the beginning of the intend
                 %10000000
 }
 
-PROC    :decompressScreen                       SECTION ::main                  `$0501
-        `==============================================================================
-        ``a screen layout is compressed using RLE (run-length-encoding). any byte that
+PROC    :decompressScreen                       SECTION ::main                  ;$0501
+        ;==============================================================================
+        ;;a screen layout is compressed using RLE (run-length-encoding). any byte that
           there are multiple of in a row are listed as two repeating bytes, followed
-          by another byte specifying the remaining number of times to repeat``
+          by another byte specifying the remaining number of times to repeat;;
  
-PARAMS  bc              `length of the compressed data
-        de              `VDP register number (D) and value byte (E) to send to the VDP
-        hl              `absolute address to the start of the compressed screen data
+PARAMS  bc              ;length of the compressed data
+        de              ;VDP register number (D) and value byte (E) to send to the VDP
+        hl              ;absolute address to the start of the compressed screen data
 {        
-        di                                      `disable interrupts
+        di                                      ;disable interrupts
         
-        `configure the VDP based on the DE parameter
-        ld      a;vdpValue, e;vdpValue
-        out     [$.VDP.CONTROL], a;vdpValue
+        ;configure the VDP based on the DE parameter
+        ld      a`vdpValue, e`vdpValue
+        out     [$.VDP.CONTROL], a`vdpValue
         
-        `add bit 7 (that is, convert A to a VDP control register number)
-        ld      a;vdpRegister, d;vdpRegister
+        ;add bit 7 (that is, convert A to a VDP control register number)
+        ld      a`vdpRegister, d`vdpRegister
         or      %01000000                       
-        out     [$.VDP.CONTROL], a;vdpRegister
+        out     [$.VDP.CONTROL], a`vdpRegister
         
-        ei                                      `enable interrupts
+        ei                                      ;enable interrupts
         
-._1     ``the current byte is stored in E to be able to check when two bytes in a row
+._1     ;;the current byte is stored in E to be able to check when two bytes in a row
           occur (the marker for a compressed byte). it's actually stored inverted
-          so that the first data byte doesn't trigger an immediate repeat``
+          so that the first data byte doesn't trigger an immediate repeat;;
         
-        ld      a;prevByte, [hl]                `read current byte from screen data
-        cpl                                     `invert the bits ("NOT")
-        ld      e;prevByte, a;prevByte          `move this to E
+        ld      a`prevByte, [hl]                ;read current byte from screen data
+        cpl                                     ;invert the bits ("NOT")
+        ld      e`prevByte, a`prevByte          ;move this to E
         
-._2     ld      a;nextByte, [hl]                `read current byte from screen data
-        cp      e;prevByte                      `is this equal to the previous byte?
-        jr      z, ._3                          `if yes, decompress the byte
+._2     ld      a`nextByte, [hl]                ;read current byte from screen data
+        cp      e`prevByte                      ;is this equal to the previous byte?
+        jr      z, ._3                          ;if yes, decompress the byte
         
-        cp      $FF                             `is this tile $FF?
+        cp      $FF                             ;is this tile $FF?
         jr      z, .skip                
         
-        `--- uncompressed byte --------------------------------------------------------
-        out     [$.VDP.DATA], a                 `send the tile to the VDP
-        ld      e, a                            `update the current byte being compared
-        ld      a, [$.TEMP1]                    `get the upper byte for the tiles
-                                                 `(foreground / background / flip)
+        ;--- uncompressed byte --------------------------------------------------------
+        out     [$.VDP.DATA], a                 ;send the tile to the VDP
+        ld      e, a                            ;update the current byte being compared
+        ld      a, [$.TEMP1]                    ;get the upper byte for the tiles
+                                                 ;(foreground / background / flip)
         out     [$.VDP.DATA], a
         
-        inc     hl                              `move to the next byte
-        dec     bc                              `decrease the remaining bytes to read
-        ld      a, b                            `check if remaining bytes is zero
+        inc     hl                              ;move to the next byte
+        dec     bc                              ;decrease the remaining bytes to read
+        ld      a, b                            ;check if remaining bytes is zero
         or      c
-        jp      nz, ._2                         `if remaining bytes, loop
-        jr      ._6                             `otherwise end
+        jp      nz, ._2                         ;if remaining bytes, loop
+        jr      ._6                             ;otherwise end
         
-        `--- decompress byte ----------------------------------------------------------
-._3     ld      d, a                            `put the current data byte into D
-        inc     hl                              `move to the next byte
-        dec     bc                              `decrease the remaining bytes to read
-        ld      a, b                            `check if remaining bytes is zero
+        ;--- decompress byte ----------------------------------------------------------
+._3     ld      d, a                            ;put the current data byte into D
+        inc     hl                              ;move to the next byte
+        dec     bc                              ;decrease the remaining bytes to read
+        ld      a, b                            ;check if remaining bytes is zero
         or      c
-        jr      z, ._6                          `if no bytes left, finish
-                                                 `(couldn't I just put `ret z` here?)
+        jr      z, ._6                          ;if no bytes left, finish
+                                                ;(couldn';t I just put `ret z` here?)
         
-        ld      a, d                            `return the data byte back to A
-        ld      e, [hl]                         `get number of times to repeat the byte
-        cp      $FF                             `is a skip being repeated?
+        ld      a, d                            ;return the data byte back to A
+        ld      e, [hl]                         ;get number of times to repeat the byte
+        cp      $FF                             ;is a skip being repeated?
         jr      z, .multiSkip
         
-        `repeat the byte
+        ;repeat the byte
 ._4     out     [$.VDP.DATA], a
         push    af
         ld      a, [$.TEMP1]
@@ -370,16 +376,16 @@ PARAMS  bc              `length of the compressed data
         dec     e
         jp      nz, ._4
         
-._5     `move to the next byte in the data
+._5     ;move to the next byte in the data
         inc     hl
         dec     bc
         
-        `any remaining bytes?
+        ;any remaining bytes?
         ld      a, b
         or      c
-        jp      nz, ._1                         `start checking duplicate bytes again
+        jp      nz, ._1                         ;start checking duplicate bytes again
         
-        `all bytes processed - we're done!
+        ;all bytes processed - we're done!
 ._6     ret
         
 .skip
@@ -408,116 +414,116 @@ PARAMS  bc              `length of the compressed data
         jp      ._5
 }
 
-PROC    :loadPalette                            SECTION ::main                  `$0566
-        `==============================================================================
-PARAMS  a;flags         `which palette(s) to set
-                         `bit 0 - tile palette (0-15)
-                         `bit 1 - sprite palette (16-31)
-        hl;addr         `address of palette
+PROC    :loadPalette                            SECTION ::main                  ;$0566
+        ;==============================================================================
+PARAMS  a`flags         ;which palette(s) to set
+                         ;bit 0 - tile palette (0-15)
+                         ;bit 1 - sprite palette (16-31)
+        hl`addr         ;address of palette
 RETURN  $.LOADPALETTE_TILE,
         $.LOADPALETTE_SPRITE
 {        
-        push    af;flags
+        push    af`flags
         
-        ld      b, 16                           `we will copy 16 colours
-        ld      c, 0                            `beginning at palette index 0 (tiles)
+        ld      b, 16                           ;we will copy 16 colours
+        ld      c, 0                            ;beginning at palette index 0 (tiles)
         
-        bit     0, a                            `are we loading a tile palette?
-        jr      z, ._1                          `if no, skip ahead to sprite palette
+        bit     0, a                            ;are we loading a tile palette?
+        jr      z, ._1                          ;if no, skip ahead to sprite palette
         
         ld      [$.LOADPALETTE_TILE], hl
-        call    .sendPalette                    `send the palette colours to the VDP
+        call    .sendPalette                    ;send the palette colours to the VDP
         
-._1     pop     af;flags
+._1     pop     af`flags
         
-        bit     1, a;flags                      `are we loading a sprite palette?
-        ret     z                               `if no, finish here
+        bit     1, a`flags                      ;are we loading a sprite palette?
+        ret     z                               ;if no, finish here
         
-        `store the address of the sprite palette
-        ld      [$.LOADPALETTE_SPRITE], hl;addr
+        ;store the address of the sprite palette
+        ld      [$.LOADPALETTE_SPRITE], hl`addr
         
-        ld      b, 16                           `we will copy 16 colours
-        ld      c, 16                           `beginning at index 16 (sprites)
+        ld      b, 16                           ;we will copy 16 colours
+        ld      c, 16                           ;beginning at index 16 (sprites)
         
-        bit     0, a;flags                      `if loading both tile & sprite palette  
-        jr      nz, .sendPalette                 `then stick with what we've set
+        bit     0, a`flags                      ;if loading both tile & sprite palette  
+        jr      nz, .sendPalette                 ;then stick with what we've set
         
-        `if loading sprite palette only, then ignore the first colour
-         `(I believe this has to do with the screen background colour being set from
-         ` the sprite palette?)
+        ;if loading sprite palette only, then ignore the first colour
+         ;(I believe this has to do with the screen background colour being set from
+         ; the sprite palette?)
         inc     hl
-        ld      b, 15                           `copy 15 colours
-        ld      c, 17                           `to indexes 17-31, that is, skip no.16
+        ld      b, 15                           ;copy 15 colours
+        ld      c, 17                           ;to indexes 17-31, that is, skip no.16
         
 .sendPalette
-        ld      a, c                            `send palette index number to begin at
+        ld      a, c                            ;send palette index number to begin at
         out     [$.VDP.CONTROL], a
-        ld      a, %11000000                    `specify palette operation (bits 7 & 6)
+        ld      a, %11000000                    ;specify palette operation (bits 7 & 6)
         out     [$.VDP.CONTROL], a
-        ld      c, $BE                          `send the colours to the palette
+        ld      c, $BE                          ;send the colours to the palette
         otir
         ret
 }
 
-PROC    :clearVRAM                              SECTION ::main                  `$0595
-        `==============================================================================
-        `called only by `::interrupts:init`
+PROC    :clearVRAM                              SECTION ::main                  ;$0595
+        ;==============================================================================
+        ;called only by `::interrupts:init`
         
-PARAMS  hl;addr         `VRAM address
-        bc;size         `length
-        a;value         `value
+PARAMS  hl`addr         ;VRAM address
+        bc`size         ;length
+        a`value         ;value
 {        
-        ld      e;value, a;value                `temporarily shift the value to E
+        ld      e`value, a`value                ;temporarily shift the value to E
         ld      a, l
         out     [$.VDP.CONTROL], a
         ld      a, h
         or      %01000000
         out     [$.VDP.CONTROL], a
         
-.loop   ld      a;value, e;value                `return the value to A
-        out     [$.VDP.DATA], a;value           `send it to the VDP
+.loop   ld      a`value, e`value                ;return the value to A
+        out     [$.VDP.DATA], a`value           ;send it to the VDP
         
-        dec     bc;size
-        ld      a;size, b;size
-        or      c;size
+        dec     bc`size
+        ld      a`size, b`size
+        or      c`size
         jr      nz, .loop
         ret
 }
 
-PROC    :readJoypad                             SECTION ::main                  `$05A7
-        `==============================================================================
+PROC    :readJoypad                             SECTION ::main                  ;$05A7
+        ;==============================================================================
 RETURN  $.VARS.joypad
 {       
-        in      a, [$.SMS.JOYPADA]              `read the joypad port
-        or      %11000000                       `mask out bits 7 & 6 -
-                                                 `these are joypad 2 down / up
-        ld      [iy+#vars.joypad], a            `store the joypad value in $D203
+        in      a, [$.SMS.JOYPADA]              ;read the joypad port
+        or      %11000000                       ;mask out bits 7 & 6 -
+                                                 ;these are joypad 2 down / up
+        ld      [iy+#vars.joypad], a            ;store the joypad value in $D203
         ret
 }
 
-PROC    :print                                  SECTION ::main                  `$05AF
-        `==============================================================================
-PARAMS  hl;addr         HELP ""Address to memory with column & row numbers,
+PROC    :print                                  SECTION ::main                  ;$05AF
+        ;==============================================================================
+PARAMS  hl`addr         HELP ""Address to memory with column & row numbers,
                              ""then text data terminated with $FF
 {
-        `get the column number
+        ;get the column number
         ld      c, [hl]
         inc     hl
         
-        ``the screen layout on the Master System is a 32x28 table of 16-bit values
+        ;;the screen layout on the Master System is a 32x28 table of 16-bit values
           (64 bytes per row). we therefore need to multiply the row number by 64
-          to get the right offset into the screen layout data``
-        ld      a, [hl]                         `read the row number
+          to get the right offset into the screen layout data;;
+        ld      a, [hl]                         ;read the row number
         inc     hl
         
-        ``we multiply by 64 by first multiplying by 256 -- very simple, we just make
+        ;;we multiply by 64 by first multiplying by 256 -- very simple, we just make
           the value the hi-byte in a 16-bit word, e.g. "$0C00" -- and then divide
-          by 4 by rotating the bits to the right``
-        rrca                                    `divide by two
-        rrca                                    `and again, making it four times
+          by 4 by rotating the bits to the right;;
+        rrca                                    ;divide by two
+        rrca                                    ;and again, making it four times
         
         ld      e, a
-        and     %00111111                       `strip off the rotated bits
+        and     %00111111                       ;strip off the rotated bits
         ld      d, a
         
         ld      a, e
@@ -526,12 +532,12 @@ PARAMS  hl;addr         HELP ""Address to memory with column & row numbers,
         
         ld      b, $00
         ex      de, hl
-        sla     c                               `multiply column by 2 (16-bit values)
+        sla     c                               ;multiply column by 2 (16-bit values)
         add     hl, bc
         ld      bc, $.VDP.SCREENNAMETABLE
         add     hl, bc
         
-        `set the VDP to point to the screen address calculated
+        ;set the VDP to point to the screen address calculated
         di
         ld      a, l
         out     [$.VDP.CONTROL], a
@@ -540,16 +546,16 @@ PARAMS  hl;addr         HELP ""Address to memory with column & row numbers,
         out     [$.VDP.CONTROL], a
         ei
 
-        `read bytes from memory until hitting $FF
+        ;read bytes from memory until hitting $FF
 .loop   ld      a, [de]
         cp      $FF
         ret     z
         
         out     [$.VDP.DATA], a
-        push    af                              `kill time?
+        push    af                              ;kill time?
         pop     af
-        ld      a, [$.TEMP1]                    `what to use as the tile upper bits
-                                                 `(front/back, flip &c.)
+        ld      a, [$.TEMP1]                    ;what to use as the tile upper bits
+                                                 ;(front/back, flip &c.)
         out     [$.VDP.DATA], a
         inc     de
         djnz    .loop
@@ -557,107 +563,107 @@ PARAMS  hl;addr         HELP ""Address to memory with column & row numbers,
         ret
 }
 
-PROC    :hideSprites                            SECTION ::main                  `$05E2
-        `==============================================================================
+PROC    :hideSprites                            SECTION ::main                  ;$05E2
+        ;==============================================================================
 {       
-        `get the address of the game's main sprite table
-        ld      HL;table        $.SPRITETABLE
-        ld      E;table         L;table         `copy to DE
-        ld      D;table         H;table
+        ;get the address of the game's main sprite table
+        ld      HL`table        $.SPRITETABLE
+        ld      E`table         L`table         ;copy to DE
+        ld      D`table         H`table
         ld      bc, $.SPRITETABLE.size
-        `set the first two bytes as 224 (X&Y position)
-        ld      A;pos           224
-        ld      [DE;table]      A;pos
-        inc     DE;table
-        ld      [DE;table]      A;pos
-        `then move forward another two bytes (skips the sprite index number)
-        inc     DE;table
-        inc     DE;table
-        `copy 189 bytes from $D000 to $D003+ (up to $D0C0)
+        ;set the first two bytes as 224 (X&Y position)
+        ld      A`pos           224
+        ld      [DE`table]      A`pos
+        inc     DE`table
+        ld      [DE`table]      A`pos
+        ;then move forward another two bytes (skips the sprite index number)
+        inc     DE`table
+        inc     DE`table
+        ;copy 189 bytes from $D000 to $D003+ (up to $D0C0)
         ldir
         
-        `set parameters so that at the next interrupt,
-         `all sprites will be hidden (see `updateVDPSprites`)
+        ;set parameters so that at the next interrupt,
+         ;all sprites will be hidden (see `updateVDPSprites`)
          
-        `mark all 64 sprites as requiring update 
+        ;mark all 64 sprites as requiring update 
         ld      [IY+#vars.spriteUpdateCount], 64        
-        `and set zero active sprites
-        xor     A;zero                          `(set A to 0)
-        ld      [$.ACTIVESPRITECOUNT], A;zero
+        ;and set zero active sprites
+        xor     A`zero                          ;(set A to 0)
+        ld      [$.ACTIVESPRITECOUNT], A`zero
         ret
 }
 
-PROC    :decimalMultiplyBy10                    SECTION ::main                  `$05FC
-        `==============================================================================
-        `does a decimal multiplication by 10. e.g. 3 > 30
+PROC    :decimalMultiplyBy10                    SECTION ::main                  ;$05FC
+        ;==============================================================================
+        ;does a decimal multiplication by 10. e.g. 3 > 30
         
-PARAMS  hl              `input number, e.g. RAM_LIVES
-        c               `base? i.e. 10
+PARAMS  hl              ;input number, e.g. RAM_LIVES
+        c               ;base? i.e. 10
 {        
-        xor     a;zero                          `set A to 0
-        ld      b;loop, 7                       `we will be looping 7 times
-        ex      de, hl                          `transfer the HL parameter to DE
-        ld      l;zero, a;zero                  `set HL as $0000
-        ld      h;zero, a;zero
+        xor     a`zero                          ;set A to 0
+        ld      b`loop, 7                       ;we will be looping 7 times
+        ex      de, hl                          ;transfer the HL parameter to DE
+        ld      l`zero, a`zero                  ;set HL as $0000
+        ld      h`zero, a`zero
         
-.loop   rl      c                               `shift the bits in C up one
-        jp      nc, ._1                         `skip if it hasn't overflowed yet
-        add     hl, de                          `add the parameter value
-._1     add     hl, hl                          `double the current value
+.loop   rl      c                               ;shift the bits in C up one
+        jp      nc, ._1                         ;skip if it hasn't overflowed yet
+        add     hl, de                          ;add the parameter value
+._1     add     hl, hl                          ;double the current value
         djnz    .loop
         
-        `is there any carry remaining?
-        or      c                               `check if C is 0
-        ret     z                               `if so, no carry the number is final
-        add     hl, de                          `otherwise add one more
+        ;is there any carry remaining?
+        or      c                               ;check if C is 0
+        ret     z                               ;if so, no carry the number is final
+        add     hl, de                          ;otherwise add one more
         ret
 }
 
-PROC    :_LABEL_60F_111                         SECTION ::main                  `$060F
-        `==============================================================================
-        `convert to decimal? (used by Map & Act Complete screens for the lives number)
-PARAMS  c               `10 - base?
-        hl              `number of lives
+PROC    :_LABEL_60F_111                         SECTION ::main                  ;$060F
+        ;==============================================================================
+        ;convert to decimal? (used by Map & Act Complete screens for the lives number)
+PARAMS  c               ;10 - base?
+        hl              ;number of lives
 {       
-        xor     a;zero                          `set A to 0
+        xor     a`zero                          ;set A to 0
         ld      b, 16
         
-        `16-bit left-rotation -- that is, multiply by 2
+        ;16-bit left-rotation -- that is, multiply by 2
 .loop   rl      l
         rl      h
-        rla                                     `if above $FFFF, overflow into A
+        rla                                     ;if above $FFFF, overflow into A
         
-        cp      c                               `check the overflow portion against C
-        jp      c, ._1                          `if less than 10, skip ahead
-        sub     c                               `-10
+        cp      c                               ;check the overflow portion against C
+        jp      c, ._1                          ;if less than 10, skip ahead
+        sub     c                               ;-10
         
-        `invert the carry flag. for values of A of 0-9, the carry will become 0,
-         `when A hits 10, the carry will become 1 and adds 1 to DE
+        ;invert the carry flag. for values of A of 0-9, the carry will become 0,
+         ;when A hits 10, the carry will become 1 and adds 1 to DE
 ._1     ccf
         
-        `multiply DE by 2
+        ;multiply DE by 2
         rl      e
         rl      d
         
         djnz    .loop
         
-        `swap DE and HL:
-         `HL will be the number of 10s (in two's compliment?)
+        ;swap DE and HL:
+         ;HL will be the number of 10s (in two's compliment?)
         ex      de, hl
         ret
 }
 
-PROC    :_LABEL_625_57                          SECTION ::main                  `$0625
-        `==============================================================================
-        `random number generator?
+PROC    :_LABEL_625_57                          SECTION ::main                  ;$0625
+        ;==============================================================================
+        ;random number generator?
 {        
         push    hl, de
         
         ld      hl, [$.D2D7]
         ld      e, l
         ld      d, h
-        add     hl, de                          `x2
-        add     hl, de                          `x4
+        add     hl, de                          ;x2
+        add     hl, de                          ;x4
         
         ld      a, l
         add     a, h
@@ -674,57 +680,57 @@ PROC    :_LABEL_625_57                          SECTION ::main                  
         ret
 }
 
-PROC    :updateCamera                           SECTION ::main                  `$063E
-        `==============================================================================
-        `calculate the VDP scroll offset according to the camera position?
+PROC    :updateCamera                           SECTION ::main                  ;$063E
+        ;==============================================================================
+        ;calculate the VDP scroll offset according to the camera position?
 {        
-        `fill B with vertical and C with horizontal VDP scroll values
+        ;fill B with vertical and C with horizontal VDP scroll values
         ld      bc,[$.VDPSCROLL_HORZ]
         
-        `------------------------------------------------------------------------------
-        `has the camera scrolled left?
+        ;------------------------------------------------------------------------------
+        ;has the camera scrolled left?
         ld      hl,[$.CAMERA_X]
         ld      de,[$.CAMERA_X_LEFT]
-        and     a                               `clear carry flag
-        sbc     hl,de                           `RAM_CAMERA_X_LEFT` > `RAM_CAMERA_X`?
-        jr      c,._1                           `jump if the camera has moved left
+        and     a                               ;clear carry flag
+        sbc     hl,de                           ;RAM_CAMERA_X_LEFT` > `RAM_CAMERA_X`?
+        jr      c,._1                           ;jump if the camera has moved left
         
-        `HL will contain the amount the screen has scrolled since the last time this
-         `function was called
+        ;HL will contain the amount the screen has scrolled since the last time this
+         ;function was called
         
-        `camera moved right:
+        ;camera moved right:
         ld      a,l
         add     a,c
         ld      c,a
         res     6,[iy+#vars.flags0]
         jp      ._2
         
-        `camera moved left:
+        ;camera moved left:
 ._1     ld      a,l
         add     a,c
         ld      c,a
         set     6,[iy+#vars.flags0]
         
-        `------------------------------------------------------------------------------
-        `has the camera scrolled up?
+        ;------------------------------------------------------------------------------
+        ;has the camera scrolled up?
         
 ._2     ld      hl,[$.CAMERA_Y]
         ld      de,[$.CAMERA_Y_UP]
-        and     a                               `clear carry flag
-        sbc     hl,de                           `RAM_CAMERA_Y_UP` > `RAM_CAMERA_Y`?
-        jr      c,._4                           `jump if the camera has moved up
+        and     a                               ;clear carry flag
+        sbc     hl,de                           ;RAM_CAMERA_Y_UP` > `RAM_CAMERA_Y`?
+        jr      c,._4                           ;jump if the camera has moved up
         
-        `camera moved down:
+        ;camera moved down:
         ld      a,l
         add     a,b
-        cp      224                             `if > 224 (bottom of the screen)
+        cp      224                             ;if > 224 (bottom of the screen)
         jr      c,._3
-        add     a,32                            `add 32 to wrap around 256 back to 0+
+        add     a,32                            ;add 32 to wrap around 256 back to 0+
 ._3     ld      b,a
         res     7,[iy+#vars.flags0]
         jp      ._6
         
-        `camera moved up:
+        ;camera moved up:
 ._4     ld      a,l
         add     a,b
         cp      224
@@ -733,38 +739,38 @@ PROC    :updateCamera                           SECTION ::main                  
 ._5     ld      b,a
         set     7,[iy+#vars.flags0]
         
-        `------------------------------------------------------------------------------
-        ``update the VDP horizontal / vertical scroll values in the RAM,
-          the interrupt routine will send the values to the chip``
+        ;------------------------------------------------------------------------------
+        ;;update the VDP horizontal / vertical scroll values in the RAM,
+          the interrupt routine will send the values to the chip;;
 ._6     ld      [$.VDPSCROLL_HORZ],bc
         
-        ``get the number of blocks across / down the camera is located:
+        ;;get the number of blocks across / down the camera is located:
           we do this by multiplying the camera position by 8 and taking only the high
           byte (effectively dividing by 256) so that everything below 32 pixels of
-          precision is lost``
+          precision is lost;;
         
         ld      hl,[$.CAMERA_X]
-        sla     l                               `x2 ...
+        sla     l                               ;x2 ...
         rl      h
-        sla     l                               `x4 ...
+        sla     l                               ;x4 ...
         rl      h
-        sla     l                               `x8
+        sla     l                               ;x8
         rl      h
-        ld      c,h                             `take the high byte
+        ld      c,h                             ;take the high byte
         
         ld      hl,[$.CAMERA_Y]
-        sla     l                               `x2 ...
+        sla     l                               ;x2 ...
         rl      h
-        sla     l                               `x4 ...
+        sla     l                               ;x4 ...
         rl      h
-        sla     l                               `x8
+        sla     l                               ;x8
         rl      h
-        ld      b,h                             `take the high byte
+        ld      b,h                             ;take the high byte
         
-        `now store the block X & Y counts
+        ;now store the block X & Y counts
         ld      [$.BLOCK_X],bc
         
-        `update the left / up values now that the camera has moved
+        ;update the left / up values now that the camera has moved
         ld      hl,[$.CAMERA_X]
         ld      [$.CAMERA_X_LEFT],hl
         ld      hl,[$.CAMERA_Y]
@@ -773,53 +779,53 @@ PROC    :updateCamera                           SECTION ::main                  
         ret
 }
 
-PROC    :fillOverscrollCache                    SECTION ::main                  `$06BD
-        `==============================================================================
-        ``this fills in the cache of the overscroll area so that when the screen
+PROC    :fillOverscrollCache                    SECTION ::main                  ;$06BD
+        ;==============================================================================
+        ;;this fills in the cache of the overscroll area so that when the screen
           scrolls onto new tiles, they can be copied across in a fast and
-          straight-forward fashion``
+          straight-forward fashion;;
 {        
-        `scrolling enabled??
+        ;scrolling enabled??
         bit     5,[iy+#vars.flags0]
         ret     z
         
         di      
-        `switch pages 1 & 2 ($4000-$BFFF) to banks 4 & 5 ($10000-$17FFF)
-        ld      A;bank          :S1_BlockMappings.bank
-        ld      [$.SMS.SLOT1]   A;bank
-        ld      [$.SLOT1]       A;bank
-        ld      A;bank          :S1_BlockMappings.bank+1
-        ld      [$.SMS.SLOT2]   A;bank
-        ld      [$.SLOT2]       A;bank
+        ;switch pages 1 & 2 ($4000-$BFFF) to banks 4 & 5 ($10000-$17FFF)
+        ld      A`bank          :S1_BlockMappings.bank
+        ld      [$.SMS.SLOT1]   A`bank
+        ld      [$.SLOT1]       A`bank
+        ld      A`bank          :S1_BlockMappings.bank+1
+        ld      [$.SMS.SLOT2]   A`bank
+        ld      [$.SLOT2]       A`bank
         ei
         
-        `------------------------------------------------------------------------------
-        `get the address of the solidity data for the level's tilemap:
+        ;------------------------------------------------------------------------------
+        ;get the address of the solidity data for the level's tilemap:
         
-        ld      a,[$.LEVEL_SOLIDITY]            `get the solidity index for the level
-        add     a,a                             `double it (for a pointer)
-        ld      c,a                             `and put it into a 16-bit number [bc]
+        ld      a,[$.LEVEL_SOLIDITY]            ;get the solidity index for the level
+        add     a,a                             ;double it (for a pointer)
+        ld      c,a                             ;and put it into a 16-bit number [bc]
         ld      b,$00
         
-        `look up the index in the solidity pointer table
+        ;look up the index in the solidity pointer table
         ld      hl,:S1_Solidity_Blocks
         add     hl,bc
         
-        `load an address at the table
+        ;load an address at the table
         ld      a,[hl]
         inc     hl
         ld      h,[hl]
         ld      l,a
         
-        `store the solidity data address in RAM
+        ;store the solidity data address in RAM
         ld      [$.TEMP3],hl
         
-        `------------------------------------------------------------------------------
-        `horizontal scrolling allowed??
+        ;------------------------------------------------------------------------------
+        ;horizontal scrolling allowed??
         bit     0,[iy+#vars.flags2]
-        jp      z,.vert                         `skip to vertical scroll handling
+        jp      z,.vert                         ;skip to vertical scroll handling
         
-        `has the camera moved left?
+        ;has the camera moved left?
         bit     6,[iy+#vars.flags0]
         jr      nz,.horz
         
@@ -827,40 +833,40 @@ PROC    :fillOverscrollCache                    SECTION ::main                  
         ld      c,$08
         jp      ._1
 
-        `get the position in the floor layout (in RAM) of the camera:
+        ;get the position in the floor layout (in RAM) of the camera:
         
 .horz   ld      a,[$.VDPSCROLL_HORZ]
-        and     %00011111                       `MOD 32 (i.e. 0-31 looping)
-        add     a,8                             `add 8 (ergo, 8-39)
-        rrca                                    `divide by 2 ...
-        rrca                                    `... 4
-        rrca                                    `... 8
-        rrca                                    `... 16
-        rrca                                    `... 32
-        and     %00000001                       `remove everything but bit 0
-        ld      b,$00                           `load result into BC
-                                                 `-- either $0000 or $0001
+        and     %00011111                       ;MOD 32 (i.e. 0-31 looping)
+        add     a,8                             ;add 8 (ergo, 8-39)
+        rrca                                    ;divide by 2 ...
+        rrca                                    ;... 4
+        rrca                                    ;... 8
+        rrca                                    ;... 16
+        rrca                                    ;... 32
+        and     %00000001                       ;remove everything but bit 0
+        ld      b,$00                           ;load result into BC
+                                                 ;-- either $0000 or $0001
         ld      c,a
 
 ._1     call    :getFloorLayoutRAMPosition
         
-        `------------------------------------------------------------------------------
+        ;------------------------------------------------------------------------------
         ld      a,[$.VDPSCROLL_HORZ]
         
-        `has the camera moved left?
+        ;has the camera moved left?
         bit     6,[iy+#vars.flags0]
         jr      z,._2
         add     a,8
         
-        `which of the four tiles width in a block is on the left-hand side of the
-         `screen - that is, determine which column within a block the camera is on
-._2     and     %00011111                       `MOD 32 (limit to pixels within block)
-        srl     a                               `divide by 2 ...
-        srl     a                               `divide by 4 ...
-        srl     a                               `divide by 8 (determine tile, 0-3)
-        ld      c,a                             `copy the tile number (0-3) into BC
+        ;which of the four tiles width in a block is on the left-hand side of the
+         ;screen - that is, determine which column within a block the camera is on
+._2     and     %00011111                       ;MOD 32 (limit to pixels within block)
+        srl     a                               ;divide by 2 ...
+        srl     a                               ;divide by 4 ...
+        srl     a                               ;divide by 8 (determine tile, 0-3)
+        ld      c,a                             ;copy the tile number (0-3) into BC
         ld      b,$00
-        ld      [$.TEMP1],bc                    `stash it away for later
+        ld      [$.TEMP1],bc                    ;stash it away for later
         
         exx     
         ld      de,$.OVERSCROLLCACHE_HORZ
@@ -868,38 +874,38 @@ PROC    :fillOverscrollCache                    SECTION ::main                  
         ld      de,[$.LEVEL_FLOORWIDTH]
         
         ld      b,7
-.loopH  ld      a,[hl]                          `read block index from the FloorLayout
+.loopH  ld      a,[hl]                          ;read block index from the FloorLayout
         exx     
         ld      c,a
         ld      b,$00
-        ld      hl,[$.TEMP3]                    `retrieve the solidity data address
-        add     hl,bc                           `offset block index into solidity data
+        ld      hl,[$.TEMP3]                    ;retrieve the solidity data address
+        add     hl,bc                           ;offset block index into solidity data
         
-        `multiply the block index by 16
-         `(blocks are each 16 bytes long)
-        rlca                                    `x2 ...
-        rlca                                    `x4 ...
-        rlca                                    `x8 ...
-        rlca                                    `x16
+        ;multiply the block index by 16
+         ;(blocks are each 16 bytes long)
+        rlca                                    ;x2 ...
+        rlca                                    ;x4 ...
+        rlca                                    ;x8 ...
+        rlca                                    ;x16
         ld      c,a
-        and     %00001111                       `MOD 16
+        and     %00001111                       ;MOD 16
         ld      b,a
-        ld      a,c                             `return to the block index * 16 value
+        ld      a,c                             ;return to the block index * 16 value
         xor     b
         ld      c,a
         
-        ld      a,[hl]                          `read solidity data for block index
+        ld      a,[hl]                          ;read solidity data for block index
         rrca
         rrca    
         rrca    
         and     %00010000
         
-        ld      hl,[$.TEMP1]                    `retrieve column number of VDP scroll
+        ld      hl,[$.TEMP1]                    ;retrieve column number of VDP scroll
         add     hl,bc
-        ld      bc,[$.BLOCKMAPPINGS]            `get address of level's block mappings
+        ld      bc,[$.BLOCKMAPPINGS]            ;get address of level's block mappings
         add     hl,bc
         ld      bc,4
-        ldi                                     `copy the first byte
+        ldi                                     ;copy the first byte
         
         ld      [de],a
         inc     e
@@ -925,10 +931,10 @@ PROC    :fillOverscrollCache                    SECTION ::main                  
         add     hl,de
         djnz    .loopH
         
-        `------------------------------------------------------------------------------
+        ;------------------------------------------------------------------------------
 .vert   bit     1,[iy+#vars.flags2]
         jp      z,.exit
-        bit     7,[iy+#vars.flags0]             `camera moved up?
+        bit     7,[iy+#vars.flags0]             ;camera moved up?
         jr      nz,._3
         ld      b,$06
         ld      c,$00
@@ -937,7 +943,7 @@ PROC    :fillOverscrollCache                    SECTION ::main                  
 ._3     ld      b,$00
         ld      c,b
         
-        `------------------------------------------------------------------------------
+        ;------------------------------------------------------------------------------
 ._4     call    :getFloorLayoutRAMPosition
         ld      a,[$.VDPSCROLL_VERT]
         and     %00011111
@@ -995,94 +1001,94 @@ PROC    :fillOverscrollCache                    SECTION ::main                  
 .exit   ret
 }
 
-PROC    :fillScrollTiles                        SECTION ::main                  `$07DB
-        `==============================================================================
-        `fill in new tiles when the screen has scrolled
+PROC    :fillScrollTiles                        SECTION ::main                  ;$07DB
+        ;==============================================================================
+        ;fill in new tiles when the screen has scrolled
 {        
         bit     0, [iy+#vars.flags2]
         jp      z, ._4
         
         exx
-        push    hl;stack, de;stack, bc;stack
+        push    hl`stack, de`stack, bc`stack
         
-        `------------------------------------------------------------------------------
-        `calculate the number of bytes to offset by to get to the correct row in the
-         `screen table
+        ;------------------------------------------------------------------------------
+        ;calculate the number of bytes to offset by to get to the correct row in the
+         ;screen table
         
-        ld      a;scrollVert, [$.VDPSCROLL_VERT]
-        and     %11111000                       `round scroll to the nearest 8 pixels
+        ld      a`scrollVert, [$.VDPSCROLL_VERT]
+        and     %11111000                       ;round scroll to the nearest 8 pixels
         
-        `multiply the vertical scroll offset by 8. since the scroll offset is already
-         `a multiple of 8, this will give you 64 bytes per screen row (32 16-bit tiles)
+        ;multiply the vertical scroll offset by 8. since the scroll offset is already
+         ;a multiple of 8, this will give you 64 bytes per screen row (32 16-bit tiles)
         ld      b, $00
-        add     a, a                            `x2
+        add     a, a                            ;x2
         rl      b
-        add     a, a                            `x4
+        add     a, a                            ;x4
         rl      b
-        add     a, a                            `x8
+        add     a, a                            ;x8
         rl      b
         ld      c, a
         
-        `------------------------------------------------------------------------------
-        `calculate the number of bytes to get from the beginning of a row to the 
-         `horizontal scroll position
+        ;------------------------------------------------------------------------------
+        ;calculate the number of bytes to get from the beginning of a row to the 
+         ;horizontal scroll position
         
-        ld      a;scrollHorz, [$.VDPSCROLL_HORZ]
+        ld      a`scrollHorz, [$.VDPSCROLL_HORZ]
         
-        bit     6, [iy+#vars.flags0]            `camera moved left?
+        bit     6, [iy+#vars.flags0]            ;camera moved left?
         jr      z, ._1
-        add     a;scrollHorz, 8                 `add 8 pixels (left screen border?)
-._1     and     %11111000                       `and then round to the nearest 8 pixels
+        add     a`scrollHorz, 8                 ;add 8 pixels (left screen border?)
+._1     and     %11111000                       ;and then round to the nearest 8 pixels
         
-        srl     a                               `divide by 2 ...
-        srl     a                               `divide by 4
+        srl     a                               ;divide by 2 ...
+        srl     a                               ;divide by 4
         add     a, c
         ld      c, a
         
         ld      hl, $.VDP.SCREENNAMETABLE
-        add     hl, bc                          `offset to top of the column needed
-        set     6, h                            `add bit 6 as a VDP VRAM address
+        add     hl, bc                          ;offset to top of the column needed
+        set     6, h                            ;add bit 6 as a VDP VRAM address
         
-        `there are 32 tiles (16-bit) per screen-width
+        ;there are 32 tiles (16-bit) per screen-width
         ld      bc, 64                          
-        ld      d, $3F|%01000000                `upper limit of the screen table
-                                                 `(bit 6 is set for VDP VRAM address)
+        ld      d, $3F|%01000000                ;upper limit of the screen table
+                                                 ;(bit 6 is set for VDP VRAM address)
         ld      e, 7
         
-        `------------------------------------------------------------------------------
+        ;------------------------------------------------------------------------------
         exx
         ld      hl, $.OVERSCROLLCACHE_HORZ
         
-        `find where in a block the scroll offset sits (this is needed to find which
-         `of the 4 tiles width in a block have to be referenced)
+        ;find where in a block the scroll offset sits (this is needed to find which
+         ;of the 4 tiles width in a block have to be referenced)
         ld      a, [$.VDPSCROLL_VERT]
-        and     %00011111                       `MOD 32
-        srl     a                               `divide by 2 ...
-        srl     a                               `divide by 4 ...
-        srl     a                               `divide by 8
-        ld      c, a                            `load this into BC
+        and     %00011111                       ;MOD 32
+        srl     a                               ;divide by 2 ...
+        srl     a                               ;divide by 4 ...
+        srl     a                               ;divide by 8
+        ld      c, a                            ;load this into BC
         ld      b, $00
-        add     hl, bc                          `add twice to HL
+        add     hl, bc                          ;add twice to HL
         add     hl, bc
-        ld      b, $32                          `set BC to $BE32
-        ld      c, $BE                           `(purpose unknown)
+        ld      b, $32                          ;set BC to $BE32
+        ld      c, $BE                           ;(purpose unknown)
         
-        `set the VDP address calculated earlier
+        ;set the VDP address calculated earlier
 ._2     exx
         ld      a, l
         out     [$.VDP.CONTROL], a
         ld      a, h
         out     [$.VDP.CONTROL], a
         
-        `move to the next row
+        ;move to the next row
         add     hl, bc
         ld      a, h
-        cp      d                               `don't go outside the screen table
+        cp      d                               ;don't go outside the screen table
         jp      nc, ._10
         
 ._3     exx
-        outi                                    `send the tile index
-        outi                                    `send the tile meta
+        outi                                    ;send the tile index
+        outi                                    ;send the tile meta
         jp      nz, ._2
         
         exx
@@ -1091,15 +1097,15 @@ PROC    :fillScrollTiles                        SECTION ::main                  
         pop     hl
         exx
         
-        `------------------------------------------------------------------------------
+        ;------------------------------------------------------------------------------
 ._4     bit     1, [iy+#vars.flags2]
-        jp      z, .exit                        `could  optimise to `ret z`?
+        jp      z, .exit                        ;could  optimise to `ret z`?
         ld      a, [$.VDPSCROLL_VERT]
         ld      b, $00
         srl     a
         srl     a
         srl     a
-        bit     7, [iy+#vars.flags0]            `camera moved up?
+        bit     7, [iy+#vars.flags0]            ;camera moved up?
         jr      nz, ._5
         add     a, $18
 ._5     cp      $1C
@@ -1169,36 +1175,36 @@ PROC    :fillScrollTiles                        SECTION ::main                  
 
 .exit   ret
 
-        `------------------------------------------------------------------------------
+        ;------------------------------------------------------------------------------
 ._10    sub     e
         ld      h, a
         jp      ._3
 }
 
-PROC    :getFloorLayoutRAMPosition              SECTION ::main                  `$07D5
-        `==============================================================================
-        `convert block X & Y co-ords into a location in the Floor Layout in RAM
+PROC    :getFloorLayoutRAMPosition              SECTION ::main                  ;$07D5
+        ;==============================================================================
+        ;convert block X & Y co-ords into a location in the Floor Layout in RAM
         
-PARAMS  bc              `a flag, $0000 or $0001 depending on callee
+PARAMS  bc              ;a flag, $0000 or $0001 depending on callee
 {        
-        `get the low-byte of the width of the level in blocks. many levels are 256
-         `blocks wide, ergo have a FloorWidth of $0100, making the low-byte $00
+        ;get the low-byte of the width of the level in blocks. many levels are 256
+         ;blocks wide, ergo have a FloorWidth of $0100, making the low-byte $00
         ld      a,[$.LEVEL_FLOORWIDTH]
-        rlca                                    `double it (x2)
-        jr      c,._1                           `>128?
-        rlca                                    `double it again (x4)
-        jr      c,._2                           `>64?
-        rlca                                    `double it again (x8)
-        jr      c,._3                           `>32?
-        rlca                                    `double it again (x16)
-        jr      c,._4                           `>16?
-        jp      ._5                             `255...?
+        rlca                                    ;double it (x2)
+        jr      c,._1                           ;>128?
+        rlca                                    ;double it again (x4)
+        jr      c,._2                           ;>64?
+        rlca                                    ;double it again (x8)
+        jr      c,._3                           ;>32?
+        rlca                                    ;double it again (x16)
+        jr      c,._4                           ;>16?
+        jp      ._5                             ;255...?
         
-        `------------------------------------------------------------------------------
+        ;------------------------------------------------------------------------------
 ._1     ld      a,[$.BLOCK_Y]
         add     a,b
         ld      e,$00
-        srl     a                               `divide by 2
+        srl     a                               ;divide by 2
         rr      e
         ld      d,a
         
@@ -1211,7 +1217,7 @@ PARAMS  bc              `a flag, $0000 or $0001 depending on callee
         add     hl,de
         ret
         
-        `------------------------------------------------------------------------------
+        ;------------------------------------------------------------------------------
 ._2     ld      a,[$.BLOCK_Y]
         add     a,b
         ld      e,$00
@@ -1230,7 +1236,7 @@ PARAMS  bc              `a flag, $0000 or $0001 depending on callee
         add     hl,de
         ret
         
-        `------------------------------------------------------------------------------
+        ;------------------------------------------------------------------------------
 ._3     ld      a,[$.BLOCK_Y]
         add     a,b
         ld      e,$00
@@ -1250,7 +1256,7 @@ PARAMS  bc              `a flag, $0000 or $0001 depending on callee
         add     hl,de
         ret
         
-        `------------------------------------------------------------------------------
+        ;------------------------------------------------------------------------------
 ._4     ld      a,[$.BLOCK_Y]
         add     a,b
         ld      e,$00
@@ -1272,7 +1278,7 @@ PARAMS  bc              `a flag, $0000 or $0001 depending on callee
         add     hl,de
         ret
         
-        `------------------------------------------------------------------------------
+        ;------------------------------------------------------------------------------
 ._5     ld      a,[$.BLOCK_Y]
         add     a,b
         ld      d,a
@@ -1285,30 +1291,30 @@ PARAMS  bc              `a flag, $0000 or $0001 depending on callee
         ret
 }
 
-PROC    :fillScreenWithFloorLayout              SECTION ::main                  `$0966
-        `==============================================================================
-        ``this routine is only called during level loading to populate the screen with
+PROC    :fillScreenWithFloorLayout              SECTION ::main                  ;$0966
+        ;==============================================================================
+        ;;this routine is only called during level loading to populate the screen with
           the visible portion of the Floor Layout. Scrolling fills in only the new
-          tiles, so a full refresh of the screen is not required``
+          tiles, so a full refresh of the screen is not required;;
 {       
-        `interrupts are disabled during this routine due to it writing to the display
+        ;interrupts are disabled during this routine due to it writing to the display
         di
         
-        `page in the Block Mappings
-        ld      A;bank          :S1_BlockMappings.bank
-        ld      [$.SMS.SLOT1]   A;bank
-        ld      [$.SLOT1]       A;bank
-        ld      A;bank          :S1_BlockMappings.bank + 1
-        ld      [$.SMS.SLOT2]   A;bank
-        ld      [$.SLOT2]       A;bank
+        ;page in the Block Mappings
+        ld      A`bank          :S1_BlockMappings.bank
+        ld      [$.SMS.SLOT1]   A`bank
+        ld      [$.SLOT1]       A`bank
+        ld      A`bank          :S1_BlockMappings.bank + 1
+        ld      [$.SMS.SLOT2]   A`bank
+        ld      [$.SLOT2]       A`bank
         
         ld      bc,$0000
         call    :getFloorLayoutRAMPosition
         
-        `------------------------------------------------------------------------------
+        ;------------------------------------------------------------------------------
         ld      de,$.VDP.SCREENNAMETABLE
-        ``in 192-line mode, the screen is 6 blocks tall,
-          in 224-line mode it's 7 blocks tall``
+        ;;in 192-line mode, the screen is 6 blocks tall,
+          in 224-line mode it's 7 blocks tall;;
         ld      b,!SCREENHEIGHT_BLOCKS
         
 ._1     push    bc, hl, de
@@ -1316,58 +1322,58 @@ PROC    :fillScreenWithFloorLayout              SECTION ::main                  
         
 ._2     push    bc, hl, de
         
-        `get the block index at the current location in the Floor Layout
+        ;get the block index at the current location in the Floor Layout
         ld      a,[hl]
         
         exx     
-        ld      e,a                             `copy the block index to E'
-        ld      a,[$.LEVEL_SOLIDITY]            `load A with level's solidity index
-        add     a,a                             `double it (i.e. for a 16-bit pointer)
-        ld      c,a                             `put it into BC'
+        ld      e,a                             ;copy the block index to E 
+        ld      a,[$.LEVEL_SOLIDITY]            ;load A with level's solidity index
+        add     a,a                             ;double it (i.e. for a 16-bit pointer)
+        ld      c,a                             ;put it into BC'
         ld      b,$00
-        ld      hl,:S1_Solidity_Blocks          `get address of solidity pointer list
-        add     hl,bc                           `offset solidity index into the list
-        ld      a,[hl]                          `read the data pointer into HL'
+        ld      hl,:S1_Solidity_Blocks          ;get address of solidity pointer list
+        add     hl,bc                           ;offset solidity index into the list
+        ld      a,[hl]                          ;read the data pointer into HL'
         inc     hl
         ld      h,[hl]
         ld      l,a
-        ld      d,$00                           `DE' is the block index
-        add     hl,de                           `offset block index into solidity data
-        ld      a,[hl]                          `and get the solidity value
+        ld      d,$00                           ;DE' is the block index
+        add     hl,de                           ;offset block index into solidity data
+        ld      a,[hl]                          ;and get the solidity value
         
-        ``in the solidity data, bit 7 determines that the tile should appear in front
+        ;;in the solidity data, bit 7 determines that the tile should appear in front
           of sprites. rotate the byte three times to position bit 7 at bit 4. 
           this byte will form the high-byte of the 16-bit value for the name table
-          entry (bit 4 will therefore become bit 12)``
+          entry (bit 4 will therefore become bit 12);;
         rrca
         rrca
         rrca
         
-        `bit 12 of a name table entry specifies if the tile should appear in front of 
-         `sprites. allow just this bit if it's set
+        ;bit 12 of a name table entry specifies if the tile should appear in front of 
+         ;sprites. allow just this bit if it's set
         and     %00010000
         ld      c,a
         exx
         
-        `return the block index to HL
+        ;return the block index to HL
         ld      l,[hl]
         ld      h,$00
-        `block mappings are 16 bytes each
-        add     hl,hl                           `x2 ...
-        add     hl,hl                           `x4 ...
-        add     hl,hl                           `x8 ...
-        add     hl,hl                           `x16
+        ;block mappings are 16 bytes each
+        add     hl,hl                           ;x2 ...
+        add     hl,hl                           ;x4 ...
+        add     hl,hl                           ;x8 ...
+        add     hl,hl                           ;x16
         ld      bc,[$.BLOCKMAPPINGS]
         add     hl,bc
         
-        `DE will be the address of block mapping
-        `HL will be an address in the screen name table
+        ;DE will be the address of block mapping
+        ;HL will be an address in the screen name table
         ex      de,hl
         
-        `------------------------------------------------------------------------------
-        ld      b,4                             `4 rows of the block mapping
+        ;------------------------------------------------------------------------------
+        ld      b,4                             ;4 rows of the block mapping
         
-        `set the screen name address
+        ;set the screen name address
 ._3     ld      a,l
         out     [$.VDP.CONTROL],a
         ld      a,h
@@ -1436,58 +1442,58 @@ PROC    :fillScreenWithFloorLayout              SECTION ::main                  
         dec     b
         jp      nz,._1
         
-        ei                                      `enable interrupts
+        ei                                      ;enable interrupts
         ret
 }
 
-PROC    :loadFloorLayout                        SECTION ::main                  `$0A10
-        `==============================================================================
-PARAMS  hl;addr         `address of Floor Layout data
-        bc;size         `length of compressed data
+PROC    :loadFloorLayout                        SECTION ::main                  ;$0A10
+        ;==============================================================================
+PARAMS  hl`addr         ;address of Floor Layout data
+        bc`size         ;length of compressed data
 {        
-        ld      de;floor,$.FLOORLAYOUT          `where in RAM the floor layout will go
+        ld      de`floor,$.FLOORLAYOUT          ;where in RAM the floor layout will go
 
-        `RLE decompress floor layout:
-        `------------------------------------------------------------------------------
-._1     ld      a,[hl;floor]                    `read first byte of the floor layout
-        cpl                                     `flip it to avoid first byte comparison
-        ld      [iy+$01],a                      `this is the comparison byte
+        ;RLE decompress floor layout:
+        ;------------------------------------------------------------------------------
+._1     ld      a,[hl`floor]                    ;read first byte of the floor layout
+        cpl                                     ;flip it to avoid first byte comparison
+        ld      [iy+$01],a                      ;this is the comparison byte
 
-._2     ld      a,[hl;floor]                    `read the current byte
-        cp      [iy+$01]                        `is it the same as the comparison byte?
-        jr      z,._3                           `if so, decompress it
+._2     ld      a,[hl`floor]                    ;read the current byte
+        cp      [iy+$01]                        ;is it the same as the comparison byte?
+        jr      z,._3                           ;if so, decompress it
         
-        `copy byte as normal:
-        ld      [de],a                          `write it to RAM        
-        ld      [iy+$01],a                      `update the comparison byte
-        inc     hl                              `move forward
+        ;copy byte as normal:
+        ld      [de],a                          ;write it to RAM        
+        ld      [iy+$01],a                      ;update the comparison byte
+        inc     hl                              ;move forward
         inc     de
-        dec     bc                              `count count of remaining bytes
-        ld      a,b                             `are there remaining bytes?
+        dec     bc                              ;count count of remaining bytes
+        ld      a,b                             ;are there remaining bytes?
         or      c
-        jp      nz,._2                          `if so continue
-        ret                                     `otherwise, finish
+        jp      nz,._2                          ;if so continue
+        ret                                     ;otherwise, finish
 
-        `if the last two bytes of the data are duplicates, don't try decompress
-         `further when there is no more data to be read!
-._3     dec     bc                              `reduce count of remaining bytes
-        ld      a,b                             `are there remaining bytes?
+        ;if the last two bytes of the data are duplicates, don't try decompress
+         ;further when there is no more data to be read!
+._3     dec     bc                              ;reduce count of remaining bytes
+        ld      a,b                             ;are there remaining bytes?
         or      c
-        ret     z                               `if not, finish
+        ret     z                               ;if not, finish
         
-        ld      a,[hl]                          `read the value to repeat
-        inc     hl                              `move to next byte (the repeat count)
-        push    bc                              `put length of compressed data aside
-        ld      b,[hl]                          `get the repeat count
+        ld      a,[hl]                          ;read the value to repeat
+        inc     hl                              ;move to next byte (the repeat count)
+        push    bc                              ;put length of compressed data aside
+        ld      b,[hl]                          ;get the repeat count
         
-._4     ld      [de],a                          `write value to RAM
-        inc     de                              `move forward in RAM
-        djnz    ._4                             `continue until repeating is complete
+._4     ld      [de],a                          ;write value to RAM
+        inc     de                              ;move forward in RAM
+        djnz    ._4                             ;continue until repeating is complete
         
-        pop     bc                              `retrieve the data length
-        inc     hl                              `move forward in the compressed data
+        pop     bc                              ;retrieve the data length
+        inc     hl                              ;move forward in the compressed data
         
-        `check if bytes remain
+        ;check if bytes remain
         dec     bc
         ld      a,b
         or      c
@@ -1495,8 +1501,8 @@ PARAMS  hl;addr         `address of Floor Layout data
         ret
 }
 
-PROC    :fadeOut                                SECTION ::main                  `$0A40
-        `==============================================================================
+PROC    :fadeOut                                SECTION ::main                  ;$0A40
+        ;==============================================================================
 {        
         ld      a, 1
         ld      [$.SMS.SLOT1], a
@@ -1506,33 +1512,33 @@ PROC    :fadeOut                                SECTION ::main                  
         ld      [$.SLOT2], a
         
         ld      a, [iy+#vars.spriteUpdateCount]
-        res     0, [iy+#vars.flags0]            `wait for interrupt to occur
-        call    :waitForInterrupt                `(refresh sprites?)
+        res     0, [iy+#vars.flags0]            ;wait for interrupt to occur
+        call    :waitForInterrupt                ;(refresh sprites?)
         
-        `after the interrupt, the sprite update count would be cleared,
-         `put it back to its old value
+        ;after the interrupt, the sprite update count would be cleared,
+         ;put it back to its old value
         ld      [iy+#vars.spriteUpdateCount], a
         ld      b, $04
         
-._1     push    bc                              `put aside the loop counter
+._1     push    bc                              ;put aside the loop counter
                 
-        `fade out the tile palette one step
+        ;fade out the tile palette one step
         ld      hl, [$.LOADPALETTE_TILE]
         ld      de, $.PALETTE
         ld      b, 16
         call    :darkenPalette
         
-        `fade out the sprite palette one step
+        ;fade out the sprite palette one step
         ld      hl, [$.LOADPALETTE_SPRITE]
         ld      b, 16
         call    :darkenPalette
         
-        `load the darkened palette on the next interrupt
-        ld      hl;addr, $.PALETTE
-        ld      a;flags, %00000011
+        ;load the darkened palette on the next interrupt
+        ld      hl`addr, $.PALETTE
+        ld      a`flags, %00000011
         call    :loadPaletteOnInterrupt
         
-        `wait 10 frames
+        ;wait 10 frames
         ld      b, $0A
 ._2     ld      a, [iy+#vars.spriteUpdateCount]
                 
@@ -1542,44 +1548,44 @@ PROC    :fadeOut                                SECTION ::main                  
         ld      [iy+#vars.spriteUpdateCount], a
         djnz    ._2
 
-        pop     bc                              `retrieve the loop counter
-        djnz    ._1                             `before looping back
+        pop     bc                              ;retrieve the loop counter
+        djnz    ._1                             ;before looping back
         
         ret
 }
 
-PROC    :darkenPalette                          SECTION ::main                  `$0A90
-        `------------------------------------------------------------------------------
-        `fades a palette one step darker
+PROC    :darkenPalette                          SECTION ::main                  ;$0A90
+        ;------------------------------------------------------------------------------
+        ;fades a palette one step darker
         
-PARAMS  hl              `source palette address
-        de              `destination palette address (RAM)
-        b               `length of palette (16)
+PARAMS  hl              ;source palette address
+        de              ;destination palette address (RAM)
+        b               ;length of palette (16)
 {     
-        `NOTE: SMS colours are in the format: 00BBGGRR
+        ;NOTE: SMS colours are in the format: 00BBGGRR
         
-        ld      a, [hl]                         `read the colour
-        and     %00000011                       `does it have any red component?
-        jr      z, ._1                          `if not, skip ahead                     
-        dec     a                               `reduce the red brightness by 1
+        ld      a, [hl]                         ;read the colour
+        and     %00000011                       ;does it have any red component?
+        jr      z, ._1                          ;if not, skip ahead                     
+        dec     a                               ;reduce the red brightness by 1
         
 ._1     ld      c, a
         ld      a, [hl]
-        and     %00001100                       `does it have any green component?
-        jr      z, ._2                          `if not, skip ahead
-        sub     %00000100                       `reduce the green brightness by 1
+        and     %00001100                       ;does it have any green component?
+        jr      z, ._2                          ;if not, skip ahead
+        sub     %00000100                       ;reduce the green brightness by 1
         
-._2     or      c                               `merge the green component back in
-        ld      c, a                            `put aside the current colour code
-        ld      a, [hl]                         `fetch the original colour code again
-        and     %00110000                       `does it have any blue component?
-        jr      z, ._3                          `if not, skip ahead
-        sub     %00010000                       `reduce the blue brightness by 1
+._2     or      c                               ;merge the green component back in
+        ld      c, a                            ;put aside the current colour code
+        ld      a, [hl]                         ;fetch the original colour code again
+        and     %00110000                       ;does it have any blue component?
+        jr      z, ._3                          ;if not, skip ahead
+        sub     %00010000                       ;reduce the blue brightness by 1
         
-._3     or      c                               `merge the blue component back in
-        ld      [de], a                         `update the palette colour
+._3     or      c                               ;merge the blue component back in
+        ld      [de], a                         ;update the palette colour
         
-        `move to the next palette colour and repeat
+        ;move to the next palette colour and repeat
         inc     hl
         inc     de
         djnz    :
@@ -1587,45 +1593,45 @@ PARAMS  hl              `source palette address
         ret
 }
 
-PROC    :_aae                                   SECTION ::main                  `$0AAE
-        `==============================================================================
+PROC    :_aae                                   SECTION ::main                  ;$0AAE
+        ;==============================================================================
 PARAMS  hl
 {
         ld      [$.TEMP6],hl
         
-        `------------------------------------------------------------------------------
-        `copy parameter palette into the temporary RAM palette used for fading out
+        ;------------------------------------------------------------------------------
+        ;copy parameter palette into the temporary RAM palette used for fading out
         
         ld      hl,[$.LOADPALETTE_TILE]
         ld      de,$.PALETTE
         ld      bc,32
         ldir    
         
-        ld      a;bank,1
-        ld      [$.SMS.SLOT1],a;bank
-        ld      [$.SLOT1],a;bank
-        ld      a;bank,2
-        ld      [$.SMS.SLOT2],a;bank
-        ld      [$.SLOT2],a;bank
+        ld      a`bank,1
+        ld      [$.SMS.SLOT1],a`bank
+        ld      [$.SLOT1],a`bank
+        ld      a`bank,2
+        ld      [$.SMS.SLOT2],a`bank
+        ld      [$.SLOT2],a`bank
         
-        `switch to using the temporary palette on screen
+        ;switch to using the temporary palette on screen
         ld      hl,$.PALETTE
         ld      a,%00000011
         call    :loadPaletteOnInterrupt
         
-        `------------------------------------------------------------------------------
+        ;------------------------------------------------------------------------------
         ld      c,[iy+#vars.spriteUpdateCount]
         ld      a,[$.VDPREGISTER_1]
-        or      %01000000                       `enable screen (bit6 of VDP register 1)
+        or      %01000000                       ;enable screen (bit6 of VDP register 1)
         ld      [$.VDPREGISTER_1],a
         
-        `wait for interrupt (refresh screen)
+        ;wait for interrupt (refresh screen)
         res     0,[iy+#vars.flags0]
         call    :waitForInterrupt
         
         ld      [iy+#vars.spriteUpdateCount],c
         
-        `wait for 9 more frames
+        ;wait for 9 more frames
         ld      b,9
 ._1     ld      a,[iy+#vars.spriteUpdateCount]
         res     0,[iy+#vars.flags0]
@@ -1633,12 +1639,12 @@ PARAMS  hl
         ld      [iy+#vars.spriteUpdateCount],a
         djnz    ._1
         
-        `fade palette
-         `(why is this not just calling `darkenPalette`?)
+        ;fade palette
+         ;(why is this not just calling `darkenPalette`?)
         
         ld      b,4
 ._2     push    bc
-        ld      hl,[$.TEMP6]                    `restore the HL parameter
+        ld      hl,[$.TEMP6]                    ;restore the HL parameter
         ld      de,$.PALETTE
         ld      b,32
 
@@ -1681,7 +1687,7 @@ PARAMS  hl
         ld      a,%00000011
         call    :loadPaletteOnInterrupt
         
-        `wait for 10 frames
+        ;wait for 10 frames
         ld      b,$0a
 ._7     ld      a,[iy+#vars.spriteUpdateCount]
         res     0,[iy+#vars.flags0]
@@ -1694,24 +1700,24 @@ PARAMS  hl
         ret
 }
 
-PROC    :_b50                                   SECTION ::main                  `$0B50
-        `==============================================================================
-PARAMS  HL;addr         HELP ""Address of a palette
+PROC    :_b50                                   SECTION ::main                  ;$0B50
+        ;==============================================================================
+PARAMS  HL`addr         HELP ""Address of a palette
 {        
-        ld      [$.TEMP6]       HL              `put the palette parameter aside 
-        ld      HL              $.PALETTE       `RAM cache of current palette
+        ld      [$.TEMP6]       HL              ;put the palette parameter aside 
+        ld      HL              $.PALETTE       ;RAM cache of current palette
         
-        `erase the current palette
-        ld      B               32              `32 colours
-.loop   ld      [HL]            $00             `set the palette colour to black
+        ;erase the current palette
+        ld      B               32              ;32 colours
+.loop   ld      [HL]            $00             ;set the palette colour to black
         inc     HL
         djnz    .loop
         
         jp      :_b60._1
 }
 
-PROC    :_b60                                   SECTION ::main                  `$0B60
-        `------------------------------------------------------------------------------
+PROC    :_b60                                   SECTION ::main                  ;$0B60
+        ;------------------------------------------------------------------------------
 {
         ld      [$.TEMP6],hl
         
@@ -1720,12 +1726,12 @@ PROC    :_b60                                   SECTION ::main                  
         ld      bc,32
         ldir    
         
-._1     ld      a;bank,1
-        ld      [$.SMS.SLOT1],a;bank
-        ld      [$.SLOT1],a;bank
-        ld      a;bank,2
-        ld      [$.SMS.SLOT2],a;bank
-        ld      [$.SLOT2],a;bank
+._1     ld      a`bank,1
+        ld      [$.SMS.SLOT1],a`bank
+        ld      [$.SLOT1],a`bank
+        ld      a`bank,2
+        ld      [$.SMS.SLOT2],a`bank
+        ld      [$.SLOT2],a`bank
         
         ld      hl,$.PALETTE
         ld      a,%00000011
@@ -1790,8 +1796,8 @@ PROC    :_b60                                   SECTION ::main                  
         pop     bc
         djnz    ._4
         
-        ld      hl;addr,$.PALETTE
-        ld      a;flags,%00000011
+        ld      hl`addr,$.PALETTE
+        ld      a`flags,%00000011
         call    :loadPaletteOnInterrupt
         
         ld      b,10
@@ -1809,63 +1815,63 @@ PROC    :_b60                                   SECTION ::main                  
         ret
 }
 
-PROC    :getLevelBitFlag                        SECTION ::main                  `$0C02
-        `==============================================================================
-PARAMS  hl              `an address to a series of 19 bits, one for each level
-                         `$.D305+: set by life monitor
-                         `$.D30B+: set by emerald
-                         `$.D311+: set by continue monitor
-                         `$.D317+: set by switch
+PROC    :getLevelBitFlag                        SECTION ::main                  ;$0C02
+        ;==============================================================================
+PARAMS  hl              ;an address to a series of 19 bits, one for each level
+                         ;$.D305+: set by life monitor
+                         ;$.D30B+: set by emerald
+                         ;$.D311+: set by continue monitor
+                         ;$.D317+: set by switch
 {       
         ld      a, [$.CURRENT_LEVEL]
         ld      c, a
-        srl     a                               `divide by 2 ...
-        srl     a                               `divide by 4 ...
-        srl     a                               `divide by 8
+        srl     a                               ;divide by 2 ...
+        srl     a                               ;divide by 4 ...
+        srl     a                               ;divide by 8
         
-        `put the result into DE
+        ;put the result into DE
         ld      e, a
         ld      d, $00
-        `add that to the parameter (e.g. $.D311)
+        ;add that to the parameter (e.g. $.D311)
         add     hl, de
         
-        ld      a, c                            `return to the current level number
+        ld      a, c                            ;return to the current level number
         ld      c, 1
-        and     %00000111                       `MOD 8
-        ret     z                               `if level 0,8,16,... then return C=1
-        ld      b, a                            `B = 1-7
-        ld      a, c                            `1
+        and     %00000111                       ;MOD 8
+        ret     z                               ;if level 0,8,16,... then return C=1
+        ld      b, a                            ;B = 1-7
+        ld      a, c                            ;1
         
-        `slide the bit up the byte between 0-7 depending on the level number
+        ;slide the bit up the byte between 0-7 depending on the level number
 .loop   rlca
         djnz    .loop
-        ld      c, a                            `return via C
+        ld      c, a                            ;return via C
         
-        `HL : address to the byte where the bit exists
-        ` C : the bit mask, e.g. 1, 2, 4, 8, 16, 32, 64 or 128
+        ;HL : address to the byte where the bit exists
+        ; C : the bit mask, e.g. 1, 2, 4, 8, 16, 32, 64 or 128
         ret
 }
 
-PROC    :loadPowerUpIcon                        SECTION ::main                  `$0C1D
-        `==============================================================================
-        `copy power-up icon into sprite VRAM
+PROC    :loadPowerUpIcon                        SECTION ::main                  ;$0C1D
+        ;==============================================================================
+        ;copy power-up icon into sprite VRAM
         
-PARAMS  hl              `absolute address to uncompressed art data for the icons,
-                         `assuming that slot 1 ($4000-$7FFF) is loaded with bank 5
-                         `($14000-$17FFF)
+PARAMS  hl              ;absolute address to uncompressed art data for the icons,
+                         ;assuming that slot 1 ($4000-$7FFF) is loaded with bank 5
+                         ;($14000-$17FFF)
 {        
         di      
-        ld      a;bank,5
-        ld      [$.SMS.SLOT1],a;bank
+        ld      a`bank,5
+        ld      [$.SMS.SLOT1],a`bank
         
         ld      a,[$.FRAMECOUNT]
         and     %00001111
-        add     a,a                             `x2
-        add     a,a                             `x4
-        add     a,a                             `x8
-        ld      e,a                             `put it into DE
+        add     a,a                             ;x2
+        add     a,a                             ;x4
+        add     a,a                             ;x8
+        ld      e,a                             ;put it into DE
         ld      d,$00
-        add     hl,de                           `offset into HL parameter
+        add     hl,de                           ;offset into HL parameter
         
         ex      de,hl
         ld      bc,$2B80
@@ -1888,9 +1894,9 @@ PARAMS  hl              `absolute address to uncompressed art data for the icons
         inc     de
         djnz    .loop
         
-        `return to the previous bank number
-        ld      a;bank,[$.SLOT1]
-        ld      [$.SMS.SLOT1],a;bank
+        ;return to the previous bank number
+        ld      a`bank,[$.SLOT1]
+        ld      [$.SMS.SLOT1],a`bank
         ei      
         ret
 }

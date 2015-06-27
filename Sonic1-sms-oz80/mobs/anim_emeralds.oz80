@@ -1,22 +1,32 @@
-`all emeralds animation
+;; Sonic 1 Master System Disassembly <github.com/Kroc/Sonic1-SMS-OZ80>
+   for MaSS1VE: The Master System Sonic 1 Visual Editor <github.com/Kroc/MaSS1VE>
+   using OZ80MANDIAS, a high-level Z80 assembler <github.com/Kroc/OZ80MANDIAS>
+   -------------------------------------------------------------------------------------
+   created by Kroc Camen <kroc@camendesign.com> and given to the Public Domain;
+   you may do anything you like with this code as long as you respect the TradeMarks
+   and (any) Copyrights within. absolutely no warranty implied
+   =====================================================================================
+;;
 
-PROC    :mob_anim_emeralds                      SECTION ::mobs                  `$BF4C
-        `==============================================================================
-PARAMS  IX;mob          HELP ""Address of the current mob being processed
+;all emeralds animation
+
+PROC    :mob_anim_emeralds                      SECTION ::mobs                  ;$BF4C
+        ;==============================================================================
+PARAMS  IX`mob          HELP ""Address of the current mob being processed
 {
-        set     5,[ix+#mob.flags]               `mob does not collide with the floor
-        ld      hl,$5400                        `$15400 - emerald image
+        set     5,[ix+#mob.flags]               ;mob does not collide with the floor
+        ld      hl,$5400                        ;$15400 - emerald image
         call    ::main:loadPowerUpIcon
         
         bit     0,[ix+#mob.flags]
         jr      nz,._1
         
-        xor     a;zero                          `set A to 0
-        ld      [ix+#mob.spriteLayout+0],a;zero
-        ld      [ix+#mob.spriteLayout+1],a;zero
-        ld      [ix+#mob.Xspeed+0],a;zero
-        ld      [ix+#mob.Xspeed+1],a;zero
-        ld      [ix+#mob.Xdirection],a;zero
+        xor     a`zero                          ;set A to 0
+        ld      [ix+#mob.spriteLayout+0],a`zero
+        ld      [ix+#mob.spriteLayout+1],a`zero
+        ld      [ix+#mob.Xspeed+0],a`zero
+        ld      [ix+#mob.Xspeed+1],a`zero
+        ld      [ix+#mob.Xdirection],a`zero
         
         inc     [ix+#mob.unknown11]
         ld      a,[ix+#mob.unknown11]
@@ -56,7 +66,7 @@ PARAMS  IX;mob          HELP ""Address of the current mob being processed
         ld      bc,[$.CAMERA_X]
         and     a
         sbc     hl,bc
-        ld      bc,._bff1                       `address of sprite layout
+        ld      bc,._bff1                       ;address of sprite layout
         call    :processSpriteLayout
         pop     hl
         pop     af
@@ -75,7 +85,7 @@ PARAMS  IX;mob          HELP ""Address of the current mob being processed
         set     2,[iy+#vars.unknown_0D]
         ret
 
-`sprite layout
+;sprite layout
 ._bff1  BYTE $5C, $5E, $FF, $FF, $FF, $FF
         BYTE $FF
 

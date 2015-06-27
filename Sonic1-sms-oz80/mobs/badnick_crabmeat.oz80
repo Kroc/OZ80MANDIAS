@@ -1,8 +1,18 @@
-`badnick - crabmeat
+;; Sonic 1 Master System Disassembly <github.com/Kroc/Sonic1-SMS-OZ80>
+   for MaSS1VE: The Master System Sonic 1 Visual Editor <github.com/Kroc/MaSS1VE>
+   using OZ80MANDIAS, a high-level Z80 assembler <github.com/Kroc/OZ80MANDIAS>
+   -------------------------------------------------------------------------------------
+   created by Kroc Camen <kroc@camendesign.com> and given to the Public Domain;
+   you may do anything you like with this code as long as you respect the TradeMarks
+   and (any) Copyrights within. absolutely no warranty implied
+   =====================================================================================
+;;
 
-PROC    :mob_badnick_crabMeat                   SECTION ::mobs                  `$65EE
-        `==============================================================================
-PARAMS  IX;mob          HELP ""Address of the current mob being processed
+;badnick - crabmeat
+
+PROC    :mob_badnick_crabMeat                   SECTION ::mobs                  ;$65EE
+        ;==============================================================================
+PARAMS  IX`mob          HELP ""Address of the current mob being processed
 {       
         ld      [ix+#mob.width],$10
         ld      [ix+#mob.height],$1F
@@ -111,7 +121,7 @@ PARAMS  IX;mob          HELP ""Address of the current mob being processed
 ._66f3  BYTE $01 $01 $FF
 ._66f6  BYTE $03 $01 $FF        
         
-        `sprite layouts                                                         `$66F9
+        ;sprite layouts                                                         ;$66F9
 .layout BYTE $00 $02 $04 $FF $FF $FF
         BYTE $20 $22 $24 $FF $FF $FF
         BYTE $FF $FF $FF $FF $FF $FF

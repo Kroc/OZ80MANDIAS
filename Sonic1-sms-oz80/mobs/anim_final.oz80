@@ -1,10 +1,20 @@
-`final animation
+;; Sonic 1 Master System Disassembly <github.com/Kroc/Sonic1-SMS-OZ80>
+   for MaSS1VE: The Master System Sonic 1 Visual Editor <github.com/Kroc/MaSS1VE>
+   using OZ80MANDIAS, a high-level Z80 assembler <github.com/Kroc/OZ80MANDIAS>
+   -------------------------------------------------------------------------------------
+   created by Kroc Camen <kroc@camendesign.com> and given to the Public Domain;
+   you may do anything you like with this code as long as you respect the TradeMarks
+   and (any) Copyrights within. absolutely no warranty implied
+   =====================================================================================
+;;
 
-PROC    :mob_anim_final                         SECTION ::mobs                  `$BDF9
-        `==============================================================================
-PARAMS  IX;mob          HELP ""Address of the current mob being processed
+;final animation
+
+PROC    :mob_anim_final                         SECTION ::mobs                  ;$BDF9
+        ;==============================================================================
+PARAMS  IX`mob          HELP ""Address of the current mob being processed
 {
-        set     5,[ix+#mob.flags]               `mob does not collide with the floor
+        set     5,[ix+#mob.flags]               ;mob does not collide with the floor
         ld      [iy+#vars.joypad],$ff
         bit     1,[ix+#mob.flags]
         jr      nz,._1
@@ -36,20 +46,22 @@ PARAMS  IX;mob          HELP ""Address of the current mob being processed
         ld      de,$ffc0
         add     hl,de
         ld      [$.SONIC.Y],hl
-        xor     a;zero                          `set A to 0
-        ld      [$.SONIC],a;zero
+        xor     a`zero                          ;set A to 0
+        ld      [$.SONIC],a`zero
         set     6,[iy+#vars.unknown0]
-        ld      a,$06
+        
+        ld      a,:S1_MusicPointers.titleScreen.index   ;=$06
         rst     :rst_playSFX
+        
 ._2     ld      [ix+#mob.width], 32
         ld      [ix+#mob.height],28
-        xor     a;zero
-        ld      [ix+#mob.Xspeed+0],a;zero
+        xor     a`zero
+        ld      [ix+#mob.Xspeed+0],a`zero
         ld      [ix+#mob.Xspeed+1],$01
-        ld      [ix+#mob.Xdirection],a;zero
-        ld      [ix+#mob.Yspeed+0],a;zero
-        ld      [ix+#mob.Yspeed+1],a;zero
-        ld      [ix+#mob.Ydirection],a;zero
+        ld      [ix+#mob.Xdirection],a`zero
+        ld      [ix+#mob.Yspeed+0],a`zero
+        ld      [ix+#mob.Yspeed+1],a`zero
+        ld      [ix+#mob.Ydirection],a`zero
         bit     6,[iy+#vars.timeLightningFlags]
         jr      z,._3
         ld      de,[$.CAMERA_X]
@@ -92,10 +104,10 @@ PARAMS  IX;mob          HELP ""Address of the current mob being processed
 ._4     call    :_79fa
         bit     0,[ix+#mob.flags]
         ret     z
-        xor     a;zero
+        xor     a`zero
         ld      [ix+#mob.Yspeed+0],$40
-        ld      [ix+#mob.Yspeed+1],a;zero
-        ld      [ix+#mob.Ydirection],a;zero
+        ld      [ix+#mob.Yspeed+1],a`zero
+        ld      [ix+#mob.Ydirection],a`zero
         ld      [ix+#mob.spriteLayout+0], LO ._bf33
         ld      [ix+#mob.spriteLayout+1], HI ._bf33
         dec     [ix+#mob.unknown11]
@@ -123,7 +135,7 @@ PARAMS  IX;mob          HELP ""Address of the current mob being processed
 ._bf21  BYTE $2A $2C $2E $30 $32 $FF $4A $4C $4E $50 $52 $FF $6A $6C $6E $70
         BYTE $72 $FF
 
-        `sprite layout
+        ;sprite layout
 ._bf33  BYTE $2A, $34, $36, $38, $32, $FF
         BYTE $4A, $4C, $4E, $50, $52, $FF
         BYTE $6A, $6C, $6E, $70, $72, $FF

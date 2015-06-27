@@ -1,10 +1,20 @@
-`wooden platform - swinging (Green Hill)
+;; Sonic 1 Master System Disassembly <github.com/Kroc/Sonic1-SMS-OZ80>
+   for MaSS1VE: The Master System Sonic 1 Visual Editor <github.com/Kroc/MaSS1VE>
+   using OZ80MANDIAS, a high-level Z80 assembler <github.com/Kroc/OZ80MANDIAS>
+   -------------------------------------------------------------------------------------
+   created by Kroc Camen <kroc@camendesign.com> and given to the Public Domain;
+   you may do anything you like with this code as long as you respect the TradeMarks
+   and (any) Copyrights within. absolutely no warranty implied
+   =====================================================================================
+;;
 
-PROC    :mob_platform_swinging                  SECTION ::mobs                  `$673C
-        `==============================================================================
-PARAMS  IX;mob          HELP ""Address of the current mob being processed
+;wooden platform - swinging (Green Hill)
+
+PROC    :mob_platform_swinging                  SECTION ::mobs                  ;$673C
+        ;==============================================================================
+PARAMS  IX`mob          HELP ""Address of the current mob being processed
 {        
-        set     5,[ix+#mob.flags]               `mob does not collide with the floor
+        set     5,[ix+#mob.flags]               ;mob does not collide with the floor
         ld      hl,$0020
         ld      [$.D267],hl
         ld      hl,$0048
@@ -105,7 +115,7 @@ PARAMS  IX;mob          HELP ""Address of the current mob being processed
         res     1,[ix+#mob.flags]
         ret
         
-._682f  `this is swinging position data
+._682f  ;this is swinging position data
         BYTE $B3, $00
         BYTE $B3, $01
         BYTE $B3, $02
@@ -221,8 +231,8 @@ PARAMS  IX;mob          HELP ""Address of the current mob being processed
         BYTE $4D, $00
 }
 
-`--------------------------------------------------------------------------------------
-`sprite layout (other platform objects share this)
+;--------------------------------------------------------------------------------------
+;sprite layout (other platform objects share this)
 
 TABLE   :object_platform_spriteLayouts          SECTION ::mobs   
 {

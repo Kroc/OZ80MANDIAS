@@ -1,6 +1,16 @@
-PROC    :mob_boss_endSign                       SECTION ::mobs                  `$5F17
-        `==============================================================================
-PARAMS  IX;mob          HELP ""Address of the current mob being processed
+;; Sonic 1 Master System Disassembly <github.com/Kroc/Sonic1-SMS-OZ80>
+   for MaSS1VE: The Master System Sonic 1 Visual Editor <github.com/Kroc/MaSS1VE>
+   using OZ80MANDIAS, a high-level Z80 assembler <github.com/Kroc/OZ80MANDIAS>
+   -------------------------------------------------------------------------------------
+   created by Kroc Camen <kroc@camendesign.com> and given to the Public Domain;
+   you may do anything you like with this code as long as you respect the TradeMarks
+   and (any) Copyrights within. absolutely no warranty implied
+   =====================================================================================
+;;
+
+PROC    :mob_boss_endSign                       SECTION ::mobs                  ;$5F17
+        ;==============================================================================
+PARAMS  IX`mob          HELP ""Address of the current mob being processed
 {       
         ld      [ix+#mob.width], 24
         ld      [ix+#mob.height],48
@@ -11,13 +21,13 @@ PARAMS  IX;mob          HELP ""Address of the current mob being processed
         res     7,[iy+#vars.flags6]
         res     3,[iy+#vars.scrollRingFlags]
         
-        `end sign sprite set
+        ;end sign sprite set
         ld      hl,$4294
         ld      de,$2000
         ld      a,9
         call    :decompressArt
         
-        `load the end-sign palette
+        ;load the end-sign palette
         ld      hl,.S1_EndSign_Palette
         ld      a,%00000010
         call    :loadPaletteOnInterrupt
@@ -84,11 +94,12 @@ PARAMS  IX;mob          HELP ""Address of the current mob being processed
         bit     7,[ix+#mob.flags]
         jr      z,._7
         
-        ld      a,#index_music_actComplete
+        ld      a,:S1_MusicPointers.actComplete.index   ;=$09
         rst     :rst_playMusic
         
         ld      a,$0c
         rst     :rst_playSFX
+        
         res     2,[ix+#mob.unknown11]
         set     3,[ix+#mob.unknown11]
         ld      a,$a0
@@ -214,8 +225,8 @@ PARAMS  IX;mob          HELP ""Address of the current mob being processed
         adc     a,[ix+$12]
         cp      $18
         jr      c,._14
-        xor     a;zero
-._14    ld      [ix+$12],a;zero
+        xor     a`zero
+._14    ld      [ix+$12],a`zero
         ld      e,[ix+#mob.Yspeed+0]
         ld      d,[ix+#mob.Yspeed+1]
         ld      a,[ix+#mob.Ydirection]
@@ -247,27 +258,27 @@ PARAMS  IX;mob          HELP ""Address of the current mob being processed
         ld      [ix+#mob.Ydirection],a
         ld      l,[ix+#mob.Y+0]
         ld      h,[ix+#mob.Y+1]
-        xor     a;zero
+        xor     a`zero
         ld      de,$0008
         sbc     hl,de
         jr      c,._16
         ld      l,c
         ld      h,b
         ld      de,$0010
-        xor     a;zero
+        xor     a`zero
         sbc     hl,de
         ld      [ix+#mob.unknown14],l
         ld      [ix+#mob.unknown15],h
         ret     nc
-._16    ld      [ix+#mob.Yspeed+0],a;zero
-        ld      [ix+#mob.Yspeed+1],a;zero
-        ld      [ix+#mob.Ydirection],a;zero
+._16    ld      [ix+#mob.Yspeed+0],a`zero
+        ld      [ix+#mob.Yspeed+1],a`zero
+        ld      [ix+#mob.Ydirection],a`zero
         res     1,[ix+#mob.unknown11]
         set     2,[ix+#mob.unknown11]
         ld      [ix+$12],$00
         ret
 
-        `UNKNOWN
+        ;UNKNOWN
 ._6157  BYTE $00 $00 $00 $00 $00 $00 $03 $03 $03 $03 $03 $03 $02 $02 $02 $02
         BYTE $02 $02 $04 $04 $04 $04 $04 $04 $FF $00 $00 $FF $00 $00 $00 $00
         BYTE $00 $00 $00 $03 $03 $03 $03 $03 $03 $02 $02 $02 $02 $02 $02 $01
@@ -278,7 +289,7 @@ PARAMS  IX;mob          HELP ""Address of the current mob being processed
         BYTE $00 $03 $03 $03 $03 $03 $03 $02 $02 $02 $02 $02 $02 $07 $07 $07
         BYTE $07 $07 $07 $FF $12
         
-        `these are sprite layouts
+        ;these are sprite layouts
 ._61dc  BYTE $4E, $50, $52, $54, $FF, $FF
         BYTE $6E, $70, $72, $74, $FF, $FF
         BYTE $FE, $42, $44, $FF, $FF, $FF
@@ -311,7 +322,7 @@ PARAMS  IX;mob          HELP ""Address of the current mob being processed
         BYTE $6E, $66, $68, $74, $FF, $FF
         BYTE $FE, $42, $44, $FF, $FF, $FF
         
-        `--------------------------------------------------------------------[$626C]---
+        ;--------------------------------------------------------------------[$626C]---
         
 .S1_EndSign_Palette
         BYTE $38 $20 $35 $1B $16 $2A $00 $3F $03 $0F $01 $00 $00 $00 $00 $00

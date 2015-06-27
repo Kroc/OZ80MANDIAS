@@ -1,13 +1,23 @@
-TABLE   :S1_Music_Jungle                        SECTION ::sound                 `$D24A
-        `===============================================================================
+;; Sonic 1 Master System Disassembly <github.com/Kroc/Sonic1-SMS-OZ80>
+   for MaSS1VE: The Master System Sonic 1 Visual Editor <github.com/Kroc/MaSS1VE>
+   using OZ80MANDIAS, a high-level Z80 assembler <github.com/Kroc/OZ80MANDIAS>
+   -------------------------------------------------------------------------------------
+   created by Kroc Camen <kroc@camendesign.com> and given to the Public Domain;
+   you may do anything you like with this code as long as you respect the TradeMarks
+   and (any) Copyrights within. absolutely no warranty implied
+   =====================================================================================
+;;
+
+TABLE   :S1_Music_Jungle                        SECTION ::sound                 ;$D24A
+        ;===============================================================================
 {
-    WORD    .channel1 - :                       `$000A
-    WORD    .channel2 - :                       `$0198
-    WORD    .channel3 - :                       `$0325
-    WORD    .channel4 - :                       `$04AA
+    WORD    .channel1 - :                       ;$000A
+    WORD    .channel2 - :                       ;$0198
+    WORD    .channel3 - :                       ;$0325
+    WORD    .channel4 - :                       ;$04AA
     WORD    $0000
         
-.channel1   `---------------------------------------------------------------------------
+.channel1   ;---------------------------------------------------------------------------
     BYTE    $80 $01 $00 $01 $00
     BYTE    $85 $FF
     BYTE    $88
@@ -37,15 +47,15 @@ TABLE   :S1_Music_Jungle                        SECTION ::sound                 
 .a  BYTE    $26 $03
     BYTE    $8C $29 $03
     BYTE    $87 $03
-    WORD    .a - :                              `$36 $01
+    WORD    .a - :                              ;$36 $01
     BYTE    $86
 .b  BYTE    $86
 .c  BYTE    $26 $03 $29 $03
     BYTE    $87 $02
-    WORD    .c - :                              `$41 $01
+    WORD    .c - :                              ;$41 $01
     BYTE    $8B
     BYTE    $87 $05
-    WORD    .b - :                              `$40 $01
+    WORD    .b - :                              ;$40 $01
     BYTE    $8C $8C $7F $12 $2B $03 $27 $03 $7F $0C $2B $03 $27 $03 $7F $0C
     BYTE    $29 $03 $22 $03 $7F $00 $27 $03 $22 $03 $7F $0C
     BYTE    $8B $8B $27 $00 $7F $0C $27 $00 $29 $00 $7F $0C $2B $00 $7F $0C
@@ -53,11 +63,11 @@ TABLE   :S1_Music_Jungle                        SECTION ::sound                 
 .d  BYTE    $29 $00 $7F $00 $7F $00
     BYTE    $8C $8C $8C
     BYTE    $87 $04
-    WORD    .d - :                              `$7B $01
+    WORD    .d - :                              ;$7B $01
     BYTE    $81 $0D $29 $00 $7F $00 $2B $00 $7F $0C $29 $00 $8D $29 $24
     BYTE    $FF
         
-.channel2   `---------------------------------------------------------------------------
+.channel2   ;---------------------------------------------------------------------------
     BYTE    $88
     BYTE    $82 $FF $14 $96 $00 $14 $0A
     BYTE    $81 $0E
@@ -91,7 +101,7 @@ TABLE   :S1_Music_Jungle                        SECTION ::sound                 
     BYTE    $7F $0C $01 $00 $7F $0C
     BYTE    $FF
         
-.channel3   `---------------------------------------------------------------------------
+.channel3   ;---------------------------------------------------------------------------
     BYTE    $88
     BYTE    $84 $04 $00
     BYTE    $82 $FF $14 $82 $00 $14 $0A
@@ -123,7 +133,7 @@ TABLE   :S1_Music_Jungle                        SECTION ::sound                 
     BYTE    $7F $0C $24 $00 $8D $24 $24
     BYTE    $FF
         
-.channel4   `---------------------------------------------------------------------------
+.channel4   ;---------------------------------------------------------------------------
     BYTE    $8A $06
     BYTE    $88
     BYTE    $86
@@ -131,7 +141,7 @@ TABLE   :S1_Music_Jungle                        SECTION ::sound                 
     BYTE    $81 $0C $71 $00 $7F $00
     BYTE    $81 $09 $70 $00
     BYTE    $87 $1F
-    WORD    .e - :                              `$AE $04
+    WORD    .e - :                              ;$AE $04
     BYTE    $70 $00 $7F $00 $70 $00
     BYTE    $81 $0C $71 $00 $71 $00 $71 $00
     BYTE    $86
@@ -139,16 +149,16 @@ TABLE   :S1_Music_Jungle                        SECTION ::sound                 
     BYTE    $81 $0C $71 $00 $7F $00
     BYTE    $81 $09 $70 $00
     BYTE    $87 $0C
-    WORD    .f - :                              `$D3 $04
+    WORD    .f - :                              ;$D3 $04
     BYTE    $86
 .g  BYTE    $70 $00 $7F $0C
     BYTE    $87 $04
-    WORD    .g - :                              `$EA $04
+    WORD    .g - :                              ;$EA $04
     BYTE    $81 $0C
     BYTE    $86
 .h  BYTE    $71 $00
     BYTE    $87 $0C
-    WORD    .h - :                              `$F5 $04
+    WORD    .h - :                              ;$F5 $04
     BYTE    $FF
         
     BYTE    $00 $00 $00 $00

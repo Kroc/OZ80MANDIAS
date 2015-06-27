@@ -1,109 +1,119 @@
+;; Sonic 1 Master System Disassembly <github.com/Kroc/Sonic1-SMS-OZ80>
+   for MaSS1VE: The Master System Sonic 1 Visual Editor <github.com/Kroc/MaSS1VE>
+   using OZ80MANDIAS, a high-level Z80 assembler <github.com/Kroc/OZ80MANDIAS>
+   -------------------------------------------------------------------------------------
+   created by Kroc Camen <kroc@camendesign.com> and given to the Public Domain;
+   you may do anything you like with this code as long as you respect the TradeMarks
+   and (any) Copyrights within. absolutely no warranty implied
+   =====================================================================================
+;;
+
 INCLUDE "driver.oz80"
 
-TABLE   :S1_MusicPointers                       SECTION ::sound                 `$C716
-        `===============================================================================
+TABLE   :S1_MusicPointers                       SECTION ::sound                 ;$C716
+        ;===============================================================================
 {
-INDEX   .greenHill                              `=$00
-    WORD    :S1_Music_GreenHill			        `$47D0 [$C7D0]
+INDEX   .greenHill                              ;=$00
+    WORD    :S1_Music_GreenHill			        ;$47D0 [$C7D0]
         
-INDEX   .bridge                                 `=$01
-    WORD    :S1_Music_Bridge			        `$574A [$D74A]
+INDEX   .bridge                                 ;=$01
+    WORD    :S1_Music_Bridge			        ;$574A [$D74A]
         
-INDEX   .jungle                                 `=$02
-    WORD    :S1_Music_Jungle			        `$524A [$D24A]
+INDEX   .jungle                                 ;=$02
+    WORD    :S1_Music_Jungle			        ;$524A [$D24A]
         
-INDEX   .labyrinth                              `=$03
-    WORD    :S1_Music_Labyrinth			        `$760C [$F60C]
+INDEX   .labyrinth                              ;=$03
+    WORD    :S1_Music_Labyrinth			        ;$760C [$F60C]
         
-INDEX   .scrapBrain                             `=$04
-    WORD    :S1_Music_ScrapBrain			    `$5B4F [$DB4F]
+INDEX   .scrapBrain                             ;=$04
+    WORD    :S1_Music_ScrapBrain			    ;$5B4F [$DB4F]
         
-INDEX   .skyBase                                `=$05
-    WORD    :S1_Music_SkyBase			        `$61A7 [$E1A7]
+INDEX   .skyBase                                ;=$05
+    WORD    :S1_Music_SkyBase			        ;$61A7 [$E1A7]
         
-INDEX   .titleScreen                            `=$06
-    WORD    :S1_Music_TitleScreen		        `$64C3 [$E4C3]
+INDEX   .titleScreen                            ;=$06
+    WORD    :S1_Music_TitleScreen		        ;$64C3 [$E4C3]
         
-INDEX   .mapScreen                              `=$07
-    WORD    :S1_Music_MapScreen			        `$663C [$E63C]
+INDEX   .mapScreen                              ;=$07
+    WORD    :S1_Music_MapScreen			        ;$663C [$E63C]
         
-INDEX   .invincibility                          `=$08
-    WORD    :S1_Music_Invinciblity		        `$6704 [$E704]
+INDEX   .invincibility                          ;=$08
+    WORD    :S1_Music_Invinciblity		        ;$6704 [$E704]
         
-INDEX   .actComplete                            `=$09
-    WORD    :S1_Music_ActComplete		        `$68B4 [$E8B4]
+INDEX   .actComplete                            ;=$09
+    WORD    :S1_Music_ActComplete		        ;$68B4 [$E8B4]
         
-INDEX   .death                                  `=$0A
-    WORD    :S1_Music_Death			            `$6991 [$E991]
+INDEX   .death                                  ;=$0A
+    WORD    :S1_Music_Death			            ;$6991 [$E991]
         
-INDEX   .boss1                                  `=$0B
-    WORD    :S1_Music_Boss			            `$6AC0 [$EAC0]
+INDEX   .boss1                                  ;=$0B
+    WORD    :S1_Music_Boss			            ;$6AC0 [$EAC0]
         
-INDEX   .boss2                                  `=$0C
-    WORD    :S1_Music_Boss			            `$6AC0 [$EAC0]
+INDEX   .boss2                                  ;=$0C
+    WORD    :S1_Music_Boss			            ;$6AC0 [$EAC0]
         
-INDEX   .boss3                                  `=$0D
-    WORD    :S1_Music_Boss			            `$6AC0 [$EAC0]
+INDEX   .boss3                                  ;=$0D
+    WORD    :S1_Music_Boss			            ;$6AC0 [$EAC0]
         
-INDEX   .ending                                 `=$0E
-    WORD    :S1_Music_Ending			        `$6D54 [$ED54]
+INDEX   .ending                                 ;=$0E
+    WORD    :S1_Music_Ending			        ;$6D54 [$ED54]
         
-    `an unused entry
-    WORD    :S1_Music_GreenHill			        `$47D0 [$C7D0]
+    ;an unused entry
+    WORD    :S1_Music_GreenHill			        ;$47D0 [$C7D0]
         
-INDEX   .specialStage                           `=$10
-    WORD    :S1_Music_SpecialStage		        `$712C [$F12C]
+INDEX   .specialStage                           ;=$10
+    WORD    :S1_Music_SpecialStage		        ;$712C [$F12C]
         
-    `a couple of unused entries
-    WORD    :S1_Music_GreenHill			        `$47D0 [$C7D0]
-    WORD    :S1_Music_GreenHill			        `$47D0 [$C7D0]
+    ;a couple of unused entries
+    WORD    :S1_Music_GreenHill			        ;$47D0 [$C7D0]
+    WORD    :S1_Music_GreenHill			        ;$47D0 [$C7D0]
 
-INDEX   .allEmeralds                            `=$13
-    WORD    :S1_Music_AllEmeralds		        `$798C [$F98C]
+INDEX   .allEmeralds                            ;=$13
+    WORD    :S1_Music_AllEmeralds		        ;$798C [$F98C]
         
-INDEX   .emerald                                `=$14
-    WORD    :S1_Music_Emerald			        `$7A26 [$FA26]
+INDEX   .emerald                                ;=$14
+    WORD    :S1_Music_Emerald			        ;$7A26 [$FA26]
 }
 
-TABLE   :S1_SFXPointers                         SECTION ::sound                 `$C740
-        `===============================================================================
+TABLE   :S1_SFXPointers                         SECTION ::sound                 ;$C740
+        ;===============================================================================
 {
-    WORD    :_fb27, $0002                       `$7B27 [$FB27]
-    WORD    :_fb43, $0002                       `$7B43 [$FB43]
-    WORD    :_fb74, $0002                       `$7B74 [$FB74]
-    WORD    :_fb98, $0002                       `$7B98 [$FB98]
-    WORD    :_fbbf, $0002                       `$7BBF [$FBBF]
-    WORD    :_fbe6, $0002                       `$7BE6 [$FBE6]
-    WORD    :_fc18, $0002                       `$7C18 [$FC18]
-    WORD    :_fc42, $0002                       `$7C42 [$FC42]
-    WORD    :_fc5e, $0001                       `$7C5E [$FC5E]
-    WORD    :_fc8e, $0001                       `$7C8E [$FC8E]
-    WORD    :_fcb7, $0002                       `$7CB7 [$FCB7]
-    WORD    :_fcd8, $0001                       `$7CD8 [$FCD8]
-    WORD    :_fcfd, $0001                       `$7CFD [$FCFD]
-    WORD    :_fd24, $0001                       `$7D24 [$FD24]
-    WORD    :_fd62, $0002                       `$7D62 [$FD62]
-    WORD    :_fd62, $0001                       `$7D62 [$FD62]
-    WORD    :_fd62, $0002                       `$7D62 [$FD62]
-    WORD    :_fd62, $0002                       `$7D62 [$FD62]
-    WORD    :_fd88, $0002                       `$7D88 [$FD88]
-    WORD    :_fdb1, $0001                       `$7DB1 [$FDB1]
-    WORD    :_fdb1, $0002                       `$7DB1 [$FDB1]
-    WORD    :_fdb1, $0002                       `$7DB1 [$FDB1]
-    WORD    :_fdb1, $0002                       `$7DB1 [$FDB1]
-    WORD    :_fde6, $0001                       `$7DE6 [$FDE6]
-    WORD    :_fe0c, $0001                       `$7E0C [$FE0C]
-    WORD    :_fe2f, $0002                       `$7E2F [$FE2F]
-    WORD    :_fe48, $0001                       `$7E48 [$FE48]
-    WORD    :_fe5c, $0001                       `$7E5C [$FE5C]
-    WORD    :_fe74, $0001                       `$7E74 [$FE74]
-    WORD    :_fea4, $0001                       `$7EA4 [$FEA4]
-    WORD    :_fecc, $0002                       `$7ECC [$FECC]
-    WORD    :_fecc, $0002                       `$7ECC [$FECC]
-    WORD    :_fee8, $0002                       `$7EE8 [$FEE8]
-    WORD    :_ff08, $0001                       `$7F08 [$FF08]
-    WORD    :_ff4e, $0001                       `$7F4E [$FF4E]
-    WORD    :_ff83, $0002                       `$7F83 [$FF83]
+    WORD    :_fb27, $0002                       ;$7B27 [$FB27]
+    WORD    :_fb43, $0002                       ;$7B43 [$FB43]
+    WORD    :_fb74, $0002                       ;$7B74 [$FB74]
+    WORD    :_fb98, $0002                       ;$7B98 [$FB98]
+    WORD    :_fbbf, $0002                       ;$7BBF [$FBBF]
+    WORD    :_fbe6, $0002                       ;$7BE6 [$FBE6]
+    WORD    :_fc18, $0002                       ;$7C18 [$FC18]
+    WORD    :_fc42, $0002                       ;$7C42 [$FC42]
+    WORD    :_fc5e, $0001                       ;$7C5E [$FC5E]
+    WORD    :_fc8e, $0001                       ;$7C8E [$FC8E]
+    WORD    :_fcb7, $0002                       ;$7CB7 [$FCB7]
+    WORD    :_fcd8, $0001                       ;$7CD8 [$FCD8]
+    WORD    :_fcfd, $0001                       ;$7CFD [$FCFD]
+    WORD    :_fd24, $0001                       ;$7D24 [$FD24]
+    WORD    :_fd62, $0002                       ;$7D62 [$FD62]
+    WORD    :_fd62, $0001                       ;$7D62 [$FD62]
+    WORD    :_fd62, $0002                       ;$7D62 [$FD62]
+    WORD    :_fd62, $0002                       ;$7D62 [$FD62]
+    WORD    :_fd88, $0002                       ;$7D88 [$FD88]
+    WORD    :_fdb1, $0001                       ;$7DB1 [$FDB1]
+    WORD    :_fdb1, $0002                       ;$7DB1 [$FDB1]
+    WORD    :_fdb1, $0002                       ;$7DB1 [$FDB1]
+    WORD    :_fdb1, $0002                       ;$7DB1 [$FDB1]
+    WORD    :_fde6, $0001                       ;$7DE6 [$FDE6]
+    WORD    :_fe0c, $0001                       ;$7E0C [$FE0C]
+    WORD    :_fe2f, $0002                       ;$7E2F [$FE2F]
+    WORD    :_fe48, $0001                       ;$7E48 [$FE48]
+    WORD    :_fe5c, $0001                       ;$7E5C [$FE5C]
+    WORD    :_fe74, $0001                       ;$7E74 [$FE74]
+    WORD    :_fea4, $0001                       ;$7EA4 [$FEA4]
+    WORD    :_fecc, $0002                       ;$7ECC [$FECC]
+    WORD    :_fecc, $0002                       ;$7ECC [$FECC]
+    WORD    :_fee8, $0002                       ;$7EE8 [$FEE8]
+    WORD    :_ff08, $0001                       ;$7F08 [$FF08]
+    WORD    :_ff4e, $0001                       ;$7F4E [$FF4E]
+    WORD    :_ff83, $0002                       ;$7F83 [$FF83]
 }
 
 INCLUDE "song_greenHill.oz80"
@@ -124,7 +134,7 @@ INCLUDE "song_labyrinth.oz80"
 INCLUDE "song_allEmeralds.oz80"
 INCLUDE "song_emerald.oz80"
 
-``
+;;
 TYPE    #sfxHeader
 {
     .overriddenTrack            BYTE
@@ -133,8 +143,8 @@ TYPE    #sfxHeader
     .unused                     BYTE
 }
 
-TABLE   :_fb27                                  SECTION ::sound                 `$FB27
-        `===============================================================================
+TABLE   :_fb27                                  SECTION ::sound                 ;$FB27
+        ;===============================================================================
 {
     DATA    #sfxHeader
             $02 $0001 $0001 $00
@@ -146,8 +156,8 @@ TABLE   :_fb27                                  SECTION ::sound                 
     BYTE    $FE
 }
 
-TABLE   :_fb43                                  SECTION ::sound                 `$FB43
-        `===============================================================================
+TABLE   :_fb43                                  SECTION ::sound                 ;$FB43
+        ;===============================================================================
 {
     DATA    #sfxHeader
             $02 $0001 $0001 $00
@@ -158,12 +168,12 @@ TABLE   :_fb43                                  SECTION ::sound                 
     BYTE    $86
 .a  BYTE    $17 $00 $15 $00 $14 $00 $12 $00 $10 $00 $0B $00 $8C $8C $8C $8C
     BYTE    $87 $03
-    WORD    .a - :                              `$1A $00
+    WORD    .a - :                              ;$1A $00
     BYTE    $81 $00
     BYTE    $FE
 }
 
-TABLE   :_fb74                                  SECTION ::sound                 `$FB74
+TABLE   :_fb74                                  SECTION ::sound                 ;$FB74
 {
     DATA    #sfxHeader
             $02 $0001 $0001 $00
@@ -567,4 +577,4 @@ BYTE $87 $FF
 WORD ((--) - _ff83) ;$14 $00
 BYTE $81 $00
 BYTE $FE
-``
+;;

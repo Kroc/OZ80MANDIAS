@@ -1,10 +1,20 @@
-`badnick - buzz bomber
+;; Sonic 1 Master System Disassembly <github.com/Kroc/Sonic1-SMS-OZ80>
+   for MaSS1VE: The Master System Sonic 1 Visual Editor <github.com/Kroc/MaSS1VE>
+   using OZ80MANDIAS, a high-level Z80 assembler <github.com/Kroc/OZ80MANDIAS>
+   -------------------------------------------------------------------------------------
+   created by Kroc Camen <kroc@camendesign.com> and given to the Public Domain;
+   you may do anything you like with this code as long as you respect the TradeMarks
+   and (any) Copyrights within. absolutely no warranty implied
+   =====================================================================================
+;;
 
-PROC    :mob_badnick_buzzBomber                 SECTION ::mobs                  `$6B74
-        `==============================================================================
-PARAMS  IX;mob          HELP ""Address of the current mob being processed
+;badnick - buzz bomber
+
+PROC    :mob_badnick_buzzBomber                 SECTION ::mobs                  ;$6B74
+        ;==============================================================================
+PARAMS  IX`mob          HELP ""Address of the current mob being processed
 {        
-        set     5,[ix+#mob.flags]               `mob does not collide with the floor
+        set     5,[ix+#mob.flags]               ;mob does not collide with the floor
         bit     0,[ix+#mob.flags]
         jr      nz,._1
         ld      e,[ix+#mob.X+0]
@@ -12,13 +22,13 @@ PARAMS  IX;mob          HELP ""Address of the current mob being processed
         ld      [ix+#mob.unknown14],e
         ld      [ix+#mob.unknown15],d
         
-        xor     a;zero
-        ld      [ix+#mob.spriteLayout+0],a;zero
-        ld      [ix+#mob.spriteLayout+1],a;zero
-        ld      [ix+$12],a;zero
-        ld      [ix+#mob.Xspeed+0],a;zero
-        ld      [ix+#mob.Xspeed+1],a;zero
-        ld      [ix+#mob.Xdirection],a;zero
+        xor     a`zero
+        ld      [ix+#mob.spriteLayout+0],a`zero
+        ld      [ix+#mob.spriteLayout+1],a`zero
+        ld      [ix+$12],a`zero
+        ld      [ix+#mob.Xspeed+0],a`zero
+        ld      [ix+#mob.Xspeed+1],a`zero
+        ld      [ix+#mob.Xdirection],a`zero
         
         ld      hl,[$.CAMERA_X]
         ld      bc,$0100
@@ -61,11 +71,11 @@ PARAMS  IX;mob          HELP ""Address of the current mob being processed
         ld      de,$0030
         add     hl,de
         ld      de,[$.CAMERA_X]
-        xor     a;zero
+        xor     a`zero
         sbc     hl,de
         jr      nc,._5
-        ld      [ix+#mob.spriteLayout+0],a;zero
-        ld      [ix+#mob.spriteLayout+1],a;zero
+        ld      [ix+#mob.spriteLayout+0],a`zero
+        ld      [ix+#mob.spriteLayout+1],a`zero
         ld      a,[ix+#mob.unknown14]
         ld      [ix+#mob.X+0],a
         ld      a,[ix+#mob.unknown15]
@@ -98,28 +108,28 @@ PARAMS  IX;mob          HELP ""Address of the current mob being processed
         push    hl
         pop     ix
         
-        xor     a;zero                          `set A to 0
-        ld      [ix+#mob.type],$0D              `unknown object
-        ld      [ix+#mob.Xsubpixel],a;zero
+        xor     a`zero                          ;set A to 0
+        ld      [ix+#mob.type],$0D              ;unknown object
+        ld      [ix+#mob.Xsubpixel],a`zero
         ld      [ix+#mob.X+0],e
         ld      [ix+#mob.X+1],d
-        ld      [ix+#mob.Ysubpixel],a;zero
+        ld      [ix+#mob.Ysubpixel],a`zero
         ld      hl,$0020
         add     hl,bc
         ld      [ix+#mob.Y+0],l
         ld      [ix+#mob.Y+1],h
-        ld      [ix+#mob.unknown11],a;zero
-        ld      [ix+#mob.unknown13],a;zero
-        ld      [ix+#mob.unknown14],a;zero
-        ld      [ix+#mob.unknown15],a;zero
-        ld      [ix+#mob.unknown16],a;zero
-        ld      [ix+#mob.unknown17],a;zero
+        ld      [ix+#mob.unknown11],a`zero
+        ld      [ix+#mob.unknown13],a`zero
+        ld      [ix+#mob.unknown14],a`zero
+        ld      [ix+#mob.unknown15],a`zero
+        ld      [ix+#mob.unknown16],a`zero
+        ld      [ix+#mob.unknown17],a`zero
         ld      [ix+#mob.Xspeed+0],$00
         ld      [ix+#mob.Xspeed+1],$ff
         ld      [ix+#mob.Xdirection],$ff
         ld      [ix+#mob.Yspeed+0],$80
         ld      [ix+#mob.Yspeed+1],$01
-        ld      [ix+#mob.Ydirection],a;zero
+        ld      [ix+#mob.Ydirection],a`zero
         
         pop     ix, bc
         ld      a,$0a
@@ -156,16 +166,16 @@ PARAMS  IX;mob          HELP ""Address of the current mob being processed
         call    nc,:hitPlayer
         ret
         
-        `no reference to this?
+        ;no reference to this?
 ._6cd7  BYTE $01, $01, $01, $01, $00, $02, $02, $03, $01, $01, $00
         
-        `animation frame order
+        ;animation frame order
 ._6ce2  WORD ._6cea, ._6cea, ._6cef, ._6cf4
 ._6cea  BYTE $00, $02, $01, $02, $FF
 ._6cef  BYTE $02, $02, $03, $02, $FF
 ._6cf4  BYTE $04, $02, $05, $02, $FF
 
-`sprite layout
+;sprite layout
 ._6cf9  BYTE $FE, $0A, $FF, $FF, $FF, $FF
         BYTE $0C, $0E, $10, $FF, $FF, $FF
         BYTE $FF, $FF, $FF, $FF, $FF, $FF

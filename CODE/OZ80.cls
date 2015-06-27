@@ -46,7 +46,7 @@ Private Declare Sub api_PutMem4 Lib "msvbvm60" Alias "PutMem4" ( _
 )
 
 'Copy raw memory from one place to another _
- <msdn.microsoft.com/en-us/library/windows/desktop/aa366535%28v=vs.85%29.aspx>
+ <msdn.microsoft.com/en-us/library/windows/desktop/aa366535(v=vs.85).aspx>
 Private Declare Sub api_RtlMoveMemory Lib "kernel32" Alias "RtlMoveMemory" ( _
     ByVal DestinationPointer As Long, _
     ByVal SourcePointer As Long, _
@@ -62,7 +62,7 @@ Private Enum BOOL
 End Enum
 
 'Structure for obtaining the Windows version _
- <msdn.microsoft.com/en-us/library/windows/desktop/ms724834%28v=vs.85%29.aspx>
+ <msdn.microsoft.com/en-us/library/windows/desktop/ms724834(v=vs.85).aspx>
 Private Type OSVERSIONINFO
     SizeOfMe As Long
     MajorVersion As Long
@@ -73,7 +73,7 @@ Private Type OSVERSIONINFO
 End Type
 
 'Get the Windows version _
- <msdn.microsoft.com/en-us/library/windows/desktop/ms724451%28v=vs.85%29.aspx>
+ <msdn.microsoft.com/en-us/library/windows/desktop/ms724451(v=vs.85).aspx>
 Private Declare Function api_GetVersionEx Lib "kernel32" Alias "GetVersionExA" ( _
     ByRef VersionInfo As OSVERSIONINFO _
 ) As BOOL
@@ -322,9 +322,9 @@ Private Enum OZ80_SYNTAX
     
     ASC_NEG = UCS2.HYPHEN_MINUS
     
-    SYNTAX_COMMENT = UCS2.GRAVE_ACCENT              ' ` - Comment marker
-    SYNTAX_HINT1 = UCS2.SEMICOLON                   ' ; - Register hint, `a;index`
-    SYNTAX_HINT2 = UCS2.APOSTROPHE                  ' ' - Shadow register, `ex af 'af`
+    SYNTAX_COMMENT = UCS2.SEMICOLON                 ' ; - Comment marker
+    SYNTAX_HINT1 = UCS2.GRAVE_ACCENT                ' ` - Register hint, `A`index`
+    SYNTAX_HINT2 = UCS2.APOSTROPHE                  ' ' - Shadow register, `ex AF AF'`
     SYNTAX_TEXT = UCS2.QUOTATION_MARK               ' " - String identifier
     SYNTAX_CONSTANT = UCS2.EXCLAMATION_MARK         ' ! - Constant identifier
     SYNTAX_LABEL = UCS2.COLON                       ' : - Label identifier
@@ -817,9 +817,7 @@ Private SectionCount As Long
  This includes Constants, RAM Names and Type values
 Private Values As Scripting.Dictionary
 
-'The database of Label locations (in ROM) and their properties. _
- These are separate from the other named items since we keep the _
- Label addresses for the second assembly pass
+'The database of Label locations (in ROM) and their properties
 Private Labels As Scripting.Dictionary
 
 '---------------------------------------------------------------------------------------
@@ -827,9 +825,6 @@ Private Labels As Scripting.Dictionary
 '---------------------------------------------------------------------------------------
 
 Private Type OZ80Node
-    Above As Long
-    Below As Long
-    
     Before As Long
     After As Long
     
@@ -1142,7 +1137,7 @@ Private OpcodeZ_Register([_PARAM_REGS_BEGIN] To [_PARAM_REGS_END]) As Long
 
 Private Type oz80Chunk
     FullName As String                  'Fully-qualified Label name
-    LabelName As String                 'Quick-access to the full Label name
+    LabelName As String                 'Quick-access to the Label name
     SectionName As String               'Quick-access to the Chunk's assigned Section
     SectionID As Long                   'Index number to `Sections` array
     
@@ -1211,7 +1206,7 @@ Private Type oz80Deferred
     TokenIndex As Long                  'Token index number, within said File
     
     ChunkID As Long                     'Which Chunk to write the Value to
-    BinaryOffset As Long                'Which starting byte within the Chunk
+    ROMOffset As Long                   'Which starting byte within the ROM
     
     Kind As OZ80_DEFERRED               'Which type of data to output
     From As Long                        'The address to calculate relative from
@@ -2076,6 +2071,7 @@ Public Function Assemble( _
     
     Dim i As Long
     For i = 1 To DeferredCount: With Deferred(i)
+        
         Call RaiseMessage(OZ80_LOG_INFO, "File : {$}", Files(.File).Path)
         Call RaiseMessage(OZ80_LOG_INFO, _
             "Line : {$} Col : {$}", _
@@ -2089,6 +2085,7 @@ Public Function Assemble( _
         '(this will cache the Token data)
         Call NextToken
         
+        'Now calculate the Expression
         Dim Value As Double
         If ParseExpression(Value, _
             Chunks(.ChunkID).LabelName, Chunks(.ChunkID).SectionName _
@@ -2107,13 +2104,18 @@ Public Function Assemble( _
             Debug.Print "Line : " & CStr(Files(.File).Tokens(.TokenIndex).Line) & " Col : " & (Files(.File).Tokens(.TokenIndex).Col)
             Debug.Print Chunks(.ChunkID).LabelName
             Debug.Print
+            
+            Let TokenIndex = .TokenIndex - 1: Call NextToken
+            Call RaiseError(OZ80_ERROR_INDEFINITE, "INDEFINITE!")
+            GoTo Finish
+            
 '            Stop
             
         Else
             Call RaiseMessage(OZ80_LOG_STATUS, Hex(Value))
             If .Kind = ASM_JR Then
                 Dim From As Long
-                Let From = Chunks(.ChunkID).Address + .BinaryOffset
+                Let From = Chunks(.ChunkID).Address + .ROMOffset
                 
                 'TODO: Calculate relative offset
                 
@@ -2126,14 +2128,14 @@ Public Function Assemble( _
                     Else Let ROM(From) = (Diff - 1) And &HFF&
                 
             ElseIf .Kind = ASM_JP Then
-                Let From = Chunks(.ChunkID).Address + .BinaryOffset
+                Let From = Chunks(.ChunkID).Address + .ROMOffset
                 
                 'TODO: Do bank calculation
                 Let ROM(From) = Value And &HFF&
                 Let ROM(From + 1) = (Value And &HFF00&) \ &H100&
             
             ElseIf .Kind = ASM_VAL8 Then
-                Let From = Chunks(.ChunkID).Address + .BinaryOffset
+                Let From = Chunks(.ChunkID).Address + .ROMOffset
                 'TODO: 8-bit limit check?
                 Let ROM(From) = Value And &HFF&
                 
@@ -2562,7 +2564,7 @@ ReadChar:
                 Let IsComment = True: GoTo NextChar
             End If
         Else
-            'If the word is interrupted by apostrophe or semi-colon, _
+            'If the word is interrupted by an apostrophe or back-tick, _
              we've hit a register hint. We can ignore the rest of the word
             If (Char = SYNTAX_HINT1) Or (Char = SYNTAX_HINT2) Then
                 'Break and process the current word
@@ -7703,13 +7705,13 @@ End Function
 'Kind           | Where the deferred Expression needs to be applied, ie. ROM / CONST ...
 'File           | Which file number the Expression is located within
 'TokenIndex     | Which Token within the file the Expression begins
-'BinaryOffset   | For Z80 use, where in the ROM to write the calculated Value
+'ROMOffset      | For Z80 use, where in the ROM to write the calculated Value
 '=======================================================================================
 Private Sub DeferExpression( _
     ByRef Kind As OZ80_DEFERRED, _
     ByRef File As Long, _
     ByRef TokenIndex As Long, _
-    ByRef BinaryOffset As Long, _
+    ByRef ROMOffset As Long, _
     ByRef From As Long _
 )
     Let DeferredCount = DeferredCount + 1
@@ -7720,7 +7722,7 @@ Private Sub DeferExpression( _
         Let .File = File
         Let .TokenIndex = TokenIndex
         Let .ChunkID = Chunk
-        Let .BinaryOffset = BinaryOffset
+        Let .ROMOffset = ROMOffset
         Let .From = From
     End With
 End Sub

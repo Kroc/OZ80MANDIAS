@@ -1,21 +1,31 @@
-`falling bridge (Bridge)
+;; Sonic 1 Master System Disassembly <github.com/Kroc/Sonic1-SMS-OZ80>
+   for MaSS1VE: The Master System Sonic 1 Visual Editor <github.com/Kroc/MaSS1VE>
+   using OZ80MANDIAS, a high-level Z80 assembler <github.com/Kroc/OZ80MANDIAS>
+   -------------------------------------------------------------------------------------
+   created by Kroc Camen <kroc@camendesign.com> and given to the Public Domain;
+   you may do anything you like with this code as long as you respect the TradeMarks
+   and (any) Copyrights within. absolutely no warranty implied
+   =====================================================================================
+;;
 
-PROC    :mob_platform_bridge                    SECTION ::mobs                  `$83C1
-        `==============================================================================
-PARAMS  IX;mob          HELP ""Address of the current mob being processed
+;falling bridge (Bridge)
+
+PROC    :mob_platform_bridge                    SECTION ::mobs                  ;$83C1
+        ;==============================================================================
+PARAMS  IX`mob          HELP ""Address of the current mob being processed
 {
-        set     5,[ix+#mob.flags]               `mob does not collide with the floor
+        set     5,[ix+#mob.flags]               ;mob does not collide with the floor
         ld      [ix+#mob.width], 14
         ld      [ix+#mob.height],8
         bit     0,[ix+#mob.flags]
         jr      nz,._2
         
-        xor     a;zero
-        ld      [ix+#mob.spriteLayout+0],a;zero
-        ld      [ix+#mob.spriteLayout+1],a;zero
-        ld      l;zero,a;zero
-        ld      h;zero,a;zero
-        ld      [$.TEMP1],hl;zero
+        xor     a`zero
+        ld      [ix+#mob.spriteLayout+0],a`zero
+        ld      [ix+#mob.spriteLayout+1],a`zero
+        ld      l`zero,a`zero
+        ld      h`zero,a`zero
+        ld      [$.TEMP1],hl`zero
         
         bit     1,[ix+#mob.flags]
         jr      nz,._1
@@ -68,7 +78,7 @@ PARAMS  IX;mob          HELP ""Address of the current mob being processed
         and     a
         sbc     hl,de
         jr      c,._
-        ld      [ix+#mob.type],$FF      `remove object?
+        ld      [ix+#mob.type],$FF      ;remove object?
         ret
         
 ._4     ld      hl,$0402
@@ -85,7 +95,7 @@ PARAMS  IX;mob          HELP ""Address of the current mob being processed
         call    :_LABEL_7CC1_12
         ret
 
-        `sprite layout
+        ;sprite layout
 ._8481  BYTE $FE, $FF, $FF, $FF, $FF, $FF
         BYTE $70, $72, $FF, $FF, $FF, $FF
         BYTE $FF

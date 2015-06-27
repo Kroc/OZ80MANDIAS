@@ -1,8 +1,18 @@
-PROC    :mob_trap_propeller                     SECTION ::mobs                  `$AA6A
-        `==============================================================================
-PARAMS  IX;mob          HELP ""Address of the current mob being processed
+;; Sonic 1 Master System Disassembly <github.com/Kroc/Sonic1-SMS-OZ80>
+   for MaSS1VE: The Master System Sonic 1 Visual Editor <github.com/Kroc/MaSS1VE>
+   using OZ80MANDIAS, a high-level Z80 assembler <github.com/Kroc/OZ80MANDIAS>
+   -------------------------------------------------------------------------------------
+   created by Kroc Camen <kroc@camendesign.com> and given to the Public Domain;
+   you may do anything you like with this code as long as you respect the TradeMarks
+   and (any) Copyrights within. absolutely no warranty implied
+   =====================================================================================
+;;
+
+PROC    :mob_trap_propeller                     SECTION ::mobs                  ;$AA6A
+        ;==============================================================================
+PARAMS  IX`mob          HELP ""Address of the current mob being processed
 {
-        set     5,[ix+#mob.flags]               `mob does not collide with the floor
+        set     5,[ix+#mob.flags]               ;mob does not collide with the floor
         ld      [ix+#mob.width],$05
         ld      [ix+#mob.height],$14
         bit     0,[ix+#mob.flags]
@@ -70,7 +80,7 @@ PARAMS  IX;mob          HELP ""Address of the current mob being processed
         ld      [ix+#mob.unknown11],$00
         ret
         
-._ab01                                                                          `$AB01
+._ab01                                                                          ;$AB01
         BYTE    $09 $AB $0F $AB $15 $AB $1B $AB $00 $00 $1C $00 $18 $3C $00 $00
         BYTE    $1E $00 $18 $3E $00 $00 $38 $00 $18 $3A $00 $08 $1A $00 $00 $FF
 }

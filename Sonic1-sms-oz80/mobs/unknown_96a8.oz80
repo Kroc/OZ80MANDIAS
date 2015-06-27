@@ -1,21 +1,31 @@
-PROC    :_96a8                                  SECTION ::mobs                  `$96A8
-        `==============================================================================
-PARAMS  IX;mob          HELP ""Address of the current mob being processed
+;; Sonic 1 Master System Disassembly <github.com/Kroc/Sonic1-SMS-OZ80>
+   for MaSS1VE: The Master System Sonic 1 Visual Editor <github.com/Kroc/MaSS1VE>
+   using OZ80MANDIAS, a high-level Z80 assembler <github.com/Kroc/OZ80MANDIAS>
+   -------------------------------------------------------------------------------------
+   created by Kroc Camen <kroc@camendesign.com> and given to the Public Domain;
+   you may do anything you like with this code as long as you respect the TradeMarks
+   and (any) Copyrights within. absolutely no warranty implied
+   =====================================================================================
+;;
+
+PROC    :_96a8                                  SECTION ::mobs                  ;$96A8
+        ;==============================================================================
+PARAMS  IX`mob          HELP ""Address of the current mob being processed
 {
-        set     5,[ix+#mob.flags]               `mob does not collide with the floor
-        xor     a;zero
-        ld      [ix+#mob.spriteLayout+0],a;zero
-        ld      [ix+#mob.spriteLayout+1],a;zero
+        set     5,[ix+#mob.flags]               ;mob does not collide with the floor
+        xor     a`zero
+        ld      [ix+#mob.spriteLayout+0],a`zero
+        ld      [ix+#mob.spriteLayout+1],a`zero
         ld      l,[ix+#mob.X+0]
         ld      h,[ix+#mob.X+1]
         ld      [$.TEMP1],hl
         ld      l,[ix+#mob.Y+0]
         ld      h,[ix+#mob.Y+1]
         ld      [$.TEMP3],hl
-        ld      l;zero,a;zero
-        ld      h;zero,a;zero
-        ld      [$.TEMP4],hl;zero
-        ld      [$.TEMP6],hl;zero
+        ld      l`zero,a`zero
+        ld      h`zero,a`zero
+        ld      [$.TEMP4],hl`zero
+        ld      [$.TEMP6],hl`zero
         ld      e,[ix+$12]
         ld      d,$00
         ld      hl,._96f5
@@ -31,7 +41,7 @@ PARAMS  IX;mob          HELP ""Address of the current mob being processed
         ld      a,[ix+$12]
         cp      $03
         ret     c
-        ld      [ix+#mob.type],$FF              `remove object?
+        ld      [ix+#mob.type],$FF              ;remove object?
         ret
 
 ._96f5  BYTE $1C, $1E, $5E

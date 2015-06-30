@@ -1,8 +1,8 @@
-﻿=======================================================================================
+﻿========================================================================================
 OZ80MANDIAS: a Z80 assembler; Copyright (C) Kroc Camen, 2013-15
 Licenced under a Creative Commons 3.0 Attribution Licence
 --You may use and modify this document how you see fit as long as you give credit
-=======================================================================================
+========================================================================================
 
                                 TABLE OF CONTENTS
         
@@ -72,16 +72,16 @@ Licenced under a Creative Commons 3.0 Attribution Licence
         A.              
 
         
-///////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////
                                  
                                  P  R  E  F  A  C  E
                          
                           (What you need to know up-front)
 
 
-=======================================================================================
+========================================================================================
 1.      Terminology
-=======================================================================================
+========================================================================================
 NOTE:   The use of small angle-brackets "‹ ›" throughout represent an optional
         component of the syntax and are not to be included in your code.
 
@@ -107,49 +107,49 @@ NOTE:   The use of small angle-brackets "‹ ›" throughout represent an option
         
 :: "Scope"
         The nesting-depth of statements within each other.
-        For example, Z80 instructions go within a PROC chunk.
-        Root is the top-most scope, not nested within anything else.
+        For example, Z80 instructions go within a PROC Chunk.
+        Root is the top-most scope, not nested within anything else
         
 :: "Chunk"
         An encapsulation of code and/or data.
-        `PROC` & `TABLE` are types of Chunks.
+        `PROC` & `TABLE` are types of Chunks
  
- 
-=======================================================================================
+
+========================================================================================
 2.      Documentation
-=======================================================================================
+========================================================================================
 2.1.    Line Comments
----------------------------------------------------------------------------------------
+----------------------------------------------------------------------------------------
 Scopes: Any
 Format:
-        `single-line
+        ;single-line
         
-        ``multi-
-          line``
+        ;;multi-
+          line;;
 
-A single-line comment begins with a back-tick.
+A single-line comment begins with a semi-colon.
 All text from that point to the end of the line is ignored.
 
-        ld      de, 3                   `sprite table is 3 bytes per sprite
+        ld      DE, 3                   ;sprite table is 3 bytes per sprite
 
-A multi-line comment begins with double back-tick ("``") and continues until the next
-double back-tick is encountered. All text in between is ignored.
+A multi-line comment begins with double semi-colon (";;") and continues until the next
+double semi-colon is encountered. All text in between is ignored.
         
-        ``in the solidity data, bit 7 determines that the tile should appear in
+        ;;in the solidity data, bit 7 determines that the tile should appear in
           front of sprites. rotate the byte three times to position bit 7 at bit 4.
           this byte will form the high-byte of the 16-bit value for the name table
-          entry (bit 4 will therefore become bit 12)``
+          entry (bit 4 will therefore become bit 12);;
         rrca
         rrca
         rrca
 
----------------------------------------------------------------------------------------
+----------------------------------------------------------------------------------------
 2.2.    Register Hints
----------------------------------------------------------------------------------------
-Scopes: Any
+----------------------------------------------------------------------------------------
+Scopes: PROC/TABLE
 Format:
-        «register»;«hint»               `or:
-        «register»'«hint»               `for indicating shadow registers in use
+        «register»`«hint»               ;or:
+        «register»'«hint»               ;for indicating shadow registers in use
 
 Register hints provide the ability to keep track of the temporary "role" of registers.
 It allows you to explain 'what' a register currently is, without resorting to comments
@@ -157,18 +157,18 @@ It allows you to explain 'what' a register currently is, without resorting to co
 
 Take for example this section of Z80 code in the middle of a procedure:
 
-        ld      c, a
-        ld      b, $00
-        ld      hl, ($.TEMP3)
-        add     hl, bc
+        ld      C, A
+        ld      B, $00
+        ld      HL, ($.TEMP3)
+        add     HL, BC
 
 What's the purpose of this code? Adding comments can answer that, but we can better
 visualise at a glance the flow of information by providing register hints like so:
   
-        ld      c;blockIndex, a;blockIndex
-        ld      b;blockIndex, $00
-        ld      hl;solidityData, ($.TEMP3)
-        add     hl;solidityData, bc;blockIndex
+        ld      C`blockIndex, A`blockIndex
+        ld      B`blockIndex, $00
+        ld      HL`solidityData, ($.TEMP3)
+        add     HL`solidityData, HL`blockIndex
 
 Now we can see that `$.TEMP3` contained "solidityData" this time (even though it
 could be used for other purposes elsewhere in the code) -- thus you do not have to
@@ -181,89 +181,88 @@ Note that register hints are optional and completely arbitrary, anything A-Z, 0-
 underscore can appear after the semi-colon and is not stored or referenced by the
 assembler. They are purely for readability.
 
----------------------------------------------------------------------------------------
+----------------------------------------------------------------------------------------
 2.3.    Help Descriptions
----------------------------------------------------------------------------------------
-Scopes: PROC, TABLE, PARAMS, RETURN
+----------------------------------------------------------------------------------------
+Scopes: PROC/TABLE, PARAMS, RETURN
 Format:
-        HELP "..."                      `single-line, or
-        HELP """
-                ...                     `multi-line
-        """
+        HELP «text»
 
 TODO
         
         
-=======================================================================================
+========================================================================================
 3.      Numbers
-=======================================================================================
+========================================================================================
 3.1.    Decimal
----------------------------------------------------------------------------------------
+----------------------------------------------------------------------------------------
+
+
 With Z80 code some instructions will require 8-bit numbers and some 16-bit numbers.
 Any decimal number above 255 is implicitly a 16-bit number, therefore the following
 would not work:
 
-        `can't load 16-bit number into 8-bit register!
-        ld a, 4096
+        ;can't load 16-bit number into 8-bit register!
+        ld A, 4096
 
 It's fine to use an 8-bit number on 16-bit instructions though, i.e.
 
-        ld bc, 8
+        ld BC, 8
 
 The number will be used as 16-bit with the correct high and low byte order.
 (the high byte will be 0) 
 
----------------------------------------------------------------------------------------
+----------------------------------------------------------------------------------------
 3.2.    Fractions
----------------------------------------------------------------------------------------
+----------------------------------------------------------------------------------------
 Decimal numbers can also be fractional, i.e. with decimal places.
 Approximately 15 decimal places are supported.
         
-        DEF !PI 3.141592653589793
+        CONST !PI 3.141592653589793
 
 Expressions may also result in fractional values:
         
-        DEF !HALF 1 / 2
+        CONST !HALF 1 / 2
 
 WARNING: Whilst fractional values can be supplied to Z80 instruction parameters,
 the value will be rounded *DOWN* and a warning raised.
         
-        ld a, 1.75                      `produces a warning, result will be 1
+        ld A, 1.75                      ;produces a warning, result will be 1
 
----------------------------------------------------------------------------------------
+----------------------------------------------------------------------------------------
 3.3.    Negatives
----------------------------------------------------------------------------------------
+----------------------------------------------------------------------------------------
 8-bit negative numbers are represented on the Master System by having the upper-most
 bit set. This limits a negative number to -127 (8-bit) or -32767 (16-bit)
 
----------------------------------------------------------------------------------------
+----------------------------------------------------------------------------------------
 3.4.    Hexadecimal
----------------------------------------------------------------------------------------
+----------------------------------------------------------------------------------------
 Hexadecimal numbers are prefixed with the dollar sign "$", e.g.
 
-        ld de, $ABCD
+        ld DE, $ABCD
 
 Hexadecimal numbers cannot be negative or have fractions.
 
----------------------------------------------------------------------------------------
+----------------------------------------------------------------------------------------
 3.5.    Binary
----------------------------------------------------------------------------------------
+----------------------------------------------------------------------------------------
 Binary numbers are prefixed with the percent sign "%".
 You can include all 8 digits or only as many as you need
 
-        ld h, %00001111
-        ld h, %1111
+        ld H, %00001111
+        ld H, %1111
 
 For 16-bit numbers use more digits.
         
-        ld hl, %0000111100001111
+        ld HL, %0000111100001111
 
 Binary numbers cannot be negative (in the sense of `-%10101010`), or have fractions.
 You may of course represent negative numbers manually in binary.
         
----------------------------------------------------------------------------------------
+----------------------------------------------------------------------------------------
 3.6.    Units
----------------------------------------------------------------------------------------
+----------------------------------------------------------------------------------------
 Number suffixes (units) are supported to represent larger numbers in a simpler
 fashion.
 
@@ -272,15 +271,15 @@ fashion.
         1 Kbit  =   128 (Kibibits)
 
 
-=======================================================================================
+========================================================================================
 4.      Expressions
-=======================================================================================
+========================================================================================
 An Expression is a calculation consisting of either a single Value, or multiple Values
 separated by Operators, e.g. `1 + 1` (See the Terminology section).
 
----------------------------------------------------------------------------------------
+----------------------------------------------------------------------------------------
 4.1.    Operators
----------------------------------------------------------------------------------------
+----------------------------------------------------------------------------------------
 These are the Operators supported:
 
 :: Plus `+`
@@ -323,9 +322,9 @@ These are the Operators supported:
         right-hand Value, dropping the overflow into the bit-bucket and inserting
         zeroes to the left.
 
----------------------------------------------------------------------------------------
+----------------------------------------------------------------------------------------
 4.2.    Precedence
----------------------------------------------------------------------------------------
+----------------------------------------------------------------------------------------
 
              *IMPORTANT*     *IMPORTANT*     *IMPORTANT*     *IMPORTANT*
 
@@ -338,46 +337,46 @@ before each operator!
 
 To enforce precedence, use curly braces as parenthesis:
 
-        ld a, 5 * {2 + 2}
+        ld A, 5 * {2 + 2}
 
 Do *not* use curved brackets -- "(" & ")" -- as these are reserved for Z80 instruction
 memory references, e.g. `ld a, (ix+$FF)`.
 
----------------------------------------------------------------------------------------
+----------------------------------------------------------------------------------------
 4.3.    Helper Functions
----------------------------------------------------------------------------------------
+----------------------------------------------------------------------------------------
 Some built in functions are provided for common manipulations of Values in Expressions.
 
 NOTE:   Watch out for the left-to-right calculation order when using helper functions.
-        For example `ld a, HI $8000 + 2` is equivalent to `ld a, {HI $8000} + 2`,
-        *NOT* `ld a, HI {$8000 + 2}`. It's best to use curly braces around helper
+        For example `ld A, HI $8000 + 2` is equivalent to `ld A, {HI $8000} + 2`,
+        *NOT* `ld A, HI {$8000 + 2}`. It's best to use curly braces around helper
         functions to ensure you get what you expect.
 
  HI «expr»
-        ```````````````````````````````````````````````````````````````````````````````
+        ````````````````````````````````````````````````````````````````````````````````
         Retrieves the high-byte of a 16-bit number, e.g. `HI $ABCD` is $AB.
         For 8-bit numbers, $00 is returned.
         
  LO «expr»
-        ```````````````````````````````````````````````````````````````````````````````
+        ````````````````````````````````````````````````````````````````````````````````
         Retrieves the low-byte of an 8/16-bit number, e.g. `LO $ABCD` is $CD
         
  NOT8 «expr»
-        ```````````````````````````````````````````````````````````````````````````````
+        ````````````````````````````````````````````````````````````````````````````````
         8-bit bitwise NOT. The first 8-bits of the proceeding value are inverted.
         E.g. `NOT8 $FF` is 0.
 
  NOT16 «expr»
-        ```````````````````````````````````````````````````````````````````````````````
+        ````````````````````````````````````````````````````````````````````````````````
         16-bit bitwise NOT. The first 16-bits of the proceeding value are inverted.
         E.g. `NOT16 $FFFF` is 0
 
 
-=======================================================================================
+========================================================================================
 #.      Managing Common Values
-=======================================================================================
+========================================================================================
 #.1.    Constants
----------------------------------------------------------------------------------------
+----------------------------------------------------------------------------------------
 Scopes: Root
 Format:
         DEF     !«name» ‹«expr»›
@@ -393,21 +392,21 @@ a constant name and a value:
 
 Anywhere you would normally use a value, you can now instead use the constant name:
 
-        ld      a, !SIR_LANCELOTS_FAVOURITE_COLOUR
+        ld      A, !SIR_LANCELOTS_FAVOURITE_COLOUR
 
 Constant names are prefixed by an exclamation mark (to represent their immutable
 nature), must be at least 2 letters long, may contain A-Z, underscore and 0-9
 (though may not begin with a number).
 
----------------------------------------------------------------------------------------
+----------------------------------------------------------------------------------------
 #.2.    Enumerations
----------------------------------------------------------------------------------------
+----------------------------------------------------------------------------------------
 Scopes: Root
 Format: 
         ENUM    !«name» ‹«expr»›
         [
                 .«name» ‹«expr»›        
-                .       ‹x «expr»›      `skip indices
+                .       ‹x «expr»›      ;skip indices
                 ‹…›
         ]
         
@@ -417,11 +416,11 @@ automatically for you.
 
         ENUM    !STATUS
         [
-                .SLEEP                  `=0, use as "!STATUS.SLEEP"
-                .PARALYZE               `=1
-                .POISON                 `=2
-                .BURN                   `=3
-                .FREEZE                 `=4
+                .SLEEP                  ;=0, use as "!STATUS.SLEEP"
+                .PARALYZE               ;=1
+                .POISON                 ;=2
+                .BURN                   ;=3
+                .FREEZE                 ;=4
         ]
 
 (The square brackets, and the portion within, is called a "hash" -- a group of Values
@@ -431,8 +430,8 @@ An Expression sets the starting number used in the Enum:
 
         ENUM    !STEPS  6
         [
-                .SIX                    `= 6
-                .SEVEN                  `= 7 ...
+                .SIX                    ;= 6
+                .SEVEN                  ;= 7 ...
         ]
 
 A lone dot skips a number. This is for the benefit of disassemblies, where you may
@@ -440,9 +439,9 @@ have unused Enum indexes in the code.
 
         ENUM    !SKIPS  1
         [
-                .FIRST                  `= 1
-                .                       `skips number 2
-                .THIRD                  `= 3
+                .FIRST                  ;= 1
+                .                       ;skips number 2
+                .THIRD                  ;= 3
         ]
 
 The Value used for each entry in the Enum can be provided manually. When an unnumbered
@@ -452,13 +451,13 @@ entry follows a numbered one, the previous Value is increased by 1.
         [
                 .ABC    8
                 .DEF    3
-                .GHI                    `= 4
+                .GHI                    ;= 4
         ]
 
         
-=======================================================================================
+========================================================================================
 #.      Objects
-=======================================================================================
+========================================================================================
 In your code you will likely be handling structured data of some kind. A common example
 would be sprite definitions for players and enemies. The structured data would normally
 consist of a number of object properties offset from some starting point, for example
@@ -467,9 +466,9 @@ X position, Y position, ID, speed and so forth.
 Managing these objects in a flexible manner is possible by using Object constructs,
 special enumerations that specify the size (in bytes) of each element.
 
----------------------------------------------------------------------------------------
+----------------------------------------------------------------------------------------
 #.1.    Data Types
----------------------------------------------------------------------------------------
+----------------------------------------------------------------------------------------
 Before you begin using Objects, it's important to know about the data types that
 specify the number of bytes a property occupies. These are:
 
@@ -510,9 +509,9 @@ e.g. "BYTE x 8 KB" = 8192 Bytes.
 There are additional data types for handling Bits, Nybbles (4-bits), Text and
 Hashes, but we will cover those in a later section.
         
----------------------------------------------------------------------------------------
+----------------------------------------------------------------------------------------
 #.2.    Definition
----------------------------------------------------------------------------------------
+----------------------------------------------------------------------------------------
 Scopes: Root
 Format:
         OBJECT  #«objName»
@@ -563,9 +562,9 @@ Objects can also contain other objects, allowing finer grained structure.
         
 These sub-properties would be accessed with `#path.start.x`, for example.
 
----------------------------------------------------------------------------------------
+----------------------------------------------------------------------------------------
 #.3.    Bit Flags
----------------------------------------------------------------------------------------
+----------------------------------------------------------------------------------------
 Scopes: OBJECT, RAM
 Format:
         BITS {
@@ -598,24 +597,24 @@ individual bits and provide names for each; for example:
         
         
         
-///////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////
                                  
                   R  E  Q  U  I  R  E  D      S  T  R  U  C  T  U  R  E
                          
                     (What you need to do, otherwise nothing will work)
                           
                           
-=======================================================================================
+========================================================================================
 #.      System Definition
-=======================================================================================
+========================================================================================
 Before you can begin assembling, your source code needs to define which computer
 system you are targeting. At this time, OZ80 only directly supports the SEGA Master
 System, however it might support other Z80 targets in the future (such as the Nintendo
 GameBoy, ZX Spectrum & Amstrad CPC).
 
----------------------------------------------------------------------------------------
+----------------------------------------------------------------------------------------
 #.1.    SEGA Master System
----------------------------------------------------------------------------------------
+----------------------------------------------------------------------------------------
 At the beginning of your source code, place the following statement to tell the
 assembler to target the SEGA Master System.
 
@@ -1114,65 +1113,21 @@ TODO: "EXIT IF"
 ...
 
 #.#.    Logical Operators
----------------------------------------------------------------------------------------
+----------------------------------------------------------------------------------------
 TODO: =, NOT, <, <=, >, >=
 
 
-=======================================================================================
-#.      Macros & Functions
-=======================================================================================
-#.#.    Macros
----------------------------------------------------------------------------------------
-Format:
-        MACRO @<macroName> [ARGS #<variableName>[, #<variableName> ...]] {
-                <code>
-        }
 
-TODO: "SHIFT", variable arguments, "ARGS.size"?
-TODO: EXIT MACRO
-TODO: USE MACRO @macroName
-...
-
-#.#.    Functions
----------------------------------------------------------------------------------------
-Scope:  Root
-Format:
-        FUNCTION ?<functionName> [ARGS #<variableName>[, #<variableName> ...]] {
-                <code>
-                DEF ?<functionName> <expr>
-        }
-
-A function is similar to a macro but is used to calculate values at expression points,
-rather than inserting whole lines or blocks of code.
-
-Since the purpose of a function is to calculate and return a value, functions cannot
-contain assembly code and can only use these statements:
-
-TODO: update this list
-DEF :<label>, EXIT IF / FUNCTION / LOOP, IF / ELSE / ELSE IF / END IF
-
-TODO: "EXIT FUNCTION"
-...
-
-Format:
-        ?<functionName> [<expr>[, <expr> ...]]
-
-
-        DATA $AA, {?functionName $10, $20, $30}, $BB, $CC
-
-...
-
-
-///////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////
                                  
                                    P  A  G  I  N  G
                          
                                 (Making big software)
 
                          
-=======================================================================================
+========================================================================================
 #.      Slots
-=======================================================================================
+========================================================================================
 Generally speaking, 8-bit systems are usually limited to addressing 64 KB of memory
 directly (using a 16-bit address bus). In some systems, the entire address space is
 RAM (such as the Amstrad CPC). In others, parts of the address space are RAM and other
@@ -1187,9 +1142,9 @@ cartridge ROM.
 Paging is highly system-specific, so an overview of the address spaces on supported
 systems appears below:
 
----------------------------------------------------------------------------------------
+----------------------------------------------------------------------------------------
 #.1.    SEGA Master System
----------------------------------------------------------------------------------------
+----------------------------------------------------------------------------------------
 The SEGA Master System can address 64 KB of memory which is mapped into three Slots of
 16 KB each, spanning 48 KB (The RAM sits above that and is 8 KB).
         
@@ -1241,7 +1196,7 @@ described below. It is important to recognise these patterns as you will need to
 apply varying patterns to your code/data.
 
 ::      Default Address Space
-```````````````````````````````````````````````````````````````````````````````````````
+````````````````````````````````````````````````````````````````````````````````````````
         For 48 KB ROMs or less, no paging is needed and OZ80 automatically assigns
         Banks 0, 1 & 2 to Slots 0, 1 & 2, providing a contiguous 48 KB of space.
 
@@ -1259,7 +1214,7 @@ apply varying patterns to your code/data.
         to 48 KB.
 
 ::      SEGA 1 KB Protected Slot
-```````````````````````````````````````````````````````````````````````````````````````
+````````````````````````````````````````````````````````````````````````````````````````
         The majority of Master System games use a SEGA mapper chip to handle the
         paging of banks into slots. A unique behaviour of the SEGA mapper is that the
         first 1 KB of Slot 0 is always mapped to the first 1 KB of Bank 0, regardless
@@ -1295,7 +1250,7 @@ NOTE:   The assembler will begin placing the first Chunks after the Pause Handle
         meaning that a maximum of 921 bytes are free in the 1 KB Slot.
 
 ::      Slot 0 Only
-```````````````````````````````````````````````````````````````````````````````````````
+````````````````````````````````````````````````````````````````````````````````````````
         This is a useful pattern if the core code of your game fits in the first Slot,
         leaving the other two Slots for various paging (see below).
         
@@ -1319,7 +1274,7 @@ NOTE:   The assembler will begin placing the first Chunks after the Pause Handle
         Bank 0 will not map the first 1 KB into Slot 0 (see previous pattern).
         
 ::      Slots 0 & 1 Contiguous
-```````````````````````````````````````````````````````````````````````````````````````
+````````````````````````````````````````````````````````````````````````````````````````
         A common pattern is where Slots 0 & 1 are contiguous
         (Slot 2 is commonly paged between multiple Banks).
         
@@ -1335,7 +1290,7 @@ NOTE:   The assembler will begin placing the first Chunks after the Pause Handle
         for a maximum of 32 KB collectively.
 
 ::      Slot 2 Only
-```````````````````````````````````````````````````````````````````````````````````````
+````````````````````````````````````````````````````````````````````````````````````````
         This pattern behaves differently from the others. The assembler will fill
         a 16 KB Bank, but will not flow the data over Bank boundaries. When one Bank
         is full with data then another Bank is used, and so on.
@@ -1352,7 +1307,7 @@ NOTE:   The assembler will begin placing the first Chunks after the Pause Handle
         page in the correct Bank for each Chunk within a Section.
               
 ::      Slots 1 & 2 Contiguous
-```````````````````````````````````````````````````````````````````````````````````````
+````````````````````````````````````````````````````````````````````````````````````````
         Here Slots 1 & 2 form a contiguous block. This would be useful if you place
         your code in Slot 0 (see above) and a large amount of data in Slots 1 & 2.
         
@@ -1368,7 +1323,7 @@ NOTE:   The assembler will begin placing the first Chunks after the Pause Handle
         remember to page in both Slot 1 & 2 together in your code!
 
 ::      Slot 1 Only
-```````````````````````````````````````````````````````````````````````````````````````
+````````````````````````````````````````````````````````````````````````````````````````
         This is the same as Slot 2 only, but with Slot 1. This patten allows you to
         have code positioned in Slot 0 and have Slot 1 & 2 access independent areas
         of the ROM.
@@ -1404,9 +1359,9 @@ When your project grows beyond 48 KB of ROM you will need to do two things:
         Chunk into the relevant Slot before using said Chunk
 
 
-=======================================================================================
+========================================================================================
 #.      Sections
-=======================================================================================
+========================================================================================
 Scopes: Root
 Format: 
         SECTION ::«sectionName» ‹SLOT «list»› ‹PAGE|FLOW›
@@ -1475,15 +1430,15 @@ number.
         
         PROC    :doMusic
         {
-                `switch Slot 1 to the music Bank
+                ;switch Slot 1 to the music Bank
                 ld ($FFFD), ::music.bank
-                `play the music!
+                ;play the music!
                 call :playMusic
         }
 
----------------------------------------------------------------------------------------
+----------------------------------------------------------------------------------------
 #.2.    `PAGE` & `FLOW`
----------------------------------------------------------------------------------------
+----------------------------------------------------------------------------------------
 What do you do if you have more data than you have Slots? Imagine a scenario where you
 have 128 KB of graphics data which you need to read. You can only page in three Slots
 at most for a maximum of (48 KB).
@@ -1561,7 +1516,7 @@ NOTE:   The largest Chunk size allowed with `FLOW` is equal to the number of Slo
         assigned to the Section. That is, if a Section is assigned to Slots 1 & 2,
         then you cannot have a single Chunk that is larger than 32 KB.
                                         
-///////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////
                                  
                                 A  P  P  E  N  D  I  X
                                 

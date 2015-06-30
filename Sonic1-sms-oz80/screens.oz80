@@ -120,7 +120,7 @@ PARAMS  IY`vars         HELP ""Address of the common variables (used throughout)
         
         ;load page 1 ($4000-$7FFF) with bank 5 ($14000-$17FFF)
         ld      A`bank          5
-        ld      [$.SMS.SLOT1]   A`bank
+        ld      [$#SMS.SLOT1]   A`bank
         ld      [$.SLOT1]       A`bank
         
         ;map screen 2 background
@@ -972,7 +972,7 @@ PARAMS  IY`vars         HELP ""Address of the common variables (used throughout)
         
         ;switch page 1 ($4000-$7FFF) to bank 5 ($14000-$17FFF)
         ld      A`bank          5
-        ld      [$.SMS.SLOT1]   A`bank
+        ld      [$#SMS.SLOT1]   A`bank
         ld      [$.SLOT1]       A`bank
         
         ;act complete background
@@ -1135,7 +1135,7 @@ PARAMS  IY`vars         HELP ""Address of the common variables (used throughout)
         
         ;load page 1 ($4000-$7FFF) with bank 5 ($14000-$17FFF)
         ld      a,5
-        ld      [$.SMS.SLOT1],a
+        ld      [$#SMS.SLOT1],a
         ld      [$.SLOT1],a
         
         ;UNKNOWN
@@ -1388,8 +1388,8 @@ PROC    :_172f                                  SECTION ::screens               
         ;jumped to from $155E
 {
         ;when adding the final bonuses, don't award an extra life for every 5 thousand
-        ld      a`score_1up     $FF
-        ld      [$.SCORE_1UP]   a`score_1up
+        ld      A`score_1up     $FF
+        ld      [$.SCORE_1UP]   A`score_1up
         
         ld      c,$00
         ld      a,[$.D27F]
@@ -2001,26 +2001,26 @@ PROC    :_LABEL_1C49_62                         SECTION ::screens               
         ;==============================================================================
 PARAMS  IY`vars         HELP ""Address of the common variables (used throughout)
 {        
-        ;set bit 0 of the parameter address (IY=$D200); `waitForInterrupt` will pause
-         ;until an interrupt event switches bit 0 of $D200 on
-        set     0, [iy+#vars.flags0]                    
+        ;;set bit 0 of the parameter address (IY=$D200); `waitForInterrupt` will pause
+          until an interrupt event switches bit 0 of $D200 on ;;
+        set     0, [iy+#vars.flags0]
         ei                                      ;enable interrupts
         
         ;default to 3 lives
-._1     ld      a, 3
-        ld      [$.LIVES], a
+._1     ld      A`lives         3
+        ld      [$.LIVES]       A`lives
         
         ;set the number of thousands of pts per extra life
-        ld      a`score_1up     !SCORE_1UP
-        ld      [$.SCORE_1UP]   a`score_1up
+        ld      A`score_1up     !SCORE_1UP
+        ld      [$.SCORE_1UP]   A`score_1up
         
         ld      a, $1C
         ld      [$.D23F], a
         
-        xor     a`zero                          ;set A to 0
-        ld      [$.CURRENT_LEVEL], a`zero       ;set starting level!
-        ld      [$.FRAMECOUNT], a`zero
-        ld      [iy+#vars.unknown_0D], a`zero
+        xor     A`zero                          ;set A to 0
+        ld      [$.CURRENT_LEVEL]       A`zero  ;set starting level!
+        ld      [$.FRAMECOUNT]          A`zero
+        ld      [iy+#vars.unknown_0D]   A`zero
         
         ld      hl, $.D27F
         ld      b, $08
@@ -2095,6 +2095,7 @@ PARAMS  hl`addr         ;memory address
         ld      [hl`addr], a`value
         inc     hl`addr
         djnz    :
+        
         ret
 }
 
@@ -2161,7 +2162,7 @@ PARAMS  IY`vars         HELP ""Address of the common variables (used throughout)
         
         ;switch page 1 ($4000-$7FFF) to bank 11 ($2C000-$2FFFF)
         ld      a,11
-        ld      [$.SMS.SLOT1],a
+        ld      [$#SMS.SLOT1],a
         ld      [$.SLOT1],a
         
         ;are rings enabled?
@@ -2185,10 +2186,10 @@ PARAMS  IY`vars         HELP ""Address of the common variables (used throughout)
         
         ;switch pages 1 & 2 ($4000-$BFFF) to banks 1 & 2 ($4000-$BFFF)
         ld      a,1
-        ld      [$.SMS.SLOT1],a
+        ld      [$#SMS.SLOT1],a
         ld      [$.SLOT1],a
         ld      a,2
-        ld      [$.SMS.SLOT2],a
+        ld      [$#SMS.SLOT2],a
         ld      [$.SLOT2],a
         
         call    :_2e5a
@@ -2301,10 +2302,10 @@ PARAMS  IY`vars         HELP ""Address of the common variables (used throughout)
         
         ;switch pages 1 & 2 ($4000-$BFFF) to banks 1 & 2 ($4000-$BFFF)
         ld      a,1
-        ld      [$.SMS.SLOT1],a
+        ld      [$#SMS.SLOT1],a
         ld      [$.SLOT1],a
         ld      a,2
-        ld      [$.SMS.SLOT2],a
+        ld      [$#SMS.SLOT2],a
         ld      [$.SLOT2],a
         
         call    :_2e5a
@@ -2358,7 +2359,7 @@ PARAMS  IY`vars         HELP ""Address of the common variables (used throughout)
         call    :waitForInterrupt
         ld      [iy+#vars.spriteUpdateCount],a
         ld      a,11
-        ld      [$.SMS.SLOT1],a
+        ld      [$#SMS.SLOT1],a
         ld      [$.SLOT1],a
         
         ;are rings enabled?
@@ -2370,10 +2371,11 @@ PARAMS  IY`vars         HELP ""Address of the common variables (used throughout)
         bit     3,[iy+#vars.timeLightningFlags]
         jr      nz,._1
         
-        ld      a,:sound_unpause.bank
-        ld      [$.SMS.SLOT1],a
-        ld      [$.SLOT1],a
+        ld      A`bank          :sound_unpause.bank
+        ld      [$#SMS.SLOT1]   A`bank
+        ld      [$.SLOT1]       A`bank
         call    :sound_unpause
+        
         ret
 }
 
@@ -2428,7 +2430,7 @@ PROC    :autoscrollUp                           SECTION ::screens               
 PROC    :dontScrollDown                         SECTION ::screens               ;$1EFF
         ;==============================================================================
         ;;fix the bottom of the level to the current screen position, 
-          i.e. Jungle Act 2;;
+          i.e. Jungle Act 2 ;;
 {        
         ld      hl,[$.CAMERA_Y]
         ld      [$.LEVEL_BOTTOM],hl
@@ -2736,7 +2738,7 @@ PROC    :_20b8                                  SECTION ::screens               
 PROC    :loadLevel                              SECTION ::screens               ;$20CB
         ;==============================================================================
 PARAMS  IY`vars         HELP ""Address of the common variables (used throughout)
-        hl`header       ;address of the level header
+        HL`header       HELP ""Address of the level header
 {
         ;PAGE 1 ($4000-$7FFF) is at BANK 5 ($14000-$17FFF)
         
@@ -2824,8 +2826,8 @@ PARAMS  IY`vars         HELP ""Address of the common variables (used throughout)
         ld      hl, :_2402
         
         ;set number of collected rings to 0
-._3     xor     a`zero                          ;set A to 0
-        ld      [$.RINGS], a`zero
+._3     xor     A`zero                          ;set A to 0
+        ld      [$.RINGS]   A`zero
         
         ;is this a special stage? (level number 28+)
         ld      a, [$.CURRENT_LEVEL]
@@ -3210,7 +3212,7 @@ PARAMS  IY`vars         HELP ""Address of the common variables (used throughout)
         
         ;switch page 1 ($4000-$BFFF) to page 5 ($14000-$17FFF)
         ld      a,5
-        ld      [$.SMS.SLOT1],a
+        ld      [$#SMS.SLOT1],a
         ld      [$.SLOT1],a
         call    :loadObjectLayout
         
@@ -3554,7 +3556,7 @@ PARAMS  IY`vars         HELP ""Address of the common variables (used throughout)
         
         ;load page 1 ($4000-$7FFF) with bank 5 ($14000-$17FFF)
         ld      a,5
-        ld      [$.SMS.SLOT1],a
+        ld      [$#SMS.SLOT1],a
         ld      [$.SLOT1],a
         
         ;map 3 screen (end of game)
@@ -3655,7 +3657,7 @@ PARAMS  IY`vars         HELP ""Address of the common variables (used throughout)
         ld      [iy+#vars.spriteUpdateCount],$00
         
         ld      a,5
-        ld      [$.SMS.SLOT1],a
+        ld      [$#SMS.SLOT1],a
         ld      [$.SLOT1],a
         
         ;UNKNOWN
@@ -3747,12 +3749,10 @@ PARAMS  IY`vars         HELP ""Address of the common variables (used throughout)
         ld      [$.TEMP1]       A`zero
         ld      HL              :S1_Credits_Text
         call    :_2795
-}
         
-PROC    :unused_infiniteLoop                    SECTION ::screens
-{       
-        ;This could be the game-freeze after the final credits
-        jp      :
+.infiniteLoop
+        ;this could be the game-freeze after the final credits
+        jp      .infiniteLoop
 }
 
 PROC    :_2718                                  SECTION ::screens               ;$2718

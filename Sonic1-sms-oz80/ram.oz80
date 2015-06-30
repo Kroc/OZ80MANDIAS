@@ -144,7 +144,7 @@ TYPE    #vars                           ;$D200:
 
 ;part of the level header -- always "0" for all levels, but unknown function
 .unknown0                       BYTE    ;IY+$08
-        ;bit 1 - unknown, set at ":mob_Sonic._4e88"
+        ;bit 1 - unknown, set at ":mob_sonic._4e88"
 
 .flags9                         BYTE    ;IY+$09
         ;bit 0 - unknown

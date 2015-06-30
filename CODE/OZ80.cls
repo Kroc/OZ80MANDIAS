@@ -788,13 +788,13 @@ End Enum
 'Sections:
 '---------------------------------------------------------------------------------------
 'A "Section" is a group of code/data Chunks that will be placed into the ROM together _
- according to special rules for the Slot pattern
+ according to special rules for the Slot pattern (system-specific paging scheme)
 
 Private Type oz80Section
-    SectionName As String
-    SectionID As Long                   'Index of the name in `TokenStrings`
-    TotalSize As Long                   'Total number of Chunk bytes for the Section
-    Slot As OZ80_SLOT                   'The Slot (banking) pattern assigned
+    Name As String
+    ID As Long                          'Index of the name in `TokenStrings`
+    Size As Long                        'Total number of Chunk bytes for the Section
+    Slot As OZ80_SLOT                   'The Slot (paging) pattern assigned
     Chunks() As Long                    'A list of which Chunks are in the Section
     ChunkCount As Long                  'Number of the above, 1-based
 End Type
@@ -1139,13 +1139,16 @@ Private Type oz80Chunk
     FullName As String                  'Fully-qualified Label name
     LabelName As String                 'Quick-access to the Label name
     SectionName As String               'Quick-access to the Chunk's assigned Section
+    Slot As OZ80_SLOT                   'Slot pattern assigned to the Chunk
     SectionID As Long                   'Index number to `Sections` array
     
     Data() As Byte                      'The binary content of the Chunk
     Buffer As Long                      'Buffer size for the data (power of 2)
     Size As Long                        'Length of the actual data in bytes
     
-    Address As Long
+    AddrReal As Long
+    AddrSlot As Long
+    
     TableIndex As Long                  'Current `INDEX` number in the Chunk
     'TODO: Replace this with something much, much faster
     Properties As Scripting.Dictionary
@@ -2052,7 +2055,7 @@ Public Function Assemble( _
     
     'Now that the size of each Chunk is known, we can arrange the Chunks in the ROM _
      space and determine each Label location
-    If ROM_Layout() Then GoTo Finish
+    If ROMLayout() Then GoTo Finish
     
     '-----------------------------------------------------------------------------------
     'Phase 3: Calculate Deferred Expressions _
@@ -2105,9 +2108,9 @@ Public Function Assemble( _
             Debug.Print Chunks(.ChunkID).LabelName
             Debug.Print
             
-            Let TokenIndex = .TokenIndex - 1: Call NextToken
-            Call RaiseError(OZ80_ERROR_INDEFINITE, "INDEFINITE!")
-            GoTo Finish
+'            Let TokenIndex = .TokenIndex - 1: Call NextToken
+'            Call RaiseError(OZ80_ERROR_INDEFINITE, "INDEFINITE!")
+'            GoTo Finish
             
 '            Stop
             
@@ -2115,27 +2118,27 @@ Public Function Assemble( _
             Call RaiseMessage(OZ80_LOG_STATUS, Hex(Value))
             If .Kind = ASM_JR Then
                 Dim From As Long
-                Let From = Chunks(.ChunkID).Address + .ROMOffset
+                Let From = Chunks(.ChunkID).AddrReal + .ROMOffset
                 
                 'TODO: Calculate relative offset
                 
                 'The Value given should be the absolute address of the destination
                 Dim Diff As Long
-                Let Diff = Value - (Chunks(.ChunkID).Address + .From)
+                Let Diff = Value - (Chunks(.ChunkID).AddrReal + .From)
                 
                 If Diff < 0 _
                     Then Let ROM(From) = (255 + Diff) And &HFF& _
                     Else Let ROM(From) = (Diff - 1) And &HFF&
                 
             ElseIf .Kind = ASM_JP Then
-                Let From = Chunks(.ChunkID).Address + .ROMOffset
+                Let From = Chunks(.ChunkID).AddrReal + .ROMOffset
                 
                 'TODO: Do bank calculation
                 Let ROM(From) = Value And &HFF&
                 Let ROM(From + 1) = (Value And &HFF00&) \ &H100&
             
             ElseIf .Kind = ASM_VAL8 Then
-                Let From = Chunks(.ChunkID).Address + .ROMOffset
+                Let From = Chunks(.ChunkID).AddrReal + .ROMOffset
                 'TODO: 8-bit limit check?
                 Let ROM(From) = Value And &HFF&
                 
@@ -4120,7 +4123,7 @@ ReadParams:
         'Look through the currently defined Sections for the Section name mentioned
         For i = 1 To SectionCount
             Dim SectionIndex As Long
-            If Sections(i).SectionID = SectionID Then SectionIndex = i: Exit For
+            If Sections(i).ID = SectionID Then SectionIndex = i: Exit For
         Next i
         
         'ERROR: Section has not been defined
@@ -4372,8 +4375,8 @@ ReadParams:
     
     'If this Chunk belongs to a Section, add its size to the total count
     If IsSectionDefined Then
-        Let Sections(SectionIndex).TotalSize = _
-            Sections(SectionIndex).TotalSize + Chunks(Chunk).Size
+        Let Sections(SectionIndex).Size = _
+            Sections(SectionIndex).Size + Chunks(Chunk).Size
     End If
     
     'Count this toward the total size of all Chunks, which we will use to determine _
@@ -4422,7 +4425,7 @@ Private Sub DefineSection()
     Dim s As Long
     For s = 1 To SectionCount
         'ERROR: Section has already been defined!
-        If Sections(s).SectionID = SectionID Then Call RaiseError( _
+        If Sections(s).ID = SectionID Then Call RaiseError( _
             OZ80_ERROR_DUPLICATE, "TODO" _
         ): Exit Sub
     Next s
@@ -4496,8 +4499,8 @@ Finish:
     Let SectionCount = SectionCount + 1
     ReDim Preserve Sections(0 To SectionCount) As oz80Section
     
-    Let Sections(SectionCount).SectionName = SectionName
-    Let Sections(SectionCount).SectionID = SectionID
+    Let Sections(SectionCount).Name = SectionName
+    Let Sections(SectionCount).ID = SectionID
     Let Sections(SectionCount).Slot = Slot
     
     Call Labels.Add(SectionName, INDEFINITE)
@@ -4680,7 +4683,7 @@ ReadParams:
         'Look through the currently defined Sections for the Section name mentioned
         For i = 1 To SectionCount
             Dim SectionIndex As Long
-            If Sections(i).SectionID = SectionID Then SectionIndex = i: Exit For
+            If Sections(i).ID = SectionID Then SectionIndex = i: Exit For
         Next i
         
         'ERROR: Section has not been defined
@@ -7245,7 +7248,7 @@ Private Sub Chunk_Begin( _
 )
     'Get the Section name if a SectionID is provided
     Dim SectionName As String
-    If SectionID <> -1 Then Let SectionName = Sections(SectionID).SectionName
+    If SectionID <> -1 Then Let SectionName = Sections(SectionID).Name
     
     'Register the Label name in the database
     Dim FullName As String
@@ -7262,9 +7265,12 @@ Private Sub Chunk_Begin( _
         Let .LabelName = LabelName
         Let .SectionName = SectionName
         Let .SectionID = SectionID
-        Let .Address = CLng(Address)
+        
+        Let .AddrReal = CLng(Address)
         
         If SectionID >= 0 Then
+            Let .Slot = Sections(SectionID).Slot
+            
             Dim SectionChunks As Long
             Let SectionChunks = Sections(SectionID).ChunkCount + 1
             ReDim Preserve Sections(SectionID).Chunks(1 To SectionChunks) As Long
@@ -7297,24 +7303,30 @@ Private Sub AddUpdateLabel( _
         Else Let Labels.Item(LabelName) = Value
 End Sub
 
-'ROM_Layout : Calculate the placement of the code/data Chunks in the output ROM
+'ROMLayout : Calculate the placement of the code/data Chunks in the output ROM
 '=======================================================================================
 'Returns        | The error number
 '=======================================================================================
-Private Function ROM_Layout( _
+Private Function ROMLayout( _
 ) As OZ80_ERROR
     '*** TIMER BEGIN ***
     Call Profiler.EventBegin(EVENT_ROM_LAYOUT)
     
     'How many bytes do we have?
-    Call RaiseMessage(OZ80_LOG_INFO, "Total Chunks Size: " & Format$(ChunksSize, "#,0") & " bytes")
+    Call RaiseMessage(OZ80_LOG_INFO, _
+        "Total Chunks Size: " & Format$(ChunksSize, "#,0") & " bytes" _
+    )
+    
     'Assign the default ROM space
     ReDim ROM(0 To ROMSize - 1) As Byte
     
     'Log the Sections defined
-    Dim s As Long, C As Long
+    Dim s As Long, c As Long
     For s = 1 To SectionCount
-        Call RaiseMessage(OZ80_LOG_INFO, "Section " & Sections(s).SectionName & ": " & Format$(Sections(s).TotalSize, "#,0") & " bytes")
+        Call RaiseMessage(OZ80_LOG_INFO, _
+            "Section " & Sections(s).Name & ": " & _
+            Format$(Sections(s).Size, "#,0") & " bytes" _
+        )
     Next s
     
     Call RaiseMessage(OZ80_LOG_INFO, "ROM Layout:")
@@ -7327,31 +7339,31 @@ Private Function ROM_Layout( _
     '-----------------------------------------------------------------------------------
     If Chunk_Interrupt00 <> 0 Then
         'TODO: Check for clash with START routine on Master System
-        If ROM_AddChunk(Chunk_Interrupt00, 0) Then GoTo Finish
+        If ROMLayoutChunk(Chunk_Interrupt00, 0) Then GoTo FinishLayout
     End If
     If Chunk_Interrupt08 <> 0 Then
-        If ROM_AddChunk(Chunk_Interrupt08, &H8&) Then GoTo Finish
+        If ROMLayoutChunk(Chunk_Interrupt08, &H8&) Then GoTo FinishLayout
     End If
     If Chunk_Interrupt10 <> 0 Then
-        If ROM_AddChunk(Chunk_Interrupt10, &H10&) Then GoTo Finish
+        If ROMLayoutChunk(Chunk_Interrupt10, &H10&) Then GoTo FinishLayout
     End If
     If Chunk_Interrupt18 <> 0 Then
-        If ROM_AddChunk(Chunk_Interrupt18, &H18&) Then GoTo Finish
+        If ROMLayoutChunk(Chunk_Interrupt18, &H18&) Then GoTo FinishLayout
     End If
     If Chunk_Interrupt20 <> 0 Then
-        If ROM_AddChunk(Chunk_Interrupt20, &H20&) Then GoTo Finish
+        If ROMLayoutChunk(Chunk_Interrupt20, &H20&) Then GoTo FinishLayout
     End If
     If Chunk_Interrupt28 <> 0 Then
-        If ROM_AddChunk(Chunk_Interrupt28, &H28&) Then GoTo Finish
+        If ROMLayoutChunk(Chunk_Interrupt28, &H28&) Then GoTo FinishLayout
     End If
     If Chunk_Interrupt30 <> 0 Then
-        If ROM_AddChunk(Chunk_Interrupt30, &H30&) Then GoTo Finish
+        If ROMLayoutChunk(Chunk_Interrupt30, &H30&) Then GoTo FinishLayout
     End If
     If Chunk_Interrupt38 <> 0 Then
-        If ROM_AddChunk(Chunk_Interrupt38, &H38&) Then GoTo Finish
+        If ROMLayoutChunk(Chunk_Interrupt38, &H38&) Then GoTo FinishLayout
     End If
     If Chunk_Interrupt66 <> 0 Then
-        If ROM_AddChunk(Chunk_Interrupt66, &H66&) Then GoTo Finish
+        If ROMLayoutChunk(Chunk_Interrupt66, &H66&) Then GoTo FinishLayout
     End If
     
     '-----------------------------------------------------------------------------------
@@ -7367,14 +7379,14 @@ Private Function ROM_Layout( _
         Call RaiseMessage(OZ80_LOG_INFO, "---------¦--------¦------------------------------------------------------")
         
         'TODO: Check for clash with INTERRUPT 0 routine on Master System
-        If ROM_AddChunk(Chunk_Start, 0) Then GoTo Finish
+        If ROMLayoutChunk(Chunk_Start, 0) Then GoTo FinishLayout
     End If
     
     '-----------------------------------------------------------------------------------
     '[4]: Place the 1 KB SEGA Slot
     '-----------------------------------------------------------------------------------
     'The special SEGA 1 KB Slot ($0000-$03FF) stays paged-in at all times regardless _
-     of which Bank is in Slot 0 ($0400-$3FFF). Therefore we have to place these Chunks _
+     of which Bank is in Slot 0 ($0000-$3FFF). Therefore we have to place these Chunks _
      before other Un/Sectioned code as all data MUST appear within the first 1 KB of _
      the ROM
     Call RaiseMessage(OZ80_LOG_INFO, "---------¦--------¦------------------------------------------------------")
@@ -7383,10 +7395,10 @@ Private Function ROM_Layout( _
         'Is this Section Slotless?
         If Sections(s).Slot = SLOT1KB Then
             'Walk through the Chunks in this Slot
-            For C = 1 To Sections(s).ChunkCount
+            For c = 1 To Sections(s).ChunkCount
                 'Place this Chunk
-                If ROM_AddChunk(Sections(s).Chunks(C)) Then GoTo Finish
-            Next C
+                If ROMLayoutChunk(Sections(s).Chunks(c)) Then GoTo FinishLayout
+            Next c
         End If
     Next s
     
@@ -7395,9 +7407,9 @@ Private Function ROM_Layout( _
     '-----------------------------------------------------------------------------------
     Call RaiseMessage(OZ80_LOG_INFO, "---------¦--------¦------------------------------------------------------")
     
-    For C = 1 To Sections(0).ChunkCount
-        If ROM_AddChunk(Sections(0).Chunks(C)) Then GoTo Finish
-    Next C
+    For c = 1 To Sections(0).ChunkCount
+        If ROMLayoutChunk(Sections(0).Chunks(c)) Then GoTo FinishLayout
+    Next c
     
     '-----------------------------------------------------------------------------------
     '[6]: Place un-paged Sections
@@ -7412,10 +7424,10 @@ Private Function ROM_Layout( _
         'Is this Section Slotless?
         If Sections(s).Slot = 0 Then
             'Walk through the Chunks in this Slot
-            For C = 1 To Sections(s).ChunkCount
+            For c = 1 To Sections(s).ChunkCount
                 'Place this Chunk
-                If ROM_AddChunk(Sections(s).Chunks(C)) Then GoTo Finish
-            Next C
+                If ROMLayoutChunk(Sections(s).Chunks(c)) Then GoTo FinishLayout
+            Next c
         End If
     Next s
     
@@ -7429,29 +7441,253 @@ Private Function ROM_Layout( _
         'Is this Section assigned to a Slot pattern other than 'SEGA 1 KB'?
         If (Sections(s).Slot And (SLOT0 Or SLOT1 Or SLOT2)) <> 0 Then
             'Walk through the Chunks in this Section
-            For C = 1 To Sections(s).ChunkCount
+            For c = 1 To Sections(s).ChunkCount
                 'Place this Chunk
-                If ROM_AddChunk(Sections(s).Chunks(C)) Then GoTo Finish
-            Next C
+                If ROMLayoutChunk(Sections(s).Chunks(c)) Then GoTo FinishLayout
+            Next c
         End If
     Next s
     
     Call RaiseMessage(OZ80_LOG_INFO, LOG_LINEDOUBLE)
+    GoTo FinishLayout
     
-Finish:
-    Let ROM_Layout = My_Error
+    '-----------------------------------------------------------------------------------
+    
+'    '*** TIMER BEGIN ***
+'    Call Profiler.EventBegin(EVENT_ROM_ADDCHUNK)
+'
+'    'TODO: If the ChunkSize is zero, discard it? _
+'           (We need to handle zero-sized Chunks earlier though -- how do we handle _
+'            references to empty Chunks? -- fixed and non-fixed)
+'
+'    'How big is the Chunk we're handling?
+'    Dim ChunkSize As Long: Let ChunkSize = Chunks(ChunkRef).Size
+'    Dim ChunkEnd As Long:  Let ChunkEnd = ChunkAddr + (ChunkSize - 1)
+'
+'    'The Layout is a 'linked-list' where each link contains a reference to the next _
+'     link in the chain. This allows us to re-order the items in the chain quickly _
+'     without having to shift up/down the entire list. The Layout list needs to always _
+'     be in order so that we can find the gaps between Chunks in the ROM Layout
+'    Dim i As Long
+'    Dim PrevLink As Long, NextLink As Long
+'
+'    'If there are no layout items yet, start the linked list
+'    '-----------------------------------------------------------------------------------
+'    If LayoutCount = 0 Then
+'        'TODO: Check the address is within the ROM space / overflow
+'        'Define the first Chunk in the layout _
+'         (fall through to `AddLink`)
+'
+'    '-----------------------------------------------------------------------------------
+'    'Do we have an address for the Chunk already?
+'    '-----------------------------------------------------------------------------------
+'    ElseIf ChunkAddr <> -1 Then
+'        'Search through the layout chain and find the point where our Chunk goes
+'        Let i = 1
+'        Do
+'            'Remember this link, should we reach a successful conclusion and need _
+'             to insert a link between this one and the next
+'            Let PrevLink = i
+'
+'            'Check if the current link comes after our Chunk's desired location
+'            '...........................................................................
+'            If Layout(i).AddrBegin > ChunkAddr Then
+'                'Check that our Chunk won't overlap the following one
+'                If ChunkEnd >= Layout(i).AddrBegin Then
+'                    'ERROR: Our Chunk will not fit in the desired location
+'                    Call RaiseError(OZ80_ERROR_LAYOUT, "TODO"): GoTo Finish
+'                End If
+'
+'                'TODO: Check our Chunk won't overlap the end of the ROM
+'
+'                Let NextLink = Layout(i).NextIndex
+'                GoTo AddLink
+'
+'            'If any Chunk is in the same place as our desired location, error
+'            '...........................................................................
+'            ElseIf Layout(i).AddrBegin = ChunkAddr Then
+'                'ERROR: Two Chunks want the same address
+'                Call RaiseError(OZ80_ERROR_LAYOUT, "TODO"): GoTo Finish
+'
+'            'If a Chunk comes before our desired location, _
+'             but its size precludes our desired location, then error
+'            '...........................................................................
+'            ElseIf Layout(i).AddrEnd >= ChunkAddr Then
+'                'ERROR: A Chunk is trying to be placed within another
+'                Call RaiseError(OZ80_ERROR_LAYOUT, "TODO"): GoTo Finish
+'            End If
+'
+'            'Follow the chain to the next item in the list
+'            Let i = Layout(i).NextIndex
+'            'If this is the end of the list, do not continue
+'            If i = 0 Then Exit Do
+'
+'        Loop
+'
+'        'If all links in the chain have been tested then we have come to the _
+'         conclusion that there is no Chunk after our desired address, and no Chunk _
+'         before that would overlap. We can go ahead and use the address we want
+'        '(fall through to `AddLink` below)
+'
+'    '-----------------------------------------------------------------------------------
+'    'Find the first available space to put the Chunk:
+'    '-----------------------------------------------------------------------------------
+'    Else
+'        'We will begin with attempting to place our Chunk from $67 onwards
+'        'TODO: Refine this definition -- System dependent
+'        Let ChunkAddr = &H67&
+'
+'        'Search through the layout chain and find the point where our Chunk goes
+'        Let i = 1
+'        Do
+'            'Remember this link, should we reach a successful conclusion and need _
+'             to insert a link between this one and the next
+'            Let PrevLink = i
+'            Let NextLink = Layout(i).NextIndex
+'
+'            'If the beginning of our Chunk clips the current Chunk:
+'            '...........................................................................
+'            If (ChunkAddr >= Layout(i).AddrBegin) _
+'            And (ChunkAddr <= Layout(i).AddrEnd) _
+'            Then
+'                'Push our location forward
+'                Let ChunkAddr = Layout(i).AddrEnd + 1
+'
+'            'If the end of our Chunk clips the current Chunk:
+'            '...........................................................................
+'            ElseIf (ChunkAddr + ChunkSize >= Layout(i).AddrBegin) _
+'               And (ChunkAddr + ChunkSize < Layout(i).AddrEnd) _
+'            Then
+'                'Push our location forward
+'                Let ChunkAddr = Layout(i).AddrEnd + 1
+'
+'            'If the current Chunk lies entirely within our Chunk:
+'            '...........................................................................
+'            ElseIf (Layout(i).AddrBegin >= ChunkAddr) _
+'               And (Layout(i).AddrEnd < ChunkAddr + ChunkSize) _
+'            Then
+'                'Push our location forward
+'                Let ChunkAddr = Layout(i).AddrEnd + 1
+'            End If
+'
+'            'Follow the chain to the next item in the list
+'            Let i = Layout(i).NextIndex
+'            'If this is the end of the list, do not continue
+'            If i = 0 Then Exit Do
+'        Loop
+'
+'        Let ChunkEnd = ChunkAddr + (ChunkSize - 1)
+'    End If
+'
+'    '-----------------------------------------------------------------------------------
+'AddLink:
+'    'Increase the number of links in the chain. _
+'     Note that they won't necessarily link in array order
+'    Let LayoutCount = LayoutCount + 1
+'    ReDim Preserve Layout(1 To LayoutCount) As oz80Layout
+'
+'    'Set the Chunk information on the newly crerated link
+'    Let Layout(LayoutCount).AddrBegin = ChunkAddr
+'    Let Layout(LayoutCount).AddrSize = ChunkSize
+'    Let Layout(LayoutCount).AddrEnd = ChunkEnd
+'
+'    If PrevLink <> 0 Then
+'        Let Layout(LayoutCount).PrevIndex = PrevLink
+'        Let Layout(PrevLink).NextIndex = LayoutCount
+'    End If
+'    If NextLink <> 0 Then
+'        Let Layout(LayoutCount).NextIndex = NextLink
+'        Let Layout(NextLink).PrevIndex = LayoutCount
+'    End If
+'
+'    '-----------------------------------------------------------------------------------
+'    With Chunks(ChunkRef)
+'
+'        Dim BankAddr As Long
+'        Let BankAddr = ChunkAddr Mod &H4000&
+'
+'        'Set the absolute ROM address on the Chunk
+'        Let .AddrReal = ChunkAddr
+'
+'        'Calculate the banked address (based on the Slot pattern)
+'        If (.Slot And SLOT1) <> 0 Then
+'            Let .AddrSlot = &H4000& + ChunkAddr
+'
+'        ElseIf (.Slot And SLOT2) <> 0 Then
+'            Let .AddrSlot = &H8000& + BankAddr
+'
+'        Else
+'            Let .AddrSlot = BankAddr
+'        End If
+'
+'        'Update the Label database with the new address
+'        Call AddUpdateLabel(.FullName, CDbl(.AddrSlot))
+'
+'        'TODO: Calculate Bank and apply to Chunk?
+'
+'        If ChunkEnd > ROMUsed Then Let ROMUsed = ChunkEnd
+'        'Is this going to fit in the ROM?
+'        If ROMUsed >= ROMSize Then
+'            'Keep doubling the ROM size until the contents fits
+'            Do While ROMUsed >= ROMSize: Let ROMSize = ROMSize * 2: Loop
+'            'TODO: Check for ROM too big (hard limit -- 32 MB -- and user limit)
+'            ReDim Preserve ROM(0 To ROMSize - 1) As Byte
+'        End If
+'
+'        'Copy the Chunk bytes into the ROM
+'        Call api_RtlMoveMemory( _
+'            DestinationPointer:=VarPtr(ROM(ChunkAddr)), _
+'                 SourcePointer:=VarPtr(.Data(1)), _
+'                        Length:=ChunkSize _
+'        )
+'
+'        Call RaiseMessage(OZ80_LOG_INFO, _
+'            "${$}:{$} | {$} | {$}", _
+'            HexStr8((ChunkAddr And &HFF0000) \ &H10000), _
+'            HexStr16(ChunkAddr And &HFFFF&), _
+'            Right$("      " & Format$(ChunkSize, "#,0"), 6), _
+'            .FullName _
+'        )
+'
+'        'Walk through the local properties in the Chunk and update their addresses too
+'        'TODO: Replace this Dictionary with something much faster
+'        Dim Key As Variant
+'        For Each Key In .Properties
+'            Call AddUpdateLabel( _
+'                .FullName & Key, _
+'                .AddrReal + .Properties(Key) _
+'            )
+'            Call RaiseMessage(OZ80_LOG_INFO, _
+'                "${$}:{$} | {$} | {$}", _
+'                HexStr8((.AddrReal + .Properties(Key) And &HFF0000) \ &H10000), _
+'                HexStr16(.AddrReal + .Properties(Key) And &HFFFF&), _
+'                "     .", _
+'                .FullName & Key _
+'            )
+'        Next
+'
+'    End With
+'
+'FinishChunk:
+'    Call Profiler.EventEnd(EVENT_ROM_ADDCHUNK)
+'    '*** TIMER END ***
+'    Return
+    
+FinishLayout:
+    '-----------------------------------------------------------------------------------
+    Let ROMLayout = My_Error
     Call Profiler.EventEnd(EVENT_ROM_LAYOUT)
     '*** TIMER END ***
 End Function
 
-'ROM_AddChunk : Add a Chunk to the ROM, checking for collisions with other Chunks
+'ROMLayoutChunk : Add a Chunk to the ROM, checking for collisions with other Chunks
 '=======================================================================================
 'ChunkRef       | Which Chunk to add to the ROM
 '[ChunkAddr]    | Where specifically to put the Chunk, otherwise find a place
 '---------------¦-----------------------------------------------------------------------
 'Returns        | The error number
 '=======================================================================================
-Private Function ROM_AddChunk( _
+Private Function ROMLayoutChunk( _
              ByRef ChunkRef As Long, _
     Optional ByRef ChunkAddr As Long = -1 _
 ) As OZ80_ERROR
@@ -7604,11 +7840,26 @@ AddLink:
     
     '-----------------------------------------------------------------------------------
     With Chunks(ChunkRef)
-    
-        'Set the ROM address on the Chunk
-        Let .Address = ChunkAddr
+        
+        Dim BankAddr As Long
+        Let BankAddr = ChunkAddr Mod &H4000&
+        
+        'Set the absolute ROM address on the Chunk
+        Let .AddrReal = ChunkAddr
+        
+        'Calculate the banked address (based on the Slot pattern)
+        If (.Slot And SLOT1) <> 0 Then
+            Let .AddrSlot = &H4000& + ChunkAddr
+            
+        ElseIf (.Slot And SLOT2) <> 0 Then
+            Let .AddrSlot = &H8000& + BankAddr
+            
+        Else
+            Let .AddrSlot = BankAddr
+        End If
+        
         'Update the Label database with the new address
-        Call AddUpdateLabel(.FullName, CDbl(ChunkAddr))
+        Call AddUpdateLabel(.FullName, CDbl(.AddrSlot))
         
         'TODO: Calculate Bank and apply to Chunk?
         
@@ -7642,12 +7893,12 @@ AddLink:
         For Each Key In .Properties
             Call AddUpdateLabel( _
                 .FullName & Key, _
-                .Address + .Properties(Key) _
+                .AddrReal + .Properties(Key) _
             )
             Call RaiseMessage(OZ80_LOG_INFO, _
                 "${$}:{$} | {$} | {$}", _
-                HexStr8((.Address + .Properties(Key) And &HFF0000) \ &H10000), _
-                HexStr16(.Address + .Properties(Key) And &HFFFF&), _
+                HexStr8((.AddrReal + .Properties(Key) And &HFF0000) \ &H10000), _
+                HexStr16(.AddrReal + .Properties(Key) And &HFFFF&), _
                 "     .", _
                 .FullName & Key _
             )
@@ -7656,7 +7907,7 @@ AddLink:
     End With
     
 Finish:
-    Let ROM_AddChunk = My_Error
+    Let ROMLayoutChunk = My_Error
     Call Profiler.EventEnd(EVENT_ROM_ADDCHUNK)
     '*** TIMER END ***
 End Function
@@ -7735,8 +7986,8 @@ End Sub
 'FormatValues...| A list of Variant values (Strings, Longs &c.) to fill in
 '=======================================================================================
 Private Sub RaiseMessage( _
-    ByRef LogLevel As OZ80_LOG, _
-    ByRef FormatText As String, _
+         ByRef LogLevel As OZ80_LOG, _
+         ByRef FormatText As String, _
     ParamArray FormatValues() As Variant _
 )
     Let LogMsg.Text = FormatText

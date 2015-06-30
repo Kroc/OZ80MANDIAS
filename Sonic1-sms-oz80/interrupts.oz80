@@ -14,373 +14,376 @@
 
 START
 {
-        di                                      ;disable interrupts
-        im      1                               ;set the interrupt mode to 1 --
-                                                 ;$0038 will be called at 50/60Hz 
-        
-        ;wait for the scanline to reach 176 (no idea why)
-.wait   in      A`scanline, [$#SMS.VDP.SCANLINE]
-        cp      176
-        jr      nz, .wait
-        
-        jp      ::interrupts:init
+    di                                          ;disable interrupts
+    im      1                                   ;;set the interrupt mode to 1 --
+                                                  $0038 will be called at 50/60Hz ;;
+    
+.wait
+    ;wait for the scanline to reach 176 (no idea why)
+    in      A`scanline  [$#SMS.VDP.SCANLINE]
+    cp      176
+    jr      nz, .wait
+    
+    jp      ::interrupts:init
 }
 
-;______________________________________________________________________________________
+;_______________________________________________________________________________________
 
-;the `RST $18` Z80 instruction jumps here
-PROC    :rst_playMusic                          INTERRUPT $18   
+PROC    :rst_playMusic                          INTERRUPT $18
+        ;===============================================================================
 PARAMS  A`songIndex
 {
-        jp      ::interrupts:playMusic
+    jp      ::interrupts:playMusic
 }
 
-;the `RST $20` Z80 instruction jumps here
 PROC    :rst_muteSound                          INTERRUPT $20
+        ;===============================================================================
 {
-        jp      ::interrupts:muteSound
+    jp      ::interrupts:muteSound
 }
 
-;the `RST $28` Z80 instruction jumps here
 PROC    :rst_playSFX                            INTERRUPT $28
+        ;===============================================================================
 PARAMS  A`SFXIndex
 {
-        jp      ::interrupts:playSFX
+    jp      ::interrupts:playSFX
 }
 
 ;the hardware interrupt generator jumps here
 PROC    :IRQ                                    INTERRUPT $38
+        ;===============================================================================
 {
-        jp      ::interrupts:interruptHandler
-        
-        ;this short copyright message is wedged between the IRQ
-         ;and NMI routines in the original ROM
-        BYTE    "Developed By (C) 1991 Ancient - S", $A5, "Hayashi.", $00
+    jp      ::interrupts:interruptHandler
+    
+    ;;this short copyright message is wedged between the IRQ
+      and NMI routines in the original ROM ;;
+    BYTE    "Developed By (C) 1991 Ancient - S", $A5, "Hayashi.", $00
 }
 
 PROC    :pause                                  INTERRUPT $66
-        ;====================================================================[$0066]===
+        ;===============================================================================
         ;pressing the pause button causes an interrupt and jumps to $0066
         
 PARAMS  IY`vars         HELP ""Address of the common variables (used throughout)
 {
-        di                                      ;disable interrupts
-        push    AF`stack
-        
-        ;level time HUD / lightning flags
-        ld      A`pauseStatus, [IY+#vars.timeLightningFlags]
-        xor     %00001000                       ;flip bit 3 (the pause bit)
-        ;save it back
-        ld      [IY+#vars.timeLightningFlags], A`pauseStatus
-        
-        pop     AF`stack
-        ei                                      ;enable interrupts
-        
-        ret
+    di                                          ;disable interrupts
+    push    AF`stack
+    
+    ;level time HUD / lightning flags
+    ld      A`pauseStatus, [IY`vars+#vars.timeLightningFlags]
+    xor     %00001000                           ;flip bit 3 (the pause bit)
+    ;save it back
+    ld      [IY`vars+#vars.timeLightningFlags], A`pauseStatus
+    
+    pop     AF`stack
+    ei                                          ;enable interrupts
+    
+    ret
 }
 
 PROC    :interruptHandler                       SECTION ::interrupts            ;$0073
-        ;==============================================================================
+        ;===============================================================================
 PARAMS  IY`vars         HELP ""Address of the common variables (used throughout)
 {       
-        di                                      ;disable interrupts during interrupt!
-        
-        ;;push everything we're going to use to the stack so that when we return
-          from the interrupt we don't find that our registers have changed
-          mid-instruction!;;
-        
-        ;;NOTE: the interrupt automatically swaps in the shadow registers, therefore
-          if we ensure that interrupts are disabled during routines that use the
-          shadow registers, we might conceivably do away with these leading / trailing
-          stack exchanges and save some cycles on the interrupt handler;;
-        
-        push    AF', HL', DE', BC'
-        
-        ;get the status of the VDP
-        in      A`vdpStatus, [$#SMS.VDP.CONTROL]
-        
-        bit     7, [IY+#vars.flags6]            ;check the underwater flag
-        jr      z, ._1                          ;if off, skip ahead
-        
-        ;;the raster split is controlled across multiple interrupts, a counter is used
-          to remember at which step the procedure is at a value of 0 means that it
-          needs to be initialised, and then it counts down from 3;;
-        
-        ld      a`step, [$.RASTERSPLIT_STEP]
-        and     a`step                          ;keep the value, but update the flags
-        jp      nz, :doRasterSplit              ;if not zero, deal with the particulars
-        
-        ;--- initialise raster split --------------------------------------------------
-        ;check the water line height:
-        ld      a`waterline, [$.WATERLINE]
-        and     a`waterline
-        jr      z, ._1                          ;if it's zero (above the screen), skip
-        
-        cp      $FF                             ;or 255 (below the screen),
-        jr      z, ._1                          ;skip
-        
-        ;;copy the water line position into the working space for the raster split.
-          this is to avoid the water line changing height between the multiple
-          interrupts needed to produce the split, I think;;
-        ld      [$.RASTERSPLIT_LINE], a`waterline
-        
-        ;;set the line interrupt to fire at line 10 (top of the screen),
-          we will then set another interrupt to fire where we want the split to occur;;
-        ld      a, 10
-        out     [$#SMS.VDP.CONTROL], a
-        ld      a, !VDP_REGISTER_10
-        out     [$#SMS.VDP.CONTROL], a
-        
-        ;enable line interrupt IRQs (bit 5 of VDP register 0)
-        ld      a, [$.VDPREGISTER_0]
-        or      %00010000
-        out     [$#SMS.VDP.CONTROL], a
-        ld      a, !VDP_REGISTER_0
-        out     [$#SMS.VDP.CONTROL], a
-        
-        ;initialise the step counter for the water line raster split
-        ld      a, 3
-        ld      [$.RASTERSPLIT_STEP], a
-        
-        ;------------------------------------------------------------------------------
-        
-._1     push    ix, iy
-        
-        ;remember the current page 1 & 2 banks
-        ld      hl`banks, [$.SLOT1]
-        push    hl`banks
-        
-        ;if the main thread is not held up at the `waitForInterrupt` routine
-        bit     0, [iy+#vars.flags0]
-        call    nz, :_LABEL_1A0_18
-        ;and if it is...
-        bit     0, [iy+#vars.flags0]
-        call    z, :_LABEL_F7_25
-        
-        ;;I'm  not sure why the interrupts are re-enabled before we've left the
-          interrupt handler, but there you go, it obviously works;;
-        ei
-        
-        ;switch in the music engine / data
-        ld      A`bank          ::sound.bank
-        ld      [$#SMS.SLOT1]   A`bank
-        ld      [$.SLOT1]       A`bank
-        call    ::sound:public.update
-        
-        call    :readJoypad
-        bit     4, [iy+#vars.joypad]            ;joypad button 1?
-        call    z, :setJoypadButtonB            ;set joypad button 2 too
-        
-        call    :_LABEL_625_57
-        
-        ;check for the reset button
-        in      a, [$.SMS.JOYPADB]              ;read 2nd joypad port which has extra
+    di                                          ;disable interrupts during interrupt!
+    
+    ;;push everything we're going to use to the stack so that when we return
+      from the interrupt we don't find that our registers have changed
+      mid-instruction! ;;
+    
+    ;;NOTE: the interrupt automatically swaps in the shadow registers, therefore
+      if we ensure that interrupts are disabled during routines that use the
+      shadow registers, we might conceivably do away with these leading / trailing
+      stack exchanges and save some cycles on the interrupt handler ;;
+    
+    push    AF', HL', DE', BC'
+    
+    ;get the status of the VDP
+    in      A`vdpStatus, [$#SMS.VDP.CONTROL]
+    
+    bit     7, [IY`vars+#vars.flags6]           ;check the underwater flag
+    jr      z, ._1                              ;if off, skip ahead
+    
+    ;;the raster split is controlled across multiple interrupts, a counter is used
+      to remember at which step the procedure is at a value of 0 means that it
+      needs to be initialised, and then it counts down from 3 ;;
+    
+    ld      A`step, [$.RASTERSPLIT_STEP]
+    and     A`step                              ;keep the value, but update the flags
+    jp      nz, :doRasterSplit                  ;if not zero, deal with the particulars
+    
+    ;--- initialise raster split -------------------------------------------------------
+    ;check the water line height:
+    ld      A`waterline, [$.WATERLINE]
+    and     A`waterline
+    jr      z, ._1                              ;if it's zero (above the screen), skip
+    
+    cp      $FF                                 ;or 255 (below the screen),
+    jr      z, ._1                              ;skip
+    
+    ;;copy the water line position into the working space for the raster split.
+      this is to avoid the water line changing height between the multiple
+      interrupts needed to produce the split, I think ;;
+    ld      [$.RASTERSPLIT_LINE], A`waterline
+    
+    ;;set the line interrupt to fire at line 10 (top of the screen),
+      we will then set another interrupt to fire where we want the split to occur ;;
+    ld      a, 10
+    out     [$#SMS.VDP.CONTROL], a
+    ld      a, !VDP_REGISTER_10
+    out     [$#SMS.VDP.CONTROL], a
+    
+    ;enable line interrupt IRQs (bit 5 of VDP register 0)
+    ld      a, [$.VDPREGISTER_0]
+    or      %00010000
+    out     [$#SMS.VDP.CONTROL], a
+    ld      a, !VDP_REGISTER_0
+    out     [$#SMS.VDP.CONTROL], a
+    
+    ;initialise the step counter for the water line raster split
+    ld      a, 3
+    ld      [$.RASTERSPLIT_STEP], a
+    
+    ;-----------------------------------------------------------------------------------
+._1
+    push    IX, IY
+    
+    ;remember the current page 1 & 2 banks
+    ld      HL`banks, [$.SLOT1]
+    push    HL`banks
+    
+    ;if the main thread is not held up at the `:waitForInterrupt` routine
+    bit     0, [IY`vars+#vars.flags0]
+    call    nz, :_LABEL_1A0_18
+    ;and if it is...
+    bit     0, [IY`vars+#vars.flags0]
+    call    z, :_LABEL_F7_25
+    
+    ;;I'm  not sure why the interrupts are re-enabled before we've left the
+      interrupt handler, but there you go, it obviously works ;;
+    ei
+    
+    ;switch in the music engine / data
+    ld      A`bank          ::sound.bank
+    ld      [$#SMS.SLOT1]   A`bank
+    ld      [$.SLOT1]       A`bank
+    call    ::sound:public.update
+    
+    call    :readJoypad
+    bit     4, [IY`vars+#vars.joypad]           ;joypad button 1?
+    call    z, :setJoypadButtonB                ;set joypad button 2 too
+    
+    call    :_LABEL_625_57
+    
+    ;check for the reset button
+    in      a, [$#SMS.JOYPADB]                  ;read 2nd joypad port which has extra
                                                  ;bits for lightgun / reset button
-        and     %00010000                       ;check bit 4
-        jp      z, START                        ;reset!
-        
-        ;return pages 1 & 2 to the banks before we started messing around here
-        pop     hl`banks
-        ld      [$.SMS.SLOT1], hl`banks
-        ld      [$.SLOT1], hl`banks
-        
-        ;pull everything off the stack so that the code that was running
-         ;before the interrupt doesn't explode
-        pop     IY, IX
-        pop     BC', DE', HL', AF'
-        ret
+    and     %00010000                           ;check bit 4
+    jp      z, START                            ;reset!
+    
+    ;return pages 1 & 2 to the banks before we started messing around here
+    pop     HL`banks
+    ld      [$#SMS.SLOT1]   HL`banks
+    ld      [$.SLOT1]       HL`banks
+    
+    ;pull everything off the stack so that the code that was running
+     ;before the interrupt doesn't explode
+    pop     IY, IX
+    pop     BC', DE', HL', AF'
+    ret
 }
 
 PROC    :setJoypadButtonB                       SECTION ::interrupts            ;$00F2
-        ;------------------------------------------------------------------------------
+        ;-------------------------------------------------------------------------------
 PARAMS  IY`vars         HELP ""Address of the common variables (used throughout)
 {
-        res     5, [iy+#vars.joypad]            ;set joypad button 2 as on
-        ret
+    res     5, [IY`vars+#vars.joypad]           ;set joypad button 2 as on
+    ret
 }
 
 PROC    :_LABEL_F7_25                           SECTION ::interrupts            ;$00F7
-        ;------------------------------------------------------------------------------
+        ;-------------------------------------------------------------------------------
 PARAMS  IY`vars         HELP ""Address of the common variables (used throughout)
 {       
-        ;blank the screen (remove bit 6 of VDP register 1)
-        ld      a, [$.VDPREGISTER_1]            ;get our cache value from RAM
-        and     %10111111                       ;remove bit 6
-        out     [$.VDP.CONTROL], a              ;write the value,
-        ld      a, $.VDP_REGISTER_1             ;followed by the register number
-        out     [$.VDP.CONTROL], a
-        
-        ;horizontal scroll
-        ld      a, [$.VDPSCROLL_HORZ]
-        neg                                     ;I don't understand the reason for this
-        out     [$.VDP.CONTROL], a
-        ld      a, $.VDP_REGISTER_8
-        out     [$.VDP.CONTROL], a
-        
-        ;vertical scroll
-        ld      a, [$.VDPSCROLL_VERT]
-        out     [$.VDP.CONTROL], a
-        ld      a, $.VDP_REGISTER_9
-        out     [$.VDP.CONTROL], a
-        
-        bit     5, [iy+#vars.flags0]                    
-        call    nz, :fillScrollTiles
-        
-        bit     5, [iy+#vars.flags0]                    
-        call    nz, :loadPaletteFromInterrupt
-        
-        ;turn the screen back on 
-         ;(or if it was already blank before this function, leave it blank)
-        ld      a, [$.VDPREGISTER_1]
-        out     [$.VDP.CONTROL], a
-        ld      a, $.VDP_REGISTER_1
-        out     [$.VDP.CONTROL], a
-        
-        ld      a`bank, 8                       ;Sonic sprites?
-        ld      [$.SMS.SLOT1], a`bank
-        ld      [$.SLOT1], a`bank
-        ld      a`bank, 9
-        ld      [$.SMS.SLOT2], a`bank
-        ld      [$.SLOT2], a`bank
-        
-        ;does the Sonic sprite need updating?
-         ;(the particular frame of animation is copied to the VRAM)
-        bit     7, [iy+#vars.timeLightningFlags]
-        call    nz, :updateSonicSpriteFrame
-        
-        ld      a`bank, 1
-        ld      [$.SMS.SLOT1], a`bank
-        ld      [$.SLOT1], a`bank
-        ld      a`bank, 2
-        ld      [$.SMS.SLOT2], a`bank
-        ld      [$.SLOT2], a`bank
-        
-        ;update sprite table?
-        bit     1, [iy+#vars.flags0]
-        call    nz, :updateVDPSprites
-        
-        bit     5, [iy+#vars.flags0]
-        call    z, :loadPaletteFromInterrupt
-        
-        ld      a, [$.D2AB+1]
-        and     %10000000
-        call    z, :_LABEL_38B0_51
-        ld      a, $FF
-        ld      [$.D2AB+1], a
-        
-        set     0, [iy+#vars.flags0]
-        ret
+    ;blank the screen (remove bit 6 of VDP register 1)
+    ld      a, [$.VDPREGISTER_1]                ;get our cache value from RAM
+    and     %10111111                           ;remove bit 6
+    out     [$#VDP.CONTROL], a                  ;write the value,
+    ld      a, $#VDP_REGISTER_1                 ;followed by the register number
+    out     [$#VDP.CONTROL], a
+    
+    ;horizontal scroll
+    ld      a, [$.VDPSCROLL_HORZ]
+    neg                                         ;I don't understand the reason for this
+    out     [$#VDP.CONTROL], a
+    ld      a, $.VDP_REGISTER_8
+    out     [$#VDP.CONTROL], a
+    
+    ;vertical scroll
+    ld      a, [$.VDPSCROLL_VERT]
+    out     [$#VDP.CONTROL], a
+    ld      a, $.VDP_REGISTER_9
+    out     [$#VDP.CONTROL], a
+    
+    bit     5, [iy+#vars.flags0]                    
+    call    nz, :fillScrollTiles
+    
+    bit     5, [iy+#vars.flags0]                    
+    call    nz, :loadPaletteFromInterrupt
+    
+    ;turn the screen back on 
+     ;(or if it was already blank before this function, leave it blank)
+    ld      a, [$.VDPREGISTER_1]
+    out     [$#VDP.CONTROL], a
+    ld      a, $.VDP_REGISTER_1
+    out     [$#VDP.CONTROL], a
+    
+    ld      A`bank          8                   ;Sonic sprites?
+    ld      [$#SMS.SLOT1]   A`bank
+    ld      [$.SLOT1]       A`bank
+    ld      A`bank          9
+    ld      [$#SMS.SLOT2]   A`bank
+    ld      [$.SLOT2]       A`bank
+    
+    ;does the Sonic sprite need updating?
+     ;(the particular frame of animation is copied to the VRAM)
+    bit     7, [iy+#vars.timeLightningFlags]
+    call    nz, :updateSonicSpriteFrame
+    
+    ld      A`bank          1
+    ld      [$#SMS.SLOT1]   A`bank
+    ld      [$.SLOT1]       A`bank
+    ld      A`bank          2
+    ld      [$#SMS.SLOT2]   A`bank
+    ld      [$.SLOT2]       A`bank
+    
+    ;update sprite table?
+    bit     1, [iy+#vars.flags0]
+    call    nz, :updateVDPSprites
+    
+    bit     5, [iy+#vars.flags0]
+    call    z, :loadPaletteFromInterrupt
+    
+    ld      a, [$.D2AB+1]
+    and     %10000000
+    call    z, :_LABEL_38B0_51
+    ld      a, $FF
+    ld      [$.D2AB+1], a
+    
+    set     0, [iy+#vars.flags0]
+    ret
 }
         
 PROC    :loadPaletteFromInterrupt               SECTION ::interrupts            ;$0174
-        ;------------------------------------------------------------------------------
+        ;-------------------------------------------------------------------------------
         ;load a palette using the parameters set by ':loadPaletteOnInterrupt'
         
 PARAMS  IY`vars         HELP ""Address of the common variables (used throughout)
         $.LOADPALETTE_ADDRESS   ;address to the palette data
         $.LOADPALETTE_FLAGS     ;flags to load tile / sprite palettes or both
 {       
-        ld      A`bank          1
-        ld      [$#SMS.SLOT1]   A`bank
-        ld      [$.SLOT1]       A`bank
-        ld      A`bank          2
-        ld      [$#SMS.SLOT2]   A`bank
-        ld      [$.SLOT2]       A`bank
-        
-        ;if the level is underwater then skip loading the palette as the palettes
-         ;are handled by the code that does the raster split
-        bit     7, [IY+#vars.flags6]            ;underwater flag
-        jr      nz, ._1
-        
-        ;get the palette loading parameters that were assigned by the main thread
-         ;(i.e. 'loadPaletteOnInterrupt')
-        ld      hl`addr, [$.LOADPALETTE_ADDRESS]
-        ld      a`flags, [$.LOADPALETTE_FLAGS]
-        
-        bit     3, [iy+#vars.flags0]    ;check the flag to specify loading the palette
-        call    nz, :loadPalette        ;load the palette if flag is set
-        res     3, [iy+#vars.flags0]    ;unset the flag so it doesn't happen again
-        ret
-        
-        ;when the level is underwater, different logic controls loading the palette
-         ;as we have to deal with the water line
-._1     call    :loadPaletteFromInterrupt_water
-        ret
+    ld      A`bank          1
+    ld      [$#SMS.SLOT1]   A`bank
+    ld      [$.SLOT1]       A`bank
+    ld      A`bank          2
+    ld      [$#SMS.SLOT2]   A`bank
+    ld      [$.SLOT2]       A`bank
+    
+    ;;if the level is underwater then skip loading the palette as the palettes
+      are handled by the code that does the raster split ;;
+    bit     7, [IY+#vars.flags6]                ;underwater flag
+    jr      nz, ._1
+    
+    ;;get the palette loading parameters that were assigned by the main thread
+      (i.e. `:loadPaletteOnInterrupt`) ;;
+    ld      hl`addr, [$.LOADPALETTE_ADDRESS]
+    ld      a`flags, [$.LOADPALETTE_FLAGS]
+    
+    bit     3, [iy+#vars.flags0]                ;check flag to specify loading palette
+    call    nz, :loadPalette                    ;load the palette if flag is set
+    res     3, [iy+#vars.flags0]                ;unset flag so it doesn't happen again
+    ret
+    
+    ;when the level is underwater, different logic controls loading the palette
+     ;as we have to deal with the water line
+._1 call    :loadPaletteFromInterrupt_water
+    ret
 }
 
 PROC    :_LABEL_1A0_18                          SECTION ::interrupts            ;$10AD
-        ;------------------------------------------------------------------------------
+        ;-------------------------------------------------------------------------------
 PARAMS  IY`vars         HELP ""Address of the common variables (used throughout)
 {       
-        bit     7, [iy+#vars.flags6]            ;check the underwater flag
-        ret     z                               ;if off, leave now
-        
-        ;switch pages 1 & 2 ($4000-$BFFF) to banks 1 & 2 ($4000-$BFFF)
-        ld      a`bank, 1
-        ld      [$.SMS.SLOT1], a`bank
-        ld      [$.SLOT1], a`bank
-        ld      a`bank, 2
-        ld      [$.SMS.SLOT2], a`bank
-        ld      [$.SLOT2], a`bank
-        
-        ;this seems quite pointless but could do with
-         ;killing a specific amount of time
-        ld      b, $00
-.nop    nop
-        djnz    .nop
-        
-        ;NOTE: fall through the procedure below...
+    bit     7, [iy+#vars.flags6]                ;check the underwater flag
+    ret     z                                   ;if off, leave now
+    
+    ;switch pages 1 & 2 ($4000-$BFFF) to banks 1 & 2 ($4000-$BFFF)
+    ld      A`bank          1
+    ld      [$#SMS.SLOT1]   A`bank
+    ld      [$.SLOT1]       A`bank
+    ld      A`bank          2
+    ld      [$#SMS.SLOT2]   A`bank
+    ld      [$.SLOT2]       A`bank
+    
+    ;;this seems quite pointless but could do with
+      killing a specific amount of time ;;
+    ld      b, $00
+.nop
+    nop
+    djnz    .nop
+    
+    ;NOTE: fall through the procedure below...
 }
 
 PROC    :loadPaletteFromInterrupt_water         SECTION ::interrupts            ;$01BA
-        ;------------------------------------------------------------------------------
+        ;-------------------------------------------------------------------------------
         ;called only from `loadPaletteFromInterrupt`
 
 PARAMS  IY`vars         HELP ""Address of the common variables (used throughout)
 {       
-        ;get the position of the water line on screen
-        ld      a`waterline, [$.WATERLINE]
-        and     a`waterline
-        jr      z, ._2                          ;is it 0? (above the screen)
-        cp      $FF                             ;or $FF? (below the screen)
-        jr      nz, ._2                         ;...skip ahead
-        
-        ;--- below water --------------------------------------------------------------
-        ;below the water line a fixed palette is used without cycles
-        
-        ;select the palette:
-         ;labyrinth Act 1 & 2 share an underwater palette and Labyrinth Act 3
-         ;uses a special palette to account for the boss / capsule, who normally
-         ;load their palettes on-demand
-        ld      hl`addr, :S1_UnderwaterPalette
-        ;underwater boss palette?
-        bit     4, [iy+#vars.timeLightningFlags]
-        jr      z, ._1                  
-        ld      hl`addr, :S1_UnderwaterPalette_Boss
-        
-._1     ld      a`flags, %00000011              ;"load tile & sprite palettes"
-        call    :loadPalette                    ;load the relevant underwater palette
-        ret
-        
-        ;--- above water --------------------------------------------------------------
-._2     ld      a, [$.CYCLEPALETTE_INDEX]
-        add     a, a                            ;x2
-        add     a, a                            ;x4
-        add     a, a                            ;x8
-        add     a, a                            ;x16
-        ld      e, a
-        ld      d, $00
-        ld      hl, [$.CYCLEPALETTE_POINTER]
-        add     hl, de
-        ld      a, %00000001
-        call    :loadPalette
-        
-        ;load the sprite palette specifically for Labyrinth
-        ld      hl, :S1_PaletteData.labyrinth+16
-        ld      a, %00000010
-        call    :loadPalette
-        
-        ret
+    ;get the position of the water line on screen
+    ld      a`waterline, [$.WATERLINE]
+    and     a`waterline
+    jr      z, ._2                              ;is it 0? (above the screen)
+    cp      $FF                                 ;or $FF? (below the screen)
+    jr      nz, ._2                             ;...skip ahead
+    
+    ;--- below water -------------------------------------------------------------------
+    ;below the water line a fixed palette is used without cycles
+    
+    ;;select the palette:
+      labyrinth Act 1 & 2 share an underwater palette and Labyrinth Act 3
+      uses a special palette to account for the boss / capsule, who normally
+      load their palettes on-demand ;;
+    ld      hl`addr, :S1_UnderwaterPalette
+    ;underwater boss palette?
+    bit     4, [iy+#vars.timeLightningFlags]
+    jr      z, ._1                  
+    ld      hl`addr, :S1_UnderwaterPalette_Boss
+    
+._1 ld      a`flags, %00000011                  ;"load tile & sprite palettes"
+    call    :loadPalette                        ;load the relevant underwater palette
+    ret
+    
+    ;--- above water -------------------------------------------------------------------
+._2 ld      a, [$.CYCLEPALETTE_INDEX]
+    add     a, a                            ;x2
+    add     a, a                            ;x4
+    add     a, a                            ;x8
+    add     a, a                            ;x16
+    ld      e, a
+    ld      d, $00
+    ld      hl, [$.CYCLEPALETTE_POINTER]
+    add     hl, de
+    ld      a, %00000001
+    call    :loadPalette
+    
+    ;load the sprite palette specifically for Labyrinth
+    ld      hl, :S1_PaletteData.labyrinth+16
+    ld      a, %00000010
+    call    :loadPalette
+    
+    ret
 }
 
 PROC    :doRasterSplit                          SECTION ::interrupts            ;$01F2

@@ -8,46 +8,50 @@
    =====================================================================================
 ;;
 
-PROC    :mob_Sonic                              SECTION ::mobs                  ;$48C8
+PROC    :mob_sonic                              SECTION ::mobs                  ;$48C8
         ;===============================================================================
 PARAMS  IX`mob          HELP ""Address of the current mob being processed
         IY`vars         HELP ""Address of the common variables (used throughout)
 {       
-        res     1,[iy+#vars.unknown0]
+        res     1,[IY`vars+#vars.unknown0]
         
-        bit     7,[ix+#mob.flags]
+        bit     7,[IX`mob+#mob.flags]
         call    nz,._4e88
         
         ;flag to update the Sonic sprite frame
-        set     7,[iy+#vars.timeLightningFlags]
+        set     7,[IY`vars+#vars.timeLightningFlags]
         
         ;is Sonic dead?
-        bit     0,[iy+#vars.scrollRingFlags]
+        bit     0,[IY`vars+#vars.scrollRingFlags]
         jp      nz,._543c
         
-        ;reduce this number until it hits 0. appears to only be set when changing
-         ;direction from left to right; something to do with acceleration/skidding?
+        ;;reduce this number until it hits 0. appears to only be set when changing
+          direction from left to right; something to do with acceleration/skidding?;;
         ld      a,[$.SONIC.unknown16]
         and     a
         call    nz,._4ff0
         
-        res     5,[ix+#mob.flags]               ;Sonic adheres to the floor
+        ;;configure the flags on Sonic so that he adheres to the ground.
+          I'm not sure why this is done every frame;;
+        res     5,[IX`mob+#mob.flags]
         
-        bit     6,[iy+#vars.flags6]             ;is Sonic in damage state?
+        ;is Sonic in damage state?
+        bit     6,[IY`vars+#vars.flags6]
         call    nz,._510a
         
         ld      a,[$.D28C]
         and     a
         call    nz,._568f
         
+        ;special stage? (time is centred)
         bit     0,[iy+#vars.timeLightningFlags]
         call    nz,._5100
         
         bit     0,[iy+#vars.unknown0]
         call    nz,._4ff5
         
-        ;is Sonic underwater?
-        bit     4,[ix+#mob.flags]               ;mob underwater?
+        ;is Sonic underwater? -- count down oxygen...
+        bit     4,[IX`mob+#mob.flags]           ;check mob underwater flag
         call    nz,.drownTimer
         
         ld      a,[$.D28B]
@@ -137,17 +141,20 @@ PARAMS  IX`mob          HELP ""Address of the current mob being processed
         and     $03
         call    z,._4fec
         
-._5     bit     1,[iy+#vars.joypad]             ;joypad up?
+        ;-------------------------------------------------------------------------------
+        
+        ;is up pressed on the joypad?
+._5     bit     1,[IY`vars+#vars.joypad]        ;joypad up?
         call    z,._50c1
         
-        bit     1,[iy+#vars.joypad]             ;joypad not up?
+        bit     1,[IY`vars+#vars.joypad]        ;joypad not up?
         call    nz,._50e3
         
         ;handle collision with tile underneath Sonic:
         ;-------------------------------------------------------------------------------
         
         ld      A`bank          15
-        ld      [$.SMS.SLOT2]   A`bank
+        ld      [$#SMS.SLOT2]   A`bank
         ld      [$.SLOT2]       A`bank
         
         ;$3F9ED = 
@@ -155,8 +162,8 @@ PARAMS  IX`mob          HELP ""Address of the current mob being processed
         ;  (180) (144) (160) (192) (192) (216) (128)
         
         ;locate which block is underneath Sonic?
-        ld      BC`xoff         12
-        ld      DE`yoff         16
+        ld      BC`xOff         12
+        ld      DE`yOff         16
         call    :getFloorLayoutRAMAddressForMob
         
         ;get the block index from the Floor Layout address returned
@@ -202,21 +209,21 @@ PARAMS  IX`mob          HELP ""Address of the current mob being processed
         ld      l,a
         
         ;load DE with the callback address
-        ld      DE`callback     ._6
+        ld      DE`callback     .callback
         
-        ld      A`bank, 2
+        ld      A`bank          2
         ld      [$.SMS.SLOT2]   A`bank
         ld      [$.SLOT2]       A`bank
         
-        ;keep a copy of the callback address
-         ;and jump to the specific solidity routine for the tile under Sonic
+        ;;keep a copy of the callback address
+          and jump to the specific solidity routine for the tile under Sonic;;
         push    DE`callback
         jp      [HL]
         
         ;has Sonic fallen out of the level?
         ;-------------------------------------------------------------------------------
-        
-._6     ld      HL`sonicY       [$.SONIC.Y]
+.callback
+        ld      HL`sonicY       [$.SONIC.Y]
         ld      DE`sonicH       $0024           ;height of Sonic?
         add     HL`sonicY       DE`sonicH
         ex      DE, HL
@@ -230,9 +237,10 @@ PARAMS  IX`mob          HELP ""Address of the current mob being processed
         ;idle timer:
         ;-------------------------------------------------------------------------------
         
-        ld      hl,$0000                        ;reset the idle timer?
+        ld      HL`timer        $0000           ;reset the idle timer?
+        
         ld      a,[iy+#vars.joypad]
-        cp      $ff                             ;is any button being pressed?
+        cp      $FF                             ;is any button being pressed?
         jr      nz,._7                          ;skip the idle timer update
         
         ;is player moving left or right?
@@ -245,11 +253,11 @@ PARAMS  IX`mob          HELP ""Address of the current mob being processed
         rlca    
         jr      nc,._7
         
-        ld      HL,[$.IDLE_TIME]
-        inc     HL
+        ld      HL`timer        [$.IDLE_TIME]
+        inc     HL`timer
         
         ;update the idle timer
-._7     ld      [$.IDLE_TIME],HL
+._7     ld      [$.IDLE_TIME]   HL`timer
         
         ;-------------------------------------------------------------------------------
         
@@ -623,10 +631,10 @@ PARAMS  IX`mob          HELP ""Address of the current mob being processed
         and     a
         jp      p,._31
         
-        xor     a`zero
-        ld      [$.SONIC.Xspeed+0],a`zero
-        ld      [$.SONIC.Xspeed+1],a`zero
-        ld      [$.SONIC.Xdirection],a`zero
+        xor     A`zero                          ;(set A to zero)
+        ld      [$.SONIC.Xspeed+0]      A`zero
+        ld      [$.SONIC.Xspeed+1]      A`zero
+        ld      [$.SONIC.Xdirection]    A`zero
         jp      ._31
         
 ._30    ld      hl,[$.LEVEL_RIGHT]
@@ -652,7 +660,7 @@ PARAMS  IX`mob          HELP ""Address of the current mob being processed
         or      l
         jr      z,._31
         
-        xor     A`zero                          ;set A to 0
+        xor     A`zero                          ;(set A to 0)
         ld      [$.SONIC.Xspeed+0]      A`zero
         ld      [$.SONIC.Xspeed+1]      A`zero
         ld      [$.SONIC.Xdirection]    A`zero
@@ -1149,17 +1157,19 @@ PARAMS  IX`mob          HELP ""Address of the current mob being processed
         ret
 
         ;-------------------------------------------------------------------------------
+        ;joypad up is pressed...
         
-._50c1  bit     2,[ix+#mob.flags]                                               ;$50C1
+._50c1  bit     2,[IX`mob+#mob.flags]                                           ;$50C1
         ret     nz
         
-        bit     0,[ix+#mob.flags]
+        bit     0,[IX`mob+#mob.flags]
         ret     nz
         
-        bit     7,[ix+#mob.flags]
+        bit     7,[IX`mob+#mob.flags]
         ret     z
         
-        set     0,[ix+#mob.flags]
+        ;is Sonic moving?
+        set     0,[IX`mob+#mob.flags]
         ld      hl,[$.SONIC.Xspeed]
         ld      a,l
         or      h
@@ -1201,11 +1211,11 @@ PARAMS  IX`mob          HELP ""Address of the current mob being processed
         ;-------------------------------------------------------------------------------
         
 ._510a  ;clear joypad input                                                     ;$510A
-        ld      [iy+#vars.joypad],$FF
+        ld      [IY`vars+#vars.joypad],$FF
         
-        ld      a,[$.SONIC.flags]
-        and     $fa
-        ld      [$.SONIC.flags],a
+        ld      A`flags     [$.SONIC.flags]
+        and     %11111010
+        ld      [$.SONIC.flags]     A`flags
         
         ret
 
@@ -1218,12 +1228,12 @@ PARAMS  IX`mob          HELP ""Address of the current mob being processed
         jr      c,._45
         
         xor     A`zero
-        ld      L`zero          A`zero
-        ld      H`zero          A`zero
-        ld      [$.SONIC.Xspeed+0] A`zero
-        ld      [$.SONIC.Xspeed+1] HL`zero
-        ld      [$.SONIC.Yspeed+0] A`zero
-        ld      [$.SONIC.Yspeed+1] HL`zero
+        ld      L`zero              A`zero
+        ld      H`zero              A`zero
+        ld      [$.SONIC.Xspeed+0]  A`zero
+        ld      [$.SONIC.Xspeed+1]  HL`zero
+        ld      [$.SONIC.Yspeed+0]  A`zero
+        ld      [$.SONIC.Yspeed+1]  HL`zero
         
         ld      [ix+#mob.unknown14],$0f
         jp      ._4c39
@@ -2389,31 +2399,30 @@ INDEX   ._5883
 
 ._5893  push    bc, de
         call    :findEmptyMob
-        
         pop     de, bc
         ret     c
         
         push    ix, hl
         pop     ix
         
-        xor     a`zero                          ;set A to 0
-        ld      [ix+#mob.type],$2E              ;falling bridge piece
-        ld      [ix+#mob.Xsubpixel],a`zero
-        ld      [ix+#mob.X+0],c
-        ld      [ix+#mob.X+1],b
-        ld      [ix+#mob.Ysubpixel],a`zero
-        ld      [ix+#mob.Y+0],e
-        ld      [ix+#mob.Y+1],d
-        ld      [ix+#mob.Xspeed+0],a`zero
-        ld      [ix+#mob.Xspeed+1],a`zero
-        ld      [ix+#mob.Xdirection],a`zero
-        ld      [ix+#mob.Yspeed+0],a`zero
-        ld      [ix+#mob.Yspeed+1],a`zero
-        ld      [ix+#mob.Ydirection],a`zero
-        ld      [ix+#mob.flags],a`zero
+        xor     A`zero                          ;set A to 0
+        ld      [IX`mob+#mob.type]          $2E ;falling bridge piece
+        ld      [IX`mob+#mob.Xsubpixel]     A`zero
+        ld      [IX`mob+#mob.X+0]           C
+        ld      [IX`mob+#mob.X+1]           B
+        ld      [IX`mob+#mob.Ysubpixel]     A`zero
+        ld      [IX`mob+#mob.Y+0]           E
+        ld      [IX`mob+#mob.Y+1]           D
+        ld      [IX`mob+#mob.Xspeed+0]      A`zero
+        ld      [IX`mob+#mob.Xspeed+1]      A`zero
+        ld      [IX`mob+#mob.Xdirection]    A`zero
+        ld      [IX`mob+#mob.Yspeed+0]      A`zero
+        ld      [IX`mob+#mob.Yspeed+1]      A`zero
+        ld      [IX`mob+#mob.Ydirection]    A`zero
+        ld      [IX`mob+#mob.flags]         A`zero
         
         pop     ix
-        and     a`zero
+        and     A`zero
         ret
 
         ;====================================================================[$58D0]===

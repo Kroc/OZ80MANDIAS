@@ -11,7 +11,7 @@
 TABLE   :mobPointers                            SECTION ::mobs                  ;$2AF6
 {
 INDEX   .sonic  
-        WORD    :mob_Sonic                      ;#00: Sonic
+        WORD    :mob_sonic                      ;#00: Sonic
 INDEX   .powerUp_ring                       
         WORD    :mob_powerUp_ring               ;#01: monitor - ring
         WORD    :mob_powerUp_speed              ;#02: monitor - speed shoes

@@ -66,7 +66,7 @@ PARAMS  IY`vars         HELP ""Address of the common variables (used throughout)
         
         ;load page 1 ($4000-$7FFF) with bank 5 ($14000-$17FFF)
         ld      A`bank          5
-        ld      [$.SMS.SLOT1]   A`bank
+        ld      [$#SMS.SLOT1]   A`bank
         ld      [$.SLOT1]       A`bank
         
         ;map 1 background
@@ -800,7 +800,7 @@ PARAMS  IY`vars         HELP ""Address of the common variables (used throughout)
         
         ;now switch page 1 ($4000-$7FFF) to bank 5 ($14000-$17FFF)
         ld      A`bank          5
-        ld      [$.SMS.SLOT1]   A`bank
+        ld      [$#SMS.SLOT1]   A`bank
         ld      [$.SLOT1]       A`bank
         
         ;load the title screen itself
@@ -2106,7 +2106,7 @@ PARAMS  IY`vars         HELP ""Address of the common variables (used throughout)
 {        
         ;load page 1 (Z80:$4000-$7FFF) with bank 5 (ROM:$14000-$17FFF)
         ld      A`bank          5
-        ld      [$.SMS.SLOT1]   A`bank
+        ld      [$#SMS.SLOT1]   A`bank
         ld      [$.SLOT1]       A`bank
         
         ld      a, [$.CURRENT_LEVEL]
@@ -2214,7 +2214,7 @@ PARAMS  IY`vars         HELP ""Address of the common variables (used throughout)
         
         ;switch page 1 ($4000-$7FFF) to bank 11 ($2C000-$2FFFF)
         ld      a,11
-        ld      [$.SMS.SLOT1],a
+        ld      [$#SMS.SLOT1],a
         ld      [$.SLOT1],a
         
         ;are rings enabled?
@@ -2446,10 +2446,10 @@ PROC    :_1f06                                  SECTION ::screens               
         
         di      
         ld      a,1
-        ld      [$.SMS.SLOT1],a
+        ld      [$#SMS.SLOT1],a
         ld      [$.SLOT1],a
         ld      a,2
-        ld      [$.SMS.SLOT2],a
+        ld      [$#SMS.SLOT2],a
         ld      [$.SLOT2],a
         
         ld      e,$00
@@ -2464,15 +2464,15 @@ PROC    :_1f06                                  SECTION ::screens               
         ld      b,$00
         add     hl,bc
         add     a,e
-        out     [$.VDP.CONTROL],a
+        out     [$#SMS.VDP.CONTROL],a
         ld      a,%11000000
-        out     [$.VDP.CONTROL],a
+        out     [$#SMS.VDP.CONTROL],a
         ld      a,[$.D2B1]
         and     $01
         ld      a,[hl]
         jr      z,._2
         ld      a,[$.D2B3]
-._2     out     [$.VDP.DATA],a
+._2     out     [$#SMS.VDP.DATA],a
         
         ei      
         ret
@@ -2724,7 +2724,7 @@ PROC    :_20b8                                  SECTION ::screens               
         ;==============================================================================
 {        
         ld      a,:sound_fadeOut.bank
-        ld      [$.SMS.SLOT1],a
+        ld      [$#SMS.SLOT1],a
         ld      [$.SLOT1],a
         
         ld      hl,$0028
@@ -3018,18 +3018,18 @@ PARAMS  IY`vars         HELP ""Address of the common variables (used throughout)
         sub     $40
         ld      h,a
         ld      a,6
-        ld      [$.SMS.SLOT1],a
+        ld      [$#SMS.SLOT1],a
         ld      [$.SLOT1],a
         ld      a,7
-        ld      [$.SMS.SLOT2],a
+        ld      [$#SMS.SLOT2],a
         ld      [$.SLOT2],a
         jr      ._10
         
 ._9     ld      a,5
-        ld      [$.SMS.SLOT1],a
+        ld      [$#SMS.SLOT1],a
         ld      [$.SLOT1],a
         ld      a,6
-        ld      [$.SMS.SLOT2],a
+        ld      [$#SMS.SLOT2],a
         ld      [$.SLOT2],a
         
 ._10    ei                                      ;enable interrupts
@@ -3116,10 +3116,10 @@ PARAMS  IY`vars         HELP ""Address of the common variables (used throughout)
         ;switch pages 1 & 2 ($4000-$BFFF) to banks 1 & 2 ($4000-$BFFF)
         di      
         ld      a,1
-        ld      [$.SMS.SLOT1],a
+        ld      [$#SMS.SLOT1],a
         ld      [$.SLOT1],a
         ld      a,2
-        ld      [$.SMS.SLOT2],a
+        ld      [$#SMS.SLOT2],a
         ld      [$.SLOT2],a
         ei      
         
@@ -3178,10 +3178,10 @@ PARAMS  IY`vars         HELP ""Address of the common variables (used throughout)
         ;switch pages 1 & 2 ($4000-$BFFF) to banks 1 & 2 ($4000-$BFFF)
         di      
         ld      a,1
-        ld      [$.SMS.SLOT1],a
+        ld      [$#SMS.SLOT1],a
         ld      [$.SLOT1],a
         ld      a,2
-        ld      [$.SMS.SLOT2],a
+        ld      [$#SMS.SLOT2],a
         ld      [$.SLOT2],a
         ei      
         
@@ -3575,7 +3575,7 @@ PARAMS  IY`vars         HELP ""Address of the common variables (used throughout)
         call    :waitForInterrupt
         
         ld      a,1
-        ld      [$.SMS.SLOT1],a
+        ld      [$#SMS.SLOT1],a
         ld      [$.SLOT1],a
         ld      a,[$.D27F]
         cp      $06
@@ -3698,7 +3698,7 @@ PARAMS  IY`vars         HELP ""Address of the common variables (used throughout)
         call    :decompressArt
         
         ld      a,5
-        ld      [$.SMS.SLOT1],a
+        ld      [$#SMS.SLOT1],a
         ld      [$.SLOT1],a
         
         ;credits screen
@@ -3935,24 +3935,24 @@ PROC    :_2795                                  SECTION ::screens               
         
 ._5     di      
         ld      a,l
-        out     [$.VDP.CONTROL],a
+        out     [$#SMS.VDP.CONTROL],a
         ld      a,h
-        out     [$.VDP.CONTROL],a
+        out     [$#SMS.VDP.CONTROL],a
         push    ix
         pop     ix
-        in      a,[$.VDP.DATA]
+        in      a,[$#SMS.VDP.DATA]
         ld      c,a
         push    ix
         pop     ix
         ld      a,e
-        out     [$.VDP.CONTROL],a
+        out     [$#SMS.VDP.CONTROL],a
         ld      a,d
         or      $40
-        out     [$.VDP.CONTROL],a
+        out     [$#SMS.VDP.CONTROL],a
         push    ix
         pop     ix
         ld      a,c
-        out     [$.VDP.DATA],a
+        out     [$#SMS.VDP.DATA],a
         push    ix
         pop     ix
         ei      

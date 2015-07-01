@@ -1786,13 +1786,13 @@ Private Sub Class_Initialize()
         
         'If the token consititutes an Expression (a calculable Value)
         '...............................................................................
-        ElseIf (t = TOKEN_PARENS_OPEN) Or _
-               (t = TOKEN_CONST) Or _
+        ElseIf (t = TOKEN_CONST) Or _
                (t = TOKEN_KEYWORD_HI) Or _
                (t = TOKEN_LABEL) Or _
                (t = TOKEN_KEYWORD_LO) Or _
                (t = TOKEN_NUMBER) Or _
                (t = TOKEN_OPERATOR_SUB) Or _
+               (t = TOKEN_PARENS_OPEN) Or _
                (t = TOKEN_PROPERTY_USE) Or _
                (t = TOKEN_RAM) Or _
                (t = TOKEN_SECTION) Or _
@@ -2090,9 +2090,7 @@ Public Function Assemble( _
         
         'Now calculate the Expression
         Dim Value As Double
-        If ParseExpression(Value, _
-            Chunks(.ChunkID).LabelName, Chunks(.ChunkID).SectionName _
-        ) Then
+        If ParseExpression(Value, .ChunkID) Then
             'TODO: Unexpected; considering the Expression will already have _
                    been walked when it was deferred!
             Stop
@@ -2108,9 +2106,9 @@ Public Function Assemble( _
             Debug.Print Chunks(.ChunkID).LabelName
             Debug.Print
             
-'            Let TokenIndex = .TokenIndex - 1: Call NextToken
-'            Call RaiseError(OZ80_ERROR_INDEFINITE, "INDEFINITE!")
-'            GoTo Finish
+            Let TokenIndex = .TokenIndex - 1: Call NextToken
+            Call RaiseError(OZ80_ERROR_INDEFINITE, "INDEFINITE!")
+            GoTo Finish
             
 '            Stop
             
@@ -2133,7 +2131,6 @@ Public Function Assemble( _
             ElseIf .Kind = ASM_JP Then
                 Let From = Chunks(.ChunkID).AddrReal + .ROMOffset
                 
-                'TODO: Do bank calculation
                 Let ROM(From) = Value And &HFF&
                 Let ROM(From + 1) = (Value And &HFF00&) \ &H100&
             
@@ -3705,7 +3702,7 @@ Private Sub DefineConst()
     '(If there was an error in the Expression, the error event _
       will already have been raised, we only need to fold upwards)
     Dim Value As Double
-    If ParseExpression(Value, vbNullString, vbNullString) Then Exit Sub
+    If ParseExpression(Value) Then Exit Sub
     
     'Define the Constant:
     Call Values.Add(ConstName, Value)
@@ -3797,7 +3794,7 @@ Continue:
     'Next word could be a Value
     If TokenIsExpression(TokenKind) Then
         Dim Value As Double
-        If ParseExpression(Value, vbNullString, vbNullString) Then Exit Sub
+        If ParseExpression(Value) Then Exit Sub
         
         If Value = INDEFINITE Then
             Stop
@@ -3833,6 +3830,9 @@ Continue:
         'Define the Type's start position
         Call Values.Add(.Name & .Nodes(.Last).Name, .Nodes(.Last).Offset \ 8)
         
+        Dim Last As Long
+        Let Last = .Last
+        
         If TokenKind = TOKEN_TYPE Then
             'TODO: Import the existing type
             
@@ -3856,6 +3856,12 @@ Continue:
             Dim CopyNodeIndex As Long
             Let CopyNodeIndex = 1
             
+            Let .NodeCount = .NodeCount + 1
+            ReDim Preserve .Nodes(1 To .NodeCount) As OZ80Node
+            Let .Nodes(.NodeCount).Before = .Last
+            Let .Nodes(.Last).After = .NodeCount
+            Let .Last = .NodeCount
+            
             Do
                 With Types(CopyTypeIndex).Nodes(CopyNodeIndex)
                     Let LogMsg.Text = "     |      |       |                                                    "
@@ -3875,6 +3881,9 @@ Continue:
                 
                 'Add the Type Property to the global value database
                 Call Values.Add(.Name & .Nodes(.Last).Name, .Nodes(.Last).Offset \ 8)
+                'Define the size (in bytes too) with thanks to below for the simple solution _
+                 <visualbasic.ittoolbox.com/groups/technical-functional/visualbasic-l/always-round-up-to-whole-number-in-vb-60-1073167#GRB4513402>
+                Call Values.Add(.Name & .Nodes(.Last).Name & ".size", Abs(Int(-.Nodes(.Last).Size / 8)))
                 
                 If CopyNodeIndex = 0 Then Exit Do
                 
@@ -3899,8 +3908,13 @@ Continue:
             If My_Error Then Exit Sub
         End If
         
-'        Let .Nodes(Index).Below = .Last
-'        Let .Nodes(.Last).Above = Index
+        'Now the sub-Type is imported, define the size property of the sub-type
+        Dim Size As Long
+        Let Size = BaseOffset - .Nodes(Last).Offset
+        'Define the size (in bytes too) with thanks to below for the simple solution _
+         <visualbasic.ittoolbox.com/groups/technical-functional/visualbasic-l/always-round-up-to-whole-number-in-vb-60-1073167#GRB4513402>
+        Call Values.Add(.Name & .Nodes(Last).Name & ".size", Abs(Int(-Size / 8)))
+        
         
         Call RaiseMessage(OZ80_LOG_INFO, _
             "-----'------'-------'----------------------------------------------------" _
@@ -3928,7 +3942,7 @@ Continue:
         If TokenKind = TOKEN_OPERATOR_REP Then
             If NextTokenError() Then Exit Sub
             
-            If ParseExpression(Value, vbNullString, vbNullString) Then Exit Sub
+            If ParseExpression(Value) Then Exit Sub
             
             If Value = INDEFINITE Then
                 'Stop
@@ -3944,14 +3958,17 @@ Continue:
         
         Let BaseOffset = .Nodes(.Last).Offset + .Nodes(.Last).Size
         
-        'Is there a default value?
+        'TODO: Is there a default value?
         If TokenIsList(TokenKind) Then
             Dim Default As Scripting.Dictionary
-            Set Default = GetListAsDictionary(vbNullString, vbNullString)
+            Set Default = GetListAsDictionary()
         End If
         
         'Add the Type Property to the global value database
         Call Values.Add(.Name & .Nodes(.Last).Name, .Nodes(.Last).Offset \ 8)
+        'Define the size (in bytes too) with thanks to below for the simple solution _
+         <visualbasic.ittoolbox.com/groups/technical-functional/visualbasic-l/always-round-up-to-whole-number-in-vb-60-1073167#GRB4513402>
+        Call Values.Add(.Name & .Nodes(.Last).Name & ".size", Abs(Int(-.Nodes(.Last).Size / 8)))
         
         Call RaiseMessage(OZ80_LOG_INFO, LogMsg.Text)
     End If
@@ -4311,7 +4328,7 @@ ReadParams:
         'Calculate the Expression:
         '(If there was an error in the Expression, the error event _
           will already have been raised, we only need to fold upwards)
-        If ParseExpression(Interrupt, vbNullString, vbNullString) Then GoTo Finish
+        If ParseExpression(Interrupt) Then GoTo Finish
         
         'An indefinite Value cannot be used for an Interrupt address, we will only be _
          able to define the indefinite Values (i.e. Label locations in ROM) once _
@@ -4389,7 +4406,7 @@ ReadParams:
     Let ChunkMode = MODE_UNSET
     
     'Enter the Procedure Chunk to process its innards
-    Call ScopeChunk(SectionName, LabelName)
+    Call ScopeChunk(Chunk)
     
     'Finalise the disassembly log
     If ChunkMode = MODE_DATA Then
@@ -4453,7 +4470,7 @@ Private Sub DefineSection()
         
         'Get the list of Slots assigned to the Section
         Dim List As Scripting.Dictionary
-        Set List = GetListAsDictionary(vbNullString, vbNullString)
+        Set List = GetListAsDictionary()
         
         'Can't be more than three -- "0, 1, 2"
         If List.Count > 3 Then Call RaiseError( _
@@ -4488,7 +4505,6 @@ Private Sub DefineSection()
         If List.Item(1) <> 1 Then GoTo ErrInvalid
         If List.Item(2) <> 2 Then GoTo ErrInvalid
         Let Slot = SLOT0 Or SLOT1 Or SLOT2
-        
     End If
 
 Finish:
@@ -4598,7 +4614,7 @@ Private Sub DefineStart()
     Let Chunk_Start = Chunk
     
     'Enter the Procedure Chunk to process its innards
-    Call ScopeChunk(vbNullString, STR_START)
+    Call ScopeChunk(Chunk_Start)
 End Sub
 
 'DefineSystem : Define the target system (e.g. SEGA Master System)
@@ -4730,7 +4746,7 @@ ReadParams:
     Let ChunkMode = MODE_UNSET
     
     'Enter the Table Chunk to process its innards
-    Call ScopeChunk(SectionName, LabelName)
+    Call ScopeChunk(Chunk)
     
     'Finalise the disassembly log
     If ChunkMode = MODE_DATA Then
@@ -4747,11 +4763,10 @@ ReadParams:
 Finish:
 End Sub
 
-'ScopeChunk: Within a code/data Chunk, i.e. `PROC`, `TABLE`
+'ScopeChunk: Within a code/data Chunk, i.e. `PROC`/`TABLE`
 '=======================================================================================
 Private Sub ScopeChunk( _
-    ByRef SectionName As String, _
-    ByRef LabelName As String _
+    ByRef ChunkID As Long _
 )
     Dim LocalName As String
     Dim Value As Double
@@ -4762,7 +4777,7 @@ Continue:
     '-----------------------------------------------------------------------------------
     If TokenIsInstruction(TokenKind) Then
         'Assemble the Z80 instruction...
-        Call Z80_Assemble(SectionName, LabelName): If My_Error Then Exit Sub
+        Call Z80_Assemble(ChunkID): If My_Error Then Exit Sub
         
         'Processing of the Z80 instruction (and parameters) will have moved the token _
          pointer on to the next unread token already, so we can just loop right back
@@ -4776,9 +4791,7 @@ Continue:
         'TODO: Duplicates?
         Call Chunks(Chunk).Properties.Add(TokenText, CDbl(Chunks(Chunk).Size))
         'Fully qualify the local Label name to its global identifier
-        Let LocalName = LabelName & TokenText
-        'Add this to the Label database
-        Call AddUpdateLabel(SectionName & LocalName, INDEFINITE)
+        Call AddUpdateLabel(Chunks(ChunkID).FullName & TokenText, INDEFINITE)
     
     '-----------------------------------------------------------------------------------
     'INDEX
@@ -4795,12 +4808,17 @@ Continue:
         End If
         
         'Fully qualify the local Label name to its global identifier
-        Let LocalName = LabelName & TokenText
         'Add this to the label database, using the current offset position in the Chunk
-        Call AddUpdateLabel(SectionName & LocalName, CDbl(Chunks(Chunk).Size - 1))
+        Call AddUpdateLabel( _
+            Chunks(ChunkID).FullName & TokenText, _
+            CDbl(Chunks(Chunk).Size - 1) _
+        )
         
         'Define the Index
-        Call AddUpdateLabel(SectionName & LocalName & STR_INDEX_LABEL, CDbl(Chunks(Chunk).TableIndex))
+        Call AddUpdateLabel( _
+            Chunks(ChunkID).FullName & TokenText & STR_INDEX_LABEL, _
+            CDbl(Chunks(Chunk).TableIndex) _
+        )
         
         'Move to the next index
         'TODO: Too many indicies at 256?
@@ -4823,7 +4841,7 @@ Continue:
         'Start walking the List
         Do
             If TokenIsExpression(TokenKind) Then
-                If ParseExpression(Value, LabelName, SectionName) Then Stop
+                If ParseExpression(Value, Chunk) Then Stop
                 
                 If Value = INDEFINITE _
                     Then Call Chunk_AddBYTE(0) _
@@ -4865,7 +4883,7 @@ Continue:
         'Start walking the List
         Do
             If TokenIsExpression(TokenKind) Then
-                If ParseExpression(Value, LabelName, SectionName) Then Stop
+                If ParseExpression(Value, Chunk) Then Stop
                 
                 If Value = INDEFINITE _
                     Then Call Chunk_AddWORD(0) _
@@ -5019,8 +5037,7 @@ End Sub
 'Z80_Assemble : Assemble bytes from a Z80 instruction and parameters
 '=======================================================================================
 Private Sub Z80_Assemble( _
-    ByRef SectionName As String, _
-    ByRef LabelName As String _
+    ByRef ChunkID As Long _
 )
     '*** TIMER BEGIN ***
     Call Profiler.EventBegin(EVENT_Z80ASSEMBLE)
@@ -5073,7 +5090,7 @@ PushPop:
         'Fetch a parameter
         '(If there was an error, the error number will already have been set, _
           we only need to fold upwards to end the assembling)
-        If Z80_GetParameter(Instruction.Param1, SectionName, LabelName) Then GoTo Finish
+        If Z80_GetParameter(Instruction.Param1, ChunkID) Then GoTo Finish
         
         'If it's not a pushable/poppable register, then it's invalid
         If (Instruction.Param1.Mask And PARAM_REGS_AF_BC_DE_HL_IXY) = 0 Then
@@ -5112,7 +5129,7 @@ PushPop:
             'Get the first parameter
             '(If there was an error, the error number will already have been set, _
               we only need to fold upwards to end the assembling
-            If Z80_GetParameter(Instruction.Param1, SectionName, LabelName) Then GoTo Finish
+            If Z80_GetParameter(Instruction.Param1, ChunkID) Then GoTo Finish
             
             Dim Mask As OZ80_MASK
             
@@ -5191,7 +5208,7 @@ PushPop:
             '...........................................................................
             If TokenIsParameter(TokenKind) Then
                 'Fetch the second parameter
-                If Z80_GetParameter(Instruction.Param2, SectionName, LabelName) Then GoTo Finish
+                If Z80_GetParameter(Instruction.Param2, ChunkID) Then GoTo Finish
                 
                 
                 'Is Parameter 2 `A`?
@@ -5263,7 +5280,7 @@ PushPop:
                     'Fetch the third parameter (very uncommon)
                     'NOTE: Parameter 3 is only used for some undocumented instructions _
                      and will not be IX/IY (though IX/IY can be in previous parameters)
-                    If Z80_GetParameter(Instruction.Param3, SectionName, LabelName) Then GoTo Finish
+                    If Z80_GetParameter(Instruction.Param3, ChunkID) Then GoTo Finish
                     
                     'Add param 3 to the log
                     Call api_RtlMoveMemory(LogPtr + 114, _
@@ -6520,13 +6537,16 @@ End Sub
 'Z80_GetParameter : Fetch the type / value of a Z80 instruction parameter
 '=======================================================================================
 'ReturnParam    | An `oz80_Param` structure to populate
+'[ChunkID]      | The Chunk ID is used to apply scope to Values that require scope,
+'               | such as Label names that assume the Chunk's Section name. If this is
+'               | ommitted (such as Expressions outside of Chunks), an error is raised
+'               | if a Scope-dependent Value appears
 '---------------¦-----------------------------------------------------------------------
 'Returns        | The error number
 '=======================================================================================
 Private Function Z80_GetParameter( _
-    ByRef ReturnParam As oz80Param, _
-    ByRef SectionName As String, _
-    ByRef LabelName As String _
+             ByRef ReturnParam As oz80Param, _
+    Optional ByRef ChunkID As Long = 0 _
 ) As OZ80_ERROR
     'Default to "no Value", it could be a Register
     Let ReturnParam.Value = INDEFINITE
@@ -6600,7 +6620,7 @@ AddExpr:    'Look for the `+` following the register name
                 'Try and calculate the Expression
                 '(If there was an error in the Expression, the error event _
                   will already have been raised, we only need to fold upwards)
-                If ParseExpression(ReturnParam.Value, SectionName, LabelName) Then GoTo Finish
+                If ParseExpression(ReturnParam.Value, ChunkID) Then GoTo Finish
                 
                 'TODO: Error if number is over 16-bit
                 'TODO: Issue warning for rounding
@@ -6643,7 +6663,7 @@ AddExpr:    'Look for the `+` following the register name
             'Try and calculate the expression
             '(If there was an error in the Expression, the error event _
               will already have been raised, we only need to fold upwards)
-            If ParseExpression(ReturnParam.Value, LabelName, SectionName) Then GoTo Finish
+            If ParseExpression(ReturnParam.Value, ChunkID) Then GoTo Finish
             
             'TODO: Error if number is over 16-bit
             'TODO: Issue warning for rounding
@@ -6703,7 +6723,7 @@ EndScope:
         'Try and calculate the expression
         '(If there was an error in the Expression, the error event _
           will already have been raised, we only need to fold upwards)
-        If ParseExpression(ReturnParam.Value, LabelName, SectionName) Then GoTo Finish
+        If ParseExpression(ReturnParam.Value, ChunkID) Then GoTo Finish
         
         'TODO: Error if number is over 16-bit
         'TODO: Issue warning for rounding
@@ -6789,8 +6809,7 @@ End Function
 'GetListAsDictionary : Reads a whole list into a Dictionary
 '=======================================================================================
 Private Function GetListAsDictionary( _
-    ByRef SectionName As String, _
-    ByRef LabelName As String _
+    Optional ByRef ChunkID As Long = 0 _
 ) As Scripting.Dictionary
     'Instantiate the return object
     Set GetListAsDictionary = New Scripting.Dictionary
@@ -6802,7 +6821,7 @@ Private Function GetListAsDictionary( _
         Dim Value As Double
         'If there was an error in the expression, the error event _
          will already have been raised, we only need to fold upwards
-        If ParseExpression(Value, vbNullString, vbNullString) Then Exit Function
+        If ParseExpression(Value, ChunkID) Then Exit Function
         
         Call GetListAsDictionary.Add( _
             GetListAsDictionary.Count, Value _
@@ -6817,7 +6836,8 @@ End Function
 'Returns        | The error number
 '=======================================================================================
 Private Function GetText( _
-    ByRef ReturnText As bluString _
+             ByRef ReturnText As bluString, _
+    Optional ByRef ChunkID As Long = 0 _
 ) As OZ80_ERROR
     'If the bluString is not instantiated, do so now
     If ReturnText Is Nothing Then Set ReturnText = New bluString
@@ -6836,7 +6856,7 @@ Private Function GetText( _
             Dim Value As Double
             'If there were an error in parsing the Expression, fold up
             'TODO: Does this need a Section/Label reference?
-            If ParseExpression(Value, vbNullString, vbNullString) Then GoTo ErrOut
+            If ParseExpression(Value, ChunkID) Then GoTo ErrOut
             
             'TODO: Indefnite values? Allowed or not in Text? _
                    If we allow for text mapping with different sized strings then _
@@ -6864,48 +6884,28 @@ ErrOut:
     Let GetText = My_Error
 End Function
 
-'GetListItem : Read in an Expression from a list
-'=======================================================================================
-Private Function GetListItem( _
-             ByRef Value As Double, _
-    Optional ByRef Length As Long = 0 _
-) As Boolean
-    'If the current token is not an expression, the list has ended; return False
-    If Not TokenIsExpression(TokenKind) Then Exit Function
-    
-    'Parse the Expression; if it's indefinite, _
-     leave that up to the caller to handle
-    '(If there was an error in the Expression, the error event _
-      will already have been raised, we only need to fold upwards)
-    'TODO: Does this need a Section/Label reference?
-    If ParseExpression(Value, vbNullString, vbNullString) Then Exit Function
-    
-    'Increases the number of items read from the list thus far
-    Let Length = Length + 1
-    
-    'Return True as the list has not ended yet
-    Let GetListItem = True
-End Function
-
 'ParseExpression : Evaluate a calculation into a Value
 '=======================================================================================
 'ReturnValue    | Gets set to the calculated Value, or `INDEFINITE`.
 '               | Note that this is a 64-bit floating-pointer number, so it's up to
 '               | the caller to validate the number according to their needs
+'[ChunkID]      | The Chunk ID is used to apply scope to Values that require scope,
+'               | such as Label names that assume the Chunk's Section name. If this is
+'               | ommitted (such as Expressions outside of Chunks), an error is raised
+'               | if a Scope-dependent Value appears
 '---------------¦-----------------------------------------------------------------------
 'Returns        | The error number
 '=======================================================================================
 Private Function ParseExpression( _
-    ByRef ReturnValue As Double, _
-    ByRef ScopeLabel As String, _
-    ByRef ScopeSection As String _
+             ByRef ReturnValue As Double, _
+    Optional ByRef ChunkID As Long = 0 _
 ) As OZ80_ERROR
     Dim Operand1 As Double              'Left-hand value in a calculation
     Dim Operand2 As Double              'Right-hand value in a calculation
     Dim Operator As OZ80_TOKEN          'Operator to use
     
     'Begin with fetching the first operand
-    If ParseValue(Operand1, ScopeSection, ScopeLabel) Then GoTo ErrOut
+    If ParseValue(Operand1, ChunkID) Then GoTo ErrOut
     'For the moment the Expression's calculated Value will be this unless we find _
      an Operator to extend the Expression
     Let ReturnValue = Operand1
@@ -6928,7 +6928,7 @@ Continue:
     If EOF Then Stop
     Call NextToken
     'Cannot have an operator hanging there without an operand following
-    If ParseValue(Operand2, ScopeSection, ScopeLabel) Then Stop
+    If ParseValue(Operand2, ChunkID) Then Stop
         
     'If either operand were a yet-unknowable value (such as a label or property), _
      then don't bother applying the operator, but do continue the expression so that _
@@ -6991,13 +6991,16 @@ End Function
 'ReturnValue    | Gets set to the calculated Value, or `INDEFINITE`.
 '               | Note that this is a 64-bit floating-pointer number, so it's up to
 '               | the caller to validate the number according to their needs
+'[ChunkID]      | The Chunk ID is used to apply scope to Values that require scope,
+'               | such as Label names that assume the Chunk's Section name. If this is
+'               | ommitted (such as Expressions outside of Chunks), an error is raised
+'               | if a Scope-dependent Value appears
 '---------------¦-----------------------------------------------------------------------
 'Returns        | The error number
 '=======================================================================================
 Private Function ParseValue( _
-    ByRef ReturnValue As Double, _
-    ByRef SectionName As String, _
-    ByRef LabelName As String _
+             ByRef ReturnValue As Double, _
+    Optional ByRef ChunkID As Long = 0 _
 ) As OZ80_ERROR
     '----------------------------------------------------------------------------------
     'A nested Expression?
@@ -7007,7 +7010,7 @@ Private Function ParseValue( _
         If NextTokenError() Then GoTo ErrOut
         
         'Parse the nested Expression and return its Value as our own
-        If ParseExpression(ReturnValue, SectionName, LabelName) Then GoTo ErrOut
+        If ParseExpression(ReturnValue, ChunkID) Then GoTo ErrOut
         
         'The nested Expression has to be closed
         If TokenKind <> TOKEN_PARENS_CLOSE Then Call RaiseError( _
@@ -7031,7 +7034,7 @@ Private Function ParseValue( _
         If NextTokenError() Then GoTo ErrOut
         
         'Fetch the parameter to the `HI` function
-        If ParseExpression(ReturnValue, LabelName, SectionName) Then GoTo ErrOut
+        If ParseExpression(ReturnValue, ChunkID) Then GoTo ErrOut
         'If that is indefinite, so will our result
         If ReturnValue = INDEFINITE Then Exit Function
         
@@ -7055,7 +7058,7 @@ Private Function ParseValue( _
         If NextTokenError() Then GoTo ErrOut
         
         'Fetch the parameter to the `LO` function
-        If ParseExpression(ReturnValue, LabelName, SectionName) Then GoTo ErrOut
+        If ParseExpression(ReturnValue, ChunkID) Then GoTo ErrOut
         'If that is indefinite, so will be our result
         If ReturnValue = INDEFINITE Then Exit Function
         
@@ -7178,14 +7181,26 @@ GetNumber:
     'Labels
     '-----------------------------------------------------------------------------------
     ElseIf TokenKind = TOKEN_LABEL Then
+        'The "self" Label (`:`) refers to the Chunk's own address
+        If TokenText = ":" Then
+            'If our Expression is not within a Chunk (e.g. `CONST`s), error
+            If ChunkID = 0 Then
+                Call RaiseError(OZ80_ERROR_INVALID, "TODO")
+                GoTo ErrOut
+            End If
+            
+            'Get the Chunk's address (will be indefinite prior to ROM layout)
+            Let ReturnValue = Chunks(ChunkID).AddrSlot
+            If ReturnValue < 0 Then ReturnValue = INDEFINITE
+            
         'Label names have to be expanded to their fully-qualified form
         'TODO: If a Label is not found in this Section, check the global Section
-        If Not Labels.Exists(SectionName & TokenText) Then
+        ElseIf Not Labels.Exists(Chunks(ChunkID).SectionName & TokenText) Then
             'Return Indefinite
             Let ReturnValue = INDEFINITE
         Else
             'Retrieve the RAM address
-            Let ReturnValue = Labels.Item(SectionName & TokenText)
+            Let ReturnValue = Labels.Item(Chunks(ChunkID).SectionName & TokenText)
         End If
     
     ElseIf TokenKind = TOKEN_SECTION Then
@@ -7203,20 +7218,20 @@ GetNumber:
     '-----------------------------------------------------------------------------------
     ElseIf TokenKind = TOKEN_PROPERTY_USE Then
         'Property names have to be expanded to their fully-qualified form
-        If Not Labels.Exists(SectionName & LabelName & TokenText) Then
+        If Not Labels.Exists(Chunks(ChunkID).FullName & TokenText) Then
             'Return Indefinite
             Let ReturnValue = INDEFINITE
         Else
             'Retrieve the sub-routine address
-            Let ReturnValue = Labels.Item(SectionName & LabelName & TokenText)
+            Let ReturnValue = Labels.Item(Chunks(ChunkID).FullName & TokenText)
         End If
         
     '-----------------------------------------------------------------------------------
     Else
         Debug.Print TokenNames(TokenKind)
         
-        'If there's a Z80 register in an Value, it's probably because the user has used _
-         parentheses for a Z80 memory reference instead of square brackets
+        'If there's a Z80 register in an Value, it's probably because the user has _
+         used parentheses for a Z80 memory reference instead of square brackets
         If TokenIsRegister(TokenKind) = True Then
             Call RaiseError(OZ80_ERROR_INVALID, _
                 "Z80 registers are not valid within expressions. Remeber that Z80 " & _
@@ -7267,6 +7282,7 @@ Private Sub Chunk_Begin( _
         Let .SectionID = SectionID
         
         Let .AddrReal = CLng(Address)
+        Let .AddrSlot = CLng(Address)
         
         If SectionID >= 0 Then
             Let .Slot = Sections(SectionID).Slot
@@ -7392,13 +7408,15 @@ Private Function ROMLayout( _
     Call RaiseMessage(OZ80_LOG_INFO, "---------¦--------¦------------------------------------------------------")
     
     For s = 1 To SectionCount
-        'Is this Section Slotless?
         If Sections(s).Slot = SLOT1KB Then
             'Walk through the Chunks in this Slot
             For c = 1 To Sections(s).ChunkCount
                 'Place this Chunk
                 If ROMLayoutChunk(Sections(s).Chunks(c)) Then GoTo FinishLayout
             Next c
+            'Record the base address & bank of the Section
+            Call AddUpdateLabel(Sections(s).Name, 0)
+            Call AddUpdateLabel(Sections(s).Name & ".bank", 0)
         End If
     Next s
     
@@ -7428,6 +7446,15 @@ Private Function ROMLayout( _
                 'Place this Chunk
                 If ROMLayoutChunk(Sections(s).Chunks(c)) Then GoTo FinishLayout
             Next c
+            If Sections(s).ChunkCount <> 0 Then
+                'Record the base address & bank of the Section
+                Call AddUpdateLabel(Sections(s).Name, _
+                    CDbl(Chunks(Sections(s).Chunks(1)).AddrSlot) _
+                )
+                Call AddUpdateLabel(Sections(s).Name & ".bank", _
+                    CDbl(Chunks(Sections(s).Chunks(1)).AddrReal \ &H4000&) _
+                )
+            End If
         End If
     Next s
     
@@ -7445,6 +7472,15 @@ Private Function ROMLayout( _
                 'Place this Chunk
                 If ROMLayoutChunk(Sections(s).Chunks(c)) Then GoTo FinishLayout
             Next c
+            If Sections(s).ChunkCount <> 0 Then
+                'Record the base address & bank of the Section
+                Call AddUpdateLabel(Sections(s).Name, _
+                    CDbl(Chunks(Sections(s).Chunks(1)).AddrSlot) _
+                )
+                Call AddUpdateLabel(Sections(s).Name & ".bank", _
+                    CDbl(Chunks(Sections(s).Chunks(1)).AddrReal \ &H4000&) _
+                )
+            End If
         End If
     Next s
     
@@ -7846,6 +7882,8 @@ AddLink:
         
         'Set the absolute ROM address on the Chunk
         Let .AddrReal = ChunkAddr
+        'Add the bank property
+        Call AddUpdateLabel(.FullName & ".bank", CDbl(.AddrReal \ &H4000&))
         
         'Calculate the banked address (based on the Slot pattern)
         If (.Slot And SLOT1) <> 0 Then
@@ -7860,8 +7898,6 @@ AddLink:
         
         'Update the Label database with the new address
         Call AddUpdateLabel(.FullName, CDbl(.AddrSlot))
-        
-        'TODO: Calculate Bank and apply to Chunk?
         
         If ChunkEnd > ROMUsed Then Let ROMUsed = ChunkEnd
         'Is this going to fit in the ROM?

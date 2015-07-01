@@ -1,11 +1,6 @@
 
-DEF RAM $#SMS           $0000   $FFFF
-DEF RAM $#SMS.SRAM1     $8000   $BFFF
-DEF RAM $#SMS.SRAM2     $8000   $BFFF
-DEF RAM $#SMS.VRAM      $0000   $3FFF
-
 ;header:
-;--------------------------------------------------------------------------------------
+;---------------------------------------------------------------------------------------
 TYPE    #SMS.HEADER
 [;property name         ;value  ;size           ;default content
 .ID                             BYTE x 8        ;!"TMR SEGA"
@@ -20,7 +15,7 @@ TYPE    #SMS.HEADER
 ]
 
 ;mapper: (bank switching)
-;--------------------------------------------------------------------------------------
+;---------------------------------------------------------------------------------------
 ;;the banking of the cartridge ROM into the slots of the Z80 address space is handled
   by the mapper chip. for standard SEGA mappers, writing to $FFFC configures the
   mapper and $FFFD/E/F sets the ROM bank number to page into the relevant memory slot.
@@ -30,7 +25,7 @@ RAM     $#SMS
 [
 .SLOT                   $FFFC   TYPE [
         ;;bank shifting is documented, but was never used
-          <smspower.org/Development/Mappers#ROMBankShifting>;;
+          http://smspower.org/Development/Mappers#ROMBankShifting ;;
         .BankShift              BOOL x 2
         .RAMBank                BOOL            ;switches SRAM banks in Slot 2
         .RAM8000                BOOL            ;enable SRAM bank at $8000 (Slot 1)
@@ -45,7 +40,7 @@ RAM     $#SMS
 ]
 
 ;VDP:
-;--------------------------------------------------------------------------------------
+;---------------------------------------------------------------------------------------
 ;;the Video Display Processor in the Master System handles the graphics and sprites
   stored in video RAM ("VRAM"), composites the display and outputs it to the display
 ;;
@@ -63,14 +58,14 @@ RAM     $#SMS.VRAM
 ]
 
 ;sound:
-;--------------------------------------------------------------------------------------
+;---------------------------------------------------------------------------------------
 RAM     $#SMS.PSG
 [
 .DATA                   $7F     BYTE            ;write-only data port for sound chip
 ]
 
 ;input:
-;--------------------------------------------------------------------------------------
+;---------------------------------------------------------------------------------------
 RAM     $#SMS.JOY
 [
 .A                      $DC     TYPE [

@@ -169,15 +169,15 @@ PARAMS  IY`vars         HELP ""Address of the common variables (used throughout)
     ld      [$.SLOT1]       A`bank
     call    ::sound:public.update
     
-    call    :readJoypad
+    call    ::main:readJoypad
     bit     4, [IY`vars+#vars.joypad]           ;joypad button 1?
     call    z, :setJoypadButtonB                ;set joypad button 2 too
     
-    call    :_LABEL_625_57
+    call    ::main:_LABEL_625_57
     
     ;check for the reset button
-    in      a, [$#SMS.JOYPADB]                  ;read 2nd joypad port which has extra
-                                                 ;bits for lightgun / reset button
+    in      a, [$#SMS.JOY.B]                    ;;read 2nd joypad port which has extra
+                                                  bits for lightgun / reset button ;;
     and     %00010000                           ;check bit 4
     jp      z, START                            ;reset!
     
@@ -208,25 +208,25 @@ PARAMS  IY`vars         HELP ""Address of the common variables (used throughout)
     ;blank the screen (remove bit 6 of VDP register 1)
     ld      a, [$.VDPREGISTER_1]                ;get our cache value from RAM
     and     %10111111                           ;remove bit 6
-    out     [$#VDP.CONTROL], a                  ;write the value,
-    ld      a, $#VDP_REGISTER_1                 ;followed by the register number
-    out     [$#VDP.CONTROL], a
+    out     [$#SMS.VDP.CONTROL], a              ;write the value,
+    ld      a, !VDP_REGISTER_1                 ;followed by the register number
+    out     [$#SMS.VDP.CONTROL], a
     
     ;horizontal scroll
     ld      a, [$.VDPSCROLL_HORZ]
     neg                                         ;I don't understand the reason for this
-    out     [$#VDP.CONTROL], a
-    ld      a, $.VDP_REGISTER_8
-    out     [$#VDP.CONTROL], a
+    out     [$#SMS.VDP.CONTROL], a
+    ld      a, !VDP_REGISTER_8
+    out     [$#SMS.VDP.CONTROL], a
     
     ;vertical scroll
     ld      a, [$.VDPSCROLL_VERT]
-    out     [$#VDP.CONTROL], a
-    ld      a, $.VDP_REGISTER_9
-    out     [$#VDP.CONTROL], a
+    out     [$#SMS.VDP.CONTROL], a
+    ld      a, !VDP_REGISTER_9
+    out     [$#SMS.VDP.CONTROL], a
     
     bit     5, [iy+#vars.flags0]                    
-    call    nz, :fillScrollTiles
+    call    nz, ::main:fillScrollTiles
     
     bit     5, [iy+#vars.flags0]                    
     call    nz, :loadPaletteFromInterrupt
@@ -234,9 +234,9 @@ PARAMS  IY`vars         HELP ""Address of the common variables (used throughout)
     ;turn the screen back on 
      ;(or if it was already blank before this function, leave it blank)
     ld      a, [$.VDPREGISTER_1]
-    out     [$#VDP.CONTROL], a
-    ld      a, $.VDP_REGISTER_1
-    out     [$#VDP.CONTROL], a
+    out     [$#SMS.VDP.CONTROL], a
+    ld      a, !VDP_REGISTER_1
+    out     [$#SMS.VDP.CONTROL], a
     
     ld      A`bank          8                   ;Sonic sprites?
     ld      [$#SMS.SLOT1]   A`bank
@@ -248,7 +248,7 @@ PARAMS  IY`vars         HELP ""Address of the common variables (used throughout)
     ;does the Sonic sprite need updating?
      ;(the particular frame of animation is copied to the VRAM)
     bit     7, [iy+#vars.timeLightningFlags]
-    call    nz, :updateSonicSpriteFrame
+    call    nz, ::mobs:updateSonicSpriteFrame
     
     ld      A`bank          1
     ld      [$#SMS.SLOT1]   A`bank
@@ -266,7 +266,7 @@ PARAMS  IY`vars         HELP ""Address of the common variables (used throughout)
     
     ld      a, [$.D2AB+1]
     and     %10000000
-    call    z, :_LABEL_38B0_51
+    call    z, ::mobs:_LABEL_38B0_51
     ld      a, $FF
     ld      [$.D2AB+1], a
     
@@ -300,7 +300,7 @@ PARAMS  IY`vars         HELP ""Address of the common variables (used throughout)
     ld      a`flags, [$.LOADPALETTE_FLAGS]
     
     bit     3, [iy+#vars.flags0]                ;check flag to specify loading palette
-    call    nz, :loadPalette                    ;load the palette if flag is set
+    call    nz, ::main:loadPalette              ;load the palette if flag is set
     res     3, [iy+#vars.flags0]                ;unset flag so it doesn't happen again
     ret
     
@@ -362,7 +362,7 @@ PARAMS  IY`vars         HELP ""Address of the common variables (used throughout)
     ld      hl`addr, :S1_UnderwaterPalette_Boss
     
 ._1 ld      a`flags, %00000011                  ;"load tile & sprite palettes"
-    call    :loadPalette                        ;load the relevant underwater palette
+    call    ::main:loadPalette                  ;load the relevant underwater palette
     ret
     
     ;--- above water -------------------------------------------------------------------
@@ -376,18 +376,18 @@ PARAMS  IY`vars         HELP ""Address of the common variables (used throughout)
     ld      hl, [$.CYCLEPALETTE_POINTER]
     add     hl, de
     ld      a, %00000001
-    call    :loadPalette
+    call    ::main:loadPalette
     
     ;load the sprite palette specifically for Labyrinth
-    ld      hl, :S1_PaletteData.labyrinth+16
+    ld      hl, ::mobs:S1_PaletteData.labyrinth+16
     ld      a, %00000010
-    call    :loadPalette
+    call    ::main:loadPalette
     
     ret
 }
 
 PROC    :doRasterSplit                          SECTION ::interrupts            ;$01F2
-        ;------------------------------------------------------------------------------
+        ;-------------------------------------------------------------------------------
 PARAMS  IY`vars         HELP ""Address of the common variables (used throughout)
         A`step                  ;the raster split step number (counts down from 3)
 {       
@@ -398,39 +398,39 @@ PARAMS  IY`vars         HELP ""Address of the common variables (used throughout)
         cp      2
         jr      z, ._1
         
-        ;--- step 3 -------------------------------------------------------------------
+        ;--- step 3 --------------------------------------------------------------------
         ;set counter at step 2
         dec     a`step
         ld      [$.RASTERSPLIT_STEP], a`step
         
-        in      a`scanline, [$.VDP.SCANLINE]
+        in      a`scanline, [$#SMS.VDP.SCANLINE]
         ld      c`scanline, a`scanline
         ld      a`split, [$.RASTERSPLIT_LINE]
         sub     c`scanline                      ;work out the difference
         
         ;set VDP register 10 with the scanline number to interrupt at next
          ;(that is, set the next interrupt to occur at the water line)
-        out     [$.VDP.CONTROL], a`scanline
-        ld      a`register, $.VDP_REGISTER_10
-        out     [$.VDP.CONTROL], a`register
+        out     [$#SMS.VDP.CONTROL], a`scanline
+        ld      a`register, !VDP_REGISTER_10
+        out     [$#SMS.VDP.CONTROL], a`register
         
         jp      ._3
         
-        ;--- step 2 -------------------------------------------------------------------
+        ;--- step 2 --------------------------------------------------------------------
 ._1     ;we don't do anything on this step
         dec     a`step
         ld      [$.RASTERSPLIT_STEP], a`step
         jp      ._3
         
-        ;--- step 1 -------------------------------------------------------------------
+        ;--- step 1 --------------------------------------------------------------------
 ._2     dec     a`step
         ld      [$.RASTERSPLIT_STEP], a`step
         
         ;set the VDP to point at the palette
         ld      a, $00
-        out     [$.VDP.CONTROL], a
+        out     [$#SMS.VDP.CONTROL], a
         ld      a, %11000000
-        out     [$.VDP.CONTROL], a
+        out     [$#SMS.VDP.CONTROL], a
         
         ld      b, 16
         ld      hl, :S1_UnderwaterPalette
@@ -442,19 +442,19 @@ PARAMS  IY`vars         HELP ""Address of the common variables (used throughout)
 
         ;copy the palette into the VDP
 .loop   ld      a, [hl]
-        out     [$.VDP.DATA], a
+        out     [$#SMS.VDP.DATA], a
         inc     hl
         nop
         ld      a, [hl]
-        out     [$.VDP.DATA], a
+        out     [$#SMS.VDP.DATA], a
         inc     hl
         djnz    .loop
         
         ld      a, [$.VDPREGISTER_0]
         and     %11101111                       ;remove bit 4: disable line interrupts
-        out     [$.VDP.CONTROL], a
-        ld      a, $.VDP_REGISTER_0
-        out     [$.VDP.CONTROL], a
+        out     [$#SMS.VDP.CONTROL], a
+        ld      a, !VDP_REGISTER_0
+        out     [$#SMS.VDP.CONTROL], a
 
 ._3     pop     bc, de, hl, af
         ei
@@ -474,12 +474,12 @@ TABLE   :S1_UnderwaterPalette_Boss              SECTION ::interrupts            
 }
 
 PROC    :init                                   SECTION ::interrupts            ;$028B
-        ;==============================================================================
+        ;===============================================================================
 RETURN  IY`vars         HELP ""Address of the common variables (used throughout)
 {       
         ;tell the SMS the cartridge has no RAM and to use ROM banking
         ld      a, %10000000
-        ld      [$#SMS.SLOT_CONTROL], a
+        ld      [$#SMS.SLOT], a
         ;load banks 0, 1 & 2 of the ROM into the address space
          ;($0000-$BFFF of the address space will be mapped to $0000-$BFFF of this ROM)
         ld      A`bank          0
@@ -509,11 +509,11 @@ RETURN  IY`vars         HELP ""Address of the common variables (used throughout)
         ld      [de], a                         ;copy to RAM
         inc     hl                              ;move to the next byte
         inc     de                              
-        out     [$#VDP.CONTROL], a              ;send the VDP lo-byte
+        out     [$#SMS.VDP.CONTROL], a          ;send the VDP lo-byte
         ld      a, c                            ;Load A with #$8B
         sub     b                               ;subtract B from A (B is decreasing),
                                                  ;so A will count from #$80 to #8A
-        out     [$#VDP.CONTROL], a              ;send the VDP hi-byte
+        out     [$#SMS.VDP.CONTROL], a          ;send the VDP hi-byte
         djnz    .loop                           ;loop until B has reached 0
         
         ;move all sprites off the bottom of the screen!
@@ -521,42 +521,42 @@ RETURN  IY`vars         HELP ""Address of the common variables (used throughout)
         ld      hl, $3F00
         ld      bc, 64
         ld      a, 224
-        call    :clearVRAM
+        call    ::main:clearVRAM
         
         call    :muteSound
         
         ;initialise variables?
         ld      iy`vars, $.VARS                 ;variable space starts here
-        jp      :_LABEL_1C49_62
+        jp      ::screens:_LABEL_1C49_62
 }
 
 PROC    :playMusic                              SECTION ::interrupts            ;$02D7
-        ;==============================================================================
+        ;===============================================================================
         ;the `rst $18` instruction ends up here
         
 PARAMS  A`songIndex     ;;index number of song to play
-                          (see `S1_MusicPointers` in "includes\music.asm");;
+                          (see `S1_MusicPointers` in "sound\sound.oz80");;
 {       
         di                                      ;disable interrupts
-        push    af`songIndex
+        push    AF`songIndex
         
         ;switch page 1 (Z80:$4000-$7FFF) to bank 3 ($C000-$FFFF)
-        ld      a`bank, :sound_playMusic.bank
-        ld      [$#SMS.SLOT1], a`bank
+        ld      A`bank              ::sound.bank
+        ld      [$#SMS.SLOT1]       A`bank
         
-        pop     af`songIndex
-        ld      [$.PREVIOUS_MUSIC], a`songIndex
+        pop     AF`songIndex
+        ld      [$.PREVIOUS_MUSIC]  A`songIndex
         call    ::sound:public.playMusic
         
-        ld      a`bank, [$.SLOT1]
-        ld      [$#SMS.SLOT1], a`bank
+        ld      A`bank              [$.SLOT1]
+        ld      [$#SMS.SLOT1]       A`bank
         
         ei                                      ;enable interrupts
         ret
 }
 
 PROC    :muteSound                              SECTION ::interrupts            ;$02ED
-        ;==============================================================================
+        ;===============================================================================
         ;the `rst $20` instruction ends up here
 {
         di                                      ;disable interrupts
@@ -573,27 +573,28 @@ PROC    :muteSound                              SECTION ::interrupts            
 }
 
 PROC    :playSFX                                SECTION ::interrupts            ;$02FE
-        ;==============================================================================
+        ;===============================================================================
         ;the `rst $28` instruction ends up here
 PARAMS  a`SFXIndex
 {
         di      
-        push    af`SFXIndex
+        push    AF`SFXIndex
         
-        ld      a`bank,:sound_playSFX.bank
-        ld      [$#SMS.SLOT1],a`bank
+        ld      A`bank          ::sound.bank
+        ld      [$#SMS.SLOT1]   A`bank
         
-        pop     af`SFXIndex
-        call    :sound_playSFX
-        ld      a`bank,[$.SLOT1]
-        ld      [$#SMS.SLOT1],a`bank
+        pop     AF`SFXIndex
+        call    ::sound:public.playSFX
+        
+        ld      A`bank          [$.SLOT1]
+        ld      [$#SMS.SLOT1]   A`bank
         
         ei      
         ret
 }
 
 TABLE   :initVDPRegisterValues                  SECTION ::interrupts            ;$031B
-        ;==============================================================================
+        ;===============================================================================
 {                                                                               ;cache:
         BYTE %00100110   ;VDP Reg#0:                                            ;$D218
             ;......x.    stretch screen (33 columns)
@@ -618,7 +619,7 @@ TABLE   :initVDPRegisterValues                  SECTION ::interrupts            
 }
 
 PROC    :waitForInterrupt                       SECTION ::interrupts            ;$031C
-        ;==============================================================================
+        ;===============================================================================
         ;;a commonly used routine to essentially 'refresh the screen' by halting main
           execution until the interrupt handler has done its work;;
 
@@ -632,7 +633,7 @@ PARAMS  IY`vars         HELP ""Address of the common variables (used throughout)
 }
 
 PROC    :unused_0323                            SECTION ::interrupts            ;$0323
-        ;==============================================================================
+        ;===============================================================================
 PARAMS  IY`vars         HELP ""Address of the common variables (used throughout)        
 {        
         set     2,[iy+#vars.flags0]
@@ -643,7 +644,7 @@ PARAMS  IY`vars         HELP ""Address of the common variables (used throughout)
 }
 
 PROC    :loadPaletteOnInterrupt                 SECTION ::interrupts            ;$0333
-        ;==============================================================================
+        ;===============================================================================
 PARAMS  IY`vars         HELP ""Address of the common variables (used throughout)
         A`flags
         HL`addr
@@ -656,17 +657,17 @@ PARAMS  IY`vars         HELP ""Address of the common variables (used throughout)
 }
 
 PROC    :updateVDPSprites                       SECTION ::interrupts            ;$033E
-        ;==============================================================================
+        ;===============================================================================
 PARAMS  IY`vars         HELP ""Address of the common variables (used throughout)        
 {       
-        ;--- sprite Y positions -------------------------------------------------------
+        ;--- sprite Y positions --------------------------------------------------------
         
         ;set the VDP address to $3F00 (sprite info table, Y-positions)
         ld      a, LO $3F00
-        out     [$#VDP.CONTROL], a
+        out     [$#SMS.VDP.CONTROL], a
         ld      a, HI $3F00
         or      %01000000               ;add bit 6 to mark an address being given
-        out     [$#VDP.CONTROL], a
+        out     [$#SMS.VDP.CONTROL], a
         
         ld      b, [iy+#vars.spriteUpdateCount]
         ld      hl, $.SPRITETABLE+1     ;Y-position of the first sprite
@@ -678,7 +679,7 @@ PARAMS  IY`vars         HELP ""Address of the common variables (used throughout)
 
         ;set sprite Y-positions:
 .yLoop  ld      a, [hl]                 ;get the sprite's Y-position from RAM
-        out     [$#VDP.DATA], a ;set the sprite's Y-position in the hardware
+        out     [$#SMS.VDP.DATA], a     ;set the sprite's Y-position in the hardware
         add     hl, de                  ;move to the next sprite
         djnz    .yLoop
         
@@ -700,10 +701,10 @@ PARAMS  IY`vars         HELP ""Address of the common variables (used throughout)
 
         ;move remaining sprites off screen
 .yOff   ld      a, 224
-        out     [$#VDP.DATA], a
+        out     [$#SMS.VDP.DATA], a
         djnz    .yOff
         
-        ;--- sprite X positions / indexes ---------------------------------------------
+        ;--- sprite X positions / indexes ----------------------------------------------
 ._2     ld      a, c
         and     a
         ret     z
@@ -713,17 +714,17 @@ PARAMS  IY`vars         HELP ""Address of the common variables (used throughout)
         
         ;set the VDP address to $3F80 (sprite info table, X-positions & indexes)
         ld      a, LO $3F80
-        out     [$#VDP.CONTROL], a
+        out     [$#SMS.VDP.CONTROL], a
         ld      a, HI $3F80
         or      %01000000                       ;add bit 6 to mark an address is given
-        out     [$#VDP.CONTROL], a
+        out     [$#SMS.VDP.CONTROL], a
         
 .xLoop  ld      a, [hl]                         ;set the sprite X-position
-        out     [$#VDP.DATA], a
+        out     [$#SMS.VDP.DATA], a
         inc     l                               ;skip Y-position
         inc     l                               
         ld      a, [hl]                         ;set the sprite index number
-        out     [$#VDP.DATA], a
+        out     [$#SMS.VDP.DATA], a
         inc     l
         djnz    .xLoop
 
@@ -736,7 +737,7 @@ PARAMS  IY`vars         HELP ""Address of the common variables (used throughout)
 }
 
 PROC    :unused_0397                            SECTION ::interrupts            ;$0397
-        ;==============================================================================
+        ;===============================================================================
         ;fill VRAM from memory?
         
 PARAMS  bc      ;number of bytes to copy
@@ -745,14 +746,14 @@ PARAMS  bc      ;number of bytes to copy
 {
         di      
         ld      a,e
-        out     [$#VDP.CONTROL],a
+        out     [$#SMS.VDP.CONTROL],a
         ld      a,d
         or      %01000000
-        out     [$#VDP.CONTROL],a
+        out     [$#SMS.VDP.CONTROL],a
         ei      
 
 .loop   ld      a,[hl]
-        out     [$#VDP.DATA],a
+        out     [$#SMS.VDP.DATA],a
         inc     hl
         
         dec     bc
@@ -764,7 +765,7 @@ PARAMS  bc      ;number of bytes to copy
 }
         
 PROC    :unused_03ac                            SECTION ::interrupts            ;$03AC
-        ;==============================================================================
+        ;===============================================================================
 PARAMS  a       ;bank number for page 1, A+1 will be used as the bank number for page 2
         de      ;VDP address
         hl      ;?
@@ -774,10 +775,10 @@ PARAMS  a       ;bank number for page 1, A+1 will be used as the bank number for
 
         ;set the VDP address using DE
         ld      a,e
-        out     [$#VDP.CONTROL],a
+        out     [$#SMS.VDP.CONTROL],a
         ld      a,d
         or      %01000000
-        out     [$#VDP.CONTROL],a
+        out     [$#SMS.VDP.CONTROL],a
         
         pop     af
         ld      de,[$.SLOT1]
@@ -797,7 +798,7 @@ PARAMS  a       ;bank number for page 1, A+1 will be used as the bank number for
 ._2     ld      a,[hl]
         cp      e
         jr      z,._3
-        out     [$#VDP.DATA],a
+        out     [$#SMS.VDP.DATA],a
         ld      e,a
         inc     hl
         dec     bc
@@ -815,7 +816,7 @@ PARAMS  a       ;bank number for page 1, A+1 will be used as the bank number for
         ld      a,d
         ld      e,[hl]
 
-._4     out     [$#VDP.DATA],a
+._4     out     [$#SMS.VDP.DATA],a
         dec     e
         nop     
         nop     
@@ -831,12 +832,12 @@ PARAMS  a       ;bank number for page 1, A+1 will be used as the bank number for
 ._5     di
         
         ;restore bank numbers
-        pop     de`banks
-        ld      [$.SLOT1],de`banks              ;restore our copy of the bank numbers
-        ld      a`banks,e`banks
-        ld      [$#SMS.SLOT1],a`banks           ;restore Slot 1 
-        ld      a`banks,d`banks
-        ld      [$#SMS.SLOT2],a`banks           ;restore Slot 2
+        pop     DE`banks
+        ld      [$.SLOT1]       DE`banks        ;restore our copy of the bank numbers
+        ld      A`banks         E`banks
+        ld      [$#SMS.SLOT1]   A`banks         ;restore Slot 1 
+        ld      A`banks         D`banks
+        ld      [$#SMS.SLOT2]   A`banks         ;restore Slot 2
         
         ;enable interrupts and return
         ei                                      

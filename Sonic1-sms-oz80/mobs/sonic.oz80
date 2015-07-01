@@ -212,7 +212,7 @@ PARAMS  IX`mob          HELP ""Address of the current mob being processed
         ld      DE`callback     .callback
         
         ld      A`bank          2
-        ld      [$.SMS.SLOT2]   A`bank
+        ld      [$#SMS.SLOT2]   A`bank
         ld      [$.SLOT2]       A`bank
         
         ;;keep a copy of the callback address

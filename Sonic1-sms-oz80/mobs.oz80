@@ -1882,13 +1882,13 @@ PARAMS  IY`vars         HELP ""Address of the common variables (used throughout)
         
         ;-------------------------------------------------------------------------------
         ld      A`low           E`vram          ;$80
-        out     [$.VDP.CONTROL] A`low
+        out     [$#SMS.VDP.CONTROL] A`low
         ld      A`hi            D`vram          ;$36
         or      %01000000                       ;set bit 6 to specify a VDP address
-        out     [$.VDP.CONTROL] A`hi
+        out     [$#SMS.VDP.CONTROL] A`hi
         
         xor     A`zero                          ;set A to 0
-        ld      c, $.VDP.DATA
+        ld      c, $#SMS.VDP.DATA
         ld      e, 24
         
         ;;by nature of the way the VDP stores image colours across bit-planes, and
@@ -1898,19 +1898,19 @@ PARAMS  IY`vars         HELP ""Address of the common variables (used throughout)
 ._1     outi
         outi
         outi
-        out     [$.VDP.DATA]    A`zero
+        out     [$#SMS.VDP.DATA]    A`zero
         outi
         outi
         outi
-        out     [$.VDP.DATA]    A`zero
+        out     [$#SMS.VDP.DATA]    A`zero
         outi
         outi
         outi
-        out     [$.VDP.DATA]    A`zero
+        out     [$#SMS.VDP.DATA]    A`zero
         outi
         outi
         outi
-        out     [$.VDP.DATA]    A`zero
+        out     [$#SMS.VDP.DATA]    A`zero
         
         dec     e
         jp      nz, ._1
@@ -1925,10 +1925,10 @@ PARAMS  IY`vars         HELP ""Address of the common variables (used throughout)
         add     hl, bc
         
         ld      a, e
-        out     [$.VDP.CONTROL], a
+        out     [$#SMS.VDP.CONTROL], a
         ld      a, d
         or      %01000000
-        out     [$.VDP.CONTROL], a
+        out     [$#SMS.VDP.CONTROL], a
         
         exx
         push    bc
@@ -1941,22 +1941,22 @@ PARAMS  IY`vars         HELP ""Address of the common variables (used throughout)
 ._3     outi
         outi
         outi
-        out     [$.VDP.DATA], a
+        out     [$#SMS.VDP.DATA], a
         add     hl, de
         outi
         outi
         outi
-        out     [$.VDP.DATA], a
+        out     [$#SMS.VDP.DATA], a
         add     hl, de
         outi
         outi
         outi
-        out     [$.VDP.DATA], a
+        out     [$#SMS.VDP.DATA], a
         add     hl, de
         outi
         outi
         outi
-        out     [$.VDP.DATA], a
+        out     [$#SMS.VDP.DATA], a
         add     hl, de
         exx
         dec     b
@@ -1985,26 +1985,26 @@ PROC    :updateRingFrame                        SECTION ::mobs                  
         ex      de,hl
         di      
         ld      a,e
-        out     [$.VDP.CONTROL],a
+        out     [$#SMS.VDP.CONTROL],a
         ld      a,d
         or      %01000000
-        out     [$.VDP.CONTROL],a
+        out     [$#SMS.VDP.CONTROL],a
         ld      b,$20
         
 .loop   ld      a,[hl]
-        out     [$.VDP.DATA],a
+        out     [$#SMS.VDP.DATA],a
         nop     
         inc     hl
         ld      a,[hl]
-        out     [$.VDP.DATA],a
+        out     [$#SMS.VDP.DATA],a
         nop     
         inc     hl
         ld      a,[hl]
-        out     [$.VDP.DATA],a
+        out     [$#SMS.VDP.DATA],a
         nop     
         inc     hl
         ld      a,[hl]
-        out     [$.VDP.DATA],a
+        out     [$#SMS.VDP.DATA],a
         inc     hl
         djnz    .loop
         
@@ -2102,28 +2102,28 @@ PROC    :_LABEL_38B0_51                         SECTION ::mobs                  
         ld      b, $02
 
 .loop   ld      a, l
-        out     [$.VDP.CONTROL], a
+        out     [$#SMS.VDP.CONTROL], a
         ld      a, h
         or      %01000000
-        out     [$.VDP.CONTROL], a
+        out     [$#SMS.VDP.CONTROL], a
         
         ld      a, [de]
-        out     [$.VDP.DATA], a
+        out     [$#SMS.VDP.DATA], a
         inc     de
         nop
         nop
         ld      a, [de]
-        out     [$.VDP.DATA], a
+        out     [$#SMS.VDP.DATA], a
         inc     de
         nop
         nop
         ld      a, [de]
-        out     [$.VDP.DATA], a
+        out     [$#SMS.VDP.DATA], a
         inc     de
         nop
         nop
         ld      a, [de]
-        out     [$.VDP.DATA], a
+        out     [$#SMS.VDP.DATA], a
         inc     de
         
         ld      a, b

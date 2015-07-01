@@ -799,10 +799,10 @@ PARAMS  IY`vars         HELP ""Address of the common variables (used throughout)
         
         di      
         ;switch pages 1 & 2 ($4000-$BFFF) to banks 4 & 5 ($10000-$17FFF)
-        ld      A`bank          :S1_BlockMappings.bank
+        ld      A`bank          ::blocks:S1_BlockMappings.bank
         ld      [$#SMS.SLOT1]   A`bank
         ld      [$.SLOT1]       A`bank
-        ld      A`bank          :S1_BlockMappings.bank+1
+        ld      A`bank          ::blocks:S1_BlockMappings.bank+1
         ld      [$#SMS.SLOT2]   A`bank
         ld      [$.SLOT2]       A`bank
         ei
@@ -816,7 +816,7 @@ PARAMS  IY`vars         HELP ""Address of the common variables (used throughout)
         ld      b,$00
         
         ;look up the index in the solidity pointer table
-        ld      hl,:S1_Solidity_Blocks
+        ld      hl,::mobs:S1_Solidity_Blocks
         add     hl,bc
         
         ;load an address at the table
@@ -1055,7 +1055,7 @@ PARAMS  IY`vars         HELP ""Address of the common variables (used throughout)
         add     a, c
         ld      c, a
         
-        ld      hl, $.VDP.SCREENNAMETABLE
+        ld      hl, $#SMS.VRAM.SCREENNAMETABLE
         add     hl, bc                          ;offset to top of the column needed
         set     6, h                            ;add bit 6 as a VDP VRAM address
         
@@ -1138,7 +1138,7 @@ PARAMS  IY`vars         HELP ""Address of the common variables (used throughout)
         srl     a
         add     a, c
         ld      c, a
-        ld      hl, $.VDP.SCREENNAMETABLE
+        ld      hl, $#SMS.VRAM.SCREENNAMETABLE
         add     hl, bc
         set     6, h
         ex      de, hl
@@ -1311,10 +1311,10 @@ PROC    :fillScreenWithFloorLayout              SECTION ::main                  
         di
         
         ;page in the Block Mappings
-        ld      A`bank          :S1_BlockMappings.bank
+        ld      A`bank          ::blocks:S1_BlockMappings.bank
         ld      [$#SMS.SLOT1]   A`bank
         ld      [$.SLOT1]       A`bank
-        ld      A`bank          :S1_BlockMappings.bank + 1
+        ld      A`bank          ::blocks:S1_BlockMappings.bank + 1
         ld      [$#SMS.SLOT2]   A`bank
         ld      [$.SLOT2]       A`bank
         
@@ -1322,7 +1322,7 @@ PROC    :fillScreenWithFloorLayout              SECTION ::main                  
         call    :getFloorLayoutRAMPosition
         
         ;------------------------------------------------------------------------------
-        ld      de,$#VDP.SCREENNAMETABLE
+        ld      de,$#SMS.VRAM.SCREENNAMETABLE
         ;;in 192-line mode, the screen is 6 blocks tall,
           in 224-line mode it's 7 blocks tall;;
         ld      b,!SCREENHEIGHT_BLOCKS
@@ -1341,7 +1341,7 @@ PROC    :fillScreenWithFloorLayout              SECTION ::main                  
         add     a,a                             ;double it (i.e. for a 16-bit pointer)
         ld      c,a                             ;put it into BC'
         ld      b,$00
-        ld      hl,:S1_Solidity_Blocks          ;get address of solidity pointer list
+        ld      hl,::mobs:S1_Solidity_Blocks    ;get address of solidity pointer list
         add     hl,bc                           ;offset solidity index into the list
         ld      a,[hl]                          ;read the data pointer into HL'
         inc     hl
@@ -1385,45 +1385,45 @@ PROC    :fillScreenWithFloorLayout              SECTION ::main                  
         
         ;set the screen name address
 ._3     ld      a,l
-        out     [$#VDP.CONTROL],a
+        out     [$#SMS.VDP.CONTROL],a
         ld      a,h
         or      %01000000
-        out     [$#VDP.CONTROL],a
+        out     [$#SMS.VDP.CONTROL],a
         
         ld      a,[de]
-        out     [$#VDP.DATA],a
+        out     [$#SMS.VDP.DATA],a
         inc     de
         exx     
         ld      a,c
         exx     
-        out     [$#VDP.DATA],a
+        out     [$#SMS.VDP.DATA],a
         nop     
         nop     
         ld      a,[de]
-        out     [$#VDP.DATA],a
+        out     [$#SMS.VDP.DATA],a
         inc     de
         exx     
         ld      a,c
         exx     
-        out     [$#VDP.DATA],a
+        out     [$#SMS.VDP.DATA],a
         nop     
         nop     
         ld      a,[de]
-        out     [$#VDP.DATA],a
+        out     [$#SMS.VDP.DATA],a
         inc     de
         exx     
         ld      a,c
         exx     
-        out     [$#VDP.DATA],a
+        out     [$#SMS.VDP.DATA],a
         nop     
         nop     
         ld      a,[de]
-        out     [$#VDP.DATA],a
+        out     [$#SMS.VDP.DATA],a
         inc     de
         exx     
         ld      a,c
         exx     
-        out     [$#VDP.DATA],a
+        out     [$#SMS.VDP.DATA],a
         ld      a,b
         ld      bc,64
         add     hl,bc
@@ -1524,7 +1524,7 @@ PARAMS  IY`vars         HELP ""Address of the common variables (used throughout)
         
         ld      a, [iy+#vars.spriteUpdateCount]
         res     0, [iy+#vars.flags0]            ;wait for interrupt to occur
-        call    :waitForInterrupt                ;(refresh sprites?)
+        call    ::interrupts:waitForInterrupt   ;(refresh sprites?)
         
         ;after the interrupt, the sprite update count would be cleared,
          ;put it back to its old value
@@ -1547,14 +1547,14 @@ PARAMS  IY`vars         HELP ""Address of the common variables (used throughout)
         ;load the darkened palette on the next interrupt
         ld      hl`addr, $.PALETTE
         ld      a`flags, %00000011
-        call    :loadPaletteOnInterrupt
+        call    ::interrupts:loadPaletteOnInterrupt
         
         ;wait 10 frames
         ld      b, $0A
 ._2     ld      a, [iy+#vars.spriteUpdateCount]
                 
         res     0, [iy+#vars.flags0]
-        call    :waitForInterrupt
+        call    ::interrupts:waitForInterrupt
         
         ld      [iy+#vars.spriteUpdateCount], a
         djnz    ._2
@@ -1629,7 +1629,7 @@ PARAMS  hl
         ;switch to using the temporary palette on screen
         ld      hl,$.PALETTE
         ld      a,%00000011
-        call    :loadPaletteOnInterrupt
+        call    ::interrupts:loadPaletteOnInterrupt
         
         ;------------------------------------------------------------------------------
         ld      c,[iy+#vars.spriteUpdateCount]
@@ -1639,7 +1639,7 @@ PARAMS  hl
         
         ;wait for interrupt (refresh screen)
         res     0,[iy+#vars.flags0]
-        call    :waitForInterrupt
+        call    ::interrupts:waitForInterrupt
         
         ld      [iy+#vars.spriteUpdateCount],c
         
@@ -1647,7 +1647,7 @@ PARAMS  hl
         ld      b,9
 ._1     ld      a,[iy+#vars.spriteUpdateCount]
         res     0,[iy+#vars.flags0]
-        call    :waitForInterrupt
+        call    ::interrupts:waitForInterrupt
         ld      [iy+#vars.spriteUpdateCount],a
         djnz    ._1
         
@@ -1697,13 +1697,13 @@ PARAMS  hl
         
         ld      hl,$.PALETTE
         ld      a,%00000011
-        call    :loadPaletteOnInterrupt
+        call    ::interrupts:loadPaletteOnInterrupt
         
         ;wait for 10 frames
         ld      b,$0a
 ._7     ld      a,[iy+#vars.spriteUpdateCount]
         res     0,[iy+#vars.flags0]
-        call    :waitForInterrupt
+        call    ::interrupts:waitForInterrupt
         ld      [iy+#vars.spriteUpdateCount],a
         djnz    ._7
         
@@ -1748,7 +1748,7 @@ PARAMS  IY`vars         HELP ""Address of the common variables (used throughout)
         
         ld      hl,$.PALETTE
         ld      a,%00000011
-        call    :loadPaletteOnInterrupt
+        call    ::interrupts:loadPaletteOnInterrupt
         
         ld      c,[iy+#vars.spriteUpdateCount]
         ld      a,[$.VDPREGISTER_1]
@@ -1756,14 +1756,14 @@ PARAMS  IY`vars         HELP ""Address of the common variables (used throughout)
         ld      [$.VDPREGISTER_1],a
         
         res     0,[iy+#vars.flags0]
-        call    :waitForInterrupt
+        call    ::interrupts:waitForInterrupt
         
         ld      [iy+#vars.spriteUpdateCount],c
         ld      b,$09
         
 ._2     ld      a,[iy+#vars.spriteUpdateCount]
         res     0,[iy+#vars.flags0]
-        call    :waitForInterrupt
+        call    ::interrupts:waitForInterrupt
         ld      [iy+#vars.spriteUpdateCount],a
         djnz    ._2
         
@@ -1811,13 +1811,13 @@ PARAMS  IY`vars         HELP ""Address of the common variables (used throughout)
         
         ld      hl`addr,$.PALETTE
         ld      a`flags,%00000011
-        call    :loadPaletteOnInterrupt
+        call    ::interrupts:loadPaletteOnInterrupt
         
         ld      b,10
 ._8     ld      a,[iy+#vars.spriteUpdateCount]
         
         res     0,[iy+#vars.flags0]
-        call    :waitForInterrupt
+        call    ::interrupts:waitForInterrupt
         
         ld      [iy+#vars.spriteUpdateCount],a
         djnz    ._8
@@ -1891,19 +1891,19 @@ PARAMS  hl              ;absolute address to uncompressed art data for the icons
         
         add     hl,bc
         ld      a,l
-        out     [$#VDP.CONTROL],a
+        out     [$#SMS.VDP.CONTROL],a
         ld      a,h
         or      %01000000
-        out     [$#VDP.CONTROL],a
+        out     [$#SMS.VDP.CONTROL],a
         
         ld      b,4
 .loop   ld      a,[de]
-        out     [$#VDP.DATA],a
+        out     [$#SMS.VDP.DATA],a
         nop     
         nop     
         inc     de
         ld      a,[de]
-        out     [$#VDP.DATA],a
+        out     [$#SMS.VDP.DATA],a
         inc     de
         djnz    .loop
         

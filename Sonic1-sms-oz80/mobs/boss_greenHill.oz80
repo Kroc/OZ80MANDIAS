@@ -31,13 +31,13 @@ PARAMS  IX`mob          HELP ""Address of the current mob being processed
         ld      hl,$aeb1
         ld      de,$2000
         ld      a,9
-        call    :decompressArt
+        call    ::main:decompressArt
         
         ld      hl,:S1_BossPalette
         ld      a,%00000010
-        call    :loadPaletteOnInterrupt
+        call    ::interrupts:loadPaletteOnInterrupt
         
-        ld      a,:S1_MusicPointers.boss1.index ;=$0B
+        ld      a,::sound:S1_MusicPointers.boss1.index ;=$0B
         rst     :rst_playMusic
         
         xor     a`zero

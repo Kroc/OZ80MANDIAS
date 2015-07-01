@@ -30,7 +30,7 @@ PARAMS  IX`mob          HELP ""Address of the current mob being processed
         bit     1,[ix+#mob.flags]
         jr      nz,._1
         
-        call    :_LABEL_625_57
+        call    ::main:_LABEL_625_57
         and     $1f
         inc     a
         ld      [ix+#mob.unknown11],a

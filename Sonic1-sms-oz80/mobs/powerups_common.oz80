@@ -37,7 +37,7 @@ PARAMS  IX`mob          HELP ""Address of the current mob being processed
         
 ._1     ld      hl,$5180                        ;$15180 - blinking items art
 ._5b34
-        call    :loadPowerUpIcon
+        call    ::main:loadPowerUpIcon
         ld      [ix+#mob.spriteLayout+0],LO ._5bbf
         ld      [ix+#mob.spriteLayout+1],HI ._5bbf
         ld      a,[$.FRAMECOUNT]
@@ -135,7 +135,7 @@ PARAMS  IX`mob          HELP ""Address of the current mob being processed
         
         ;check if the level has its bit flag set at $.D305+
         ld      hl,$.D305
-        call    :getLevelBitFlag
+        call    ::main:getLevelBitFlag
         ld      a,[hl]
         and     c
         jr      z,._1                           ;if not set, skip ahead
@@ -156,7 +156,7 @@ PARAMS  IX`mob          HELP ""Address of the current mob being processed
         
         ;set the level's bit flag at $.D305+
         ld      hl,$.D305
-        call    :getLevelBitFlag
+        call    ::main:getLevelBitFlag
         ld      a,[hl]
         or      c
         ld      [hl],a
@@ -209,7 +209,7 @@ PARAMS  IX`mob          HELP ""Address of the current mob being processed
         
 ._6     set     2,[ix+#mob.flags]
         ld      hl,$.D317
-        call    :getLevelBitFlag
+        call    ::main:getLevelBitFlag
         ld      a,[hl]
         ld      hl,$5180
         and     c
@@ -270,7 +270,7 @@ PARAMS  IX`mob          HELP ""Address of the current mob being processed
         ld      a,$F0
         ld      [$.D28D],a
         
-        ld      a,:S1_MusicPointers.invincibility.index ;=$08
+        ld      a,::sound:S1_MusicPointers.invincibility.index ;=$08
         rst     :rst_playMusic
         
         jp      :mob_powerUp_ring._5b29
@@ -295,7 +295,7 @@ PARAMS  IX`mob          HELP ""Address of the current mob being processed
         jr      c,._1
         
         ld      hl,$.D311
-        call    :getLevelBitFlag
+        call    ::main:getLevelBitFlag
         ld      a,[hl]
         or      c
         ld      [hl],a
@@ -483,7 +483,7 @@ PROC    :mob_powerUp_emerald                    SECTION ::mobs                  
 PARAMS  IX`mob          HELP ""Address of the current mob being processed
 {       
         ld      hl,$.D30B
-        call    :getLevelBitFlag
+        call    ::main:getLevelBitFlag
         ld      a,[hl]
         and     c
         jr      nz,._1
@@ -500,7 +500,7 @@ PARAMS  IX`mob          HELP ""Address of the current mob being processed
         call    :detectCollisionWithSonic
         jr      c,._2
         ld      hl,$.D30B
-        call    :getLevelBitFlag
+        call    ::main:getLevelBitFlag
         ld      a,[hl]
         or      c
         ld      [hl],a
@@ -509,7 +509,7 @@ PARAMS  IX`mob          HELP ""Address of the current mob being processed
         ld      a,$fe
         ld      [$.D28B],a
         
-        ld      a,:S1_MusicPointers.emerald.index ;=$14
+        ld      a,::sound:S1_MusicPointers.emerald.index ;=$14
         rst     :rst_playMusic
         
 ._1     ld      [ix+#mob.type],$FF      ;remove object?
@@ -530,7 +530,7 @@ PARAMS  IX`mob          HELP ""Address of the current mob being processed
         ld      [ix+#mob.Yspeed+1],h
         ld      [ix+#mob.Ydirection],a
         ld      hl,$5400                        ;$15400 - emerald in blinking items art
-        call    :loadPowerUpIcon
+        call    ::main:loadPowerUpIcon
         ret
 
 ._5f10  BYTE $5C, $5E, $FF, $FF, $FF, $FF

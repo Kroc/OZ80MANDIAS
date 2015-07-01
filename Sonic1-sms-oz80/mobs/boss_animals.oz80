@@ -108,17 +108,17 @@ PARAMS  IX`mob          HELP ""Address of the current mob being processed
         res     5,[ix+#mob.flags]               ;mob adheres to the floor
         ld      [ix+#mob.width], 12
         ld      [ix+#mob.height],32
-        ld      hl,:_7760
+        ld      hl,._7760
         ld      a,[$.LEVEL_SOLIDITY]
         and     a
         jr      z,._1
-        ld      hl,:_777b
+        ld      hl,._777b
         dec     a
         jr      z,._1
-        ld      hl,:_7796
+        ld      hl,._7796
         dec     a
         jr      z,._1
-        ld      hl,:_77b1
+        ld      hl,._77b1
 ._1     ld      [ix+#mob.spriteLayout+0],l
         ld      [ix+#mob.spriteLayout+1],h
         bit     7,[ix+#mob.flags]
@@ -132,18 +132,18 @@ PARAMS  IX`mob          HELP ""Address of the current mob being processed
         ld      [ix+#mob.Xspeed+1],a`zero
         ld      [ix+#mob.Xdirection],a`zero
         
-        ld      hl,:_7752
+        ld      hl,._7752
         ld      a,[$.LEVEL_SOLIDITY]
         ld      c,a
         and     a
         jr      z,._2
-        ld      hl,:_776d
+        ld      hl,._776d
         dec     a
         jr      z,._2
-        ld      hl,:_7788
+        ld      hl,._7788
         dec     a
         jr      z,._2
-        ld      hl,:_77a3
+        ld      hl,._77a3
 ._2     ld      [ix+#mob.spriteLayout+0],l
         ld      [ix+#mob.spriteLayout+1],h
         inc     [ix+#mob.unknown11]

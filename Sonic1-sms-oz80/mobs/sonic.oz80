@@ -193,7 +193,7 @@ PARAMS  IX`mob          HELP ""Address of the current mob being processed
         ld      A`data          [HL`data]
         ;if it's higher than the number of solidity types, skip ahead
         cp      $1C                             ;=number of entries in ._58e5
-        jr      nc,._6
+        jr      nc,.callback
         
         ;double the data byte read
          ;and transfer to HL for 16-bit use
@@ -545,7 +545,7 @@ PARAMS  IX`mob          HELP ""Address of the current mob being processed
         jp      ._22
         
 ._23    ld      d,a
-        ld      bc,:sound_update
+        ld      bc,::sound:public.update
         bit     1,[ix+#mob.flags]
         jr      z,._24
         ld      bc,:_7000                       ;immediate $7000 or label?
@@ -845,7 +845,7 @@ PARAMS  IX`mob          HELP ""Address of the current mob being processed
         jr      z,._37
         ld      hl,$.D2F7
 ._37    push    hl
-        call    :_LABEL_625_57
+        call    ::main:_LABEL_625_57
         pop     hl
         and     $0f
         ld      [hl],a
@@ -1078,7 +1078,7 @@ PARAMS  IX`mob          HELP ""Address of the current mob being processed
         ld      [$.D287],a
         
         ;drowned!
-        ld      a,:S1_MusicPointers.death.index ;=$0A
+        ld      a,::sound:S1_MusicPointers.death.index ;=$0A
         rst     :rst_playMusic
         
         call    :_91eb
@@ -1453,7 +1453,7 @@ PARAMS  IX`mob          HELP ""Address of the current mob being processed
         
         ld      c,[iy+#vars.spriteUpdateCount]
         res     0,[iy+#vars.flags0]
-        call    :waitForInterrupt
+        call    ::interrupts:waitForInterrupt
         ld      [iy+#vars.spriteUpdateCount],c
         ret
 

@@ -750,7 +750,7 @@ PARAMS  IX`mob          HELP ""Address of the current mob being processed
         and     $07
         ld      c,a
         ld      hl,$0068
-        call    :decimalMultiplyBy10
+        call    ::main:decimalMultiplyBy10
         ld      de,$.SONIC
         add     hl,de
         ex      de,hl
@@ -1556,7 +1556,7 @@ PARAMS  IY`vars         HELP ""Address of the common variables (used throughout)
         res     0,[IY+#vars.unknown0]           ;the 0 byte from the level header
         
         ;play the death sound effect
-        ld      A`sfx           #index_music_death
+        ld      A`sfx           ::sound:S1_MusicPointers.death.index
         rst     :playMusic
         
         ret
@@ -2096,7 +2096,7 @@ PROC    :_LABEL_38B0_51                         SECTION ::mobs                  
         xor     l
         ld      h, a
         add     hl, bc
-        ld      bc, $.VDP.SCREENNAMETABLE
+        ld      bc, $#SMS.VRAM.SCREENNAMETABLE
         add     hl, bc
         ld      de, [$.D2AF]
         ld      b, $02
@@ -2335,6 +2335,8 @@ PARAMS  C`thousands     HELP ""Thousands to add to the score
 
 PROC    :updateTime                             SECTION ::mobs                  ;$3A03
         ;===============================================================================
+        ;called only by `:_LABEL_1CED_131`; main game loop?
+        
 PARAMS  IY`vars         HELP ""Address of the common variables (used throughout)
 {        
         ;is Sonic dead? if so, exit now
@@ -2911,7 +2913,7 @@ PARAMS  IX`mob          HELP ""Address of the current mob being processed
         
         ld      a,[iy+#vars.spriteUpdateCount]
         res     0,[iy+#vars.flags0]
-        call    :waitForInterrupt
+        call    ::interrupts:waitForInterrupt
         ld      [iy+#vars.spriteUpdateCount],a
 ._9     ld      [ix+#mob.Xspeed+0],$00
         ld      [ix+#mob.Xspeed+1],$03
@@ -2946,11 +2948,11 @@ PARAMS  IX`mob          HELP ""Address of the current mob being processed
         
         set     1,[iy+#vars.flags9]
         
-._11    ;UNKNOWN
+._10    ;UNKNOWN
         ld      hl,$DA28
         ld      de,$2000
         ld      a,12
-        call    :decompressArt
+        call    ::main:decompressArt
         ret
 
 ;sprite layout
@@ -3045,12 +3047,12 @@ PARAMS  IX`mob          HELP ""Address of the current mob being processed
         call    :findEmptyMob
         ret     c
         push    hl
-        call    :_LABEL_625_57
+        call    ::main:_LABEL_625_57
         and     $1f
         ld      l,a
         ld      h,$00
         ld      [$.TEMP1],hl
-        call    :_LABEL_625_57
+        call    ::main:_LABEL_625_57
         and     $1f
         ld      l,a
         ld      h,$00
@@ -3513,22 +3515,22 @@ PARAMS  IX`mob          HELP ""Address of the current mob being processed
         ld      hl,$e508
         ld      de,$2000
         ld      a,12
-        call    :decompressArt
+        call    ::main:decompressArt
         
         ld      hl,:S1_BossPalette
         ld      a,%00000010
-        call    :loadPaletteOnInterrupt
+        call    ::interrupts:loadPaletteOnInterrupt
         xor     a`zero
         ld      [$.D2EC],a`zero
         
-        ld      a,:S1_MusicPointers.boss1.index ;=$0B
+        ld      a,::sound:S1_MusicPointers.boss1.index ;=$0B
         rst     :rst_playMusic
         
         set     0,[ix+#mob.flags]
 ._1     ld      a,[ix+#mob.unknown11]
         and     a
         jr      nz,._2
-        call    :_LABEL_625_57
+        call    ::main:_LABEL_625_57
         and     $01
         add     a,a
         add     a,a
@@ -3740,7 +3742,7 @@ PARAMS  IX`mob          HELP ""Address of the current mob being processed
         ld      a,[ix+#mob.unknown11]
         and     $0f
         jr      nz,._2
-        call    :_LABEL_625_57
+        call    ::main:_LABEL_625_57
         ld      bc,$0020
         ld      d,$00
         and     $3f
@@ -3819,7 +3821,7 @@ PARAMS  IX`mob          HELP ""Address of the current mob being processed
         cp      $41
         jr      nz,._1
         push    hl
-        call    :_LABEL_625_57
+        call    ::main:_LABEL_625_57
         and     $0f
         ld      e,a
         ld      d,$00
@@ -3838,7 +3840,7 @@ PARAMS  IX`mob          HELP ""Address of the current mob being processed
         ld      [ix+#mob.type],a
         xor     a`zero                          ;set A to 0
         ld      [ix+#mob.Xsubpixel],a`zero
-        call    :_LABEL_625_57
+        call    ::main:_LABEL_625_57
         and     $0f
         ld      l,a
         ld      h,$00
@@ -3846,7 +3848,7 @@ PARAMS  IX`mob          HELP ""Address of the current mob being processed
         ld      [ix+#mob.X+0],l
         ld      [ix+#mob.X+1],h
         ld      [ix+#mob.Ysubpixel],$00
-        call    :_LABEL_625_57
+        call    ::main:_LABEL_625_57
         and     $0f
         ld      l,a
         xor     a`zero
@@ -3890,15 +3892,15 @@ PARAMS  IX`mob          HELP ""Address of the current mob being processed
         ld      hl,$e508
         ld      de,$2000
         ld      a,12
-        call    :decompressArt
+        call    ::main:decompressArt
         
         ld      hl,:S1_BossPalette
         ld      a,%00000010
-        call    :loadPaletteOnInterrupt
+        call    ::interrupts:loadPaletteOnInterrupt
         xor     a`zero
         ld      [$.D2EC],a`zero
         
-        ld      a,:S1_MusicPointers.boss1.index ;=$0B
+        ld      a,::sound:S1_MusicPointers.boss1.index ;=$0B
         rst     :rst_playMusic
         
         set     0,[ix+#mob.flags]
@@ -4155,7 +4157,7 @@ PARAMS  IX`mob          HELP ""Address of the current mob being processed
         add     hl,de
         ld      [ix+#mob.Y+0],l
         ld      [ix+#mob.Y+1],h
-        call    :_LABEL_625_57
+        call    ::main:_LABEL_625_57
         ld      [ix+#mob.unknown11],a
         set     0,[ix+#mob.flags]
 ._1     ld      l,[ix+#mob.X+0]
@@ -4871,7 +4873,7 @@ PARAMS  IX`mob          HELP ""Address of the current mob being processed
         jr      nz,._4
         set     1,[ix+#mob.flags]
         ld      hl,$.D317
-        call    :getLevelBitFlag
+        call    ::main:getLevelBitFlag
         ld      a,[hl]
         xor     c
         ld      [hl],a
@@ -4941,7 +4943,7 @@ PARAMS  IX`mob          HELP ""Address of the current mob being processed
         ld      [$.SONIC.Xdirection],a`zero
         
 ._2     ld      hl,$.D317
-        call    :getLevelBitFlag
+        call    ::main:getLevelBitFlag
         bit     1,[ix+#mob.flags]
         jr      z,._3
         ld      a,[hl]
@@ -5215,13 +5217,13 @@ PARAMS  IX`mob          HELP ""Address of the current mob being processed
         ld      hl,$ef3f
         ld      de,$2000
         ld      a,12
-        call    :decompressArt
+        call    ::main:decompressArt
 
         ld      hl,:S1_BossPalette
         ld      a,%00000010
-        call    :loadPaletteOnInterrupt
+        call    ::interrupts:loadPaletteOnInterrupt
         
-        ld      a,:S1_MusicPointers.boss1.index     ;=$0B
+        ld      a,::sound:S1_MusicPointers.boss1.index     ;=$0B
         rst     :rst_playMusic
         
         set     0,[ix+#mob.flags]
@@ -5343,7 +5345,7 @@ PARAMS  IX`mob          HELP ""Address of the current mob being processed
         ld      [$.SONIC.X],hl
         set     4,[ix+#mob.flags]               ;set mob underwater
         
-        ld      a,:S1_MusicPointers.actComplete.index ;=$09
+        ld      a,::sound:S1_MusicPointers.actComplete.index ;=$09
         rst     :rst_playMusic
         
         ld      a,$a0
@@ -5453,7 +5455,7 @@ PARAMS  IX`mob          HELP ""Address of the current mob being processed
         and     a
         sbc     hl,de
         jr      nc,._2
-        call    :_LABEL_625_57
+        call    ::main:_LABEL_625_57
         ld      b,$00
         add     a,a
         ld      c,a
@@ -6021,7 +6023,7 @@ PARAMS  IX`mob          HELP ""Address of the current mob being processed
         set     5,[ix+#mob.flags]               ;mob does not collide with the floor
         bit     0,[ix+#mob.flags]
         jr      nz,._1
-        call    :_LABEL_625_57
+        call    ::main:_LABEL_625_57
         and     $07
         ld      [ix+#mob.unknown11],a
         set     0,[ix+#mob.flags]
@@ -6509,7 +6511,7 @@ PARAMS  IX`mob          HELP ""Address of the current mob being processed
         xor     a`zero
         ld      [$.D2EC],a`zero
         
-        ld      a,:S1_MusicPointers.boss3.index ;=$0D
+        ld      a,::sound:S1_MusicPointers.boss3.index ;=$0D
         rst     :rst_playMusic
         
         set     4,[iy+#vars.unknown0]
@@ -6645,7 +6647,7 @@ PARAMS  IX`mob          HELP ""Address of the current mob being processed
         set     2,[ix+#mob.flags]
         res     4,[iy+#vars.unknown0]
         
-        ld      a,:S1_MusicPointers.scrapBrain.index    ;=$04
+        ld      a,::sound:S1_MusicPointers.scrapBrain.index    ;=$04
         rst     :rst_playMusic
         
         ld      a,$21

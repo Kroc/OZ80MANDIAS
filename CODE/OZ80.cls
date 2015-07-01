@@ -7181,26 +7181,29 @@ GetNumber:
     'Labels
     '-----------------------------------------------------------------------------------
     ElseIf TokenKind = TOKEN_LABEL Then
-        'The "self" Label (`:`) refers to the Chunk's own address
-        If TokenText = ":" Then
-            'If our Expression is not within a Chunk (e.g. `CONST`s), error
-            If ChunkID = 0 Then
-                Call RaiseError(OZ80_ERROR_INVALID, "TODO")
-                GoTo ErrOut
-            End If
+        'If no scope is provided, we cannot qualify local names to global names
+        If ChunkID = 0 Then
+            'In this case you can only refer to Sectionless Labels
+            If Labels.Exists(TokenText) _
+                Then Let ReturnValue = Labels.Item(TokenText) _
+                Else Let ReturnValue = INDEFINITE
             
+        'The "self" Label (`:`) refers to the Chunk's own address
+        ElseIf TokenText = ":" Then
             'Get the Chunk's address (will be indefinite prior to ROM layout)
             Let ReturnValue = Chunks(ChunkID).AddrSlot
             If ReturnValue < 0 Then ReturnValue = INDEFINITE
-            
-        'Label names have to be expanded to their fully-qualified form
-        'TODO: If a Label is not found in this Section, check the global Section
-        ElseIf Not Labels.Exists(Chunks(ChunkID).SectionName & TokenText) Then
-            'Return Indefinite
-            Let ReturnValue = INDEFINITE
-        Else
-            'Retrieve the RAM address
+        
+        'Check for Labels within the current Section scope
+        ElseIf Labels.Exists(Chunks(ChunkID).SectionName & TokenText) Then
             Let ReturnValue = Labels.Item(Chunks(ChunkID).SectionName & TokenText)
+        
+        'Check for global Labels
+        ElseIf Labels.Exists(TokenText) Then
+            Let ReturnValue = Labels.Item(TokenText)
+        
+        Else
+            Let ReturnValue = INDEFINITE
         End If
     
     ElseIf TokenKind = TOKEN_SECTION Then
@@ -7886,6 +7889,7 @@ AddLink:
         Call AddUpdateLabel(.FullName & ".bank", CDbl(.AddrReal \ &H4000&))
         
         'Calculate the banked address (based on the Slot pattern)
+        'TODO: This is `SYSTEM`-specific
         If (.Slot And SLOT1) <> 0 Then
             Let .AddrSlot = &H4000& + ChunkAddr
             

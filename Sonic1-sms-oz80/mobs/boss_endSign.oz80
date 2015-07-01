@@ -25,12 +25,12 @@ PARAMS  IX`mob          HELP ""Address of the current mob being processed
         ld      hl,$4294
         ld      de,$2000
         ld      a,9
-        call    :decompressArt
+        call    ::main:decompressArt
         
         ;load the end-sign palette
         ld      hl,.S1_EndSign_Palette
         ld      a,%00000010
-        call    :loadPaletteOnInterrupt
+        call    ::interrupts:loadPaletteOnInterrupt
         
         set     0,[ix+#mob.unknown11]
         
@@ -94,7 +94,7 @@ PARAMS  IX`mob          HELP ""Address of the current mob being processed
         bit     7,[ix+#mob.flags]
         jr      z,._7
         
-        ld      a,:S1_MusicPointers.actComplete.index   ;=$09
+        ld      a,::sound:S1_MusicPointers.actComplete.index   ;=$09
         rst     :rst_playMusic
         
         ld      a,$0c

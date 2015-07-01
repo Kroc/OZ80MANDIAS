@@ -18,7 +18,7 @@ PARAMS  IX`mob          HELP ""Address of the current mob being processed
         ld      a,[ix+$12]
         and     $7f
         jr      nz,._1
-        call    :_LABEL_625_57
+        call    ::main:_LABEL_625_57
         and     $07
         ld      e,a
         ld      d,$00

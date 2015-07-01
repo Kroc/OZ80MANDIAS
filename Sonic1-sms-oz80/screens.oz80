@@ -44,25 +44,25 @@ PARAMS  IY`vars         HELP ""Address of the common variables (used throughout)
         
         ;refresh the screen (wait for interrupt to complete)
         res     0, [IY+#vars.flags0]
-        call    :waitForInterrupt
+        call    ::interrupts:waitForInterrupt
         
         ;map screen 1 tileset
         ld      HL, $0000
         ld      DE, $0000
         ld      A`bank, 12                      ;$30000
-        call    :decompressArt
+        call    ::main:decompressArt
         
         ;map screen 1 sprite set
         ld      HL, $526B                       ;$2926B
         ld      DE, $2000
         ld      A`bank, 9
-        call    :decompressArt
+        call    ::main:decompressArt
         
         ;HUD tileset
         ld      HL,$b92e                        ;$2F92E
         ld      DE,$3000
         ld      A`bank, 9
-        call    :decompressArt
+        call    ::main:decompressArt
         
         ;load page 1 ($4000-$7FFF) with bank 5 ($14000-$17FFF)
         ld      A`bank          5
@@ -72,21 +72,21 @@ PARAMS  IY`vars         HELP ""Address of the common variables (used throughout)
         ;map 1 background
         ld      HL,$627e
         ld      BC,$0178
-        ld      DE,$.VDP.SCREENNAMETABLE
+        ld      DE,$#SMS.VRAM.SCREENNAMETABLE
         ld      A,$10
         ld      [$.TEMP1],A
-        call    :decompressScreen
+        call    ::main:decompressScreen
         
         ;map 1 foreground
         ld      HL,$63f6
         ld      BC,$0145
-        ld      DE,$.VDP.SCREENNAMETABLE
+        ld      DE,$#SMS.VRAM.SCREENNAMETABLE
         ld      A,$00
         ld      [$.TEMP1],A
-        call    :decompressScreen
+        call    ::main:decompressScreen
         
-        ld      HL,#S1_MapScreen1_Palette
-        call    :_b50
+        ld      HL,:S1_MapScreen1_Palette
+        call    ::main:_b50
         jr      ._3
         
         ;------------------------------------------------------------------------------
@@ -98,25 +98,25 @@ PARAMS  IY`vars         HELP ""Address of the common variables (used throughout)
         
         ;refresh the screen
         res     0, [IY+#vars.flags0]
-        call    :waitForInterrupt
+        call    ::interrupts:waitForInterrupt
         
         ;map screen 2 tileset
         ld      HL, $1801                       ;$31801
         ld      DE, $0000
         ld      A, 12
-        call    :decompressArt
+        call    ::main:decompressArt
         
         ;map screen 2 sprites
         ld      HL,$5942                        ;$29942
         ld      DE,$2000
         ld      A,9
-        call    :decompressArt
+        call    ::main:decompressArt
         
         ;HUD tileset
         ld      HL,$b92e                        ;$2F92E
         ld      DE,$3000
         ld      A,$09
-        call    :decompressArt
+        call    ::main:decompressArt
         
         ;load page 1 ($4000-$7FFF) with bank 5 ($14000-$17FFF)
         ld      A`bank          5
@@ -126,21 +126,21 @@ PARAMS  IY`vars         HELP ""Address of the common variables (used throughout)
         ;map screen 2 background
         ld      HL,$653b
         ld      BC,$0170
-        ld      DE,$.VDP.SCREENNAMETABLE
+        ld      DE,$#SMS.VRAM.SCREENNAMETABLE
         ld      A,$10
         ld      [$.TEMP1],A
-        call    :decompressScreen
+        call    ::main:decompressScreen
         
         ;map screen 2 foreground
         ld      HL,$66ab
         ld      BC,$0153
-        ld      DE,$.VDP.SCREENNAMETABLE
+        ld      DE,$#SMS.VRAM.SCREENNAMETABLE
         ld      A,$00
         ld      [$.TEMP1],A
-        call    :decompressScreen
+        call    ::main:decompressScreen
         
-        ld      HL,#S1_MapScreen2_Palette
-        call    :_b50
+        ld      HL,:S1_MapScreen2_Palette
+        call    ::main:_b50
 
         ;play the map screen music
 ._3     ld      A`music         7               ;#index_music_mapScreen
@@ -161,7 +161,7 @@ PARAMS  IY`vars         HELP ""Address of the common variables (used throughout)
         ;display in-front of sprites (bit 12 of tile)
         ld      A, %00010000
         ld      [$.TEMP1], A
-        call    :print
+        call    ::main:print
         
         ld      A, [$.CURRENT_LEVEL]
         ld      C, A
@@ -229,7 +229,7 @@ PARAMS  IY`vars         HELP ""Address of the common variables (used throughout)
         ld      H,$00
         ld      D,H
         ld      BC,[$.TEMP4]
-        call    :processSpriteLayout
+        call    ::mobs:processSpriteLayout
         pop     HL
         ld      [$.TEMP6],HL
         pop     BC
@@ -364,21 +364,21 @@ PARAMS  IY`vars         HELP ""Address of the common variables (used throughout)
         push    HL
         
         res     0, [IY+#vars.flags0]
-        call    :waitForInterrupt
+        call    ::interrupts:waitForInterrupt
         
         ld      [IY+#vars.spriteUpdateCount], $00
         ld      A`lives         [$.LIVES]
         ld      l, a
         ld      h, $00
         ld      c, $0A
-        call    :_LABEL_60F_111
+        call    ::main:_LABEL_60F_111
         
         ld      a, l
         add     a, a
         add     a, $80
         ld      [$.LAYOUT_BUFFER], a
         ld      c, 10
-        call    :decimalMultiplyBy10
+        call    ::main:decimalMultiplyBy10
         
         ex      de, hl
         
@@ -398,7 +398,7 @@ PARAMS  IY`vars         HELP ""Address of the common variables (used throughout)
         ld      c`xpos, 40
         ld      hl, $.SPRITETABLE
         ld      de, $.LAYOUT_BUFFER
-        call    :layoutSpritesHorizontal
+        call    ::mobs:layoutSpritesHorizontal
         
         ld      [$.SPRITETABLE_ADDR], hl
         pop     hl
@@ -447,7 +447,7 @@ PARAMS  bc
         pop     hl                              ;X-position
         push    hl
         push    de
-        call    :processSpriteLayout
+        call    ::mobs:processSpriteLayout
         
         ld      a,[$.TEMP1]
         inc     a
@@ -782,21 +782,21 @@ PARAMS  IY`vars         HELP ""Address of the common variables (used throughout)
         
         ;refresh the screen
         res     0, [IY+#vars.flags0]
-        call    :waitForInterrupt
+        call    ::interrupts:waitForInterrupt
         
         ;load the title screen tile set
          ;BANK 9 ($24000) + $2000 = $26000
         ld      HL              $2000
         ld      DE              $0000
         ld      A`bank          9
-        call    :decompressArt
+        call    ::main:decompressArt
         
         ;load the title screen sprite set
          ;BANK 9 ($24000) + $4B0A = $28B0A
         ld      HL              $4B0A
         ld      DE              $2000
         ld      A`bank          9
-        call    :decompressArt
+        call    ::main:decompressArt
         
         ;now switch page 1 ($4000-$7FFF) to bank 5 ($14000-$17FFF)
         ld      A`bank          5
@@ -805,11 +805,11 @@ PARAMS  IY`vars         HELP ""Address of the common variables (used throughout)
         
         ;load the title screen itself
         ld      HL              $6000           ;ROM:$16000
-        ld      DE              $.VDP.SCREENNAMETABLE
+        ld      DE              $#SMS.VRAM.SCREENNAMETABLE
         ld      BC              $012E
         ld      A               $00
         ld      [$.TEMP1]       A
-        call    :decompressScreen
+        call    ::main:decompressScreen
         
         ;reset horizontal / vertical scroll
         xor     A`zero                          ;set A to zero
@@ -819,12 +819,12 @@ PARAMS  IY`vars         HELP ""Address of the common variables (used throughout)
         ;load the palette
         ld      HL      .S1_TitleScreen_Palette
         ld      A       %00000011               ;flags to load tile & sprite palettes
-        call    :loadPaletteOnInterrupt
+        call    ::interrupts:loadPaletteOnInterrupt
         
         set     1, [IY+#vars.flags0]
         
         ;play title screen music
-        ld      a, #index_music_titleScreen
+        ld      a, ::sound:S1_MusicPointers.titleScreen.index
         rst     :playMusic
         
         ;initialise the animation parameters?
@@ -842,7 +842,7 @@ PARAMS  IY`vars         HELP ""Address of the common variables (used throughout)
         ld      [$.VDPREGISTER_1]       A
         ;refresh the screen
         res     0, [IY+#vars.flags0]
-        call    :waitForInterrupt
+        call    ::interrupts:waitForInterrupt
         
         ;count to 100:
         ld      a, [$.D216]                     ;get the screen counter
@@ -858,7 +858,7 @@ PARAMS  IY`vars         HELP ""Address of the common variables (used throughout)
         ld      hl, ._1362
 ._3     xor     a`zero                          ;set A to 0
         ld      [$.TEMP1], a`zero
-        call    :print
+        call    ::main:print
         
         ld      a, [$.TEMP2]
         dec     a
@@ -889,7 +889,7 @@ PARAMS  IY`vars         HELP ""Address of the common variables (used throughout)
         ld      hl, $0080
         ld      de, $0018
         ld      bc, [$.TEMP4]
-        call    :processSpriteLayout
+        call    ::mobs:processSpriteLayout
         
         ;has the button been pressed? if not, repeat
         bit     5, [iy+#vars.joypad]
@@ -961,14 +961,14 @@ PARAMS  IY`vars         HELP ""Address of the common variables (used throughout)
         ld      [$.VDPREGISTER_1],a
         ;refresh the screen
         res     0,[iy+#vars.flags0]
-        call    :waitForInterrupt
+        call    ::interrupts:waitForInterrupt
         di      
         
         ;act complete sprite set
         ld      hl,$351f
         ld      de,$0000
         ld      A`bank, 9
-        call    :decompressArt
+        call    ::main:decompressArt
         
         ;switch page 1 ($4000-$7FFF) to bank 5 ($14000-$17FFF)
         ld      A`bank          5
@@ -978,17 +978,17 @@ PARAMS  IY`vars         HELP ""Address of the common variables (used throughout)
         ;act complete background
         ld      hl,$67fe
         ld      bc,$0032
-        ld      de,$.VDP.SCREENNAMETABLE
+        ld      de,$#SMS.VRAM.SCREENNAMETABLE
         ld      a,$00
         ld      [$.TEMP1],a
-        call    :decompressScreen
+        call    ::main:decompressScreen
         
         xor     A`zero
         ld      [$.VDPSCROLL_HORZ], A`zero
         ld      [$.VDPSCROLL_VERT], A`zero
         ld      hl,._14fc
         ld      a,%00000011
-        call    :loadPaletteOnInterrupt
+        call    ::interrupts:loadPaletteOnInterrupt
         ei      
         ld      b,$78
         
@@ -998,7 +998,7 @@ PARAMS  IY`vars         HELP ""Address of the common variables (used throughout)
         ld      [$.VDPREGISTER_1],a
         ;refresh the screen
         res     0,[iy+#vars.flags0]
-        call    :waitForInterrupt
+        call    ::interrupts:waitForInterrupt
         
         djnz    ._1
         
@@ -1010,7 +1010,7 @@ PARAMS  IY`vars         HELP ""Address of the common variables (used throughout)
 ._2     push    bc
         
         res     0,[iy+#vars.flags0]
-        call    :waitForInterrupt
+        call    ::interrupts:waitForInterrupt
         
         pop     bc
         dec     bc
@@ -1029,16 +1029,16 @@ PARAMS  IY`vars         HELP ""Address of the common variables (used throughout)
         ld      c,$0b
         call    :_16d9
         ld      hl,._14e6
-        call    :print
+        call    ::main:print
         ld      hl,._14f1
-        call    :print
+        call    ::main:print
         ld      a,$09
         ld      [$.D216],a
         
 ._4     ld      b,$3c
 ._5     push    bc
         res     0,[iy+#vars.flags0]
-        call    :waitForInterrupt
+        call    ::interrupts:waitForInterrupt
         ld      [iy+#vars.spriteUpdateCount],$00
         ld      hl,$.D216
         ld      de,$.LAYOUT_BUFFER
@@ -1050,7 +1050,7 @@ PARAMS  IY`vars         HELP ""Address of the common variables (used throughout)
         ld      hl,$.SPRITETABLE
         ld      c`xpos,140
         ld      b`ypos,94
-        call    :layoutSpritesHorizontal
+        call    ::mobs:layoutSpritesHorizontal
         ld      [$.SPRITETABLE_ADDR],hl
         
         pop     bc
@@ -1070,7 +1070,7 @@ PARAMS  IY`vars         HELP ""Address of the common variables (used throughout)
         
         ;get the bit flag for the level
 ._6     ld      hl,$.D311
-        call    :getLevelBitFlag
+        call    ::main:getLevelBitFlag
         ld      a,c
         cpl                                     ;invert the level bits (create a mask)
         ld      c,a
@@ -1119,19 +1119,19 @@ PARAMS  IY`vars         HELP ""Address of the common variables (used throughout)
         ld      [$.VDPREGISTER_1],a
         
         res     0,[iy+#vars.flags0]
-        call    :waitForInterrupt
+        call    ::interrupts:waitForInterrupt
         
         ;load HUD sprites
         ld      hl,$b92e
         ld      de,$3000
         ld      a,9
-        call    :decompressArt
+        call    ::main:decompressArt
         
         ;level complete screen tile set
         ld      hl,$351f
         ld      de,$0000
         ld      a,9
-        call    :decompressArt
+        call    ::main:decompressArt
         
         ;load page 1 ($4000-$7FFF) with bank 5 ($14000-$17FFF)
         ld      a,5
@@ -1141,7 +1141,7 @@ PARAMS  IY`vars         HELP ""Address of the common variables (used throughout)
         ;UNKNOWN
         ld      hl,$612e
         ld      bc,$00bb
-        ld      de,$.VDP.SCREENNAMETABLE
+        ld      de,$#SMS.VRAM.SCREENNAMETABLE
         ld      a,[$.CURRENT_LEVEL]
         cp      28
         jr      c,._1
@@ -1149,11 +1149,11 @@ PARAMS  IY`vars         HELP ""Address of the common variables (used throughout)
         ;UNKNOWN
         ld      hl,$61e9                        ;$161E9?
         ld      bc,$0095
-        ld      de,$.VDP.SCREENNAMETABLE
+        ld      de,$#SMS.VRAM.SCREENNAMETABLE
 
 ._1     xor     a`zero
         ld      [$.TEMP1],a`zero
-        call    :decompressScreen
+        call    ::main:decompressScreen
         
         ld      hl,:_1711
         ld      c,$10
@@ -1191,7 +1191,7 @@ PARAMS  IY`vars         HELP ""Address of the common variables (used throughout)
         ld      a,$ff
         ld      [de],a
         ld      hl,$.LAYOUT_BUFFER
-        call    :print
+        call    ::main:print
         pop     hl
         pop     bc
         inc     hl
@@ -1203,7 +1203,7 @@ PARAMS  IY`vars         HELP ""Address of the common variables (used throughout)
         ld      [$.VDPSCROLL_VERT],a`zero
         ld      hl,$1b8d
         ld      a,%00000011
-        call    :loadPaletteOnInterrupt
+        call    ::interrupts:loadPaletteOnInterrupt
         ld      a,[$.CURRENT_LEVEL]
         cp      $1c
         jr      c,._4
@@ -1269,14 +1269,14 @@ PARAMS  IY`vars         HELP ""Address of the common variables (used throughout)
         ld      [$.VDPREGISTER_1],a
         
         res     0,[iy+#vars.flags0]
-        call    :waitForInterrupt
+        call    ::interrupts:waitForInterrupt
         
         call    :_1a18
         pop     bc
         djnz    ._11
         
 ._12    res     0,[iy+#vars.flags0]
-        call    :waitForInterrupt
+        call    ::interrupts:waitForInterrupt
         
         call    :_1a18
         call    :_19b4
@@ -1303,7 +1303,7 @@ PARAMS  IY`vars         HELP ""Address of the common variables (used throughout)
         
 ._14    push    bc
         res     0,[iy+#vars.flags0]
-        call    :waitForInterrupt
+        call    ::interrupts:waitForInterrupt
         call    :_1a18
         pop     bc
         bit     5,[iy+#vars.joypad]
@@ -1337,9 +1337,9 @@ PROC    :_16d9                                  SECTION ::screens               
         
 .loop   push    bc
         ld      hl,$.LAYOUT_BUFFER
-        call    :print
+        call    ::main:print
         ld      hl,$.D2C3
-        call    :print
+        call    ::main:print
         ld      hl,$.LAYOUT_BUFFER
         inc     [hl]
         inc     [hl]
@@ -1440,21 +1440,21 @@ PROC    :_172f                                  SECTION ::screens               
         inc     hl
         ld      [hl],$00
         ld      hl,:_1907
-        call    :print
+        call    ::main:print
         ld      hl,:_191c
-        call    :print
+        call    ::main:print
         ld      hl,:_1931
-        call    :print
+        call    ::main:print
         ld      hl,:_1946
-        call    :print
+        call    ::main:print
         ld      hl,:_1953
-        call    :print
+        call    ::main:print
         ld      hl,:_1960
-        call    :print
+        call    ::main:print
         ld      hl,:_196d
-        call    :print
+        call    ::main:print
         ld      hl,:_197e
-        call    :print
+        call    ::main:print
         xor     a`zero
         ld      [$.D216],a`zero
         ld      bc,$00b4
@@ -1470,7 +1470,7 @@ PROC    :_172f                                  SECTION ::screens               
         
         ld      DE`hundreds     $0000
         ld      C`thousands     $02
-        call    :increaseScore
+        call    ::mobs:increaseScore
         
         ld      A`sfx           $02
         rst     :playSFX
@@ -1482,7 +1482,7 @@ PROC    :_172f                                  SECTION ::screens               
         ld      a,$01
         ld      [$.D216],a
         ld      hl,:_198e
-        call    :print
+        call    ::main:print
         ld      bc,$00b4
         call    :_1860
         
@@ -1496,7 +1496,7 @@ PROC    :_172f                                  SECTION ::screens               
         
         ld      DE`hundreds     $5000
         ld      C`thousands     $00
-        call    :increaseScore
+        call    ::mobs:increaseScore
         
         ld      A`sfx           $02
         rst     :playSFX
@@ -1508,9 +1508,9 @@ PROC    :_172f                                  SECTION ::screens               
         ld      a,$02
         ld      [$.D216],a
         ld      hl,:_199e
-        call    :print
+        call    ::main:print
         ld      hl,:_197a
-        call    :print
+        call    ::main:print
         ld      bc,$00b4
         call    :_1860
 
@@ -1532,7 +1532,7 @@ PROC    :_172f                                  SECTION ::screens               
         
         ld      DE`hundreds     $0000
         ld      C`thousands     $01
-        call    :increaseScore
+        call    ::mobs:increaseScore
         
         ld      A`sfx$02        $02
         rst     :playSFX
@@ -1551,7 +1551,7 @@ PARAMS  IY`vars         HELP ""Address of the common variables (used throughout)
         push    bc
         
         res     0,[iy+#vars.flags0]
-        call    :waitForInterrupt
+        call    ::interrupts:waitForInterrupt
         
         ld      [iy+#vars.spriteUpdateCount],$00
         ld      hl,$.SPRITETABLE
@@ -1565,7 +1565,7 @@ PARAMS  IY`vars         HELP ""Address of the common variables (used throughout)
         ld      hl,[$.SPRITETABLE_ADDR]
         ld      c`xpos,144
         ld      b`ypos,128
-        call    :layoutSpritesHorizontal
+        call    ::mobs:layoutSpritesHorizontal
         ld      [$.SPRITETABLE_ADDR],hl
         
         ld      a,[$.D216]
@@ -1580,7 +1580,7 @@ PARAMS  IY`vars         HELP ""Address of the common variables (used throughout)
         ld      hl,[$.SPRITETABLE_ADDR]
         ld      c`xpos,144
         ld      b`ypos,96
-        call    :layoutSpritesHorizontal
+        call    ::mobs:layoutSpritesHorizontal
         ld      [$.SPRITETABLE_ADDR],hl
         
         ld      hl,:_19ae
@@ -1592,7 +1592,7 @@ PARAMS  IY`vars         HELP ""Address of the common variables (used throughout)
         ld      hl,[$.SPRITETABLE_ADDR]
         ld      c`xpos,160
         ld      b`ypos,96
-        call    :layoutSpritesHorizontal
+        call    ::mobs:layoutSpritesHorizontal
         ld      [$.SPRITETABLE_ADDR],hl
         
         jr      ._3
@@ -1609,7 +1609,7 @@ PARAMS  IY`vars         HELP ""Address of the common variables (used throughout)
         ld      hl,[$.SPRITETABLE_ADDR]
         ld      c`xpos,160
         ld      b`ypos,96
-        call    :layoutSpritesHorizontal
+        call    ::mobs:layoutSpritesHorizontal
         ld      [$.SPRITETABLE_ADDR],hl
         
         jr      ._3
@@ -1623,7 +1623,7 @@ PARAMS  IY`vars         HELP ""Address of the common variables (used throughout)
         ld      hl,[$.SPRITETABLE_ADDR]
         ld      c`xpos,160
         ld      b`ypos,96
-        call    :layoutSpritesHorizontal
+        call    ::mobs:layoutSpritesHorizontal
         ld      [$.SPRITETABLE_ADDR],hl
         
 ._3     pop     bc
@@ -1720,7 +1720,7 @@ PROC    :_19b4                                  SECTION ::screens               
         ld      d,a
         ld      a,[$.D286]
         ld      e,a
-._2     call    :increaseScore
+._2     call    ::mobs:increaseScore
         ret
 }
 
@@ -1758,7 +1758,7 @@ PROC    :_19df                                  SECTION ::screens               
         
         ld      DE`hundreds     $0100
         ld      C`thousands     $00
-        call    :increaseScore
+        call    ::mobs:increaseScore
         
         ret
 }
@@ -1784,7 +1784,7 @@ PARAMS  IY`vars         HELP ""Address of the common variables (used throughout)
         ld      hl,[$.SPRITETABLE_ADDR]
         ld      c`xpos,136
         ld      b`ypos,80
-        call    :layoutSpritesHorizontal
+        call    ::mobs:layoutSpritesHorizontal
         ld      [$.SPRITETABLE_ADDR],hl
         
         ld      hl,$.RINGS
@@ -1800,7 +1800,7 @@ PARAMS  IY`vars         HELP ""Address of the common variables (used throughout)
         cp      $1c
         jr      c,._1
         ld      b`ypos,104
-._1     call    :layoutSpritesHorizontal
+._1     call    ::mobs:layoutSpritesHorizontal
         ld      [$.SPRITETABLE_ADDR],hl
         
         ld      a,[$.CURRENT_LEVEL]
@@ -1821,7 +1821,7 @@ PARAMS  IY`vars         HELP ""Address of the common variables (used throughout)
 ._3     ld      c`xpos,192
         ex      de,hl
         ld      hl,[$.SPRITETABLE_ADDR]
-        call    :layoutSpritesHorizontal
+        call    ::mobs:layoutSpritesHorizontal
         ld      [$.SPRITETABLE_ADDR],hl
         call    :_1aca
         ld      a,[$.CURRENT_LEVEL]
@@ -1835,7 +1835,7 @@ PARAMS  IY`vars         HELP ""Address of the common variables (used throughout)
         ld      hl,[$.SPRITETABLE_ADDR]
         ld      c`xpos,136
         ld      b`ypos,104
-        call    :layoutSpritesHorizontal
+        call    ::mobs:layoutSpritesHorizontal
         ld      [$.SPRITETABLE_ADDR],hl
         ret
         
@@ -1847,7 +1847,7 @@ PARAMS  IY`vars         HELP ""Address of the common variables (used throughout)
         ld      hl,[$.SPRITETABLE_ADDR]
         ld      c`xpos,168
         ld      b`ypos,128
-        call    :layoutSpritesHorizontal
+        call    ::mobs:layoutSpritesHorizontal
         ld      [$.SPRITETABLE_ADDR],hl
         ret
 }
@@ -1860,14 +1860,14 @@ PROC    :_1aca                                  SECTION ::screens               
         ld      L,A
         ld      H,$00
         ld      C,$0a
-        call    :_LABEL_60F_111
+        call    ::main:_LABEL_60F_111
         
         ld      A,L
         add     A,A
         add     A,$80
         ld      [$.LAYOUT_BUFFER],A
         ld      C,10
-        call    :decimalMultiplyBy10
+        call    ::main:decimalMultiplyBy10
         
         ex      DE,HL
         ld      A,[$.LIVES]
@@ -1891,7 +1891,7 @@ PROC    :_1aca                                  SECTION ::screens               
         ld      C`xpos          144
 ._1     ld      HL,[$.SPRITETABLE_ADDR]
         ld      DE,$.LAYOUT_BUFFER
-        call    :layoutSpritesHorizontal
+        call    ::mobs:layoutSpritesHorizontal
         ld      [$.SPRITETABLE_ADDR],HL
         ret
 }
@@ -2040,7 +2040,7 @@ PARAMS  IY`vars         HELP ""Address of the common variables (used throughout)
         
         res     0, [iy+#vars.flags2]
         res     1, [iy+#vars.flags2]
-        call    :hideSprites
+        call    ::main:hideSprites
         call    :titleScreen
         
         res     1, [iy+#vars.scrollRingFlags]
@@ -2056,15 +2056,15 @@ PARAMS  IY`vars         HELP ""Address of the common variables (used throughout)
         
         res     0, [iy+#vars.flags2]
         res     1, [iy+#vars.flags2]
-        call    :hideSprites
+        call    ::main:hideSprites
         call    :_LABEL_C52_106
         bit     1, [iy+#vars.scrollRingFlags]
         jr      z, ._LABEL_1CBD_120
         jp      c, ._1
         
 ._LABEL_1CBD_120
-        call    :fadeOut
-        call    :hideSprites
+        call    ::main:fadeOut
+        call    ::main:hideSprites
         bit     0, [iy+#vars.scrollRingFlags]
         jr      nz, ._2
         bit     4, [iy+#vars.flags6]
@@ -2073,7 +2073,7 @@ PARAMS  IY`vars         HELP ""Address of the common variables (used throughout)
         ;wait at title screen for button press?
 ._2     ld      b, $3C
 .wait   res     0, [iy+#vars.flags0]
-        call    :waitForInterrupt
+        call    ::interrupts:waitForInterrupt
         djnz    .wait
         
         rst     :muteSound
@@ -2152,7 +2152,7 @@ PARAMS  IY`vars         HELP ""Address of the common variables (used throughout)
 ._2     push    bc
         
         res     0,[iy+#vars.flags0]
-        call    :waitForInterrupt
+        call    ::interrupts:waitForInterrupt
         
         ld      [iy+#vars.joypad],$ff           ;clear joypad input
         
@@ -2167,7 +2167,7 @@ PARAMS  IY`vars         HELP ""Address of the common variables (used throughout)
         
         ;are rings enabled?
         bit     2,[iy+#vars.scrollRingFlags]
-        call    nz,:updateRingFrame
+        call    nz,::mobs:updateRingFrame
         
         ;something to do with camera control...
         ld      HL          $0060
@@ -2192,9 +2192,9 @@ PARAMS  IY`vars         HELP ""Address of the common variables (used throughout)
         ld      [$#SMS.SLOT2],a
         ld      [$.SLOT2],a
         
-        call    :_2e5a
-        call    :updateCamera
-        call    :fillOverscrollCache
+        call    ::mobs:_2e5a
+        call    ::main:updateCamera
+        call    ::main:fillOverscrollCache
         
         set     5,[iy+#vars.flags0]             
         
@@ -2210,7 +2210,7 @@ PARAMS  IY`vars         HELP ""Address of the common variables (used throughout)
         ld      [iy+#vars.spriteUpdateCount],h
 ._1dae
         res     0,[iy+#vars.flags0]
-        call    :waitForInterrupt
+        call    ::interrupts:waitForInterrupt
         
         ;switch page 1 ($4000-$7FFF) to bank 11 ($2C000-$2FFFF)
         ld      a,11
@@ -2219,10 +2219,10 @@ PARAMS  IY`vars         HELP ""Address of the common variables (used throughout)
         
         ;are rings enabled?
         bit     2,[iy+#vars.scrollRingFlags]
-        call    nz,:updateRingFrame
+        call    nz,::mobs:updateRingFrame
         
         bit     3,[iy+#vars.flags6]             
-        call    nz,:updateTime
+        call    nz,::mobs:updateTime
         
         ld      a,[$.FRAMECOUNT]
         and     %00000001
@@ -2308,9 +2308,9 @@ PARAMS  IY`vars         HELP ""Address of the common variables (used throughout)
         ld      [$#SMS.SLOT2],a
         ld      [$.SLOT2],a
         
-        call    :_2e5a
-        call    :updateCamera
-        call    :fillOverscrollCache
+        call    ::mobs:_2e5a
+        call    ::main:updateCamera
+        call    ::main:fillOverscrollCache
         
         ld      hl,$.VDPREGISTER_1
         set     6,[hl]
@@ -2356,7 +2356,7 @@ PARAMS  IY`vars         HELP ""Address of the common variables (used throughout)
         
 ._1     ld      a,[iy+#vars.spriteUpdateCount]
         res     0,[iy+#vars.flags0]
-        call    :waitForInterrupt
+        call    ::interrupts:waitForInterrupt
         ld      [iy+#vars.spriteUpdateCount],a
         ld      a,11
         ld      [$#SMS.SLOT1],a
@@ -2364,17 +2364,17 @@ PARAMS  IY`vars         HELP ""Address of the common variables (used throughout)
         
         ;are rings enabled?
         bit     2,[iy+#vars.scrollRingFlags]
-        call    nz,:updateRingFrame
+        call    nz,::mobs:updateRingFrame
         call    :_23c9
         call    :_239c
         ;paused?
         bit     3,[iy+#vars.timeLightningFlags]
         jr      nz,._1
         
-        ld      A`bank          :sound_unpause.bank
+        ld      A`bank          ::sound.bank
         ld      [$#SMS.SLOT1]   A`bank
         ld      [$.SLOT1]       A`bank
-        call    :sound_unpause
+        call    ::sound:public.unpause
         
         ret
 }
@@ -2573,7 +2573,7 @@ PARAMS  IY`vars         HELP ""Address of the common variables (used throughout)
         ret     z
         jp      [hl]
         
-._1     call    :fadeOut
+._1     call    ::main:fadeOut
         pop     hl
         res     5,[iy+#vars.flags0]
         bit     2,[iy+#vars.unknown_0D]
@@ -2583,7 +2583,7 @@ PARAMS  IY`vars         HELP ""Address of the common variables (used throughout)
         rst     :muteSound
         bit     7,[iy+#vars.flags6]
         call    nz,:disableWaterline
-        call    :hideSprites
+        call    ::main:hideSprites
         call    :_155e                          ;Act Complete screen?
         
         ld      a,[$.CURRENT_LEVEL]
@@ -2592,7 +2592,7 @@ PARAMS  IY`vars         HELP ""Address of the common variables (used throughout)
         bit     0,[iy+#vars.timeLightningFlags]
         jr      z,._2
         ld      hl,$2047
-        call    :_b60
+        call    ::main:_b60
         ld      a,[$.CURRENT_LEVEL]
         push    af
         ld      a,[$.D23F]
@@ -2648,7 +2648,7 @@ PROC    :add10Rings                             SECTION ::screens               
 {
         ;add 10 rings to the ring counter
         ld      a,$10
-        call    :increaseRings
+        call    ::mobs:increaseRings
         ret
 }
 
@@ -2688,8 +2688,8 @@ PARAMS  IY`vars         HELP ""Address of the common variables (used throughout)
         and     a
         ld      a,$02
         ret     nz
-        call    :fadeOut
-        call    :hideSprites
+        call    ::main:fadeOut
+        call    ::main:hideSprites
         res     5,[iy+#vars.flags0]
         call    :_1401
         ld      a,$00
@@ -2723,13 +2723,13 @@ PARAMS  IY`vars         HELP ""Address of the common variables (used throughout)
 PROC    :_20b8                                  SECTION ::screens               ;$20B8
         ;==============================================================================
 {        
-        ld      a,:sound_fadeOut.bank
-        ld      [$#SMS.SLOT1],a
-        ld      [$.SLOT1],a
+        ld      A`bank          ::sound.bank
+        ld      [$#SMS.SLOT1]   A`bank
+        ld      [$.SLOT1]       A`bank
         
         ld      hl,$0028
-        call    :sound_fadeOut
-        call    :fadeOut
+        call    ::sound:public.fadeOut
+        call    ::main:fadeOut
         
         xor     a`zero
         ret
@@ -2747,7 +2747,7 @@ PARAMS  IY`vars         HELP ""Address of the common variables (used throughout)
         ld      [$.VDPREGISTER_1], a
         
         res     0, [iy+#vars.flags0]
-        call    :waitForInterrupt
+        call    ::interrupts:waitForInterrupt
         
         ;copy the level header from ROM to RAM starting at $D354
          ;(this copies 40 bytes, even though level headers are 37 bytes long.
@@ -2790,7 +2790,7 @@ PARAMS  IY`vars         HELP ""Address of the common variables (used throughout)
          ;DE will be the level number divided by 8
          ;HL will be $.D311 + the level number divided by 8
         ld      hl, $.D311
-        call    :getLevelBitFlag
+        call    ::main:getLevelBitFlag
         
         ;DE will now be $.D311 + the level number divided by 8
         ex      de, hl
@@ -2854,7 +2854,7 @@ PARAMS  IY`vars         HELP ""Address of the common variables (used throughout)
         ld      hl, $B92E                       ;$2F92E
         ld      de, $3000
         ld      a, 9
-        call    :decompressArt
+        call    ::main:decompressArt
         
         ;------------------------------------------------------------------------------
         ;begin reading the level header:
@@ -2894,7 +2894,7 @@ PARAMS  IY`vars         HELP ""Address of the common variables (used throughout)
          ;DE will be the level number divided by 8
          ;HL will be $.D311 + the level number divided by 8
         ld      hl,$.D311
-        call    :getLevelBitFlag
+        call    ::main:getLevelBitFlag
         
         ld      a,[hl]
         ex      de,hl                           ;DE will now be $.D311+
@@ -3037,7 +3037,7 @@ PARAMS  IY`vars         HELP ""Address of the common variables (used throughout)
         ;load the Floor Layout into RAM
         ld      de,$4000                        ;re-base the FloorLayout address to Page 1
         add     hl,de
-        call    :loadFloorLayout
+        call    ::main:loadFloorLayout
         
         ;return to our place in the level header
         pop     hl
@@ -3079,7 +3079,7 @@ PARAMS  IY`vars         HELP ""Address of the common variables (used throughout)
         ;load the level art from bank 12+ ($30000)
         ld      de,$0000
         ld      a,12
-        call    :decompressArt
+        call    ::main:decompressArt
         
         ;return to our position in the level header
         pop     hl
@@ -3097,7 +3097,7 @@ PARAMS  IY`vars         HELP ""Address of the common variables (used throughout)
         push    hl
         ex      de,hl
         ld      de,$2000
-        call    :decompressArt
+        call    ::main:decompressArt
         pop     hl
         
         ;IP: Initial Palette
@@ -3131,12 +3131,12 @@ PARAMS  IY`vars         HELP ""Address of the common variables (used throughout)
         
         ;queue the palette to be loaded via the interrupt
         ld      a,%00000011
-        call    :loadPaletteOnInterrupt
+        call    ::interrupts:loadPaletteOnInterrupt
         
         res     0,[iy+#vars.flags0]
-        call    :waitForInterrupt
+        call    ::interrupts:waitForInterrupt
         
-        call    :fillScreenWithFloorLayout
+        call    ::main:fillScreenWithFloorLayout
         
         pop     hl
         inc     hl
@@ -3172,7 +3172,7 @@ PARAMS  IY`vars         HELP ""Address of the common variables (used throughout)
         ld      c,a                             ;put it into a 16-bit number
         ld      b,$00
         ;offset into the cycle palette pointers table
-        ld      hl,:S1_PaletteCycle_Pointers
+        ld      hl,::mobs:S1_PaletteCycle_Pointers
         add     hl,bc                   
         
         ;switch pages 1 & 2 ($4000-$BFFF) to banks 1 & 2 ($4000-$BFFF)
@@ -3448,7 +3448,7 @@ PROC    :_23c9                                  SECTION ::screens               
         ld      de,[$.CYCLEPALETTE_POINTER]
         add     hl,de
         ld      a,%00000001
-        call    :loadPaletteOnInterrupt
+        call    ::interrupts:loadPaletteOnInterrupt
         ld      hl,[$.CYCLEPALETTE_INDEX]
         ld      a,l
         inc     a
@@ -3537,7 +3537,7 @@ PARAMS  IY`vars         HELP ""Address of the common variables (used throughout)
         ld      [$.VDPREGISTER_1], a
         
         res     0, [iy+#vars.flags0]
-        call    :waitForInterrupt
+        call    ::interrupts:waitForInterrupt
         
         ;reset the screen scroll (for static screens)
         xor     A`zero
@@ -3546,13 +3546,13 @@ PARAMS  IY`vars         HELP ""Address of the common variables (used throughout)
         
         ld      hl, :_2828
         ld      a, %00000011
-        call    :loadPaletteOnInterrupt
+        call    ::interrupts:loadPaletteOnInterrupt
         
         ;load the map screen 1
         ld      hl, $0000
         ld      de, $0000
         ld      a, $0C                          ;bank 12 ($30000+)
-        call    :decompressArt
+        call    ::main:decompressArt
         
         ;load page 1 ($4000-$7FFF) with bank 5 ($14000-$17FFF)
         ld      a,5
@@ -3562,17 +3562,17 @@ PARAMS  IY`vars         HELP ""Address of the common variables (used throughout)
         ;map 3 screen (end of game)
         ld      hl,$6830
         ld      bc,$0179
-        ld      de,$.VDP.SCREENNAMETABLE
+        ld      de,$#SMS.VRAM.SCREENNAMETABLE
         xor     A`zero
         ld      [$.TEMP1]       A`zero
-        call    :decompressScreen
+        call    ::main:decompressScreen
         
         ld      a,[$.VDPREGISTER_1]
         or      %01000000
         ld      [$.VDPREGISTER_1],a
         
         res     0,[iy+#vars.flags0]
-        call    :waitForInterrupt
+        call    ::interrupts:waitForInterrupt
         
         ld      a,1
         ld      [$#SMS.SLOT1],a
@@ -3585,18 +3585,18 @@ PARAMS  IY`vars         HELP ""Address of the common variables (used throughout)
 ._1     push    bc
         
         res     0,[iy+#vars.flags0]
-        call    :waitForInterrupt
+        call    ::interrupts:waitForInterrupt
         
         ld      hl,$.SPRITETABLE
         ld      c`xpos,112
         ld      b`ypos,96
         ld      de,:_2825
-        call    :layoutSpritesHorizontal
+        call    ::mobs:layoutSpritesHorizontal
         ld      [$.SPRITETABLE_ADDR],hl
         pop     bc
         djnz    ._1
         
-        ld      a,#index_music_allEmeralds
+        ld      a,::sound:S1_MusicPointers.allEmeralds.index
         rst     :playMusic
         
         ld      hl,$241d
@@ -3605,10 +3605,10 @@ PARAMS  IY`vars         HELP ""Address of the common variables (used throughout)
 ._2     push    bc
         ld      c,[iy+#vars.spriteUpdateCount]
         res     0,[iy+#vars.flags0]
-        call    :waitForInterrupt
+        call    ::interrupts:waitForInterrupt
         ld      [iy+#vars.spriteUpdateCount],c
         res     0,[iy+#vars.flags0]
-        call    :waitForInterrupt
+        call    ::interrupts:waitForInterrupt
         ld      de,$.SPRITETABLE
         ld      [$.SPRITETABLE_ADDR],de
         ld      b,$03
@@ -3626,7 +3626,7 @@ PARAMS  IY`vars         HELP ""Address of the common variables (used throughout)
         push    bc
         ld      de,:_2825
         ld      hl,[$.SPRITETABLE_ADDR]
-        call    :layoutSpritesHorizontal
+        call    ::mobs:layoutSpritesHorizontal
         ld      [$.SPRITETABLE_ADDR],hl
         pop     bc
         pop     hl
@@ -3643,7 +3643,7 @@ PARAMS  IY`vars         HELP ""Address of the common variables (used throughout)
         push    hl
         ld      de,:_2825
         ld      hl,[$.SPRITETABLE_ADDR]
-        call    :layoutSpritesHorizontal
+        call    ::mobs:layoutSpritesHorizontal
         ld      [$.SPRITETABLE_ADDR],hl
         pop     hl
         pop     bc
@@ -3653,7 +3653,7 @@ PARAMS  IY`vars         HELP ""Address of the common variables (used throughout)
         djnz    ._2
         
         ld      hl,:_2047
-        call    :_b60
+        call    ::main:_b60
         ld      [iy+#vars.spriteUpdateCount],$00
         
         ld      a,5
@@ -3663,13 +3663,13 @@ PARAMS  IY`vars         HELP ""Address of the common variables (used throughout)
         ;UNKNOWN
         ld      hl,$69a9
         ld      bc,$0145
-        ld      de,$.VDP.SCREENNAMETABLE
+        ld      de,$#SMS.VRAM.SCREENNAMETABLE
         xor     a`zero
         ld      [$.TEMP1],a`zero
-        call    :decompressScreen
+        call    ::main:decompressScreen
         
         ld      hl,:_2828
-        call    :_aae                           ;called only by this routine,
+        call    ::main:_aae                     ;called only by this routine,
                                                  ;appears to fade the screen out
         
         ;------------------------------------------------------------------------------
@@ -3680,7 +3680,7 @@ PARAMS  IY`vars         HELP ""Address of the common variables (used throughout)
         
         ld      bc,240
         call    :waitFrames
-        call    :fadeOut
+        call    ::main:fadeOut
         
         ld      bc,120
         call    :waitFrames
@@ -3689,13 +3689,13 @@ PARAMS  IY`vars         HELP ""Address of the common variables (used throughout)
         ld      hl,$1801
         ld      de,$0000
         ld      a,12
-        call    :decompressArt
+        call    ::main:decompressArt
         
         ;title screen animated finger sprite set
         ld      hl,$4b0a
         ld      de,$2000
         ld      a,9
-        call    :decompressArt
+        call    ::main:decompressArt
         
         ld      a,5
         ld      [$#SMS.SLOT1],a
@@ -3704,10 +3704,10 @@ PARAMS  IY`vars         HELP ""Address of the common variables (used throughout)
         ;credits screen
         ld      hl,$6c61
         ld      bc,$0189
-        ld      de,$.VDP.SCREENNAMETABLE
+        ld      de,$#SMS.VRAM.SCREENNAMETABLE
         xor     a`zero
         ld      [$.TEMP1],a`zero
-        call    :decompressScreen
+        call    ::main:decompressScreen
         
         xor     A`zero                          ;set A to 0
         ;NOTE: These are addresses! See `:_275a`
@@ -3740,9 +3740,9 @@ PARAMS  IY`vars         HELP ""Address of the common variables (used throughout)
         call    :_2718
         
         ld      hl,:S1_Credits_Palette
-        call    :_b50
+        call    ::main:_b50
         
-        ld      a,#index_music_ending
+        ld      a,::sound:S1_MusicPointers.ending.index
         rst     :playMusic
         
         xor     A`zero                          ;(set A to 0)
@@ -3763,7 +3763,7 @@ PARAMS  IY`vars         HELP ""Address of the common variables (used throughout)
 ._1     push    BC
         
         res     0,[iy+#vars.flags0]
-        call    :waitForInterrupt
+        call    ::interrupts:waitForInterrupt
         
         ld      [iy+#vars.spriteUpdateCount],$00
         ld      hl,$.SPRITETABLE
@@ -3799,7 +3799,7 @@ PARAMS  IY`vars         HELP ""Address of the common variables (used throughout)
         ld      a,[IY+#vars.spriteUpdateCount]
         
         res     0,[IY+#vars.flags0]
-        call    :waitForInterrupt
+        call    ::interrupts:waitForInterrupt
         
         ld      [IY+#vars.spriteUpdateCount],a
         
@@ -3874,7 +3874,7 @@ PARAMS  HL`addr
         ld      l,a
         ld      h,$00
         ld      d,h
-        call    :processSpriteLayout
+        call    ::mobs:processSpriteLayout
         
         pop     HL
         ret
@@ -3911,7 +3911,7 @@ PROC    :_2795                                  SECTION ::screens               
         ld      bc,$0008
         call    :_2718
         ld      hl,$.LAYOUT_BUFFER
-        call    :print
+        call    ::main:print
         ld      hl,$.LAYOUT_BUFFER
         inc     [hl]
         pop     hl

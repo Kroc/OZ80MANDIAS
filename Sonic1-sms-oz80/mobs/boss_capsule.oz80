@@ -172,7 +172,7 @@ PARAMS  IX`mob          HELP ""Address of the current mob being processed
         ld      a,$a0
         ld      [$.D289],a
         
-        ld      a,:S1_MusicPointers.actComplete.index   ;=$09
+        ld      a,::sound:S1_MusicPointers.actComplete.index   ;=$09
         rst     :rst_playMusic
         
         set     1,[ix+#mob.flags]
@@ -183,7 +183,7 @@ PARAMS  IX`mob          HELP ""Address of the current mob being processed
         ld      a,[$.FRAMECOUNT]
         and     $0f
         ret     nz
-        call    :_LABEL_625_57
+        call    ::main:_LABEL_625_57
         and     $01
         add     a,$23
         call    ._74b6
@@ -222,9 +222,9 @@ PARAMS  IX`mob          HELP ""Address of the current mob being processed
         add     hl,bc
         ld      [ix+#mob.Y+0],l
         ld      [ix+#mob.Y+1],h
-        call    :_LABEL_625_57
+        call    ::main:_LABEL_625_57
         ld      [ix+#mob.Yspeed+0],a
-        call    :_LABEL_625_57
+        call    ::main:_LABEL_625_57
         and     $01
         inc     a
         inc     a

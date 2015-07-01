@@ -21,7 +21,7 @@ PARAMS  IX`mob          HELP ""Address of the current mob being processed
         add     hl,de
         ld      [ix+#mob.X+0],l
         ld      [ix+#mob.X+1],h
-        call    :_LABEL_625_57
+        call    ::main:_LABEL_625_57
         ld      [ix+#mob.unknown11],a
         set     0,[ix+#mob.flags]
 ._1     ld      a,[ix+#mob.unknown11]

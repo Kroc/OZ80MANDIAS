@@ -117,7 +117,7 @@ PARAMS  IX`mob          HELP ""Address of the current mob being processed
         ld      a,[ix+#mob.unknown11]
         and     $0f
         jr      nz,._7
-        call    :_LABEL_625_57
+        call    ::main:_LABEL_625_57
         ld      bc,$0020
         ld      d,$00
         and     $3f

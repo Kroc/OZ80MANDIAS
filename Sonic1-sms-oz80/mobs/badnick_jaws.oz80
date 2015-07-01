@@ -52,7 +52,7 @@ PARAMS  IX`mob          HELP ""Address of the current mob being processed
         and     $07
         ret     nz
         inc     [ix+#mob.unknown11]
-        call    :_LABEL_625_57
+        call    ::main:_LABEL_625_57
         and     $1e
         call    z,:_91eb
         ret

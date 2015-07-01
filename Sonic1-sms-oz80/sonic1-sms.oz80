@@ -100,19 +100,14 @@ DEF !SCREENHEIGHT_BLOCKS        !SCREENHEIGHT_PX / 32
 ;number of thousands of pts to get an extra life
 DEF !SCORE_1UP                  5
 
-;======================================================================================
+;=======================================================================================
+
+INCLUDE "ram.oz80"
 
 DEF SECTION     ::interrupts    SLOT 1 KB
 DEF SECTION     ::main          ;SLOT 0
 DEF SECTION     ::screens       ;SLOT 0
 DEF SECTION     ::mobs          ;SLOT 1, 2
-DEF SECTION     ::sound         SLOT 1
-
-;======================================================================================
-
-INCLUDE "ram.oz80"
-
-;======================================================================================
 
 INCLUDE "interrupts.oz80"
 
@@ -122,11 +117,17 @@ INCLUDE "screens.oz80"
 
 INCLUDE "mobs.oz80"
 
-;======================================================================================
+;=======================================================================================
 ;music code and song data
+
+DEF SECTION     ::sound         SLOT 1
 
 INCLUDE "sound\sound.oz80"
 
-TABLE   :S1_BlockMappings
+;=======================================================================================
+
+DEF SECTION     ::blocks        SLOT 1, 2
+
+TABLE   :S1_BlockMappings                       SECTION ::blocks                ;$10000
 {
 }

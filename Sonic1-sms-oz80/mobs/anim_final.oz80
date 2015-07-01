@@ -50,7 +50,7 @@ PARAMS  IX`mob          HELP ""Address of the current mob being processed
         ld      [$.SONIC],a`zero
         set     6,[iy+#vars.unknown0]
         
-        ld      a,:S1_MusicPointers.titleScreen.index   ;=$06
+        ld      a,::sound:S1_MusicPointers.titleScreen.index   ;=$06
         rst     :rst_playSFX
         
 ._2     ld      [ix+#mob.width], 32

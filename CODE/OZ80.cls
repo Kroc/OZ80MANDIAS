@@ -731,10 +731,10 @@ Private Word As bluString
 
 'We track the opening and closing of brackets to validate nesting of brackets _
  and to allow the assembler to skip over blocks
-Private Nesting(0 To 255) As TokenNesting
+Private Nesting(0 To 255) As oZ80TokenNesting
 Private NestingDepth As Long
 
-Private Type TokenNesting
+Private Type oZ80TokenNesting
     Token As OZ80_TOKEN                 'Which type of bracket `{`, `[`, `(`
     Index As Long                       'The token index of the opening bracket
 End Type
@@ -3828,7 +3828,7 @@ Continue:
         )
         
         'Define the Type's start position
-        Call Values.Add(.Name & .Nodes(.Last).Name, .Nodes(.Last).Offset \ 8)
+        Call Values.Add(.Name & BaseName & .Nodes(.Last).Name, .Nodes(.Last).Offset \ 8)
         
         Dim Last As Long
         Let Last = .Last
@@ -3880,10 +3880,10 @@ Continue:
                 End With
                 
                 'Add the Type Property to the global value database
-                Call Values.Add(.Name & .Nodes(.Last).Name, .Nodes(.Last).Offset \ 8)
+                Call Values.Add(.Name & BaseName & .Nodes(.Last).Name, .Nodes(.Last).Offset \ 8)
                 'Define the size (in bytes too) with thanks to below for the simple solution _
                  <visualbasic.ittoolbox.com/groups/technical-functional/visualbasic-l/always-round-up-to-whole-number-in-vb-60-1073167#GRB4513402>
-                Call Values.Add(.Name & .Nodes(.Last).Name & ".size", Abs(Int(-.Nodes(.Last).Size / 8)))
+                Call Values.Add(.Name & BaseName & .Nodes(.Last).Name & ".size", Abs(Int(-.Nodes(.Last).Size / 8)))
                 
                 If CopyNodeIndex = 0 Then Exit Do
                 
@@ -3902,19 +3902,18 @@ Continue:
                 Let .Last = .NodeCount
             Loop
             
+            'Now the sub-Type is imported, define the size property of the sub-Type
+            Dim Size As Long
+            Let Size = BaseOffset - .Nodes(Last).Offset
+            'Define the size (in bytes too) with thanks to below for the simple solution _
+             <visualbasic.ittoolbox.com/groups/technical-functional/visualbasic-l/always-round-up-to-whole-number-in-vb-60-1073167#GRB4513402>
+            Call Values.Add(.Name & BaseName & .Nodes(Last).Name & ".size", Abs(Int(-Size / 8)))
+            
         Else
             'Walk the Type within this Type...
             Call ScopeType(BaseType, BaseOffset, .Nodes(.Last).Name)
             If My_Error Then Exit Sub
         End If
-        
-        'Now the sub-Type is imported, define the size property of the sub-type
-        Dim Size As Long
-        Let Size = BaseOffset - .Nodes(Last).Offset
-        'Define the size (in bytes too) with thanks to below for the simple solution _
-         <visualbasic.ittoolbox.com/groups/technical-functional/visualbasic-l/always-round-up-to-whole-number-in-vb-60-1073167#GRB4513402>
-        Call Values.Add(.Name & .Nodes(Last).Name & ".size", Abs(Int(-Size / 8)))
-        
         
         Call RaiseMessage(OZ80_LOG_INFO, _
             "-----'------'-------'----------------------------------------------------" _
@@ -3965,10 +3964,10 @@ Continue:
         End If
         
         'Add the Type Property to the global value database
-        Call Values.Add(.Name & .Nodes(.Last).Name, .Nodes(.Last).Offset \ 8)
+        Call Values.Add(.Name & BaseName & .Nodes(.Last).Name, .Nodes(.Last).Offset \ 8)
         'Define the size (in bytes too) with thanks to below for the simple solution _
          <visualbasic.ittoolbox.com/groups/technical-functional/visualbasic-l/always-round-up-to-whole-number-in-vb-60-1073167#GRB4513402>
-        Call Values.Add(.Name & .Nodes(.Last).Name & ".size", Abs(Int(-.Nodes(.Last).Size / 8)))
+        Call Values.Add(.Name & BaseName & .Nodes(.Last).Name & ".size", Abs(Int(-.Nodes(.Last).Size / 8)))
         
         Call RaiseMessage(OZ80_LOG_INFO, LogMsg.Text)
     End If
@@ -3979,6 +3978,10 @@ Continue:
     If TokenKind = TOKEN_SQUARE_CLOSE _
         Then Call NextToken _
         Else GoTo Continue
+    
+    'Define the size of the whole type, with thanks to below for the simple solution _
+     <visualbasic.ittoolbox.com/groups/technical-functional/visualbasic-l/always-round-up-to-whole-number-in-vb-60-1073167#GRB4513402>
+    Call Values.Add(BaseType.Name & BaseName & ".size", Abs(Int(-BaseOffset / 8)))
 End Sub
 
 ''ScopeType_Import

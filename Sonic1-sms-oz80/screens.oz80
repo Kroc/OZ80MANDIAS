@@ -144,7 +144,7 @@ PARAMS  IY`vars         HELP ""Address of the common variables (used throughout)
 
         ;play the map screen music
 ._3     ld      A`music         7               ;#index_music_mapScreen
-        rst     :playMusic
+        rst     :rst_playMusic
         
 ._4     call    :_LABEL_E86_110
         ld      A, [$.CURRENT_LEVEL]
@@ -738,36 +738,36 @@ TABLE   :_1201                                  SECTION ::screens               
 TABLE   :S1_ZoneTitles                          SECTION ::screens               ;$1209
         ;==============================================================================
 {        
-        WORD    .GreenHill                      ;Green Hill Act 1
-        WORD    .GreenHill                      ;Green Hill Act 2
-        WORD    .GreenHill                      ;Green Hill Act 3
-        WORD    .Bridge                         ;Bridge Act 1
-        WORD    .Bridge                         ;Bridge Act 2
-        WORD    .Bridge                         ;Bridge Act 3
-        WORD    .Jungle                         ;Jungle Act 1
-        WORD    .Jungle                         ;Jungle Act 2
-        WORD    .Jungle                         ;Jungle Act 3
-        WORD    .Labyrinth                      ;Labyrinth Act 1
-        WORD    .Labyrinth                      ;Labyrinth Act 2
-        WORD    .Labyrinth                      ;Labyrinth Act 3
-        WORD    .ScrapBrain                     ;Scrap Brain Act 1
-        WORD    .ScrapBrain                     ;Scrap Brain Act 2
-        WORD    .ScrapBrain                     ;Scrap Brain Act 3
-        WORD    .SkyBase                        ;Sky Base Act 1
-        WORD    .SkyBase                        ;Sky Base Act 2
-        WORD    .SkyBase                        ;Sky Base Act 3
+        WORD    .greenHill                      ;Green Hill Act 1
+        WORD    .greenHill                      ;Green Hill Act 2
+        WORD    .greenHill                      ;Green Hill Act 3
+        WORD    .bridge                         ;Bridge Act 1
+        WORD    .bridge                         ;Bridge Act 2
+        WORD    .bridge                         ;Bridge Act 3
+        WORD    .jungle                         ;Jungle Act 1
+        WORD    .jungle                         ;Jungle Act 2
+        WORD    .jungle                         ;Jungle Act 3
+        WORD    .labyrinth                      ;Labyrinth Act 1
+        WORD    .labyrinth                      ;Labyrinth Act 2
+        WORD    .labyrinth                      ;Labyrinth Act 3
+        WORD    .scrapBrain                     ;Scrap Brain Act 1
+        WORD    .scrapBrain                     ;Scrap Brain Act 2
+        WORD    .scrapBrain                     ;Scrap Brain Act 3
+        WORD    .skyBase                        ;Sky Base Act 1
+        WORD    .skyBase                        ;Sky Base Act 2
+        WORD    .skyBase                        ;Sky Base Act 3
 
-.GreenHill                                      ;"GREEN HILL"                   ;$122D
+.greenHill                                      ;"GREEN HILL"                   ;$122D
         BYTE    $10 $13 $46 $62 $44 $44 $51 $EB $47 $40 $43 $43 $EB $EB $FF
-.Bridge                                         ;"BRIDGE"                       ;$123C
+.bridge                                         ;"BRIDGE"                       ;$123C
         BYTE    $10 $13 $35 $62 $40 $37 $46 $44 $EB $EB $EB $EB $EB $EB $FF
-.Jungle                                         ;"JUNGLE"                       ;$124B
+.jungle                                         ;"JUNGLE"                       ;$124B
         BYTE    $10 $13 $41 $81 $51 $46 $43 $44 $EB $EB $EB $EB $EB $EB $FF
-.Labyrinth                                      ;"LABYRINTH"                    ;$125A
+.labyrinth                                      ;"LABYRINTH"                    ;$125A
         BYTE    $10 $13 $6F $1E $1F $DE $9F $5E $7F $AF $4F $EB $EB $EB $FF
-.ScrapBrain                                     ;"SCRAP BRAIN"                  ;$1269
+.scrapBrain                                     ;"SCRAP BRAIN"                  ;$1269
         BYTE    $10 $13 $AE $2E $9F $1E $8F $EB $1F $9F $1E $5E $7F $EB $FF
-.SkyBase                                        ;"SKY BASE"                     ;$1278
+.skyBase                                        ;"SKY BASE"                     ;$1278
         BYTE    $10 $13 $AE $6E $DE $EB $1F $1E $AE $3E $EB $EB $EB $EB $FF
 }
 
@@ -825,7 +825,7 @@ PARAMS  IY`vars         HELP ""Address of the common variables (used throughout)
         
         ;play title screen music
         ld      a, ::sound:S1_MusicPointers.titleScreen.index
-        rst     :playMusic
+        rst     :rst_playMusic
         
         ;initialise the animation parameters?
         xor     a`zero
@@ -897,7 +897,7 @@ PARAMS  IY`vars         HELP ""Address of the common variables (used throughout)
         
         scf
 
-._5     rst     :muteSound
+._5     rst     :rst_muteSound
         ret
 
         ;------------------------------------------------------------------------------
@@ -1059,7 +1059,7 @@ PARAMS  IY`vars         HELP ""Address of the common variables (used throughout)
         djnz    ._5
         
         ld      a,$1a
-        rst     :playSFX
+        rst     :rst_playSFX
         
         ld      hl,$.D216
         ld      a,[hl]
@@ -1289,7 +1289,7 @@ PARAMS  IY`vars         HELP ""Address of the common variables (used throughout)
         and     $03
         jr      nz,._13
         ld      a,$02
-        rst     :playSFX
+        rst     :rst_playSFX
 
 ._13    ld      hl,[$.TEMP4]
         ld      de,[$.TEMP6]
@@ -1473,7 +1473,7 @@ PROC    :_172f                                  SECTION ::screens               
         call    ::mobs:increaseScore
         
         ld      A`sfx           $02
-        rst     :playSFX
+        rst     :rst_playSFX
         
         jp      ._7
         
@@ -1499,7 +1499,7 @@ PROC    :_172f                                  SECTION ::screens               
         call    ::mobs:increaseScore
         
         ld      A`sfx           $02
-        rst     :playSFX
+        rst     :rst_playSFX
         
         jp      ._9
         
@@ -1535,7 +1535,7 @@ PROC    :_172f                                  SECTION ::screens               
         call    ::mobs:increaseScore
         
         ld      A`sfx$02        $02
-        rst     :playSFX
+        rst     :rst_playSFX
         
         jp      ._11
         
@@ -2076,7 +2076,7 @@ PARAMS  IY`vars         HELP ""Address of the common variables (used throughout)
         call    ::interrupts:waitForInterrupt
         djnz    .wait
         
-        rst     :muteSound
+        rst     :rst_muteSound
         
 ._3     call    :_LABEL_1CED_131
         and     a
@@ -2352,7 +2352,7 @@ PARAMS  IY`vars         HELP ""Address of the common variables (used throughout)
         bit     1,[iy+#vars.scrollRingFlags]
         ret     nz
         
-        rst     :muteSound
+        rst     :rst_muteSound
         
 ._1     ld      a,[iy+#vars.spriteUpdateCount]
         res     0,[iy+#vars.flags0]
@@ -2509,7 +2509,7 @@ PROC    :_1f49                                  SECTION ::screens               
 ._2     push    bc
 
         ld      a,$13
-        rst     :playSFX
+        rst     :rst_playSFX
         
         pop     bc
         
@@ -2539,15 +2539,15 @@ PROC    :_1f49                                  SECTION ::screens               
 ;lightning palette control:
 TABLE   :_1f9d                                  SECTION ::screens               ;$1F9D
 {
-        BYTE    $02 $04 WORD :S1_PaletteData.skyBase_cycles
+        BYTE    $02 $04 WORD ::mobs:S1_PaletteData.skyBase_cycles
 }       
 TABLE   :_1fa1                                  SECTION ::screens               ;$1FA1
 {
-        BYTE    $02 $04 WORD :S1_PaletteData.skyBase_cycles_Lightning1
+        BYTE    $02 $04 WORD ::mobs:S1_PaletteData.skyBase_cycles_Lightning1
 }
 TABLE   :_1fa5                                  SECTION ::screens               ;$1FA5
 {
-        BYTE    $02 $04 WORD :S1_PaletteData.skyBase_cycles_Lightning2
+        BYTE    $02 $04 WORD ::mobs:S1_PaletteData.skyBase_cycles_Lightning2
 }
 
 PROC    :_1fa9                                  SECTION ::screens               ;$1FA9
@@ -2580,7 +2580,7 @@ PARAMS  IY`vars         HELP ""Address of the common variables (used throughout)
         jr      nz,._4
         bit     4,[iy+#vars.flags6]
         jr      nz,._5
-        rst     :muteSound
+        rst     :rst_muteSound
         bit     7,[iy+#vars.flags6]
         call    nz,:disableWaterline
         call    ::main:hideSprites
@@ -2626,7 +2626,7 @@ PROC    :_202d                                  SECTION ::screens               
         ;==============================================================================
 {        
         ld      a, $0E
-        rst     :playSFX
+        rst     :rst_playSFX
         ret
 }
 
@@ -2638,7 +2638,7 @@ PROC    :addExtraLife                           SECTION ::screens               
         inc     [hl]
         
         ld      a`sfx,$09                       ;extra life sound?
-        rst     :playSFX
+        rst     :rst_playSFX
         
         ret
 }
@@ -2657,7 +2657,7 @@ PROC    :_203f                                  SECTION ::screens               
 PARAMS  IY`vars         HELP ""Address of the common variables (used throughout)
 {        
         ld      a,$07
-        rst     :playSFX
+        rst     :rst_playSFX
         set     0,[iy+#vars.timeLightningFlags]
         ret
 }
@@ -3244,7 +3244,7 @@ PARAMS  IY`vars         HELP ""Address of the common variables (used throughout)
         inc     hl
         ld      a,[$.PREVIOUS_MUSIC]            ;check previously played music
         cp      [hl]
-        jr      z,._12                          ;if current music is the same, skip ahead
+        jr      z,._11                          ;if current music is the same, skip ahead
         
         ld      a,[hl]                          ;get the music number from the level header
         and     a                               ;this won't change the value of A, but it will
@@ -3254,7 +3254,7 @@ PARAMS  IY`vars         HELP ""Address of the common variables (used throughout)
         
         ;remember the current level music to restore it after invincibility &c.
         ld      [$.LEVEL_MUSIC],a
-        rst     :playMusic
+        rst     :rst_playMusic
 
         ;fill 64 bytes (32 16-bit numbers) from $D37C-$D3BC
 ._11    ld      b,32
@@ -3353,7 +3353,7 @@ PARAMS  IX`mob          HELP ""Address of the current mob being processed
         
         ;--- Y position ---------------------------------------------------------------
         inc     hl
-        ld      a,[hl]                          ;get the Y position from the object layout
+        ld      a,[hl]                          ;get the Y position from the mob layout
         
         exx     
         ld      l,a
@@ -3597,7 +3597,7 @@ PARAMS  IY`vars         HELP ""Address of the common variables (used throughout)
         djnz    ._1
         
         ld      a,::sound:S1_MusicPointers.allEmeralds.index
-        rst     :playMusic
+        rst     :rst_playMusic
         
         ld      hl,$241d
         ld      b,$3d
@@ -3743,7 +3743,7 @@ PARAMS  IY`vars         HELP ""Address of the common variables (used throughout)
         call    ::main:_b50
         
         ld      a,::sound:S1_MusicPointers.ending.index
-        rst     :playMusic
+        rst     :rst_playMusic
         
         xor     A`zero                          ;(set A to 0)
         ld      [$.TEMP1]       A`zero

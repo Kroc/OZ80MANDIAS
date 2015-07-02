@@ -78,7 +78,7 @@ TYPE    #track
 ;define the variables in RAM:
 ;---------------------------------------------------------------------------------------
 ;(NB: in the original ROM, $DC00-$DC03 go unused)
-RAM $
+APPEND  $
 [
     .playbackMode        $DC04  BYTE            ;bit 4 dis/enables fading out
     .overriddenTrack            BYTE            ;which music track the SFX is overriding
@@ -102,8 +102,8 @@ RAM $
     .track3dataPointer          WORD
     .track4dataPointer          WORD
     
-    ;;the `_loadMusic` routine assumes that the track RAM follows the data pointers
-      above, so just take note in case of rearranging the RAM here;;
+    ;the `_loadMusic` routine assumes that the track RAM follows the data pointers
+     ;above, so just take note in case of rearranging the RAM here
     .track0vars                 TYPE #track
     .track1vars                 TYPE #track
     .track2vars                 TYPE #track
@@ -122,21 +122,21 @@ RAM $
 PROC    :public                                 SECTION ::sound
 {
 .update
-    jp      .doUpdate
+    jp      :doUpdate
 .loadMusic
-    jp      .doLoadMusic                        ;this public call is not used in the game
+    jp      :doLoadMusic                        ;this public call is not used in the game
 .stop 
-    jp      .doStop
+    jp      :doStop
 .unpause
-    jp      .doUnpause
+    jp      :doUnpause
 .fadeOut
-    jp      .doFadeOut
+    jp      :doFadeOut
 .loadSFX
-    jp      .doLoadSFX                          ;this public call is not used in the game
+    jp      :doLoadSFX                          ;this public call is not used in the game
 .playMusic
-    jp      .doPlayMusic                        ;this is used externally to start a song
+    jp      :doPlayMusic                        ;this is used externally to start a song
 .playSFX
-    jp      .doPlaySFX                          ;this is used externally to start SFX
+    jp      :doPlaySFX                          ;this is used externally to start SFX
 }
 
 ;_______________________________________________________________________________________
@@ -622,10 +622,10 @@ PROC    :doUpdateTrack                          SECTION ::sound
     sbc     hl,bc
     ld      [ix+#track.tickStep+0],l
     ld      [ix+#track.tickStep+1],h
-    jr      z,.doTrackReadLoop
+    jr      z,.trackReadLoop
     jp      nc,:doNote.x
     
-.doTrackReadLoop
+.trackReadLoop
     ld      a,[de]
     and     a
     jp      m,:doCommand
@@ -634,7 +634,7 @@ PROC    :doUpdateTrack                          SECTION ::sound
     cp      $7f
     jr      nz,:doNoiseNote
     ld      [ix+#track.effectiveVolume],$00
-    jp      :doNoteLength
+    jp      :doNote.doNoteLength
 }
 
 ;---------------------------------------------------------------------------------------
@@ -665,7 +665,7 @@ PROC    :doNoiseNote                            SECTION ::sound
     ldi     
     ldi     
     pop     de
-    jp      :doResetModValues
+    jp      :doNote.resetModValues
 }
 
 ;---------------------------------------------------------------------------------------
@@ -691,7 +691,7 @@ PROC    :doNote                                 SECTION ::sound
     and     $0f
     ld      [ix+#track.octave],a
     bit     0,[ix+#track.flags]
-    jr      nz,:doNoteLength
+    jr      nz,:doNote.doNoteLength
 
 .resetModValues
     ld      a,[ix+#track.initModulationDelay]
@@ -727,7 +727,7 @@ PROC    :doNote                                 SECTION ::sound
     or      h
     jr      nz,._2
     ld      hl,[$.tickMultiplier]
-._2 call    :doCalcTickTime
+._2 call    :calcTickTime
     pop     de
     ld      a,l
     add     a,[ix+#track.tickStep+0]
@@ -747,7 +747,7 @@ TABLE   :noiseNoteValues                        SECTION ::sound
 
 ;_______________________________________________________________________________________
 
-PROC    :processTrack                           SECTION ::sound
+PROC    :doProcessTrack                           SECTION ::sound
 {
     bit     1,[ix+#track.flags]
     ret     z
@@ -770,22 +770,18 @@ PROC    :doTrackSoundOut                        SECTION ::sound
 {
     ld      a,[ix+#track.channelFrequencyPSG]
     cp      $e0
-    jr      nz,:doModulation
+    jr      nz,.doModulation
     ld      c,[ix+#track.noiseMode]
     ld      a,[$.noiseMode]
     cp      c
-    jp      z,:sendVolume
+    jp      z,.sendVolume
     ld      a,c
     ld      [$.noiseMode],a
     or      %11100000                           ;noise channel frequency?
-    out     [$#SMS.PSG.DAT],a
-    jp      :sendVolume
-}
-   
-;---------------------------------------------------------------------------------------
+    out     [$#SMS.PSG.DATA],a
+    jp      .sendVolume
 
-PROC    :doModulation                           SECTION ::sound
-{
+.doModulation
     ld      e,[ix+#track.modulationFreq+0]
     ld      d,[ix+#track.modulationFreq+1]
     ld      a,[ix+#track.modulationDelay]
@@ -928,9 +924,9 @@ PROC    :cmdFF_stopMusic                        SECTION ::sound
     ld      h,[ix+#track.masterLoopAddress+1]
     ld      a,l
     or      h
-    jr      z,:stopTrack
+    jr      z,:cmdFE_stopSFX.stopTrack
     ex      de,hl
-    jp      :trackReadLoop
+    jp      :doUpdateTrack.trackReadLoop
 }
 
 PROC    :cmdFE_stopSFX                          SECTION ::sound
@@ -1048,7 +1044,7 @@ PROC    :cmd80_tempo                            SECTION ::sound
     ld      [$.tickDivider1+1],a
     ld      [$.tickDivider2+1],a
     inc     de
-    jp      :trackReadLoop
+    jp      :doUpdateTrack.trackReadLoop
 }
 
 ;---------------------------------------------------------------------------------------
@@ -1063,12 +1059,12 @@ PROC    :cmd81_volumeSet                        SECTION ::sound
     jr      z,._1
     ld      a,[$.playbackMode]
     and     %00001000
-    jp      nz,:trackReadLoop
+    jp      nz,:doUpdateTrack.trackReadLoop
     
 ._1 ld      a,[ix+#track.channelVolume]
     ld      [ix+#track.fadeTicks+1],a
     ld      [ix+#track.fadeTicks+0],$00
-    jp      :trackReadLoop
+    jp      :doUpdateTrack.trackReadLoop
 }
 
 ;---------------------------------------------------------------------------------------
@@ -1087,7 +1083,7 @@ PROC    :cmd82_setADSR                          SECTION ::sound
     ldi     
     ldi     
     ex      de,hl
-    jp      :trackReadLoop
+    jp      :doUpdateTrack.trackReadLoop
 }
 
 ;---------------------------------------------------------------------------------------
@@ -1105,7 +1101,7 @@ PROC    :cmd83_modulation                       SECTION ::sound
     ldi     
     ldi     
     ex      de,hl
-    jp      :trackReadLoop
+    jp      :doUpdateTrack.trackReadLoop
 }
     
 ;---------------------------------------------------------------------------------------
@@ -1118,7 +1114,7 @@ PROC    :cmd84_detune                           SECTION ::sound
     ld      a,[de]
     ld      [ix+#track.detune+1],a
     inc     de
-    jp      :trackReadLoop
+    jp      :doUpdateTrack.trackReadLoop
 }
 
 ;---------------------------------------------------------------------------------------
@@ -1127,7 +1123,7 @@ PROC    :cmd85_dummy                            SECTION ::sound
 {
     ld      a,[de]
     inc     de
-    jp      :trackReadLoop
+    jp      :doUpdateTrack.trackReadLoop
 }
 
 ;---------------------------------------------------------------------------------------
@@ -1141,7 +1137,7 @@ PROC    :cmd86_loopStart                        SECTION ::sound
     add     hl,bc
     ld      [ix+#track.loopAddress+0],l
     ld      [ix+#track.loopAddress+1],h
-    jp      :trackReadLoop
+    jp      :doUpdateTrack.trackReadLoop
 }
 
 ;---------------------------------------------------------------------------------------
@@ -1154,7 +1150,7 @@ PROC    :cmd87_loopEnd                          SECTION ::sound
     add     hl,bc
     ld      a,[hl]
     and     a
-    jr      nz,:loopInit
+    jr      nz,.loopInit
     ld      a,[de]
     dec     a
     jr      z,._2
@@ -1174,14 +1170,14 @@ PROC    :cmd87_loopEnd                          SECTION ::sound
     ld      b,[ix+#track.baseAddress+1]
     add     hl,bc
     ex      de,hl
-    jp      :trackReadLoop
+    jp      :doUpdateTrack.trackReadLoop
     
 ._2 ld      [ix+#track.loopAddress+0],l
     ld      [ix+#track.loopAddress+1],h
     inc     de
     inc     de
     inc     de
-    jp      :trackReadLoop
+    jp      :doUpdateTrack.trackReadLoop
 }
 
 ;---------------------------------------------------------------------------------------
@@ -1190,7 +1186,7 @@ PROC    :cmd88_masterLoop                       SECTION ::sound
 {
     ld      [ix+#track.masterLoopAddress+0],e
     ld      [ix+#track.masterLoopAddress+1],d
-    jp      :trackReadLoop
+    jp      :doUpdateTrack.trackReadLoop
 }
 
 ;---------------------------------------------------------------------------------------
@@ -1200,7 +1196,7 @@ PROC    :cmd89_noiseMode                        SECTION ::sound
     ld      a,[de]
     ld      [ix+#track.noiseMode],a
     inc     de
-    jp      :trackReadLoop
+    jp      :doUpdateTrack.trackReadLoop
 }
 
 ;--------------------------------------------------------------------------------------
@@ -1210,7 +1206,7 @@ PROC    :cmd8A_noteLength                       SECTION ::sound
     ld      a,[de]
     ld      [ix+#track.defaultNoteLength],a
     inc     de
-    jp      :trackReadLoop
+    jp      :doUpdateTrack.trackReadLoop
 }
 
 ;--------------------------------------------------------------------------------------
@@ -1225,10 +1221,10 @@ PROC    :cmd8B_volumeUp                         SECTION ::sound
 ._1 ld      [ix+#track.channelVolume],a
     ld      a,[$.playbackMode]
     and     %00001000
-    jp      nz,:trackReadLoop
+    jp      nz,:doUpdateTrack.trackReadLoop
     ld      a,[ix+#track.channelVolume]
     ld      [ix+#track.fadeTicks+1],a
-    jp      :trackReadLoop
+    jp      :doUpdateTrack.trackReadLoop
 }
 
 ;---------------------------------------------------------------------------------------
@@ -1243,10 +1239,10 @@ PROC    :cmd8C_volumeDown                       SECTION ::sound
 ._1 ld      [ix+#track.channelVolume],a
     ld      a,[$.playbackMode]
     and     %00001000
-    jp      nz,:trackReadLoop
+    jp      nz,:doUpdateTrack.trackReadLoop
     ld      a,[ix+#track.channelVolume]
     ld      [ix+#track.fadeTicks+1],a
-    jp      :trackReadLoop
+    jp      :doUpdateTrack.trackReadLoop
 }
 
 ;---------------------------------------------------------------------------------------
@@ -1254,7 +1250,7 @@ PROC    :cmd8C_volumeDown                       SECTION ::sound
 PROC    :cmd8D_hold                             SECTION ::sound
 {
     set     0,[ix+#track.flags]
-    jp      :trackReadLoop
+    jp      :doUpdateTrack.trackReadLoop
 }
 
 ;_______________________________________________________________________________________
@@ -1335,7 +1331,7 @@ PARAMS  A               ;index number of SFX to play (see `S1_SFXPointers`)
      ;DE will now be an address to SFX;s entry in the SFX list
      ;HL will now be the address of the SFX's data
     ex      de,hl
-    call    :loadSFX
+    call    :doLoadSFX
     
     pop     DE, HL
     ret

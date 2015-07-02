@@ -17,7 +17,7 @@ TABLE   :S1_Music_GreenHill                     SECTION ::sound                 
     WORD    .channel4 - :                       ;offset to channel 4
     WORD    $0000							    ;unused
 
-.channel1:  ;---------------------------------------------------------------------------
+.channel1   ;---------------------------------------------------------------------------
     BYTE    $80 $01 $00 $01 $00
     BYTE    $82 $FF $14 $96 $00 $32 $0A
     BYTE    $85 $FF

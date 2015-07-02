@@ -36,11 +36,11 @@ PARAMS  IX`mob          HELP ""Address of the current mob being processed
         ld      [ix+#mob.unknown11],a
         set     1,[ix+#mob.flags]
 ._1     dec     [ix+#mob.unknown11]
-        jp      nz,._
+        jp      nz,._4
         ld      [ix+#mob.unknown11],$01
         ld      a,[$.D2AB+1]
         and     $80
-        jp      z,._
+        jp      z,._4
         ld      l,[ix+#mob.X+0]
         ld      h,[ix+#mob.X+1]
         ld      [$.D2AB],hl
@@ -77,7 +77,7 @@ PARAMS  IX`mob          HELP ""Address of the current mob being processed
         ld      h,[ix+#mob.Y+1]
         and     a
         sbc     hl,de
-        jr      c,._
+        jr      c,._4
         ld      [ix+#mob.type],$FF      ;remove object?
         ret
         

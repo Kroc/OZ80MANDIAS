@@ -379,6 +379,7 @@ Private Const STR_ADC                   As String = "adc"
 Private Const STR_ADD                   As String = "add"
 Private Const STR_AF                    As String = "AF"
 Private Const STR_AND                   As String = "and"
+Private Const STR_APPEND                As String = "APPEND"
 Private Const STR_B                     As String = "B"
 Private Const STR_BC                    As String = "BC"
 Private Const STR_BIT                   As String = "bit"
@@ -628,6 +629,7 @@ Private Enum OZ80_TOKEN
     
     'Keywords ..........................................................................
     [_TOKEN_KEYWORDS_BEGIN]
+    TOKEN_KEYWORD_APPEND                'Append more to a Chunk / Type
     TOKEN_KEYWORD_BOOL                  'Boolean data type (1-bit)
     TOKEN_KEYWORD_BYTE                  'Byte data type
     TOKEN_KEYWORD_DEF                   'Define constant
@@ -838,6 +840,7 @@ End Type
 Private Type OZ80Type
     Name As String
     Base As Long
+    Size As Long                        'Size of the Type in bits
     
     Nodes() As OZ80Node
     NodeCount As Long
@@ -1217,8 +1220,10 @@ End Type
 
 Private Enum OZ80_DEFERRED
     ASM_VAL8                            'An 8-bit value
+    ASM_VAL16                           'A 16-bit value
     ASM_JR                              'A relative jump (8-bits)
     ASM_JP                              'An absolute jump (16-bits)
+    ASM_RST                             'An `rst` Z80 instruction
 End Enum
 
 Private Deferred() As oz80Deferred
@@ -1622,6 +1627,7 @@ Private Sub Class_Initialize()
     Let TokenNames(TOKEN_OPERATOR_XOR) = Chr$(SYNTAX_OPERATOR_XOR)
     
     'Keywords ..........................................................................
+    Let TokenNames(TOKEN_KEYWORD_APPEND) = STR_APPEND
     Let TokenNames(TOKEN_KEYWORD_BOOL) = STR_BOOL
     Let TokenNames(TOKEN_KEYWORD_BYTE) = STR_BYTE
     Let TokenNames(TOKEN_KEYWORD_DEF) = STR_DEF
@@ -1809,7 +1815,7 @@ Private Sub Class_Initialize()
             Let TokenIsList(t) = True
         
         'Z80 parameters are Expressions, with the addition of _
-         Z80 register / memory references, e.g. `[ix+$FF]`
+         Z80 register / memory references, e.g. `[IX+$FF]`
         '...............................................................................
         ElseIf (t = TOKEN_SQUARE_OPEN) Then
             Let TokenIsParameter(t) = True
@@ -2118,8 +2124,6 @@ Public Function Assemble( _
                 Dim From As Long
                 Let From = Chunks(.ChunkID).AddrReal + .ROMOffset
                 
-                'TODO: Calculate relative offset
-                
                 'The Value given should be the absolute address of the destination
                 Dim Diff As Long
                 Let Diff = Value - (Chunks(.ChunkID).AddrReal + .From)
@@ -2139,6 +2143,16 @@ Public Function Assemble( _
                 'TODO: 8-bit limit check?
                 Let ROM(From) = Value And &HFF&
                 
+            ElseIf .Kind = ASM_VAL16 Then
+                Let From = Chunks(.ChunkID).AddrReal + .ROMOffset
+                
+                Let ROM(From) = Value And &HFF&
+                Let ROM(From + 1) = (Value And &HFF00&) \ &H100&
+            
+            ElseIf .Kind = ASM_RST Then
+                Let ROM( _
+                    Chunks(.ChunkID).AddrReal + .ROMOffset _
+                ) = X3 Or OpcodeY_RST(Value) Or Z7
             Else
                 'TODO: Any other kind of deferred expressions
                 Stop
@@ -2856,6 +2870,8 @@ TokenWord:
             Let Token = TOKEN_Z80_ADC
         ElseIf Word.Equals(STR_ADD) Then Let Token = TOKEN_Z80_ADD
         ElseIf Word.Equals(STR_AND) Then Let Token = TOKEN_Z80_AND
+        'Keywords
+        ElseIf Word.Equals(STR_APPEND) Then Let Token = TOKEN_KEYWORD_APPEND
         'Registers
         ElseIf (Asc2 = ASC_NUL) Then Let Token = TOKEN_Z80_A
         ElseIf (Asc3 = ASC_NUL) And (Asc2 = ASC_F) Then Let Token = TOKEN_Z80_AF
@@ -3569,10 +3585,30 @@ Private Sub ScopeRoot()
      allowed here. Once all nested scopes are exhausted, we return here
     
 Continue:
+    'Append to an existing Chunk / Type
     '-----------------------------------------------------------------------------------
+    If TokenKind = TOKEN_KEYWORD_APPEND Then
+        'Pass over the `APPEND` keyword
+        If NextTokenError() Then Exit Sub
+        
+        'Is the target a RAM Hash?
+        If TokenKind = TOKEN_RAM Then
+            Dim i As Long
+            For i = 1 To TypeCount
+                If Types(i).Name = TokenText Then
+                    If NextTokenError() Then Exit Sub
+                    Call ScopeType(Types(i), Types(i).Size)
+                    Exit For
+                End If
+            Next i
+        Else
+            'TODO: Implement Chunk appending...
+            Stop
+        End If
+        
     'Define Constant / RAM Bank / Section / System:
     '-----------------------------------------------------------------------------------
-    If TokenKind = TOKEN_KEYWORD_DEF Then
+    ElseIf TokenKind = TOKEN_KEYWORD_DEF Then
         'Pass over the `DEF` keyword
         'TODO: DEF specific error
         If NextTokenError() Then Exit Sub
@@ -3744,23 +3780,30 @@ End Sub
 '=======================================================================================
 'BaseType       | Which Type to populate
 '[BaseOffset]   | Where the properties should begin addressing from
-'[BaseName]     | The name heirarchy to prepend
+'[BaseName]     | The name heirarchy to prepend (when nesting Types)
 '=======================================================================================
 Private Sub ScopeType( _
              ByRef BaseType As OZ80Type, _
     Optional ByVal BaseOffset As Long = 0, _
     Optional ByVal BaseName As String = vbNullString _
 )
-    If TokenKind <> TOKEN_SQUARE_OPEN Then
-        Call RaiseError(OZ80_ERROR_EXPECTED, "TODO"): Exit Sub
-    End If
-    
-    If NextTokenError() Then Exit Sub
-    
-Continue:
     'This is a recursive function designed for walking nested Type definitions. _
      The outer-most Type block will already have been created in the Type database, _
      and we will define all the properties within it
+    
+    'It should be noted that the optional params above are `ByVal`, this is _
+     critically important otherwise recursive calls cause the array to be locked, _
+     preventing from us adding to the array whilst we walk it
+    
+    'Begin with a simple validation -- the Type bracket
+    If TokenKind <> TOKEN_SQUARE_OPEN Then
+        Call RaiseError(OZ80_ERROR_EXPECTED, "TODO"): Exit Sub
+    End If
+    'Move over the bracket
+    If NextTokenError() Then Exit Sub
+    
+Continue:
+    'Property Name:
     '-----------------------------------------------------------------------------------
     With BaseType
     
@@ -3787,8 +3830,10 @@ Continue:
     'The new Property's reserved data size will begin ater the previous
     Let .Nodes(.Last).Offset = BaseOffset
     
+    'Move over the Property name
     If NextTokenError() Then Exit Sub
     
+    'Offset Value:
     '-----------------------------------------------------------------------------------
     
     'Next word could be a Value
@@ -3809,6 +3854,7 @@ Continue:
     Call LogMsg.Overwrite(0, HexStr16(.Nodes(.Last).Offset \ 8))
     Call LogMsg.Overwrite(22, .Nodes(.Last).Name)
     
+    'Unit:
     '-----------------------------------------------------------------------------------
     
     'Next word will be the unit size
@@ -3876,6 +3922,8 @@ Continue:
                     Let BaseOffset = BaseOffset + .Size
                     Let CopyNodeIndex = .After
                     
+                    Let BaseType.Size = BaseType.Size + .Size
+                    
                     Call RaiseMessage(OZ80_LOG_INFO, LogMsg.Text)
                 End With
                 
@@ -3904,10 +3952,13 @@ Continue:
             
             'Now the sub-Type is imported, define the size property of the sub-Type
             Dim Size As Long
-            Let Size = BaseOffset - .Nodes(Last).Offset
+            Let Size = Types(CopyTypeIndex).Size
             'Define the size (in bytes too) with thanks to below for the simple solution _
              <visualbasic.ittoolbox.com/groups/technical-functional/visualbasic-l/always-round-up-to-whole-number-in-vb-60-1073167#GRB4513402>
-            Call Values.Add(.Name & BaseName & .Nodes(Last).Name & ".size", Abs(Int(-Size / 8)))
+            Call Values.Add( _
+                .Name & BaseName & .Nodes(Last).Name & ".size", _
+                Abs(Int(-Size / 8)) _
+            )
             
         Else
             'Walk the Type within this Type...
@@ -3919,6 +3970,7 @@ Continue:
             "-----'------'-------'----------------------------------------------------" _
         )
         
+    'Nested Type:
     '...................................................................................
     Else
         Dim UnitBits As Long
@@ -3944,7 +3996,7 @@ Continue:
             If ParseExpression(Value) Then Exit Sub
             
             If Value = INDEFINITE Then
-                'Stop
+                Stop
             Else
                 'TODO: Overflow check
                 Let .Nodes(.Last).Size = UnitBits * Value
@@ -3956,6 +4008,7 @@ Continue:
         End If
         
         Let BaseOffset = .Nodes(.Last).Offset + .Nodes(.Last).Size
+        Let .Size = .Size + .Nodes(.Last).Size
         
         'TODO: Is there a default value?
         If TokenIsList(TokenKind) Then
@@ -3981,59 +4034,12 @@ Continue:
     
     'Define the size of the whole type, with thanks to below for the simple solution _
      <visualbasic.ittoolbox.com/groups/technical-functional/visualbasic-l/always-round-up-to-whole-number-in-vb-60-1073167#GRB4513402>
-    Call Values.Add(BaseType.Name & BaseName & ".size", Abs(Int(-BaseOffset / 8)))
+    If Values.Exists(BaseType.Name & BaseName & ".size") Then
+        Let Values.Item(BaseType.Name & BaseName & ".size") = Abs(Int(-BaseType.Size / 8))
+    Else
+        Call Values.Add(BaseType.Name & BaseName & ".size", Abs(Int(-BaseType.Size / 8)))
+    End If
 End Sub
-
-''ScopeType_Import
-''=======================================================================================
-''=======================================================================================
-'Private Sub ScopeType_Import( _
-'    ByRef DstType As OZ80Type, _
-'    ByRef SrcType As OZ80Type, _
-'    ByRef BaseOffset As Long _
-')
-'    Dim CopyNodeIndex As Long
-'    Let CopyNodeIndex = 1
-'
-'    With DstType
-'    Do
-'        With SrcType.Nodes(CopyNodeIndex)
-'            Let LogMsg.Text = "     |      |       |                                                    "
-'            Call LogMsg.Overwrite(0, HexStr16(BaseOffset \ 8))
-'            Call LogMsg.Overwrite(22, .Name)
-'            Call LogMsg.Overwrite(7, TokenNames(.Unit))
-'
-'            'Copy the Property across
-'            Let DstType.Nodes(DstType.Last).Offset = BaseOffset
-'            Let DstType.Nodes(DstType.Last).Name = DstType.Name & .Name
-'            Let DstType.Nodes(DstType.Last).Size = .Size
-'            Let BaseOffset = BaseOffset + .Size
-'            Let CopyNodeIndex = .After
-'
-'            Call RaiseMessage(OZ80_LOG_INFO, LogMsg.Text)
-'        End With
-'
-'        'Add the Type Property to the global value database
-''        Call Values.Add(.Name & .Nodes(.Last).Name, .Nodes(.Last).Offset \ 8)
-'
-'        If CopyNodeIndex = 0 Then Exit Do
-'
-'        'Create the next node
-'        Let .NodeCount = .NodeCount + 1
-'        ReDim Preserve .Nodes(1 To .NodeCount) As OZ80Node
-'
-'        'This new node follows the previous
-'        If .Last <> 0 Then
-'            'Link the two nodes together,
-'            Let .Nodes(.NodeCount).Before = .Last
-'            Let .Nodes(.Last).After = .NodeCount
-'        End If
-'
-'        'This new node is now the latest
-'        Let .Last = .NodeCount
-'    Loop
-'    End With
-'End Sub
 
 'ProcessInclude : Process an Include statement
 '=======================================================================================
@@ -4579,6 +4585,7 @@ Private Sub DefineRAMType()
     ReDim Preserve Types(1 To TypeCount) As OZ80Type
     Let Types(TypeCount).Name = TypeName
     
+    'TODO: Do this properly
     If TypeName = "$" Then
         Call ScopeType(Types(TypeCount), &HC000& * 8)
     Else
@@ -4771,7 +4778,7 @@ End Sub
 Private Sub ScopeChunk( _
     ByRef ChunkID As Long _
 )
-    Dim LocalName As String
+    Dim ExprToken As Long
     Dim Value As Double
     
 Continue:
@@ -4792,7 +4799,7 @@ Continue:
     ElseIf TokenKind = TOKEN_PROPERTY_NEW Then
         'Define the local property
         'TODO: Duplicates?
-        Call Chunks(Chunk).Properties.Add(TokenText, CDbl(Chunks(Chunk).Size))
+        Call Chunks(ChunkID).Properties.Add(TokenText, CDbl(Chunks(ChunkID).Size))
         'Fully qualify the local Label name to its global identifier
         Call AddUpdateLabel(Chunks(ChunkID).FullName & TokenText, INDEFINITE)
     
@@ -4810,11 +4817,13 @@ Continue:
             Exit Sub
         End If
         
+        'Define the local property
+        Call Chunks(ChunkID).Properties.Add(TokenText, CDbl(Chunks(ChunkID).Size))
+        
         'Fully qualify the local Label name to its global identifier
         'Add this to the label database, using the current offset position in the Chunk
         Call AddUpdateLabel( _
-            Chunks(ChunkID).FullName & TokenText, _
-            CDbl(Chunks(Chunk).Size - 1) _
+            Chunks(ChunkID).FullName & TokenText, INDEFINITE _
         )
         
         'Define the Index
@@ -4844,11 +4853,18 @@ Continue:
         'Start walking the List
         Do
             If TokenIsExpression(TokenKind) Then
-                If ParseExpression(Value, Chunk) Then Stop
+                Let ExprToken = TokenIndex
                 
-                If Value = INDEFINITE _
-                    Then Call Chunk_AddBYTE(0) _
-                    Else Call Chunk_AddBYTE(Value)
+                If ParseExpression(Value, ChunkID) Then Stop
+                
+                If Value = INDEFINITE Then
+                    Call DeferExpression( _
+                        ASM_VAL8, File, ExprToken, Chunks(ChunkID).Size, 0 _
+                    )
+                    Call Chunk_AddBYTE(0)
+                Else
+                    Call Chunk_AddBYTE(Value)
+                End If
                 
             ElseIf TokenKind = TOKEN_TEXT Then
                 'Walk the Text bytes
@@ -4886,11 +4902,18 @@ Continue:
         'Start walking the List
         Do
             If TokenIsExpression(TokenKind) Then
-                If ParseExpression(Value, Chunk) Then Stop
+                Let ExprToken = TokenIndex
                 
-                If Value = INDEFINITE _
-                    Then Call Chunk_AddWORD(0) _
-                    Else Call Chunk_AddWORD(Value)
+                If ParseExpression(Value, ChunkID) Then Stop
+                
+                If Value = INDEFINITE Then
+                    Call DeferExpression( _
+                        ASM_VAL16, File, ExprToken, Chunks(ChunkID).Size, 0 _
+                    )
+                    Call Chunk_AddWORD(0)
+                Else
+                    Call Chunk_AddWORD(Value)
+                End If
                 
             ElseIf Not TokenIsList(TokenKind) Then
                 Exit Do
@@ -5560,8 +5583,6 @@ iDJNZ:
      ...................................................................................
     If Z80_TestParams(Instruction, PARAM_VAL) Then
         Let Opcode = Y2
-        'TODO: Address translation
-        Let Instruction.Value = 0
         GoTo Output8_1Param
     End If
     'ERROR: Wrong parameters for Z80 instruction
@@ -6066,6 +6087,10 @@ iRST:
         'TODO: Best way to handle INDEFINITE?
         If Instruction.Value <> INDEFINITE Then
             Let Opcode = X3 Or OpcodeY_RST(Instruction.Value) Or Z7
+        Else
+            Call DeferExpression(ASM_RST, _
+                File, Instruction.Param1.Expression, BinaryOffset, 0 _
+            )
         End If
         'The Value is baked into the Opcode, _
          so discard it and don't write a separate byte!
@@ -6258,7 +6283,8 @@ Output8_1Param:
         'Add the indefinite value to the disassembly log and params list
         Call api_RtlMoveMemory(LogPtr + 38, StrPtr(HexStr8(-1)), 4)
         Call api_RtlMoveMemory(LogPtr + 74, StrPtr("$??       "), 20)
-        If Mnemonic = TOKEN_Z80_JR Or Mnemonic = TOKEN_Z80_DJNZ Then
+        If (Mnemonic = TOKEN_Z80_JR) _
+        Or (Mnemonic = TOKEN_Z80_DJNZ) Then
             Call DeferExpression( _
                 ASM_JR, File, Instruction.Param1.Expression, BinaryOffset, From _
             )
@@ -6329,7 +6355,7 @@ OutputOff8:
     If Instruction.Value = INDEFINITE Then
         Call DeferExpression( _
             ASM_VAL8, File, Instruction.Param2.Expression, _
-            BinaryOffset + (ByteCount - 1), From _
+            BinaryOffset + (ByteCount - 2), From _
         )
     Else
         Let Bytes(ByteCount) = Instruction.Value
@@ -7190,6 +7216,7 @@ GetNumber:
             If Labels.Exists(TokenText) _
                 Then Let ReturnValue = Labels.Item(TokenText) _
                 Else Let ReturnValue = INDEFINITE
+            If ReturnValue < 0 Then ReturnValue = INDEFINITE
             
         'The "self" Label (`:`) refers to the Chunk's own address
         ElseIf TokenText = ":" Then
@@ -7200,11 +7227,12 @@ GetNumber:
         'Check for Labels within the current Section scope
         ElseIf Labels.Exists(Chunks(ChunkID).SectionName & TokenText) Then
             Let ReturnValue = Labels.Item(Chunks(ChunkID).SectionName & TokenText)
+            If ReturnValue < 0 Then ReturnValue = INDEFINITE
         
         'Check for global Labels
         ElseIf Labels.Exists(TokenText) Then
             Let ReturnValue = Labels.Item(TokenText)
-        
+            If ReturnValue < 0 Then ReturnValue = INDEFINITE
         Else
             Let ReturnValue = INDEFINITE
         End If
@@ -7215,8 +7243,9 @@ GetNumber:
             'Return Indefinite
             Let ReturnValue = INDEFINITE
         Else
-            'Retrieve the RAM address
+            'Retrieve the Label address
             Let ReturnValue = Labels.Item(TokenText)
+            If ReturnValue < 0 Then ReturnValue = INDEFINITE
         End If
         
     '-----------------------------------------------------------------------------------
@@ -7882,7 +7911,6 @@ AddLink:
     
     '-----------------------------------------------------------------------------------
     With Chunks(ChunkRef)
-        
         Dim BankAddr As Long
         Let BankAddr = ChunkAddr Mod &H4000&
         
@@ -7894,58 +7922,60 @@ AddLink:
         'Calculate the banked address (based on the Slot pattern)
         'TODO: This is `SYSTEM`-specific
         If (.Slot And SLOT1) <> 0 Then
-            Let .AddrSlot = &H4000& + ChunkAddr
+            Let .AddrSlot = &H4000& + BankAddr
             
         ElseIf (.Slot And SLOT2) <> 0 Then
             Let .AddrSlot = &H8000& + BankAddr
             
         Else
-            Let .AddrSlot = BankAddr
+            Let .AddrSlot = ChunkAddr
         End If
         
         'Update the Label database with the new address
         Call AddUpdateLabel(.FullName, CDbl(.AddrSlot))
         
-        If ChunkEnd > ROMUsed Then Let ROMUsed = ChunkEnd
-        'Is this going to fit in the ROM?
-        If ROMUsed >= ROMSize Then
-            'Keep doubling the ROM size until the contents fits
-            Do While ROMUsed >= ROMSize: Let ROMSize = ROMSize * 2: Loop
-            'TODO: Check for ROM too big (hard limit -- 32 MB -- and user limit)
-            ReDim Preserve ROM(0 To ROMSize - 1) As Byte
-        End If
-        
-        'Copy the Chunk bytes into the ROM
-        Call api_RtlMoveMemory( _
-            DestinationPointer:=VarPtr(ROM(ChunkAddr)), _
-                 SourcePointer:=VarPtr(.Data(1)), _
-                        Length:=ChunkSize _
-        )
-        
-        Call RaiseMessage(OZ80_LOG_INFO, _
-            "${$}:{$} | {$} | {$}", _
-            HexStr8((ChunkAddr And &HFF0000) \ &H10000), _
-            HexStr16(ChunkAddr And &HFFFF&), _
-            Right$("      " & Format$(ChunkSize, "#,0"), 6), _
-            .FullName _
-        )
-        
-        'Walk through the local properties in the Chunk and update their addresses too
-        'TODO: Replace this Dictionary with something much faster
-        Dim Key As Variant
-        For Each Key In .Properties
-            Call AddUpdateLabel( _
-                .FullName & Key, _
-                .AddrReal + .Properties(Key) _
+        If ChunkSize > 0 Then
+            If (ChunkEnd + 1) > ROMUsed Then Let ROMUsed = ChunkEnd + 1
+            'Is this going to fit in the ROM?
+            If ROMUsed > ROMSize Then
+                'Keep doubling the ROM size until the contents fits
+                Do While ROMUsed > ROMSize: Let ROMSize = ROMSize * 2: Loop
+                'TODO: Check for ROM too big (hard limit -- 32 MB -- and user limit)
+                ReDim Preserve ROM(0 To ROMSize - 1) As Byte
+            End If
+            
+            'Copy the Chunk bytes into the ROM
+            Call api_RtlMoveMemory( _
+                DestinationPointer:=VarPtr(ROM(ChunkAddr)), _
+                     SourcePointer:=VarPtr(.Data(1)), _
+                            Length:=ChunkSize _
             )
+            
             Call RaiseMessage(OZ80_LOG_INFO, _
                 "${$}:{$} | {$} | {$}", _
-                HexStr8((.AddrReal + .Properties(Key) And &HFF0000) \ &H10000), _
-                HexStr16(.AddrReal + .Properties(Key) And &HFFFF&), _
-                "     .", _
-                .FullName & Key _
+                HexStr8((ChunkAddr And &HFF0000) \ &H10000), _
+                HexStr16(ChunkAddr And &HFFFF&), _
+                Right$("      " & Format$(ChunkSize, "#,0"), 6), _
+                .FullName _
             )
-        Next
+            
+            'Walk through the local properties in the Chunk and update their addresses too
+            'TODO: Replace this Dictionary with something much faster
+            Dim Key As Variant
+            For Each Key In .Properties
+                Call AddUpdateLabel( _
+                    .FullName & Key, _
+                    .AddrSlot + .Properties(Key) _
+                )
+                Call RaiseMessage(OZ80_LOG_INFO, _
+                    "${$}:{$} | {$} | {$}", _
+                    HexStr8((.AddrReal + .Properties(Key) And &HFF0000) \ &H10000), _
+                    HexStr16(.AddrReal + .Properties(Key) And &HFFFF&), _
+                    "     .", _
+                    .FullName & Key _
+                )
+            Next
+        End If
     
     End With
     

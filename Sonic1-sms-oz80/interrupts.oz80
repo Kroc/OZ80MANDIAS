@@ -501,7 +501,7 @@ RETURN  IY`vars         HELP ""Address of the common variables (used throughout)
         
         ;initialize the VDP:
         ld      hl, :initVDPRegisterValues
-        ld      de, !VDP_REGISTER_0
+        ld      de, $.VDPREGISTER_0
         ld      b, 11
         ld      c, $8B
                                 

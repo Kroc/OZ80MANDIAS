@@ -9,7 +9,7 @@
 ;;
 
 PROC    :decompressArt                          SECTION ::main                  ;$0405
-        ;==============================================================================
+        ;===============================================================================
 PARAMS  A`bank          HELP ""Bank number for the relative address HL
         HL`dataAddr     HELP ""Relative address from the beginning of the intended bank
                              ""(A) to the art data
@@ -19,7 +19,7 @@ PARAMS  A`bank          HELP ""Bank number for the relative address HL
         di                                      ;disable interrupts
         
 .calculateBank
-        ;--- determine bank number ----------------------------------------------------
+        ;--- determine bank number -----------------------------------------------------
         push    AF`bank                         ;put aside the current bank number
         
         ;;is the HL parameter address below the $40xx range?
@@ -39,7 +39,7 @@ PARAMS  A`bank          HELP ""Bank number for the relative address HL
         inc     A`bank
         jp      .calculateBank
         
-        ;--- configure the VDP --------------------------------------------------------
+        ;--- configure the VDP ---------------------------------------------------------
         
 ._2     ld      a, e                            ;VDP value byte from the DE parameter
         out     [$#SMS.VDP.CONTROL], a          ;send to the VDP
@@ -49,7 +49,7 @@ PARAMS  A`bank          HELP ""Bank number for the relative address HL
                                                  ;a VDP control register number)
         out     [$#SMS.VDP.CONTROL], a          ;send it to the VDP
         
-        ;--- switch banks -------------------------------------------------------------
+        ;--- switch banks --------------------------------------------------------------
         
         pop     af                              ;restore the A parameter
         
@@ -68,7 +68,7 @@ PARAMS  A`bank          HELP ""Bank number for the relative address HL
         ld      [$#SMS.SLOT2], a
         ld      [$.SLOT2], a
         
-        ;--- read header --------------------------------------------------------------
+        ;--- read header ---------------------------------------------------------------
         
         bit     1, [IY`vars+#vars.flags9]
         jr      nz, ._3
@@ -136,7 +136,7 @@ PARAMS  A`bank          HELP ""Bank number for the relative address HL
          ;DE will be the ArtData value
         exx
         
-        ;--- process row --------------------------------------------------------------
+        ;--- process row ---------------------------------------------------------------
 .processRow
         ld      hl, [$.TEMP3]                   ;load HL with original row count
                                                  ;($0400 for sprites, $0800 for tiles)
@@ -176,7 +176,7 @@ PARAMS  A`bank          HELP ""Bank number for the relative address HL
         jr      nz, .duplicateRow               ;if bit is set, it's a duplicate row,
                                                  ;otherwise continue for a unique row
         
-        ;--- unique row ---------------------------------------------------------------
+        ;--- unique row ----------------------------------------------------------------
         
         ;swap back the BC/DE/HL shadow values
          ;BC will be the absolute address to the ArtData
@@ -215,7 +215,7 @@ PARAMS  A`bank          HELP ""Bank number for the relative address HL
         jp      ._5                             ;otherwise, skip to finalisation
 
 .duplicateRow
-        ;--- duplicate row ------------------------------------------------------------
+        ;--- duplicate row -------------------------------------------------------------
         
         ;swap in the BC/DE/HL shadow values
          ;BC will be the absolute address to the ArtData
@@ -303,7 +303,7 @@ PARAMS  A`bank          HELP ""Bank number for the relative address HL
 }
 
 PROC    :decompressScreen                       SECTION ::main                  ;$0501
-        ;==============================================================================
+        ;===============================================================================
         ;;a screen layout is compressed using RLE (run-length-encoding). any byte that
           there are multiple of in a row are listed as two repeating bytes, followed
           by another byte specifying the remaining number of times to repeat;;
@@ -340,7 +340,7 @@ PARAMS  bc              ;length of the compressed data
         cp      $FF                             ;is this tile $FF?
         jr      z, .skip                
         
-        ;--- uncompressed byte --------------------------------------------------------
+        ;--- uncompressed byte ---------------------------------------------------------
         out     [$#SMS.VDP.DATA], a             ;send the tile to the VDP
         ld      e, a                            ;update the current byte being compared
         ld      a, [$.TEMP1]                    ;get the upper byte for the tiles
@@ -354,7 +354,7 @@ PARAMS  bc              ;length of the compressed data
         jp      nz, ._2                         ;if remaining bytes, loop
         jr      ._6                             ;otherwise end
         
-        ;--- decompress byte ----------------------------------------------------------
+        ;--- decompress byte -----------------------------------------------------------
 ._3     ld      d, a                            ;put the current data byte into D
         inc     hl                              ;move to the next byte
         dec     bc                              ;decrease the remaining bytes to read
@@ -416,7 +416,7 @@ PARAMS  bc              ;length of the compressed data
 }
 
 PROC    :loadPalette                            SECTION ::main                  ;$0566
-        ;==============================================================================
+        ;===============================================================================
 PARAMS  a`flags         ;which palette(s) to set
                          ;bit 0 - tile palette (0-15)
                          ;bit 1 - sprite palette (16-31)
@@ -467,7 +467,7 @@ RETURN  $.LOADPALETTE_TILE,
 }
 
 PROC    :clearVRAM                              SECTION ::main                  ;$0595
-        ;==============================================================================
+        ;===============================================================================
         ;called only by `::interrupts:init`
         
 PARAMS  hl`addr         ;VRAM address
@@ -492,7 +492,7 @@ PARAMS  hl`addr         ;VRAM address
 }
 
 PROC    :readJoypad                             SECTION ::main                  ;$05A7
-        ;==============================================================================
+        ;===============================================================================
 PARAMS  IY`vars         HELP ""Address of the common variables (used throughout)
 RETURN  $.VARS.joypad
 {       
@@ -504,7 +504,7 @@ RETURN  $.VARS.joypad
 }
 
 PROC    :print                                  SECTION ::main                  ;$05AF
-        ;==============================================================================
+        ;===============================================================================
 PARAMS  hl`addr         HELP ""Address to memory with column & row numbers,
                              ""then text data terminated with $FF
 {
@@ -566,14 +566,14 @@ PARAMS  hl`addr         HELP ""Address to memory with column & row numbers,
 }
 
 PROC    :hideSprites                            SECTION ::main                  ;$05E2
-        ;==============================================================================
+        ;===============================================================================
 PARAMS  IY`vars         HELP ""Address of the common variables (used throughout)
 {       
         ;get the address of the game's main sprite table
         ld      HL`table        $.SPRITETABLE
         ld      E`table         L`table         ;copy to DE
         ld      D`table         H`table
-        ld      BC`count        $.SPRITETABLE.size
+        ld      BC`count        189             ;size of $.SPRITETABLE - 3?
         ;set the first two bytes as 224 (X&Y position)
         ld      A`pos           224
         ld      [DE`table]      A`pos
@@ -598,7 +598,7 @@ PARAMS  IY`vars         HELP ""Address of the common variables (used throughout)
 }
 
 PROC    :decimalMultiplyBy10                    SECTION ::main                  ;$05FC
-        ;==============================================================================
+        ;===============================================================================
         ;does a decimal multiplication by 10. e.g. 3 > 30
         
 PARAMS  hl              ;input number, e.g. RAM_LIVES
@@ -624,7 +624,7 @@ PARAMS  hl              ;input number, e.g. RAM_LIVES
 }
 
 PROC    :_LABEL_60F_111                         SECTION ::main                  ;$060F
-        ;==============================================================================
+        ;===============================================================================
         ;convert to decimal? (used by Map & Act Complete screens for the lives number)
 PARAMS  c               ;10 - base?
         hl              ;number of lives
@@ -658,7 +658,7 @@ PARAMS  c               ;10 - base?
 }
 
 PROC    :_LABEL_625_57                          SECTION ::main                  ;$0625
-        ;==============================================================================
+        ;===============================================================================
         ;random number generator?
 {        
         push    hl, de
@@ -685,7 +685,7 @@ PROC    :_LABEL_625_57                          SECTION ::main                  
 }
 
 PROC    :updateCamera                           SECTION ::main                  ;$063E
-        ;==============================================================================
+        ;===============================================================================
         ;calculate the VDP scroll offset according to the camera position?
         
 PARAMS  IY`vars         HELP ""Address of the common variables (used throughout)
@@ -693,7 +693,7 @@ PARAMS  IY`vars         HELP ""Address of the common variables (used throughout)
         ;fill B with vertical and C with horizontal VDP scroll values
         ld      bc,[$.VDPSCROLL_HORZ]
         
-        ;------------------------------------------------------------------------------
+        ;-------------------------------------------------------------------------------
         ;has the camera scrolled left?
         ld      hl,[$.CAMERA_X]
         ld      de,[$.CAMERA_X_LEFT]
@@ -717,7 +717,7 @@ PARAMS  IY`vars         HELP ""Address of the common variables (used throughout)
         ld      c,a
         set     6,[iy+#vars.flags0]
         
-        ;------------------------------------------------------------------------------
+        ;-------------------------------------------------------------------------------
         ;has the camera scrolled up?
         
 ._2     ld      hl,[$.CAMERA_Y]
@@ -745,7 +745,7 @@ PARAMS  IY`vars         HELP ""Address of the common variables (used throughout)
 ._5     ld      b,a
         set     7,[iy+#vars.flags0]
         
-        ;------------------------------------------------------------------------------
+        ;-------------------------------------------------------------------------------
         ;;update the VDP horizontal / vertical scroll values in the RAM,
           the interrupt routine will send the values to the chip;;
 ._6     ld      [$.VDPSCROLL_HORZ],bc
@@ -786,7 +786,7 @@ PARAMS  IY`vars         HELP ""Address of the common variables (used throughout)
 }
 
 PROC    :fillOverscrollCache                    SECTION ::main                  ;$06BD
-        ;==============================================================================
+        ;===============================================================================
         ;;this fills in the cache of the overscroll area so that when the screen
           scrolls onto new tiles, they can be copied across in a fast and
           straight-forward fashion;;
@@ -807,7 +807,7 @@ PARAMS  IY`vars         HELP ""Address of the common variables (used throughout)
         ld      [$.SLOT2]       A`bank
         ei
         
-        ;------------------------------------------------------------------------------
+        ;-------------------------------------------------------------------------------
         ;get the address of the solidity data for the level's tilemap:
         
         ld      a,[$.LEVEL_SOLIDITY]            ;get the solidity index for the level
@@ -828,7 +828,7 @@ PARAMS  IY`vars         HELP ""Address of the common variables (used throughout)
         ;store the solidity data address in RAM
         ld      [$.TEMP3],hl
         
-        ;------------------------------------------------------------------------------
+        ;-------------------------------------------------------------------------------
         ;horizontal scrolling allowed??
         bit     0,[iy+#vars.flags2]
         jp      z,.vert                         ;skip to vertical scroll handling
@@ -858,7 +858,7 @@ PARAMS  IY`vars         HELP ""Address of the common variables (used throughout)
 
 ._1     call    :getFloorLayoutRAMPosition
         
-        ;------------------------------------------------------------------------------
+        ;-------------------------------------------------------------------------------
         ld      a,[$.VDPSCROLL_HORZ]
         
         ;has the camera moved left?
@@ -939,7 +939,7 @@ PARAMS  IY`vars         HELP ""Address of the common variables (used throughout)
         add     hl,de
         djnz    .loopH
         
-        ;------------------------------------------------------------------------------
+        ;-------------------------------------------------------------------------------
 .vert   bit     1,[iy+#vars.flags2]
         jp      z,.exit
         bit     7,[iy+#vars.flags0]             ;camera moved up?
@@ -951,7 +951,7 @@ PARAMS  IY`vars         HELP ""Address of the common variables (used throughout)
 ._3     ld      b,$00
         ld      c,b
         
-        ;------------------------------------------------------------------------------
+        ;-------------------------------------------------------------------------------
 ._4     call    :getFloorLayoutRAMPosition
         ld      a,[$.VDPSCROLL_VERT]
         and     %00011111
@@ -1010,7 +1010,7 @@ PARAMS  IY`vars         HELP ""Address of the common variables (used throughout)
 }
 
 PROC    :fillScrollTiles                        SECTION ::main                  ;$07DB
-        ;==============================================================================
+        ;===============================================================================
         ;fill in new tiles when the screen has scrolled
         
 PARAMS  IY`vars         HELP ""Address of the common variables (used throughout)
@@ -1021,7 +1021,7 @@ PARAMS  IY`vars         HELP ""Address of the common variables (used throughout)
         exx
         push    hl`stack, de`stack, bc`stack
         
-        ;------------------------------------------------------------------------------
+        ;-------------------------------------------------------------------------------
         ;calculate the number of bytes to offset by to get to the correct row in the
          ;screen table
         
@@ -1039,7 +1039,7 @@ PARAMS  IY`vars         HELP ""Address of the common variables (used throughout)
         rl      b
         ld      c, a
         
-        ;------------------------------------------------------------------------------
+        ;-------------------------------------------------------------------------------
         ;calculate the number of bytes to get from the beginning of a row to the 
          ;horizontal scroll position
         
@@ -1065,7 +1065,7 @@ PARAMS  IY`vars         HELP ""Address of the common variables (used throughout)
                                                  ;(bit 6 is set for VDP VRAM address)
         ld      e, 7
         
-        ;------------------------------------------------------------------------------
+        ;-------------------------------------------------------------------------------
         exx
         ld      hl, $.OVERSCROLLCACHE_HORZ
         
@@ -1107,7 +1107,7 @@ PARAMS  IY`vars         HELP ""Address of the common variables (used throughout)
         pop     hl
         exx
         
-        ;------------------------------------------------------------------------------
+        ;-------------------------------------------------------------------------------
 ._4     bit     1, [iy+#vars.flags2]
         jp      z, .exit                        ;could  optimise to `ret z`?
         ld      a, [$.VDPSCROLL_VERT]
@@ -1185,14 +1185,14 @@ PARAMS  IY`vars         HELP ""Address of the common variables (used throughout)
 
 .exit   ret
 
-        ;------------------------------------------------------------------------------
+        ;-------------------------------------------------------------------------------
 ._10    sub     e
         ld      h, a
         jp      ._3
 }
 
-PROC    :getFloorLayoutRAMPosition              SECTION ::main                  ;$07D5
-        ;==============================================================================
+PROC    :getFloorLayoutRAMPosition              SECTION ::main                  ;$08D5
+        ;===============================================================================
         ;convert block X & Y co-ords into a location in the Floor Layout in RAM
         
 PARAMS  bc              ;a flag, $0000 or $0001 depending on callee
@@ -1210,7 +1210,7 @@ PARAMS  bc              ;a flag, $0000 or $0001 depending on callee
         jr      c,._4                           ;>16?
         jp      ._5                             ;255...?
         
-        ;------------------------------------------------------------------------------
+        ;-------------------------------------------------------------------------------
 ._1     ld      a,[$.BLOCK_Y]
         add     a,b
         ld      e,$00
@@ -1227,7 +1227,7 @@ PARAMS  bc              ;a flag, $0000 or $0001 depending on callee
         add     hl,de
         ret
         
-        ;------------------------------------------------------------------------------
+        ;-------------------------------------------------------------------------------
 ._2     ld      a,[$.BLOCK_Y]
         add     a,b
         ld      e,$00
@@ -1246,7 +1246,7 @@ PARAMS  bc              ;a flag, $0000 or $0001 depending on callee
         add     hl,de
         ret
         
-        ;------------------------------------------------------------------------------
+        ;-------------------------------------------------------------------------------
 ._3     ld      a,[$.BLOCK_Y]
         add     a,b
         ld      e,$00
@@ -1266,7 +1266,7 @@ PARAMS  bc              ;a flag, $0000 or $0001 depending on callee
         add     hl,de
         ret
         
-        ;------------------------------------------------------------------------------
+        ;-------------------------------------------------------------------------------
 ._4     ld      a,[$.BLOCK_Y]
         add     a,b
         ld      e,$00
@@ -1288,7 +1288,7 @@ PARAMS  bc              ;a flag, $0000 or $0001 depending on callee
         add     hl,de
         ret
         
-        ;------------------------------------------------------------------------------
+        ;-------------------------------------------------------------------------------
 ._5     ld      a,[$.BLOCK_Y]
         add     a,b
         ld      d,a
@@ -1302,7 +1302,7 @@ PARAMS  bc              ;a flag, $0000 or $0001 depending on callee
 }
 
 PROC    :fillScreenWithFloorLayout              SECTION ::main                  ;$0966
-        ;==============================================================================
+        ;===============================================================================
         ;;this routine is only called during level loading to populate the screen with
           the visible portion of the Floor Layout. Scrolling fills in only the new
           tiles, so a full refresh of the screen is not required;;
@@ -1321,7 +1321,7 @@ PROC    :fillScreenWithFloorLayout              SECTION ::main                  
         ld      bc,$0000
         call    :getFloorLayoutRAMPosition
         
-        ;------------------------------------------------------------------------------
+        ;-------------------------------------------------------------------------------
         ld      de,$#SMS.VRAM.SCREENNAMETABLE
         ;;in 192-line mode, the screen is 6 blocks tall,
           in 224-line mode it's 7 blocks tall;;
@@ -1380,7 +1380,7 @@ PROC    :fillScreenWithFloorLayout              SECTION ::main                  
         ;HL will be an address in the screen name table
         ex      de,hl
         
-        ;------------------------------------------------------------------------------
+        ;-------------------------------------------------------------------------------
         ld      b,4                             ;4 rows of the block mapping
         
         ;set the screen name address
@@ -1457,14 +1457,14 @@ PROC    :fillScreenWithFloorLayout              SECTION ::main                  
 }
 
 PROC    :loadFloorLayout                        SECTION ::main                  ;$0A10
-        ;==============================================================================
+        ;===============================================================================
 PARAMS  hl`addr         ;address of Floor Layout data
         bc`size         ;length of compressed data
 {        
         ld      de`floor,$.FLOORLAYOUT          ;where in RAM the floor layout will go
 
         ;RLE decompress floor layout:
-        ;------------------------------------------------------------------------------
+        ;-------------------------------------------------------------------------------
 ._1     ld      a,[hl`floor]                    ;read first byte of the floor layout
         cpl                                     ;flip it to avoid first byte comparison
         ld      [iy+$01],a                      ;this is the comparison byte
@@ -1566,7 +1566,7 @@ PARAMS  IY`vars         HELP ""Address of the common variables (used throughout)
 }
 
 PROC    :darkenPalette                          SECTION ::main                  ;$0A90
-        ;------------------------------------------------------------------------------
+        ;-------------------------------------------------------------------------------
         ;fades a palette one step darker
         
 PARAMS  hl              ;source palette address
@@ -1605,13 +1605,13 @@ PARAMS  hl              ;source palette address
 }
 
 PROC    :_aae                                   SECTION ::main                  ;$0AAE
-        ;==============================================================================
+        ;===============================================================================
 PARAMS  hl
         IY`vars         HELP ""Address of the common variables (used throughout)
 {
         ld      [$.TEMP6],hl
         
-        ;------------------------------------------------------------------------------
+        ;-------------------------------------------------------------------------------
         ;copy parameter palette into the temporary RAM palette used for fading out
         
         ld      hl,[$.LOADPALETTE_TILE]
@@ -1631,7 +1631,7 @@ PARAMS  hl
         ld      a,%00000011
         call    ::interrupts:loadPaletteOnInterrupt
         
-        ;------------------------------------------------------------------------------
+        ;-------------------------------------------------------------------------------
         ld      c,[iy+#vars.spriteUpdateCount]
         ld      a,[$.VDPREGISTER_1]
         or      %01000000                       ;enable screen (bit6 of VDP register 1)
@@ -1713,7 +1713,7 @@ PARAMS  hl
 }
 
 PROC    :_b50                                   SECTION ::main                  ;$0B50
-        ;==============================================================================
+        ;===============================================================================
 PARAMS  HL`addr         HELP ""Address of a palette
 {        
         ld      [$.TEMP6]       HL              ;put the palette parameter aside 
@@ -1829,7 +1829,7 @@ PARAMS  IY`vars         HELP ""Address of the common variables (used throughout)
 }
 
 PROC    :getLevelBitFlag                        SECTION ::main                  ;$0C02
-        ;==============================================================================
+        ;===============================================================================
 PARAMS  hl              ;an address to a series of 19 bits, one for each level
                          ;$.D305+: set by life monitor
                          ;$.D30B+: set by emerald
@@ -1866,7 +1866,7 @@ PARAMS  hl              ;an address to a series of 19 bits, one for each level
 }
 
 PROC    :loadPowerUpIcon                        SECTION ::main                  ;$0C1D
-        ;==============================================================================
+        ;===============================================================================
         ;copy power-up icon into sprite VRAM
         
 PARAMS  hl              ;absolute address to uncompressed art data for the icons,

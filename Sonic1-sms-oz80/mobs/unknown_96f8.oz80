@@ -146,20 +146,20 @@ PARAMS  IX`mob          HELP ""Address of the current mob being processed
         add     hl,bc
         and     a
         sbc     hl,de
-        jr      c,9
+        jr      c,._9
         ld      l,[ix+#mob.Y+0]
         ld      h,[ix+#mob.Y+1]
         ex      de,hl
         ld      hl,[$.D2DC]
         and     a
         sbc     hl,de
-        jr      nc,9
+        jr      nc,._9
         ld      hl,[$.CAMERA_Y]
         ld      bc,$fff0
         add     hl,bc
         and     a
         sbc     hl,de
-        jr      nc,9
+        jr      nc,._9
         ld      hl,[$.CAMERA_Y]
         ld      bc,$00c0
         add     hl,bc

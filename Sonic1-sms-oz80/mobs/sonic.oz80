@@ -401,7 +401,7 @@ PARAMS  IX`mob          HELP ""Address of the current mob being processed
         bit     7,[ix+#mob.flags]
         jr      z,._13
         bit     3,[ix+#mob.flags]
-        jr      nz,._16
+        jr      nz,._12
         bit     5,[iy+#vars.joypad]
         jr      z,._13
 ._12    bit     5,[iy+#vars.joypad]
@@ -2443,11 +2443,11 @@ INDEX   ._58d0
         ld      [IY+#vars.joypad],$FF
         ret
         
-        ;====================================================================[$58E5]===
+        ;===============================================================================
         ;lookup table to the functions above
          ;(these probably handle the different solidity values)
-
-._58e5  WORD    ._54bc, ._54c6, ._54ce, ._550f, ._552d, ._5556, ._5578, ._5590
+        
+._58e5  WORD    ._54bc, ._54c6, ._54ce, ._550f, ._552d, ._5556, ._5578, ._5590  ;$58E5
         WORD    ._55a8, ._55b6, ._55e2, ._55eb, ._565c, ._567c, ._56a6, ._56b6
         WORD    ._56c6, ._56d6, ._5761, ._5771, ._5781, ._5791, ._57cd, ._57f6
         WORD    ._5808, ._584b, ._5883, ._58d0

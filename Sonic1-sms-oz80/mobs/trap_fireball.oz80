@@ -43,7 +43,7 @@ PARAMS  IX`mob          HELP ""Address of the current mob being processed
         call    :getFloorLayoutRAMAddressForMob
         ld      a,[hl]
         cp      $52
-        jr      z,._3
+        jr      z,._1
         set     1,[ix+#mob.flags]
 ._1     ld      a,[ix+#mob.unknown11]
         and     a

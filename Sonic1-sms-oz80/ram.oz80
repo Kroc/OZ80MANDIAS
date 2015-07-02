@@ -29,7 +29,7 @@ TYPE    #levelHeader
 .cycleSpeed                     BYTE            ;speed of palette animation
 .cycleCount                     BYTE            ;number of palettes in cycle
 .cyclePalette                   BYTE            ;index of cycle palette
-.objectLayout                   LONG            ;address of Object layout data
+.objectLayout                   WORD            ;address of Object layout data
 .scrollRingFlags                BYTE            
 .underwaterFlag                 BYTE    
 .timeLightningFlags             BYTE    
@@ -37,7 +37,7 @@ TYPE    #levelHeader
 .music                          BYTE            ;index of music
 ]
 
-;--------------------------------------------------------------------------------------
+;---------------------------------------------------------------------------------------
 
 TYPE    #mob                    ;26 bytes
 [
@@ -73,7 +73,7 @@ TYPE    #mob                    ;26 bytes
 .unknown19                      BYTE    ;unused?
 ]
 
-;--------------------------------------------------------------------------------------
+;---------------------------------------------------------------------------------------
 
 ;;the programmers use the IY register as a short-cut to $D200
   to access commonly used variables and flags;;   
@@ -160,7 +160,7 @@ TYPE    #vars                           ;$D200:
 .unknown_0D                     BYTE    ;IY+$0D
 ]
 
-;--------------------------------------------------------------------------------------
+;---------------------------------------------------------------------------------------
 
 RAM     $
 ;name                           ;size                                           ;addr
@@ -171,11 +171,13 @@ RAM     $
 .FLOORLAYOUT                    BYTE x 4 KB                                     ;$C000
 
 ;X/Y/I data for the 64 sprites
-.SPRITETABLE                    BYTE x 64*4                                     ;$D000
+.SPRITETABLE                    BYTE x 64*3                                     ;$D000
 
-;;when the screen scrolls and new tiles need to be filled in, they are pulled
-  from these caches which have the necessary tiles already in horizontal
-  / vertical order for speed;;
+.D0C0                           BYTE x 64                                       ;UNUSED
+
+;;when the screen scrolls and new tiles need to be filled in, they are pulled from
+  these caches which have the necessary tiles already in horizontal / vertical order
+  for speed ;;
 ;(NOTE: though these are 128 bytes each, I don't think that much is used)
 .OVERSCROLLCACHE_VERT           BYTE x 128                                      ;$D100
 .OVERSCROLLCACHE_HORZ           BYTE x 128                                      ;$D180
@@ -368,11 +370,12 @@ RAM     $
 .TIME_SECONDS                   BYTE ;level timer - seconds                     ;$D2CF
 .TIME_FRAMES                    BYTE ;level timer - frames                      ;$D2D0
 
+.D2D1                           BYTE                                            ;UNUSED
+
 ;;the previous song played is checked during level load to avoid starting
   the same song again (for example, when teleporting in Scrap Brain);;
-.PREVIOUS_MUSIC                 BYTE                                            ;$D2D1
+.PREVIOUS_MUSIC                 BYTE                                            ;$D2D2
 
-.D2D2                           BYTE                                            ;UNUSED
 .D2D3                           BYTE ;UNKNOWN                                   ;$D2D3
 
 .LEVEL_SOLIDITY                 BYTE                                            ;$D2D4
@@ -480,10 +483,10 @@ RAM     $
 ;a working-copy of the palette, for fade effects
 .PALETTE                        BYTE x 32                                       ;$D3BC
 
-.D3DC                           BYTE x 32                                       ;UNUSED
+.D3DE                           BYTE x 32                                       ;UNUSED
 
 ;mobs: the 32 mobs in the level begin here:
-;--------------------------------------------------------------------------------------
+;---------------------------------------------------------------------------------------
 
 ;the player is a mob like any other and has reserved parameters in memory
 .SONIC                          TYPE #mob                                       ;$D3FC

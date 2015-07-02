@@ -187,7 +187,7 @@ PARAMS  IY`vars         HELP ""Address of the common variables (used throughout)
         
 ._1     add     A`lives A`lives                 ;double for the 8x16 sprite lookup                     
         add     A`lives $80                     ;number sprites begin at index $80
-        ld      [$.LAYOUT_BUFFER+2] A`lives     ;put number of lives into the buffer
+        ld      [$.LAYOUT_BUFFER+3] A`lives     ;put number of lives into the buffer
         
         ld      C`xpos  16                      ;X-position of lives display
         ld      B`ypos  172                     ;Y-position of lives display
@@ -1557,7 +1557,7 @@ PARAMS  IY`vars         HELP ""Address of the common variables (used throughout)
         
         ;play the death sound effect
         ld      A`sfx           ::sound:S1_MusicPointers.death.index
-        rst     :playMusic
+        rst     :rst_playMusic
         
         ret
 }
@@ -1624,7 +1624,7 @@ PARAMS  IX`mob          HELP ""Address of the current mob being processed
         ld      [iy+#vars.joypad],$ff
         
         ld      A,$11
-        rst     :playSFX
+        rst     :rst_playSFX
         
         ret
 }
@@ -1666,7 +1666,7 @@ PARAMS  IX`mob          HELP ""Address of the current mob being processed
         
         ;play the explosion sound
         ld      A`sfx           $01
-        rst     :playSFX
+        rst     :rst_playSFX
         
         ;give the player 100 points
         ld      DE`hundreds     $0100
@@ -2246,11 +2246,11 @@ PARAMS  A`count         HELP ""Number of rings to add
         
 .is100rings
         ld      A`rings         C`rings
-        cp      100
+        cp      $A0
         jr      c,.pickupRing                   ;if not yet 100, keep going
         
         ;subtract 100 rings
-        sub     100
+        sub     $A0
         ld      [$.RINGS]       A`rings
         
         ;add 1 to the lives count
@@ -2260,7 +2260,7 @@ PARAMS  A`count         HELP ""Number of rings to add
         
         ;play the 1-up sound effect
         ld      A`sfx           $09
-        rst     :playSFX
+        rst     :rst_playSFX
         
         ret
         
@@ -2271,7 +2271,7 @@ PARAMS  A`count         HELP ""Number of rings to add
         ld      [$.RINGS]       A`rings
         ;play the pickup-ring sound
         ld      A`sfx           $02
-        rst     :playSFX
+        rst     :rst_playSFX
         
         ret
 }
@@ -2328,7 +2328,7 @@ PARAMS  C`thousands     HELP ""Thousands to add to the score
         inc     [HL`lives]
         ;play extra life sound effect
         ld      A`sfx           $09
-        rst     :playSFX
+        rst     :rst_playSFX
         
         ret
 }
@@ -3216,7 +3216,7 @@ PARAMS  IX`mob          HELP ""Address of the current mob being processed
         ld      l, h
         ld      h, a
         add     hl, bc
-        ld      a, [$.SONIC.width]
+        ld      a, [$.SONIC.height]
         ld      c, a
         xor     a`zero
         ld      b, a`zero
@@ -3365,7 +3365,7 @@ PARAMS  IX`mob          HELP ""Address of the current mob being processed
         ld      hl,$0806
         ld      [$.TEMP6],hl
         call    :detectCollisionWithSonic
-        jp      c,:_8003
+        jp      c,._8003
         ld      bc,$0010
         ld      e,[ix+#mob.Yspeed+0]
         ld      d,[ix+#mob.Yspeed+1]

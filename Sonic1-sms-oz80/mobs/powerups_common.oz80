@@ -413,7 +413,7 @@ PARAMS  IX`mob          HELP ""Address of the current mob being processed
         jr      nz,._1
         ld      l,[ix+#mob.Y+0]
         ld      h,[ix+#mob.Y+1]
-        ld      a,[$.SONIC.width]
+        ld      a,[$.SONIC.height]
         ld      c,a
         xor     a`zero
         ld      b,a`zero

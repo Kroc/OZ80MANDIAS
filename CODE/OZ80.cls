@@ -1161,10 +1161,6 @@ Private Chunks() As oz80Chunk           'All Chunks are collected here
 Private ChunkCount As Long              '1-based count of Chunks
 Private ChunksSize As Long              'Total size of all Chunks in bytes
 
-'The current chunk being assembled into. This is a reference into the Chunks array _
- so that we can speak to the current Chunk in scope consistently
-Private Chunk As Long
-
 'These will be references to the special Chunks at fixed positions within the ROM _
  (when laying out the ROM, we'll need to position these first)
 Private Chunk_Header As Long
@@ -1970,8 +1966,6 @@ Private Sub Reset()
     Let TokenIndex = 0
     Let TokensLength = 0
     
-    'Dereference the currently attached Chunk
-    Let Chunk = 0
     'Dereference the fixed Chunks so that the array can be emptied without _
      keeping these ones alive
     Let Chunk_Header = 0
@@ -4403,21 +4397,24 @@ ReadParams:
     If NextTokenError() Then GoTo Finish
     
     'Now define the Label name; if a Section was given, it needs to be prepended
-    Dim FullLabelName As String
-    Let FullLabelName = SectionName & LabelName
+    Dim FullName As String
+    Let FullName = SectionName & LabelName
     
     'ERROR: Duplicate Chunk name
-    If ChunkExists(FullLabelName) Then Call RaiseError( _
+    If ChunkExists(FullName) Then Call RaiseError( _
         OZ80_ERROR_DUPLICATE, "TODO" _
     ): GoTo Finish
+    
+    'This will be the index of the new Chunk we create
+    Dim Chunk As Long
     
     'Create the Chunk
     If Interrupt = INDEFINITE Then
         'A standard Procedure without fixed (interrupt) address
-        Call Chunk_Begin(LabelName, SectionIndex)
+        Let Chunk = Chunk_Begin(LabelName, SectionIndex)
     Else
         'A special fixed-Procedure for hardware interrupts
-        Call Chunk_Begin(LabelName, -1, Interrupt)
+        Let Chunk = Chunk_Begin(LabelName, -1, Interrupt)
         'We keep direct references to Interrupt Procedures to make it easier to _
          lay out the ROM contents
         If Interrupt = &H0& Then
@@ -4650,12 +4647,9 @@ Private Sub DefineStart()
     'The chunk cannot be left open
     If NextTokenError() Then Exit Sub
     
-    'Create the Chunk
+    'Create the Chunk, and keep a reference to this for laying out the ROM
     'TODO: Check that the System has been defined
-    Call Chunk_Begin(STR_START, -1, 0)
-        
-    'Keep a reference to this for laying out the ROM
-    Let Chunk_Start = Chunk
+    Let Chunk_Start = Chunk_Begin(STR_START, -1, 0)
     
     'Enter the Procedure Chunk to process its innards
     Call ScopeChunk(Chunk_Start)
@@ -4782,7 +4776,8 @@ ReadParams:
     ): GoTo Finish
     
     'Create the Chunk
-    Call Chunk_Begin(LabelName, SectionIndex)
+    Dim Chunk As Long
+    Let Chunk = Chunk_Begin(LabelName, SectionIndex)
     
     'Log a header for the disassembly
     Call Chunks(Chunk).LogASM.LogFormat("TABLE {$}", LabelName)
@@ -4863,12 +4858,12 @@ Continue:
         'Define the Index
         Call AddUpdateLabel( _
             Chunks(ChunkID).FullName & TokenText & STR_INDEX_LABEL, _
-            CDbl(Chunks(Chunk).TableIndex) _
+            CDbl(Chunks(ChunkID).TableIndex) _
         )
         
         'Move to the next index
         'TODO: Too many indicies at 256?
-        Let Chunks(Chunk).TableIndex = Chunks(Chunk).TableIndex + 1
+        Let Chunks(ChunkID).TableIndex = Chunks(ChunkID).TableIndex + 1
         
     '-----------------------------------------------------------------------------------
     'BYTE Data
@@ -4893,11 +4888,11 @@ Continue:
                 
                 If Value = INDEFINITE Then
                     Call DeferExpression( _
-                        ASM_VAL8, File, ExprToken, Chunks(ChunkID).Size, 0 _
+                        ASM_VAL8, File, ChunkID, ExprToken, Chunks(ChunkID).Size, 0 _
                     )
-                    Call Chunk_AddBYTE(0)
+                    Call Chunk_AddBYTE(ChunkID, 0)
                 Else
-                    Call Chunk_AddBYTE(Value)
+                    Call Chunk_AddBYTE(ChunkID, Value)
                 End If
                 
             ElseIf TokenKind = TOKEN_TEXT Then
@@ -4905,7 +4900,7 @@ Continue:
                 Let LogMsg.Text = TokenText
                 Dim i As Long
                 For i = 0 To LogMsg.Length - 1
-                    Call Chunk_AddBYTE(LogMsg.Char(i) And &HFF&)
+                    Call Chunk_AddBYTE(ChunkID, LogMsg.Char(i) And &HFF&)
                 Next i
                 If NextTokenError Then Exit Sub
                 
@@ -4942,11 +4937,11 @@ Continue:
                 
                 If Value = INDEFINITE Then
                     Call DeferExpression( _
-                        ASM_VAL16, File, ExprToken, Chunks(ChunkID).Size, 0 _
+                        ASM_VAL16, File, ChunkID, ExprToken, Chunks(ChunkID).Size, 0 _
                     )
-                    Call Chunk_AddWORD(0)
+                    Call Chunk_AddWORD(ChunkID, 0)
                 Else
-                    Call Chunk_AddWORD(Value)
+                    Call Chunk_AddWORD(ChunkID, Value)
                 End If
                 
             ElseIf Not TokenIsList(TokenKind) Then
@@ -4988,9 +4983,10 @@ End Sub
 'Value          | The "BYTE" to add to the current Chunk
 '=======================================================================================
 Private Sub Chunk_AddBYTE( _
+    ByRef ChunkID As Long, _
     ByRef Value As Double _
 )
-    With Chunks(Chunk)
+    With Chunks(ChunkID)
         'Increase the Chunk accordingly
         Let .Size = .Size + 1
     
@@ -5006,7 +5002,7 @@ Private Sub Chunk_AddBYTE( _
     End With
     
     'Add this to the disassembly log
-    Call Chunk_LogByte(Value And &HFF&)
+    Call Chunk_LogByte(ChunkID, Value And &HFF&)
 End Sub
 
 'Chunk_AddWORD
@@ -5014,9 +5010,10 @@ End Sub
 'Value          | The "WORD" (2-bytes) to add to the current Chunk
 '=======================================================================================
 Private Sub Chunk_AddWORD( _
+    ByRef ChunkID As Long, _
     ByRef Value As Double _
 )
-    With Chunks(Chunk)
+    With Chunks(ChunkID)
         'Increase the Chunk accordingly
         Let .Size = .Size + 2
     
@@ -5033,8 +5030,8 @@ Private Sub Chunk_AddWORD( _
     End With
     
     'Add this to the disassembly log
-    Call Chunk_LogByte(Value And &HFF&)
-    Call Chunk_LogByte((Value \ &H100&) And &HFF&)
+    Call Chunk_LogByte(ChunkID, Value And &HFF&)
+    Call Chunk_LogByte(ChunkID, (Value \ &H100&) And &HFF&)
 End Sub
 
 'Chunk_LogByte
@@ -5042,6 +5039,7 @@ End Sub
 'Value          | The byte to add to the current disassembly line
 '=======================================================================================
 Private Sub Chunk_LogByte( _
+    ByRef ChunkID As Long, _
     ByRef Value As Byte _
 )
     'If we've just come from Z80 instructions, we'll need to switch to the data _
@@ -5052,18 +5050,18 @@ Private Sub Chunk_LogByte( _
         'Include the current address on the log line
         Call api_RtlMoveMemory( _
             DestinationPointer:=StrPtr(ChunkDataLog), _
-                 SourcePointer:=StrPtr(HexStr16(Chunks(Chunk).Size - 1)), _
+                 SourcePointer:=StrPtr(HexStr16(Chunks(ChunkID).Size - 1)), _
                         Length:=8 _
         )
         'Bytes will be logged according to the current offset _
          (so that the data is displayed aligned to 16 bytes)
-        Let ChunkDataIndex = (Chunks(Chunk).Size - 1) Mod 16
+        Let ChunkDataIndex = (Chunks(ChunkID).Size - 1) Mod 16
         
         If ChunkMode <> MODE_UNSET Then
-            Call Chunks(Chunk).LogASM.Log(LOG_ASM_FOOT)
+            Call Chunks(ChunkID).LogASM.Log(LOG_ASM_FOOT)
         End If
-        Call Chunks(Chunk).LogASM.Log(LOG_DATA_COLS)
-        Call Chunks(Chunk).LogASM.Log(LOG_DATA_HEAD)
+        Call Chunks(ChunkID).LogASM.Log(LOG_DATA_COLS)
+        Call Chunks(ChunkID).LogASM.Log(LOG_DATA_HEAD)
         Let ChunkMode = MODE_DATA
     End If
     
@@ -5078,14 +5076,14 @@ Private Sub Chunk_LogByte( _
     'If we've reached the end of a disassembly line then log it and start a new one
     If ChunkDataIndex = 15 Then
         'Add the prepared line to the log
-        Call Chunks(Chunk).LogASM.Log(ChunkDataLog)
+        Call Chunks(ChunkID).LogASM.Log(ChunkDataLog)
         'Start the next line
         Let ChunkDataLog = LOG_DATA
         Let ChunkDataIndex = 0
         'Include the next address on the log line
         Call api_RtlMoveMemory( _
             DestinationPointer:=StrPtr(ChunkDataLog), _
-                 SourcePointer:=StrPtr(HexStr16(Chunks(Chunk).Size)), _
+                 SourcePointer:=StrPtr(HexStr16(Chunks(ChunkID).Size)), _
                         Length:=8 _
         )
     Else
@@ -5394,7 +5392,7 @@ PushPop:
     
     '-----------------------------------------------------------------------------------
     
-    With Chunks(Chunk)
+    With Chunks(ChunkID)
         'If the disassembly log is not yet set for Z80, do so now
         If ChunkMode <> MODE_Z80 Then
             'If we're coming from binary data, we'll need to finalise that
@@ -6123,7 +6121,7 @@ iRST:
             Let Opcode = X3 Or OpcodeY_RST(Instruction.Value) Or Z7
         Else
             Call DeferExpression(ASM_RST, _
-                File, Instruction.Param1.Expression, BinaryOffset, 0 _
+                File, ChunkID, Instruction.Param1.Expression, BinaryOffset, 0 _
             )
         End If
         'The Value is baked into the Opcode, _
@@ -6282,7 +6280,7 @@ OutputOffset_1Param:
     Else
         'If the offset is indefinite, defer the calculation
         If Offset = INDEFINITE Then Call DeferExpression( _
-            ASM_JR, File, Instruction.Param1.Expression, BinaryOffset, From _
+            ASM_JR, File, ChunkID, Instruction.Param1.Expression, BinaryOffset, From _
         )
         Let ByteCount = 2
     End If
@@ -6299,7 +6297,7 @@ OutputOffset_2Param:
     Else
         'If the offset is indefinite, defer the calculation
         If Offset = INDEFINITE Then Call DeferExpression( _
-            ASM_JR, File, Instruction.Param2.Expression, BinaryOffset, From _
+            ASM_JR, File, ChunkID, Instruction.Param2.Expression, BinaryOffset, From _
         )
         Let ByteCount = 2
     End If
@@ -6320,11 +6318,11 @@ Output8_1Param:
         If (Mnemonic = TOKEN_Z80_JR) _
         Or (Mnemonic = TOKEN_Z80_DJNZ) Then
             Call DeferExpression( _
-                ASM_JR, File, Instruction.Param1.Expression, BinaryOffset, From _
+                ASM_JR, File, ChunkID, Instruction.Param1.Expression, BinaryOffset, From _
             )
         Else
             Call DeferExpression( _
-                ASM_VAL8, File, Instruction.Param1.Expression, BinaryOffset, From _
+                ASM_VAL8, File, ChunkID, Instruction.Param1.Expression, BinaryOffset, From _
             )
         End If
     Else
@@ -6348,11 +6346,11 @@ Output8_2Param:
         Call api_RtlMoveMemory(LogPtr + 94, StrPtr("$??       "), 20)
         If Mnemonic = TOKEN_Z80_JR Or Mnemonic = TOKEN_Z80_DJNZ Then
             Call DeferExpression( _
-                ASM_JR, File, Instruction.Param2.Expression, BinaryOffset, From _
+                ASM_JR, File, ChunkID, Instruction.Param2.Expression, BinaryOffset, From _
             )
         Else
             Call DeferExpression( _
-                ASM_VAL8, File, Instruction.Param2.Expression, BinaryOffset, From _
+                ASM_VAL8, File, ChunkID, Instruction.Param2.Expression, BinaryOffset, From _
             )
         End If
     Else
@@ -6376,7 +6374,7 @@ OutputOff8:
     If Instruction.HasOffset = 1 Then
         If Offset = INDEFINITE Then
             Call DeferExpression( _
-                ASM_VAL8, File, Instruction.Param1.Expression, BinaryOffset, From _
+                ASM_VAL8, File, ChunkID, Instruction.Param1.Expression, BinaryOffset, From _
             )
         Else
             Let Bytes(2) = Offset
@@ -6388,7 +6386,7 @@ OutputOff8:
     Let ByteCount = ByteCount + 1
     If Instruction.Value = INDEFINITE Then
         Call DeferExpression( _
-            ASM_VAL8, File, Instruction.Param2.Expression, _
+            ASM_VAL8, File, ChunkID, Instruction.Param2.Expression, _
             BinaryOffset + (ByteCount - 2), From _
         )
     Else
@@ -6409,7 +6407,7 @@ Output16_1Param:
         Call api_RtlMoveMemory(LogPtr + 74, StrPtr("$????     "), 20)
         
         Call DeferExpression( _
-            ASM_JP, File, Instruction.Param1.Expression, BinaryOffset, From _
+            ASM_JP, File, ChunkID, Instruction.Param1.Expression, BinaryOffset, From _
         )
     Else
         Let Bytes(2) = (Instruction.Value And &HFF&)
@@ -6432,7 +6430,7 @@ Output16_2Param:
         Call api_RtlMoveMemory(LogPtr + 74, StrPtr("$????     "), 20)
         
         Call DeferExpression( _
-            ASM_JP, File, Instruction.Param2.Expression, BinaryOffset, From _
+            ASM_JP, File, ChunkID, Instruction.Param2.Expression, BinaryOffset, From _
         )
     Else
         Let Bytes(2) = (Instruction.Value And &HFF&)
@@ -6470,7 +6468,7 @@ OutputED16_1Param:
         Call api_RtlMoveMemory(LogPtr + 44, StrPtr(HexStr8(-1)), 4)
         
         Call DeferExpression( _
-            ASM_JP, File, Instruction.Param1.Expression, BinaryOffset, From _
+            ASM_JP, File, ChunkID, Instruction.Param1.Expression, BinaryOffset, From _
         )
     Else
         Let Bytes(2) = (Instruction.Value And &HFF&)
@@ -6496,7 +6494,7 @@ OutputED16_2Param:
         Call api_RtlMoveMemory(LogPtr + 44, StrPtr(HexStr8(-1)), 4)
         
         Call DeferExpression( _
-            ASM_JP, File, Instruction.Param2.Expression, BinaryOffset, From _
+            ASM_JP, File, ChunkID, Instruction.Param2.Expression, BinaryOffset, From _
         )
     Else
         Let Bytes(2) = (Instruction.Value And &HFF&)
@@ -6521,7 +6519,7 @@ OutputCB_1Param:
         Let ByteCount = 3
         If Offset = INDEFINITE Then
             Call DeferExpression( _
-                ASM_VAL8, File, Instruction.Param1.Expression, BinaryOffset, From _
+                ASM_VAL8, File, ChunkID, Instruction.Param1.Expression, BinaryOffset, From _
             )
         End If
     Else
@@ -6543,7 +6541,7 @@ OutputCB_2Param:
         Let ByteCount = 3
         If Offset = INDEFINITE Then
             Call DeferExpression( _
-                ASM_VAL8, File, Instruction.Param2.Expression, BinaryOffset, From _
+                ASM_VAL8, File, ChunkID, Instruction.Param2.Expression, BinaryOffset, From _
             )
         End If
     Else
@@ -6554,7 +6552,7 @@ OutputCB_2Param:
 AddBytes:
     '-----------------------------------------------------------------------------------
     'Now the assembled bytes have been queued, add them to the Chunk
-    With Chunks(Chunk)
+    With Chunks(ChunkID)
         'Increase the Chunk accordingly
         If Bytes(0) = 0 _
             Then Let .Size = .Size + ByteCount _
@@ -7324,12 +7322,14 @@ End Function
 'LabelName      | String of the fully-qualified Label name, i.e. "::section:label"
 '[SectionIndex] | Which Section this belongs to, index of `Sections` array
 '[Address]      | Optional address to place the Chunk in ROM
+'---------------¦-----------------------------------------------------------------------
+'Returns        | The index number of the new Chunk created
 '=======================================================================================
-Private Sub Chunk_Begin( _
+Private Function Chunk_Begin( _
              ByRef LabelName As String, _
     Optional ByRef SectionID As Long = -1, _
     Optional ByRef Address As Double = -1 _
-)
+) As Long
     'Get the Section name if a SectionID is provided
     Dim SectionName As String
     If SectionID <> -1 Then Let SectionName = Sections(SectionID).Name
@@ -7341,10 +7341,10 @@ Private Sub Chunk_Begin( _
     
     Let ChunkCount = ChunkCount + 1
     ReDim Preserve Chunks(1 To ChunkCount) As oz80Chunk
+    Let Chunk_Begin = ChunkCount
     
     'Apply the details we have
-    Let Chunk = ChunkCount
-    With Chunks(Chunk)
+    With Chunks(Chunk_Begin)
         Let .FullName = FullName
         Let .LabelName = LabelName
         Let .SectionName = SectionName
@@ -7371,7 +7371,7 @@ Private Sub Chunk_Begin( _
         
         Set .Properties = New Scripting.Dictionary
     End With
-End Sub
+End Function
 
 'AddUpdateLabel: Blindly adds to or updates the Label database
 '=======================================================================================
@@ -8068,6 +8068,7 @@ End Function
 Private Sub DeferExpression( _
     ByRef Kind As OZ80_DEFERRED, _
     ByRef File As Long, _
+    ByRef ChunkID As Long, _
     ByRef TokenIndex As Long, _
     ByRef ROMOffset As Long, _
     ByRef From As Long _
@@ -8079,7 +8080,7 @@ Private Sub DeferExpression( _
         Let .Kind = Kind
         Let .File = File
         Let .TokenIndex = TokenIndex
-        Let .ChunkID = Chunk
+        Let .ChunkID = ChunkID
         Let .ROMOffset = ROMOffset
         Let .From = From
     End With

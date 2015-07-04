@@ -826,10 +826,7 @@ Private Labels As Scripting.Dictionary
 'Type Definition:
 '---------------------------------------------------------------------------------------
 
-Private Type OZ80Node
-    Before As Long
-    After As Long
-    
+Private Type OZ80Property
     Name As String
     Offset As Long
     
@@ -842,10 +839,8 @@ Private Type OZ80Type
     Base As Long
     Size As Long                        'Size of the Type in bits
     
-    Nodes() As OZ80Node
-    NodeCount As Long
-    
-    Last As Long
+    Properties() As OZ80Property
+    PropertyCount As Long
 End Type
 
 Private Types() As OZ80Type
@@ -1139,18 +1134,19 @@ Private OpcodeZ_Register([_PARAM_REGS_BEGIN] To [_PARAM_REGS_END]) As Long
  placed into the output ROM file
 
 Private Type oz80Chunk
-    FullName As String                  'Fully-qualified Label name
+    FullName As String                  'Fully-qualified name, i.e. "::section:label"
     LabelName As String                 'Quick-access to the Label name
-    SectionName As String               'Quick-access to the Chunk's assigned Section
+    SectionName As String               'Quick-access to the Chunk's Section name
     Slot As OZ80_SLOT                   'Slot pattern assigned to the Chunk
+    
     SectionID As Long                   'Index number to `Sections` array
     
     Data() As Byte                      'The binary content of the Chunk
     Buffer As Long                      'Buffer size for the data (power of 2)
     Size As Long                        'Length of the actual data in bytes
     
-    AddrReal As Long
-    AddrSlot As Long
+    AddrReal As Long                    'Location of Chunk within the ROM
+    AddrSlot As Long                    'As above, but memory-mapped within 64 K
     
     TableIndex As Long                  'Current `INDEX` number in the Chunk
     'TODO: Replace this with something much, much faster
@@ -1198,7 +1194,7 @@ Private Layout() As oz80Layout
 Private LayoutCount As Long
 
 Private ROM() As Byte                   'The ROM's binary contents
-Private ROMSize As Long                 'The ROM file size, e.g. 256 KB
+Private ROMSize As Long                 'The ROM file size, e.g. 256 KB (power of 2)
 Private ROMUsed As Long                 'Where the current end of the data is
 
 '---------------------------------------------------------------------------------------
@@ -3787,6 +3783,8 @@ Private Sub ScopeType( _
     Optional ByVal BaseOffset As Long = 0, _
     Optional ByVal BaseName As String = vbNullString _
 )
+    Dim Value As Double
+    
     'This is a recursive function designed for walking nested Type definitions. _
      The outer-most Type block will already have been created in the Type database, _
      and we will define all the properties within it
@@ -3812,59 +3810,63 @@ Continue:
         Call RaiseError(OZ80_ERROR_EXPECTED, "TODO"): Exit Sub
     End If
     
+    'TODO: Anonymous properties
+    
     'Define this Property:
-    Let .NodeCount = .NodeCount + 1
-    ReDim Preserve .Nodes(1 To .NodeCount) As OZ80Node
-    
-    'This new node follows the previous
-    If .Last <> 0 Then
-        'Link the two nodes together,
-        Let .Nodes(.NodeCount).Before = .Last
-        Let .Nodes(.Last).After = .NodeCount
-    End If
-    
-    'This new node is now the latest
-    Let .Last = .NodeCount
+    Let .PropertyCount = .PropertyCount + 1
+    ReDim Preserve .Properties(1 To .PropertyCount) As OZ80Property
     'Combine the Property name with the inherited heirarchy
-    Let .Nodes(.Last).Name = BaseName & TokenText
-    'The new Property's reserved data size will begin ater the previous
-    Let .Nodes(.Last).Offset = BaseOffset
+    Let .Properties(.PropertyCount).Name = BaseName & TokenText
     
     'Move over the Property name
     If NextTokenError() Then Exit Sub
     
     'Offset Value:
     '-----------------------------------------------------------------------------------
+    'An optional Value can be provided before the size to set the current enumeration _
+     address; that is, you can skip to anywhere in the address space
     
-    'Next word could be a Value
+    'Is there a Value preceeding the unit size?
+    '...................................................................................
     If TokenIsExpression(TokenKind) Then
-        Dim Value As Double
+        'Fetch the Value given. Any error, fold upwards
         If ParseExpression(Value) Then Exit Sub
         
+        'An indefinite Value cannot be used (yet?) as the addressing of the remainder _
+         of the Type will depend upon this Value and we haven't a means of deferring _
+         enmueration of Type structures
         If Value = INDEFINITE Then
-            Stop
-        Else
-            'TODO: Sanity check
-            Let .Nodes(.Last).Offset = Value * 8
-            Let BaseOffset = .Nodes(.Last).Offset
+            'Error, and fold up
+            Call RaiseError(OZ80_ERROR_INDEFINITE, "TODO")
+            Exit Sub
         End If
+        
+        'TODO: Sanity check (must be within $0000 - $FFFF)
+        'Set the address of this property to that given
+        Let .Properties(.PropertyCount).Offset = Value * 8
+        'The next property will begin after this new address
+        Let BaseOffset = .Properties(.PropertyCount).Offset
+        
+    '...................................................................................
+    Else
+        'The new Property's reserved data size will begin ater the previous
+        Let .Properties(.PropertyCount).Offset = BaseOffset
     End If
     
     Let LogMsg.Text = "     |      |       |                                                    "
-    Call LogMsg.Overwrite(0, HexStr16(.Nodes(.Last).Offset \ 8))
-    Call LogMsg.Overwrite(22, .Nodes(.Last).Name)
+    Call LogMsg.Overwrite(0, HexStr16(.Properties(.PropertyCount).Offset \ 8))
+    Call LogMsg.Overwrite(22, .Properties(.PropertyCount).Name)
     
-    'Unit:
+     
+    'Record the type of unit used
+    Let .Properties(.PropertyCount).Unit = TokenKind
+    
+    'Nested Types:
     '-----------------------------------------------------------------------------------
-    
-    'Next word will be the unit size
-    Let .Nodes(.Last).Unit = TokenKind
-    
+    'If the unit for a Property is `TYPE` then we append another Type at this point, _
+     either pre-existing (by name), or an anonymous Type, embedded here-in
     If TokenKind = TOKEN_KEYWORD_TYPE Then
-        
-        Dim Index As Long
-        Let Index = .Last
-        
+        'Skip oiver the `TYPE` keyword
         If NextTokenError() Then Exit Sub
         
         Call LogMsg.Overwrite(7, STR_TYPE)
@@ -3873,96 +3875,96 @@ Continue:
             "-----.------.-------.----------------------------------------------------" _
         )
         
-        'Define the Type's start position
-        Call Values.Add(.Name & BaseName & .Nodes(.Last).Name, .Nodes(.Last).Offset \ 8)
+        'Define the nested Type's address; that is, `#type.subtype` will give you the _
+         address of the nested Type, which will be the same as the first Property _
+         there-in (e.g. `#type.subtype.property`). This is so that you need not rely _
+         on the name/position of the first Property in your code
+        Call Values.Add( _
+            .Name & BaseName & .Properties(.PropertyCount).Name, _
+            .Properties(.PropertyCount).Offset \ 8 _
+        )
         
-        Dim Last As Long
-        Let Last = .Last
-        
+        'Is this a pre-existing Type name?
+        '...............................................................................
         If TokenKind = TOKEN_TYPE Then
-            'TODO: Import the existing type
-            
+            'Retrieve the name of the Type
             Dim CopyTypeName As String
             Let CopyTypeName = TokenText
             
+            'Look for it amongst the existing Types...
+            'TODO: I would like to do away with this and have the Type name token _
+             implicitly link to its Type structure; perhaps do this at Tokenisation...
             Dim i As Long
             For i = 1 To TypeCount
                 Dim CopyTypeIndex As Long
                 If Types(i).Name = CopyTypeName Then Let CopyTypeIndex = i: Exit For
             Next i
-            
             'TODO: Type not found?
             If CopyTypeIndex = 0 Then Stop
             
+            'Step over the Type name. There should exist at least the end-Type _
+             bracket, so end-of-file is an error
             If NextTokenError() Then Exit Sub
             
+            'Define the size of the sub-Type. With thanks to below for the simple _
+             solution to always-round-up division for converting bits-to-bytes _
+             <visualbasic.ittoolbox.com/groups/technical-functional/visualbasic-l/always-round-up-to-whole-number-in-vb-60-1073167#GRB4513402>
+            Call Values.Add( _
+                .Name & BaseName & .Properties(.PropertyCount).Name & ".size", _
+                Abs(Int(-Types(CopyTypeIndex).Size / 8)) _
+            )
+            
+            'The Property name given to the sub-Type will need to be prepended to _
+             each Property within the sub-Type as we walk them; attaching the sub-Type _
+             to the parent Type at any nesting level
+            
             Dim CopyBaseName As String
-            Let CopyBaseName = .Nodes(.Last).Name
+            Let CopyBaseName = .Properties(.PropertyCount).Name
             
-            Dim CopyNodeIndex As Long
-            Let CopyNodeIndex = 1
-            
-            Let .NodeCount = .NodeCount + 1
-            ReDim Preserve .Nodes(1 To .NodeCount) As OZ80Node
-            Let .Nodes(.NodeCount).Before = .Last
-            Let .Nodes(.Last).After = .NodeCount
-            Let .Last = .NodeCount
-            
-            Do
-                With Types(CopyTypeIndex).Nodes(CopyNodeIndex)
+            'Walk the list of Properties within the sub-Type
+            For i = 1 To Types(CopyTypeIndex).PropertyCount
+                'Create the next node
+                Let .PropertyCount = .PropertyCount + 1
+                ReDim Preserve .Properties(1 To .PropertyCount) As OZ80Property
+                
+                'Start assigning the Property details
+                With Types(CopyTypeIndex).Properties(i)
                     Let LogMsg.Text = "     |      |       |                                                    "
                     Call LogMsg.Overwrite(0, HexStr16(BaseOffset \ 8))
                     Call LogMsg.Overwrite(22, BaseName & CopyBaseName & .Name)
                     Call LogMsg.Overwrite(7, TokenNames(.Unit))
                     
                     'Copy the Property across
-                    Let BaseType.Nodes(BaseType.Last).Offset = BaseOffset
-                    Let BaseType.Nodes(BaseType.Last).Name = BaseName & CopyBaseName & .Name
-                    Let BaseType.Nodes(BaseType.Last).Size = .Size
+                    Let BaseType.Properties(BaseType.PropertyCount).Offset = BaseOffset
+                    Let BaseType.Properties(BaseType.PropertyCount).Name = BaseName & CopyBaseName & .Name
+                    Let BaseType.Properties(BaseType.PropertyCount).Unit = .Unit
+                    Let BaseType.Properties(BaseType.PropertyCount).Size = .Size
                     Let BaseOffset = BaseOffset + .Size
-                    Let CopyNodeIndex = .After
                     
+                    'Add the size of this Property to the parent-Type
                     Let BaseType.Size = BaseType.Size + .Size
                     
                     Call RaiseMessage(OZ80_LOG_INFO, LogMsg.Text)
                 End With
                 
-                'Add the Type Property to the global value database
-                Call Values.Add(.Name & BaseName & .Nodes(.Last).Name, .Nodes(.Last).Offset \ 8)
-                'Define the size (in bytes too) with thanks to below for the simple solution _
-                 <visualbasic.ittoolbox.com/groups/technical-functional/visualbasic-l/always-round-up-to-whole-number-in-vb-60-1073167#GRB4513402>
-                Call Values.Add(.Name & BaseName & .Nodes(.Last).Name & ".size", Abs(Int(-.Nodes(.Last).Size / 8)))
-                
-                If CopyNodeIndex = 0 Then Exit Do
-                
-                'Create the next node
-                Let .NodeCount = .NodeCount + 1
-                ReDim Preserve .Nodes(1 To .NodeCount) As OZ80Node
-                
-                'This new node follows the previous
-                If .Last <> 0 Then
-                    'Link the two nodes together,
-                    Let .Nodes(.NodeCount).Before = .Last
-                    Let .Nodes(.Last).After = .NodeCount
-                End If
-                
-                'This new node is now the latest
-                Let .Last = .NodeCount
-            Loop
+                'Add the Type Property to the global Label database
+                Call Values.Add( _
+                    .Name & BaseName & .Properties(.PropertyCount).Name, _
+                    .Properties(.PropertyCount).Offset \ 8 _
+                )
+                'Define the size in the Label database (in bytes)
+                Call Values.Add( _
+                    .Name & BaseName & .Properties(.PropertyCount).Name & ".size", _
+                    Abs(Int(-.Properties(.PropertyCount).Size / 8)) _
+                )
+            Next i
             
-            'Now the sub-Type is imported, define the size property of the sub-Type
-            Dim Size As Long
-            Let Size = Types(CopyTypeIndex).Size
-            'Define the size (in bytes too) with thanks to below for the simple solution _
-             <visualbasic.ittoolbox.com/groups/technical-functional/visualbasic-l/always-round-up-to-whole-number-in-vb-60-1073167#GRB4513402>
-            Call Values.Add( _
-                .Name & BaseName & .Nodes(Last).Name & ".size", _
-                Abs(Int(-Size / 8)) _
-            )
-            
+        'An anonymous (embedded) Type:
+        '...............................................................................
         Else
             'Walk the Type within this Type...
-            Call ScopeType(BaseType, BaseOffset, .Nodes(.Last).Name)
+            Call ScopeType(BaseType, BaseOffset, .Properties(.PropertyCount).Name)
+            'For any error within the sub-Type, don't continue with the outer Type
             If My_Error Then Exit Sub
         End If
         
@@ -3970,9 +3972,12 @@ Continue:
             "-----'------'-------'----------------------------------------------------" _
         )
         
-    'Nested Type:
-    '...................................................................................
+    'Unit:
+    '-----------------------------------------------------------------------------------
+    'Each Property of a Type must define a size (Bytes, Words, Longs &c.), _
+     this is used to enumerate the addresses automatically
     Else
+        'All size measurement is done in bits
         Dim UnitBits As Long
         If TokenKind = TOKEN_KEYWORD_BYTE Then
             Let UnitBits = 8
@@ -3982,34 +3987,54 @@ Continue:
         ElseIf TokenKind = TOKEN_KEYWORD_NYBL Then Let UnitBits = 4
         ElseIf TokenKind = TOKEN_KEYWORD_BOOL Then Let UnitBits = 1
         Else
-            Stop
+            'ERROR: Not a valid Unit size!
+            Call RaiseError(OZ80_ERROR_EXPECTED, "TODO")
+            Exit Sub
         End If
         
         Call LogMsg.Overwrite(7, TokenNames(TokenKind))
         
-        'Check for multiples
+        'Pass over the Unit token
         If NextTokenError() Then Exit Sub
         
+        'Multiplier?
+        '...............................................................................
+        'A Unit size (e.g. `WORD` -- 16 bits) can be multiplied as needed using the _
+         'repeat' operator "x". E.g. `WORD x 6` will give you 6 pairs of bytes
         If TokenKind = TOKEN_OPERATOR_REP Then
+            'Pass over the repeat operator
             If NextTokenError() Then Exit Sub
-            
+            'Get the multiplier Value
             If ParseExpression(Value) Then Exit Sub
             
+            'This cannot be indefinite because the size of structures must be known _
+             in order to layout the ROM and therefore define the Label addresses
             If Value = INDEFINITE Then
-                Stop
+                'ERROR: Size of a structure cannot be indefinite
+                Call RaiseError(OZ80_ERROR_INDEFINITE, "TODO")
+                Exit Sub
             Else
                 'TODO: Overflow check
-                Let .Nodes(.Last).Size = UnitBits * Value
+                'Assign the size in bits (unit x multiplier)
+                Let .Properties(.PropertyCount).Size = UnitBits * Value
                 Call LogMsg.Overwrite(14, CStr(Value))
             End If
+            
+        'No multipler -- just use a single unit
+        '...............................................................................
         Else
-            Let .Nodes(.Last).Size = UnitBits
+            Let .Properties(.PropertyCount).Size = UnitBits
             Call LogMsg.Overwrite(14, "1")
         End If
         
-        Let BaseOffset = .Nodes(.Last).Offset + .Nodes(.Last).Size
-        Let .Size = .Size + .Nodes(.Last).Size
+        'Shift forward the enumeration address according to the size of the structure; _
+         that is, the next Property shall begin after the previous number of bits
+        Let BaseOffset = .Properties(.PropertyCount).Offset + .Properties(.PropertyCount).Size
+        'And add this to the overal size of the whole Type
+        Let .Size = .Size + .Properties(.PropertyCount).Size
         
+        'Default Value?
+        '...............................................................................
         'TODO: Is there a default value?
         If TokenIsList(TokenKind) Then
             Dim Default As Scripting.Dictionary
@@ -4017,10 +4042,16 @@ Continue:
         End If
         
         'Add the Type Property to the global value database
-        Call Values.Add(.Name & BaseName & .Nodes(.Last).Name, .Nodes(.Last).Offset \ 8)
+        Call Values.Add( _
+            .Name & BaseName & .Properties(.PropertyCount).Name, _
+            .Properties(.PropertyCount).Offset \ 8 _
+        )
         'Define the size (in bytes too) with thanks to below for the simple solution _
          <visualbasic.ittoolbox.com/groups/technical-functional/visualbasic-l/always-round-up-to-whole-number-in-vb-60-1073167#GRB4513402>
-        Call Values.Add(.Name & BaseName & .Nodes(.Last).Name & ".size", Abs(Int(-.Nodes(.Last).Size / 8)))
+        Call Values.Add( _
+            .Name & BaseName & .Properties(.PropertyCount).Name & ".size", _
+            Abs(Int(-.Properties(.PropertyCount).Size / 8)) _
+        )
         
         Call RaiseMessage(OZ80_LOG_INFO, LogMsg.Text)
     End If
@@ -4028,12 +4059,15 @@ Continue:
     End With
     '-----------------------------------------------------------------------------------
     
+    'Has the Type come to an end? If not, loop for the next Property
     If TokenKind = TOKEN_SQUARE_CLOSE _
         Then Call NextToken _
         Else GoTo Continue
     
     'Define the size of the whole type, with thanks to below for the simple solution _
      <visualbasic.ittoolbox.com/groups/technical-functional/visualbasic-l/always-round-up-to-whole-number-in-vb-60-1073167#GRB4513402>
+    'We check for existence because of the ability to `APPEND` to a Type
+    'TODO: Do away with the use of a Dictionary object
     If Values.Exists(BaseType.Name & BaseName & ".size") Then
         Let Values.Item(BaseType.Name & BaseName & ".size") = Abs(Int(-BaseType.Size / 8))
     Else

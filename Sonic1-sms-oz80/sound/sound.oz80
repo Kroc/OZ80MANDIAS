@@ -627,10 +627,7 @@ TABLE   :_ff83                                  SECTION ::sound                 
     BYTE    $81 $00
     BYTE    $FE
     
-    ;TODO: Padding until we implement `ALIGN` (and can bump up the Block Mappings)
-    BYTE        $00 $00 $00 $00 $00 $00 $00 $00 $00 $00 $00 $00 $00 $00 $00
-    BYTE    $00 $00 $00 $00 $00 $00 $00 $00 $00 $00 $00 $00 $00 $00 $00 $00
-    BYTE    $00 $00 $00 $00 $00 $00 $00 $00 $00 $00 $00 $00 $00 $00 $00 $00
-    BYTE    $00 $00 $00 $00 $00 $00 $00 $00 $00 $00 $00 $00 $00 $00 $00 $00
-    BYTE    $00 $00 $00 $00 $00 $00 $00 $00 $00 $00 $00 $00 $00 $00 $00 $00
+    ;the background text in the original ROM
+    BYTE    "Master System & Game Gear Version. '1991 (C)Ancient. (BANK0-4)", $A2
+            "SONIC THE HEDGE"
 }

@@ -71,65 +71,7 @@ End Sub
 'FORM Load
 '======================================================================================
 Private Sub Form_Load()
-    Call Me.Show
-    
-    Dim StartTime As Single
-    Let StartTime = Timer
-
-'    Dim i As Long
-    Dim Test As New bluString
-'    Let Test.Text = "ABCD…F"
-'    Debug.Print Test.Insert("The Quick Brown Fox", 0).Truncate(12).Text
-'    End
-    
-'    Debug.Print Test.Left(10, ASTERISK).Text
-    
-'    Debug.Print Test.Join(Test.Clone.LCase).Text
-'    Debug.Print Test.Append("!").Text
-'    Debug.Print Test.Insert("_1_2_3_", 2).Text
-'    Debug.Print Test.Prepend("È").Text
-'    Debug.Print Test.Insert("G", -1).Text
-'    Call Test.CharPush(65535)
-'    Debug.Print Test.CharPull()
-'    Debug.Print Test.CharRemove(2), Test.Text
-'    Debug.Print Test.CharInsert(2, 66).Text
-'    Debug.Print Test.Remove(14, 6).Text
-'    Debug.Print Test.Replace("_1_2_3_", "{$}").Text
-'    Debug.Print Test.Wrap("""").Text
-'    Debug.Print Test.Format(3.141).Text
-'    Debug.Print Test.Overwrite(2, "***").Text
-'    Debug.Print Hex(Test.CRC())
-    
-'    For i = 0 To 999999
-'        Call Test.Replace("_1_2_3_", "_!_").Replace("_!_", "_1_2_3_")
-'        Call Test.Equals("ÈAB_1_2_3_CD…FG!!")
-'    Next i
-'    MsgBox Format$(Timer - StartTime, "0.000")
-'    End
-    
-    Set Assembler = New OZ80
-
-    'TODO: This will obviously be converted to use the command arguments
-    Call Assembler.Assemble(App.Path & "\Sonic1-sms-oz80\sonic1-sms.oz80")
-'    Call Assembler.Assemble(App.Path & "\TEST\test.oz80")
-    
-    Call Log("External Time: " & Format$(Timer - StartTime, "0.000"), OZ80_LOG_INFO)
-    Call Log(Assembler.Profiler.Report, OZ80_LOG_INFO)
-    Set Assembler = Nothing
-    
-    Call SendMessage( _
-        Me.txtLog.hWnd, EM_SETSEL, _
-        Len(Me.txtLog.Text), Len(Me.txtLog.Text) _
-    )
-    
-    Call SendMessageString( _
-        Me.txtLog.hWnd, EM_REPLACESEL, _
-        ByVal 0, LogText.Concatenate() _
-    )
-    
-    Call SendMessage( _
-        Me.txtLog.hWnd, WM_VSCROLL, 7, ByVal 0 _
-    )
+    '
 End Sub
 
 'FORM Resize
@@ -193,6 +135,67 @@ Private Sub Assembler_Message( _
 )
     Call Log(LogText.Text, LogLevel)
 End Sub
+
+Public Function Assemble( _
+    ByRef FilePath As String _
+) As OZ80_ERROR
+    Dim StartTime As Single
+    Let StartTime = Timer
+
+    Dim i As Long
+    Dim Test As New bluString
+'    Let Test.Text = "ABCD…F"
+'    Debug.Print Test.Insert("The Quick Brown Fox", 0).Truncate(12).Text
+'    End
+    
+'    Debug.Print Test.Left(10, ASTERISK).Text
+    
+'    Debug.Print Test.Join(Test.Clone.LCase).Text
+'    Debug.Print Test.Append("!").Text
+'    Debug.Print Test.Insert("_1_2_3_", 2).Text
+'    Debug.Print Test.Prepend("È").Text
+'    Debug.Print Test.Insert("G", -1).Text
+'    Call Test.CharPush(65535)
+'    Debug.Print Test.CharPull()
+'    Debug.Print Test.CharRemove(2), Test.Text
+'    Debug.Print Test.CharInsert(2, 66).Text
+'    Debug.Print Test.Remove(14, 6).Text
+'    Debug.Print Test.Replace("_1_2_3_", "{$}").Text
+'    Debug.Print Test.Wrap("""").Text
+'    Debug.Print Test.Format(3.141).Text
+'    Debug.Print Test.Overwrite(2, "***").Text
+'    Debug.Print Hex(Test.CRC())
+    
+'    For i = 0 To 999999
+'        Call Test.Replace("_1_2_3_", "_!_").Replace("_!_", "_1_2_3_")
+'        Call Test.Equals("ÈAB_1_2_3_CD…FG!!")
+'    Next i
+'    MsgBox Format$(Timer - StartTime, "0.000")
+'    End
+    
+    Set Assembler = New OZ80
+
+    'TODO: This will obviously be converted to use the command arguments
+    Call Assembler.Assemble(FilePath)
+    
+    Call Log("External Time: " & Format$(Timer - StartTime, "0.000"), OZ80_LOG_INFO)
+    Call Log(Assembler.Profiler.Report, OZ80_LOG_INFO)
+    Set Assembler = Nothing
+    
+    Call SendMessage( _
+        Me.txtLog.hWnd, EM_SETSEL, _
+        Len(Me.txtLog.Text), Len(Me.txtLog.Text) _
+    )
+    
+    Call SendMessageString( _
+        Me.txtLog.hWnd, EM_REPLACESEL, _
+        ByVal 0, LogText.Concatenate() _
+    )
+    
+    Call SendMessage( _
+        Me.txtLog.hWnd, WM_VSCROLL, 7, ByVal 0 _
+    )
+End Function
 
 'Log : Add a message to the log
 '======================================================================================

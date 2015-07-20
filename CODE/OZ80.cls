@@ -12,11 +12,11 @@ Attribute VB_Creatable = True
 Attribute VB_PredeclaredId = False
 Attribute VB_Exposed = False
 Option Explicit
-'=======================================================================================
+'======================================================================================
 'OZ80MANDIAS: a Z80 assembler; Copyright (C) Kroc Camen, 2013-15
 'Licenced under a Creative Commons 3.0 Attribution Licence
 '--You may use and modify this code how you see fit as long as you give credit
-'=======================================================================================
+'======================================================================================
 'CLASS :: OZ80
 
 'In any normal programming language you would want lots of small classes to handle _
@@ -28,106 +28,10 @@ Option Explicit
 'Therefore the code in here is very, very long. I've tried to arrange it in logical _
  progression order -- source code parsing & tokenising, assembling, and output
 
-'/// API ///////////////////////////////////////////////////////////////////////////////
-
-'Undocumented VB6 APIs to write a number of bytes to memory. _
- We'll be using this to manually create some Double values
-Private Declare Sub api_PutMem1 Lib "msvbvm60" Alias "PutMem1" ( _
-    ByVal DestinationPointer As Long, _
-    ByVal Value As Byte _
-)
-Private Declare Sub api_PutMem2 Lib "msvbvm60" Alias "PutMem2" ( _
-    ByVal DestinationPointer As Long, _
-    ByVal Value As Integer _
-)
-Private Declare Sub api_PutMem4 Lib "msvbvm60" Alias "PutMem4" ( _
-    ByVal DestinationPointer As Long, _
-    ByVal Value As Long _
-)
-
-'Copy raw memory from one place to another _
- <msdn.microsoft.com/en-us/library/windows/desktop/aa366535(v=vs.85).aspx>
-Private Declare Sub api_RtlMoveMemory Lib "kernel32" Alias "RtlMoveMemory" ( _
-    ByVal DestinationPointer As Long, _
-    ByVal SourcePointer As Long, _
-    ByVal Length As Long _
-)
-
-'---------------------------------------------------------------------------------------
-
-'In VB6 True is -1 and False is 0, but in the Win32 API it's 1 for True
-Private Enum BOOL
-    API_TRUE = 1
-    API_FALSE = 0
-End Enum
-
-'Structure for obtaining the Windows version _
- <msdn.microsoft.com/en-us/library/windows/desktop/ms724834(v=vs.85).aspx>
-Private Type OSVERSIONINFO
-    SizeOfMe As Long
-    MajorVersion As Long
-    MinorVersion As Long
-    BuildNumber As Long
-    PlatformID As Long
-    ServicePack As String * 128
-End Type
-
-'Get the Windows version _
- <msdn.microsoft.com/en-us/library/windows/desktop/ms724451(v=vs.85).aspx>
-Private Declare Function api_GetVersionEx Lib "kernel32" Alias "GetVersionExA" ( _
-    ByRef VersionInfo As OSVERSIONINFO _
-) As BOOL
-
-'---------------------------------------------------------------------------------------
-
-'Get the Locale Identifier (LCID) of this app _
- <msdn.microsoft.com/en-us/library/windows/desktop/dd318127(v=vs.85).aspx>
-'This is used for Windows XP support as Vista+ use Locale Name strings
-Private Declare Function api_GetThreadLocale Lib "kernel32" Alias "GetThreadLocale" ( _
-) As Long
-
-'Unicode & Locale-aware case conversion (Windows XP) _
- <msdn.microsoft.com/en-us/library/windows/desktop/dd318700(v=vs.85).aspx>
-Private Declare Function api_LCMapString Lib "kernel32" Alias "LCMapStringW" ( _
-    ByVal LocaleID As Long, _
-    ByVal MapFlags As LCMAP, _
-    ByVal SourceStringPointer As Long, _
-    ByVal SourceStringLength As Long, _
-    ByVal DestinationStringPointer As Long, _
-    ByVal DestinationStringLength As Long _
-) As Long
-
-'Unicode & Locale-aware case conversion (Windows Vista+) _
- <msdn.microsoft.com/en-us/library/windows/desktop/dd318702(v=vs.85).aspx>
-Private Declare Function api_LCMapStringEx Lib "kernel32" Alias "LCMapStringEx" ( _
-    ByVal LocaleNamePointer As Long, _
-    ByVal MapFlags As LCMAP, _
-    ByVal SourceStringPointer As Long, _
-    ByVal SourceStringLength As Long, _
-    ByVal DestinationStringPointer As Long, _
-    ByVal DestinationStringLength As Long, _
-    ByVal VersionInfoPointer As Long, _
-    ByVal ReservedPointer As Long, _
-    ByVal SortHandle As Long _
-) As Long
-
-Private Enum LCMAP
-    LCMAP_LINGUISTIC_CASING = &H1000000 'Manage accents &c. in lower/upper casing
-    LCMAP_LOWERCASE = &H100&            'Convert to lower case
-    LCMAP_UPPERCASE = &H200&            'Convert to UPPER CASE
-    LCMAP_SORTKEY = &H400&              'Generate a sort key
-    LCMAP_BYTEREV = &H800&              'Reverse the bytes
-    LCMAP_HIRAGANA = &H100000           'Change Japanese Katakana to Hiragana
-    LCMAP_KATAKANA = &H200000           'Change Japanese Hiragana to Katakana
-    LCMAP_HALFWIDTH = &H400000          'Use standard (half-width) characters
-    LCMAP_FULLWIDTH = &H800000          'Use wide-characters (i.e. Latin in Chinese)
-    'Change traditional Chinese to simplified Chinese and vice-versa
-    LCMAP_SIMPLIFIED_CHINESE = &H2000000
-    LCMAP_TRADITIONAL_CHINESE = &H4000000
-End Enum
+'/// API //////////////////////////////////////////////////////////////////////////////
 
 'Unicode character properties:
-'---------------------------------------------------------------------------------------
+'--------------------------------------------------------------------------------------
 'Returns an array of Unicode character properties for a string _
  <msdn.microsoft.com/en-us/library/windows/desktop/dd318119(v=vs.85).aspx>
 Private Declare Function api_GetStringTypeW Lib "kernel32" Alias "GetStringTypeW" ( _
@@ -163,7 +67,7 @@ Private Enum C1
     C1_VISIBLE = C1_SPACE Or C1_PUNCT Or C1_BLANK Or C1_ALPHANUM
 End Enum
 
-'/// DEBUG /////////////////////////////////////////////////////////////////////////////
+'/// DEBUG ////////////////////////////////////////////////////////////////////////////
 
 'We'll be doing some basic timing throughout
 Public Profiler As New bluProfiler
@@ -182,15 +86,17 @@ Public Enum PROFILER_EVENTS
     EVENT_ROM_ADDCHUNK
 End Enum
 
-'/// CLASS /////////////////////////////////////////////////////////////////////////////
+'/// CLASS ////////////////////////////////////////////////////////////////////////////
 
 'Errors:
-'---------------------------------------------------------------------------------------
+'--------------------------------------------------------------------------------------
 'Error number!
-Private My_Error As OZ80_ERROR
+Private Error As OZ80_ERROR
 
 Public Enum OZ80_ERROR
     OZ80_ERROR_NONE                     'Assembly completed successfully
+    OZ80_ERROR_ABORT                    'The user cancelled the assembly
+    
     OZ80_ERROR_DUPLICATE                'A name has been defined twice
     OZ80_ERROR_EXPECTED                 'Incorrect content at the current scope
     OZ80_ERROR_FILE_END                 'Unexpected end of file
@@ -231,7 +137,7 @@ Private Const STR_ERR_INVALID_NAME As String = _
     vbTab & ":  - Label, e.g. ':Procedure'" & vbCrLf & _
     vbTab & ":: - Section, e.g. '::Section'" & vbCrLf & _
     vbTab & "#  - Type, e.g. '#type'" & vbCrLf & _
-    vbTab & ".  - Subroutine/property, e.g. '.loop'" & vbCrLf & _
+    vbTab & ".  - Subroutine/Property, e.g. '.loop'" & vbCrLf & _
     vbCrLf & _
     "* The name may contain A-Z, 0-9 and Underscores, with the exceptions below" & vbCrLf & _
     "* The character following the prefix must be A-Z only"
@@ -274,11 +180,7 @@ Public Enum OZ80_WARNING
     OZ80_WARNING_ROUND                  'A decimal number had to be round-down
 End Enum
 
-'---------------------------------------------------------------------------------------
-
-'Some APIs are different for Windows XP / Vista+. _
- We fetch the Windows kernel version number during initialisation and store it here
-Private WindowsVersion As Single
+'--------------------------------------------------------------------------------------
 
 'During class initialisation we manually create special 64-bit numbers _
  in these values, which cannot be written out natively in VB6
@@ -291,16 +193,16 @@ Private NUMBER_MAX_K As Double
 Private NUMBER_MIN_KB As Double
 Private NUMBER_MAX_KB As Double
 
-'---------------------------------------------------------------------------------------
+'--------------------------------------------------------------------------------------
 'File Tokenising:
-'---------------------------------------------------------------------------------------
+'--------------------------------------------------------------------------------------
 'OZ80 converts the source code files into "Tokens", byte-code representations of the _
  source "words" which are then used for parsing. It would be too slow to re-interpret _
  the text every time we needed to cross-reference
 
 'A lot of the text parsing will be letter-by-letter, so this enum provides the _
  common character codes we'll be referring to, as well as the particular punctuation _
- symbols used for OZ80 syntax. Note that `UCS2` is defined by 'bluString.cls'
+ symbols used for OZ80 syntax. Note that `UCS2` is defined by 'blu_Strings.cls'
 Private Enum OZ80_SYNTAX
     ASC_NUL
     ASC_TAB = UCS2.C0_HT
@@ -501,7 +403,7 @@ Private Const STR_WORD                  As String = "WORD"
 Private Const STR_XOR                   As String = "xor"
 Private Const STR_Z                     As String = "Z"
 
-'---------------------------------------------------------------------------------------
+'--------------------------------------------------------------------------------------
 
 Private Enum OZ80_TOKEN
     TOKEN_NONE                          'Skip "0"
@@ -581,7 +483,7 @@ Private Enum OZ80_TOKEN
     TOKEN_Z80_XOR                       'Bitwise XOR
     [_TOKEN_Z80_END] = TOKEN_Z80_XOR
     
-    'Z80 Registers & Flags .............................................................
+    'Z80 Registers & Flags ............................................................
     [_TOKEN_REGS_BEGIN]
     TOKEN_Z80_A = [_TOKEN_REGS_BEGIN]   'Accumulator
     TOKEN_Z80_AF                        'Accumulator and Flags
@@ -613,7 +515,7 @@ Private Enum OZ80_TOKEN
     TOKEN_Z80_Z                         'Zero set flag
     [_TOKEN_REGS_END] = TOKEN_Z80_Z
     
-    'Operators .........................................................................
+    'Operators ........................................................................
     [_TOKEN_OPERATORS_BEGIN]
     TOKEN_OPERATOR_ADD                  'Add "+"
     TOKEN_OPERATOR_SUB                  'Subtract "-"
@@ -627,7 +529,7 @@ Private Enum OZ80_TOKEN
     TOKEN_OPERATOR_XOR                  'Bitwise XOR "~"
     [_TOKEN_OPERATORS_END]
     
-    'Keywords ..........................................................................
+    'Keywords .........................................................................
     [_TOKEN_KEYWORDS_BEGIN]
     TOKEN_KEYWORD_APPEND                'Append more to a Chunk / Type
     TOKEN_KEYWORD_BOOL                  'Boolean data type (1-bit)
@@ -684,7 +586,7 @@ End Enum
  (oh how I wish VB6 supported static constant arrays)
 Private TokenNames(0 To OZ80_TOKEN.[_TOKEN_LAST] - 1) As String
 
-'---------------------------------------------------------------------------------------
+'--------------------------------------------------------------------------------------
 
 'A token stream is machine-readable representation of the original source code that _
  does away for the need to refer to the source text files again. Below is the _
@@ -741,7 +643,7 @@ Private Type oZ80TokenNesting
     Index As Long                       'The token index of the opening bracket
 End Type
 
-'---------------------------------------------------------------------------------------
+'--------------------------------------------------------------------------------------
 
 Private Type oz80File
     'Remember where the original source file is as the assembler will need to change
@@ -770,14 +672,27 @@ Private TokensLength As Long
 'The portions of Text in the source code file
 Private TokenStrings As bluArrayStrings
 
-'---------------------------------------------------------------------------------------
+
+Private Type OZ80_ASTNode
+    Token As OZ80_TOKEN
+    Value As Double
+    
+    File As Long                        'File number
+    Line As Long
+    Col As Long
+End Type
+
+Private AST() As OZ80_ASTNode
+Private ASTCount As Long
+
+'--------------------------------------------------------------------------------------
 'Target System:
-'---------------------------------------------------------------------------------------
+'--------------------------------------------------------------------------------------
 'OZ80 does not aim to be overly generic, but rather target specific systems so as to _
  avoid requiring the developer to manually implement ROM checksums etc.
 
 'Which target system is selected, e.g. SEGA Master System
-Private My_System As OZ80_SYSTEM
+Private System As OZ80_SYSTEM
 
 'A list of system targets. Only the SEGA Master System is supported at the moment, _
  but I will consider supporting other Z80 systems in the future
@@ -786,9 +701,9 @@ Public Enum OZ80_SYSTEM
     SYSTEM_SMS                          'SEGA Master System
 End Enum
 
-'---------------------------------------------------------------------------------------
+'--------------------------------------------------------------------------------------
 'Sections:
-'---------------------------------------------------------------------------------------
+'--------------------------------------------------------------------------------------
 'A "Section" is a group of code/data Chunks that will be placed into the ROM together _
  according to special rules for the Slot pattern (system-specific paging scheme)
 
@@ -813,7 +728,7 @@ End Enum
 Private Sections() As oz80Section
 Private SectionCount As Long
 
-'---------------------------------------------------------------------------------------
+'--------------------------------------------------------------------------------------
 
 'The database of named item values. _
  This includes Constants, RAM Names and Type values
@@ -822,9 +737,9 @@ Private Values As Scripting.Dictionary
 'The database of Label locations (in ROM) and their properties
 Private Labels As Scripting.Dictionary
 
-'---------------------------------------------------------------------------------------
+'--------------------------------------------------------------------------------------
 'Type Definition:
-'---------------------------------------------------------------------------------------
+'--------------------------------------------------------------------------------------
 
 Private Type OZ80Property
     Name As String
@@ -837,7 +752,7 @@ End Type
 Private Type OZ80Type
     Name As String
     Base As Long
-    Size As Long                        'Size of the Type in bits
+    Size As Long                        'Complete size of the Type in bits
     
     Properties() As OZ80Property
     PropertyCount As Long
@@ -846,9 +761,9 @@ End Type
 Private Types() As OZ80Type
 Private TypeCount As Long
 
-'---------------------------------------------------------------------------------------
+'--------------------------------------------------------------------------------------
 'Z80 Instructions:
-'---------------------------------------------------------------------------------------
+'--------------------------------------------------------------------------------------
 'There are up to three parameters for Z80 instructions. _
  These can be Registers, Values or Z80 Memory References
 
@@ -940,7 +855,7 @@ Private Enum OZ80_PARAM
      'e.g. `LD A, $FF`
     PARAM_VAL = 2 ^ 23
     
-    '...................................................................................
+    '..................................................................................
     
     'Register C & Flag C cannot be distinguished by the tokeniser (it isn't aware of
      'context) so they are treated as the same thing. Another bit covers NC/Z/NZ so
@@ -950,7 +865,7 @@ Private Enum OZ80_PARAM
     
     PARAM_FLAGS = PARAM_FLAGS_CZ Or PARAM_FLAGS_MP
     
-    '...................................................................................
+    '..................................................................................
     
     'The IN and OUT instructions can use port "C" (which is, in reality, BC)
     PARAM_MEM_BC = 2 ^ 26
@@ -959,7 +874,7 @@ Private Enum OZ80_PARAM
     
     PARAM_MEM_VAL = 2 ^ 29
     
-    '...................................................................................
+    '..................................................................................
     
     'This is a shorthand to check for any instance of IX/IY so that we can add the
      'relevant opcode prefix with the simplest of tests
@@ -988,7 +903,7 @@ End Type
  combinations of the three parameters in a single bit-mask
 Private Enum OZ80_MASK
     'Param 1 Bits
-    '...................................................................................
+    '..................................................................................
     MASK_P1_A = (2 ^ 0)                 'Param 1 contains `A`
     MASK_P1_BDEHL = (2 ^ 1)             'Param 1 contains `B|D|E|H|L`
     MASK_P1_C = (2 ^ 2)                 'Param 1 contains `C` (Register or Flag)
@@ -1008,7 +923,7 @@ Private Enum OZ80_MASK
     MASK_P1_NZZNCPOPEPM = (2 ^ 16)      'Param 1 contains `NZ|Z|NC|PE|PO|P|M` (flags)
     
     'Param 2 Bits
-    '...................................................................................
+    '..................................................................................
     MASK_P2_A = (2 ^ 30)                'Param 2 contains `A`
     MASK_P2_BCDEHL = (2 ^ 29)           'Param 2 contains `B|C|D|E|H|L`
     MASK_P2_IXYHL = (2 ^ 28)            'Param 2 contains `IXH|IYH|IXL|IYL`
@@ -1025,11 +940,11 @@ Private Enum OZ80_MASK
     MASK_P2_MEM_VAL = (2 ^ 17)          'Param 2 contains `[$FF|$FFFF]
     
     'Param 3 (undocumented) Bits
-    '...................................................................................
+    '..................................................................................
     MASK_P3_ABCDEHL = -1                'Param 3 contains `A|B|C|D|E|H|L`
     
     'Parameter Tests
-    '...................................................................................
+    '..................................................................................
     TEST_P1_A = MASK_P1_A
     TEST_P1_ABCDEHL = TEST_P1_A Or MASK_P1_BDEHL Or MASK_P1_C
     TEST_P1_ABCDEHL_IXYHL_MEM_HLIXY = TEST_P1_ABCDEHL Or MASK_P1_IXYHL Or MASK_P1_MEM_HLIXY
@@ -1082,9 +997,9 @@ Private Enum OZ80_MASK
     
 End Enum
 
-'---------------------------------------------------------------------------------------
+'--------------------------------------------------------------------------------------
 'Z80 Opcodes:
-'---------------------------------------------------------------------------------------
+'--------------------------------------------------------------------------------------
 'Z80 opcodes are made up of various bit patterns that can be broken down into the
 'following layout: (this information from <z80.info/decoding.htm>)
 
@@ -1126,11 +1041,11 @@ Private OpcodeY_Bit(0 To 7) As Long
 Private OpcodeY_Register([_PARAM_REGS_BEGIN] To [_PARAM_REGS_END]) As Long
 Private OpcodeZ_Register([_PARAM_REGS_BEGIN] To [_PARAM_REGS_END]) As Long
 
-'---------------------------------------------------------------------------------------
+'--------------------------------------------------------------------------------------
 'ROM Layout:
-'---------------------------------------------------------------------------------------
-'As PROCs and TABLEs are parsed they are assembled into binary "Chunks". After all the _
- Source code Is assembled, the Chunks are arranged according to their attributes and _
+'--------------------------------------------------------------------------------------
+'As PROCs and TABLEs are parsed they are assembled into binary "Chunks". After all _
+ source code is assembled, the Chunks are arranged according to their attributes and _
  placed into the output ROM file
 
 Private Type oz80Chunk
@@ -1152,7 +1067,7 @@ Private Type oz80Chunk
     'TODO: Replace this with something much, much faster
     Properties As Scripting.Dictionary
     
-    LogASM As bluLog                    'Disassembly log
+    LogASM As bluArrayStrings           'Disassembly log
 End Type
 'We'll erase a Chunk by setting it to this empty instance
 Private EmptyChunk As oz80Chunk
@@ -1193,9 +1108,9 @@ Private ROM() As Byte                   'The ROM's binary contents
 Private ROMSize As Long                 'The ROM file size, e.g. 256 KB (power of 2)
 Private ROMUsed As Long                 'Where the current end of the data is
 
-'---------------------------------------------------------------------------------------
+'--------------------------------------------------------------------------------------
 'Deferred Expressions:
-'---------------------------------------------------------------------------------------
+'--------------------------------------------------------------------------------------
 'Certain Values cannot be known until the size of all Chunks has been determined first. _
  When such a Value is encountered, the Expression is 'deferred' until after ROM Layout
 
@@ -1221,10 +1136,14 @@ End Enum
 Private Deferred() As oz80Deferred
 Private DeferredCount As Long
 
-'---------------------------------------------------------------------------------------
+'--------------------------------------------------------------------------------------
 'Logging:
-'---------------------------------------------------------------------------------------
+'--------------------------------------------------------------------------------------
+'OZ80's internal dialogue will be dumped out to a text file as it goes, _
+ this is not kept in memory
+Private Log As bluLog
 
+'Logging level
 Public Enum OZ80_LOG
     OZ80_LOG_ERROR                      'Error messages have the highest priority
     OZ80_LOG_ACTION                     'The key important happenings
@@ -1247,7 +1166,6 @@ Private Const LOG_FILE_LENGTH           As String = "Length: {$} Characters"
 Private Const LOG_FILE_TOKENS           As String = "Tokens: {$}"
 
 'For diaplying a disassembly
-
 Private Const LOG_ASM_COLS              As String = "ADDR | PX OP OF CB LO HI | MNEMONIC  PARAM1    PARAM2    PARAM3"
 Private Const LOG_ASM_HEAD              As String = "-----¦-------------------¦-----------------------------------------------"
 Private Const LOG_ASM                   As String = "···· | ·· ·· ·· ·· ·· ·· | ·········                                     "
@@ -1256,6 +1174,7 @@ Private Const LOG_DATA_COLS             As String = "ADDR | 00 01 02 03 04 05 06
 Private Const LOG_DATA_HEAD             As String = "-----¦-------------------------------------------------¦-----------------"
 Private Const LOG_DATA                  As String = "···· | ·· ·· ·· ·· ·· ·· ·· ·· ·· ·· ·· ·· ·· ·· ·· ·· | ················"
 
+'For displaying a Token's data
 Private Const FORMAT_QUOTE              As String = """"
 Private Const FORMAT_TOKEN              As String = "<tkn> {$} ({$},{$}) [{$}] {$}"
 Private Const FORMAT_TOKEN_CHUNK        As String = "   CHUNK"
@@ -1277,7 +1196,7 @@ Private Const FORMAT_TOKEN_Z80          As String = "     Z80"
 
 'To save having to create and destroy short strings all the time, _
  we'll keep this one around for formatting log messages
-Private LogMsg As bluString
+Private LogStr As bluString
 
 'Which type of data the Chunk is recording (Z80 assembly or Data). _
  This is used to produce the disassembly log
@@ -1295,7 +1214,7 @@ Private ChunkDataIndex As Long
 'This will be the current line of disassembled log data (See `LOG_DATA`)
 Private ChunkDataLog As String
 
-'---------------------------------------------------------------------------------------
+'--------------------------------------------------------------------------------------
 
 'For maximum logging speed, we're going to build a massive (~2.5 MB) cache of the _
  possible Z80 parameters as text
@@ -1348,7 +1267,7 @@ End Enum
 
 Private ParamText(0 To [_PARAMTEXT_TOTAL]) As String * 10
 
-'/// EVENTS ////////////////////////////////////////////////////////////////////////////
+'/// EVENTS ///////////////////////////////////////////////////////////////////////////
 
 'Progress messages are passed through an event, the handler can choose to show them _
  or not, and in what format. I don't want to spam unwanted `Debug.Print` output. _
@@ -1367,8 +1286,14 @@ Event Error( _
 )
 
 'CLASS Initialize
-'=======================================================================================
+'======================================================================================
 Private Sub Class_Initialize()
+    'Unlike the assemblers of the past, we are not practically memory-constrained; _
+     even though OZ80 would be hard-pushed to use more than a few hundred megs of RAM, _
+     there is always virtual memory, so our work does not have a hard limit. _
+     Therefore we aim to trade off memory-usage for speed with a large set of lookup _
+     tables which we set up with the class. If you don't want to waste memory whilst _
+     the assembler isn't running, only insantiate OZ80 when needed
     Dim i As Long
     
     'If too many possible tokens are created, things will screw up
@@ -1396,24 +1321,28 @@ Private Sub Class_Initialize()
     Call Profiler.EventBegin(EVENT_INITIALIZE)
     
     'This is a re-usable temporary String for logging
-    Set LogMsg = New bluString
+    Set LogStr = New bluString
     
     'Manually create a 64-bit Double "Infinite" number, which cannot be written _
      implicitly in VB6. This method is based upon <stackoverflow.com/a/896292>. _
      We use this to mark numbers as "not yet defined" whilst still allowing full _
      64-Bit floating-point calculations
-    Call api_PutMem1(VarPtr(INDEFINITE) + 6, 240)
-    Call api_PutMem1(VarPtr(INDEFINITE) + 7, 127)
+    Dim ptrINDEFINITE As Long
+    Let ptrINDEFINITE = VarPtr(INDEFINITE)
+    Let Win32.MemByte(ptrINDEFINITE + 6) = 240
+    Let Win32.MemByte(ptrINDEFINITE + 7) = 127
     'Manually create the largest possible 64-bit number
-    Call api_PutMem2(VarPtr(NUMBER_MAX), &HFFFFFFFF)
-    Call api_PutMem2(VarPtr(NUMBER_MAX) + 4, -1)
-    Call api_PutMem1(VarPtr(NUMBER_MAX) + 6, 239)
-    Call api_PutMem1(VarPtr(NUMBER_MAX) + 7, 127)
+    Dim ptrNUMBER_MAX As Long
+    Let ptrNUMBER_MAX = VarPtr(NUMBER_MAX)
+    Let Win32.MemDouble(ptrNUMBER_MAX) = -1
+    Let Win32.MemByte(ptrNUMBER_MAX + 6) = 239
+    Let Win32.MemByte(ptrNUMBER_MAX + 7) = 127
     'Manually create the largest negative 64-bit number
-    Call api_PutMem2(VarPtr(NUMBER_MIN), &HFFFFFFFF)
-    Call api_PutMem2(VarPtr(NUMBER_MIN) + 4, -1)
-    Call api_PutMem1(VarPtr(NUMBER_MIN) + 6, 239)
-    Call api_PutMem1(VarPtr(NUMBER_MIN) + 7, 255)
+    Dim ptrNUMBER_MIN As Long
+    Let ptrNUMBER_MIN = VarPtr(NUMBER_MIN)
+    Let Win32.MemDouble(ptrNUMBER_MIN) = -1
+    Let Win32.MemByte(VarPtr(NUMBER_MIN) + 6) = 239
+    Let Win32.MemByte(VarPtr(NUMBER_MIN) + 7) = 255
     'Define min/max numbers that can be multiplied by 1000/1024 without overflow
     Let NUMBER_MAX_K = NUMBER_MAX / 1000
     Let NUMBER_MIN_K = -NUMBER_MAX_K
@@ -1421,58 +1350,42 @@ Private Sub Class_Initialize()
     Let NUMBER_MIN_KB = -NUMBER_MAX_KB
     
     'Upper-case look-up table:
-    '-----------------------------------------------------------------------------------
+    '----------------------------------------------------------------------------------
     'Begin with a straight forward list of all 2-byte UCS-2 code points
     Dim Unicode(0 To &HFFFF&) As Integer
     For i = 0 To &HFFFF&
         If i >= 32768 Then Let Unicode(i) = i - 65536 Else Let Unicode(i) = i
     Next i
     
-    'Get the Windows version as Windows Vista and above use alternative APIs for _
-     locale-dependent methods (such as `Equals`)
-    Dim VersionInfo As OSVERSIONINFO
-    Let VersionInfo.SizeOfMe = Len(VersionInfo)
-    'NOTE: If the app is in compatibility mode, this will return the compatible _
-     Windows version, not the actual version. Windows 8.1 and above also cause _
-     this API to always return as Windows 8.0 unless the app opts-in to correct _
-     version info via manifest, but this isn't an issue to bluString as we are _
-     only concerned with testing for Windows Vista+
-    If api_GetVersionEx(VersionInfo) = API_TRUE Then
-        '`Val`, rather than `CSng` is used here due to locale differences; _
-         `CSng("6.1")` will fail in locales that use comma as decimal separator
-        Let WindowsVersion = Val( _
-            VersionInfo.MajorVersion & "." & VersionInfo.MinorVersion _
-        )
-    End If
+    'Use the Windows API to convert these to their linguistic upper-case equivilents:
     
-    'Use the Windows API to convert these to their linguistic upper-case equivilents
     'Check for Windows Vista and above:
-    If WindowsVersion >= 6 Then
+    If blu.sys.WindowsAPILevel = VISTA_OR_HIGHER Then
         'NOTE: The use of null on the first parameter causes Windows to use the _
          user's current locale, so we don't need to manually fetch the locale name
-        Call api_LCMapStringEx( _
+        Call Win32.TextConvertCase_NT6( _
                    LocaleNamePointer:=0&, _
-                            MapFlags:=LCMAP_UPPERCASE Or LCMAP_LINGUISTIC_CASING, _
+                               Flags:=vbCaseUpper Or vbCaseLinguistic, _
                  SourceStringPointer:=VarPtr(Unicode(0)), _
                   SourceStringLength:=UBound(Unicode) + 1, _
-            DestinationStringPointer:=VarPtr(CharToUpperCase(0)), _
-             DestinationStringLength:=UBound(CharToUpperCase) + 1, _
-                  VersionInfoPointer:=0&, ReservedPointer:=0&, SortHandle:=0& _
+                 ResultStringPointer:=VarPtr(CharToUpperCase(0)), _
+                  ResultStringLength:=UBound(CharToUpperCase) + 1, _
+                Reserved_VersionInfo:=0&, Reserved:=0&, Reserved_SortHandle:=0& _
         )
     Else
         'Use the Windows XP compatible API
-        Call api_LCMapString( _
-                            LocaleID:=api_GetThreadLocale(), _
-                            MapFlags:=LCMAP_UPPERCASE Or LCMAP_LINGUISTIC_CASING, _
+        Debug.Print Win32.TextConvertCase_NT5( _
+                            LocaleID:=Win32.ThreadLocale, _
+                               Flags:=vbCaseUpper Or vbCaseLinguistic, _
                  SourceStringPointer:=VarPtr(Unicode(0)), _
                   SourceStringLength:=UBound(Unicode) + 1, _
-            DestinationStringPointer:=VarPtr(CharToUpperCase(0)), _
-             DestinationStringLength:=UBound(CharToUpperCase) + 1 _
+                 ResultStringPointer:=VarPtr(CharToUpperCase(0)), _
+                  ResultStringLength:=UBound(CharToUpperCase) + 1 _
         )
     End If
     
     'Unicode properties look-up tables:
-    '-----------------------------------------------------------------------------------
+    '----------------------------------------------------------------------------------
     'Use the Windows API to convert the list of Unicode points into their properties. _
      This API doesn't allow overwriting the original array
     Dim Properties(0 To &HFFFF&) As Integer
@@ -1494,7 +1407,7 @@ Private Sub Class_Initialize()
     Erase Properties
     
     '8 & 16-bit hexadecimal numbers:
-    '-----------------------------------------------------------------------------------
+    '----------------------------------------------------------------------------------
     Let HexStr8(-1) = "??"
     For i = 0 To &HF&:          Let HexStr8(i) = "0" & Hex$(i):     Next i
     For i = &H10& To &HFF&:     Let HexStr8(i) = Hex$(i):           Next i
@@ -1505,8 +1418,8 @@ Private Sub Class_Initialize()
     For i = &H1000& To &HFFFF&: Let HexStr16(i) = Hex$(i):          Next i
     
     'Token Names:
-    '-----------------------------------------------------------------------------------
-    'Z80 Instructions ..................................................................
+    '----------------------------------------------------------------------------------
+    'Z80 Instructions .................................................................
     Let TokenNames(TOKEN_Z80_ADC) = STR_ADC
     Let TokenNames(TOKEN_Z80_ADD) = STR_ADD
     Let TokenNames(TOKEN_Z80_AND) = STR_AND
@@ -1576,7 +1489,7 @@ Private Sub Class_Initialize()
     Let TokenNames(TOKEN_Z80_SUB) = STR_SUB
     Let TokenNames(TOKEN_Z80_XOR) = STR_XOR
     
-    'Z80 Registers / Flags .............................................................
+    'Z80 Registers / Flags ............................................................
     Let TokenNames(TOKEN_Z80_A) = STR_A
     Let TokenNames(TOKEN_Z80_AF) = STR_AF
     Let TokenNames(TOKEN_Z80_B) = STR_B
@@ -1606,7 +1519,7 @@ Private Sub Class_Initialize()
     Let TokenNames(TOKEN_Z80_Z) = STR_Z
     Let TokenNames(TOKEN_Z80_NZ) = STR_NZ
     
-    'Operators .........................................................................
+    'Operators ........................................................................
     Let TokenNames(TOKEN_OPERATOR_ADD) = Chr$(SYNTAX_OPERATOR_ADD)
     Let TokenNames(TOKEN_OPERATOR_SUB) = Chr$(SYNTAX_OPERATOR_SUB)
     Let TokenNames(TOKEN_OPERATOR_MUL) = Chr$(SYNTAX_OPERATOR_MUL)
@@ -1618,7 +1531,7 @@ Private Sub Class_Initialize()
     Let TokenNames(TOKEN_OPERATOR_AND) = Chr$(SYNTAX_OPERATOR_AND)
     Let TokenNames(TOKEN_OPERATOR_XOR) = Chr$(SYNTAX_OPERATOR_XOR)
     
-    'Keywords ..........................................................................
+    'Keywords .........................................................................
     Let TokenNames(TOKEN_KEYWORD_APPEND) = STR_APPEND
     Let TokenNames(TOKEN_KEYWORD_BOOL) = STR_BOOL
     Let TokenNames(TOKEN_KEYWORD_BYTE) = STR_BYTE
@@ -1662,7 +1575,7 @@ Private Sub Class_Initialize()
     Let TokenNames(TOKEN_SECTION) = String(2, Chr$(SYNTAX_LABEL))
     
     'Z80 Param Text:
-    '-----------------------------------------------------------------------------------
+    '----------------------------------------------------------------------------------
     'Index 0 acts as an "unimplemented" marker so we can see when certain cache _
      indexes haven't been implemented yet
     Let ParamText(PARAMTEXT_NONE) = "?????????"
@@ -1720,7 +1633,7 @@ Private Sub Class_Initialize()
             HexStr16(i) & ChrW$(SYNTAX_SQUARE_CLOSE)
     Next i
     
-    '-----------------------------------------------------------------------------------
+    '----------------------------------------------------------------------------------
     
     'Initialise the token stream string database _
      (the text portions within source code files)
@@ -1731,7 +1644,7 @@ Private Sub Class_Initialize()
     Dim t As OZ80_TOKEN
     For t = 0 To [_TOKEN_LAST]
         'Check what token category it belongs to
-        '...............................................................................
+        '..............................................................................
         Let TokenIsInstruction(t) = (t >= [_TOKEN_Z80_BEGIN]) And _
                                     (t <= [_TOKEN_Z80_END])
         Let TokenIsOperator(t) = (t > [_TOKEN_OPERATORS_BEGIN]) And _
@@ -1740,7 +1653,7 @@ Private Sub Class_Initialize()
                                 (t < [_TOKEN_KEYWORDS_END])
         
         'Registers and flags are more complex as there's some overlap
-        '...............................................................................
+        '..............................................................................
         If (t = TOKEN_Z80_C) Then
             'At the token level, we can't differentiate Register C and Flag C; _
              we need context for that and we can't gaurantee the TokenStream is _
@@ -1752,7 +1665,7 @@ Private Sub Class_Initialize()
             Let TokenIsFlag(t) = True
         
         '8-Bit registers:
-        '...............................................................................
+        '..............................................................................
         ElseIf (t = TOKEN_Z80_A) Or (t = TOKEN_Z80_B) Or (t = TOKEN_Z80_C) Or _
                (t = TOKEN_Z80_D) Or (t = TOKEN_Z80_E) Or (t = TOKEN_Z80_H) Or _
                (t = TOKEN_Z80_L) Or (t = TOKEN_Z80_I) Or (t = TOKEN_Z80_R) Or _
@@ -1764,7 +1677,7 @@ Private Sub Class_Initialize()
             Let TokenIsRegister(t) = True
         
         '16-Bit registers:
-        '...............................................................................
+        '..............................................................................
         ElseIf (t = TOKEN_Z80_AF) Or (t = TOKEN_Z80_BC) Or (t = TOKEN_Z80_DE) Or _
                (t = TOKEN_Z80_HL) Or (t = TOKEN_Z80_IX) Or (t = TOKEN_Z80_IY) Or _
                (t = TOKEN_Z80_SP) Or (t = TOKEN_Z80_PC) _
@@ -1774,7 +1687,7 @@ Private Sub Class_Initialize()
             Let TokenIsRegister(t) = True
         
         'Condition flags:
-        '...............................................................................
+        '..............................................................................
         ElseIf (t = TOKEN_Z80_NC) Or (t = TOKEN_Z80_M) Or (t = TOKEN_Z80_P) Or _
                (t = TOKEN_Z80_PE) Or (t = TOKEN_Z80_PO) Or (t = TOKEN_Z80_Z) Or _
                (t = TOKEN_Z80_NZ) _
@@ -1783,7 +1696,7 @@ Private Sub Class_Initialize()
             Let TokenIsFlag(t) = True
         
         'If the token consititutes an Expression (a calculable Value)
-        '...............................................................................
+        '..............................................................................
         ElseIf (t = TOKEN_CONST) Or _
                (t = TOKEN_KEYWORD_HI) Or _
                (t = TOKEN_LABEL) Or _
@@ -1802,18 +1715,18 @@ Private Sub Class_Initialize()
         
         'Text classes as a self-contained List; _
          all other List items are Expressions
-        '...............................................................................
+        '..............................................................................
         ElseIf (t = TOKEN_TEXT) Then
             Let TokenIsList(t) = True
         
         'Z80 parameters are Expressions, with the addition of _
          Z80 register / memory references, e.g. `[IX+$FF]`
-        '...............................................................................
+        '..............................................................................
         ElseIf (t = TOKEN_SQUARE_OPEN) Then
             Let TokenIsParameter(t) = True
             
         'The `START` keyword acts as a Label for the System's boot vector
-        '...............................................................................
+        '..............................................................................
         ElseIf (t = TOKEN_KEYWORD_START) Then
             Let TokenIsExpression(t) = True
             Let TokenIsParameter(t) = True
@@ -1821,7 +1734,7 @@ Private Sub Class_Initialize()
         End If
     Next t
     
-    '-----------------------------------------------------------------------------------
+    '----------------------------------------------------------------------------------
     
     'Populate the look-up table for converting register tokens into their bit masks
     Let TokenRegister(TOKEN_Z80_A) = PARAM_REG_A
@@ -1928,7 +1841,7 @@ Private Sub Class_Initialize()
 End Sub
 
 'CLASS Terminate
-'=======================================================================================
+'======================================================================================
 Private Sub Class_Terminate()
     Call Reset
     
@@ -1954,12 +1867,18 @@ Private Sub Class_Terminate()
     Set Profiler = Nothing
     
     Set Word = Nothing
-    Set LogMsg = Nothing
+    Set LogStr = Nothing
 End Sub
 
-'Reset
-'=======================================================================================
+'Reset : Clears the internal state
+'======================================================================================
 Private Sub Reset()
+    'Reset the error number
+    Let Error = OZ80_ERROR_NONE
+    
+    'Stop the log (this will close the file handle, if open)
+    Set Log = Nothing
+    
     'Clear the database of source files
     Erase Files: Let File = 0
     
@@ -1986,7 +1905,7 @@ Private Sub Reset()
     'Reset Sections
     Erase Sections: Let SectionCount = 0
     'User-defined Sections begin from index 1 and up. _
-     Index 0 is reserved as a default Section for Chunks without a specified Section
+     Index 0 is reserved as a default for Chunks without a specified Section
     ReDim Sections(0 To 0) As oz80Section
     
     'Reset the value stores
@@ -1995,89 +1914,112 @@ Private Sub Reset()
     
     'Clear ROM layout
     Erase Layout: Let LayoutCount = 0
-    
     Erase ROM
     'TODO: Default ROM size should be per-system / user-selectable?
     Let ROMSize = 8192
 End Sub
 
-'/// PUBLIC INTERFACE //////////////////////////////////////////////////////////////////
+'/// PUBLIC INTERFACE /////////////////////////////////////////////////////////////////
 
-'Error : Expose the internal error number
-'=======================================================================================
-Public Property Get Error() As OZ80_ERROR
-    Let Error = My_Error
-End Property
+'Abort : Stop the assembly when running (e.g. user cancelled)
+'======================================================================================
+Public Sub Abort()
+    'OZ80 checks the error state regularly during assembly, _
+     meaning that it will cancel at the next check
+    Let Error = OZ80_ERROR_ABORT
+End Sub
 
 'Assemble : Compile a Z80 binary from a given starting OZ80 source code file
-'=======================================================================================
-'FilePath       | Source code file to begin with
-'---------------¦-----------------------------------------------------------------------
+'======================================================================================
+'SourceFile     | Path to Source code file to begin with
+'[LogFile]      | Path to desired log file. Will default to SourceFile + ".log"
+'---------------¦----------------------------------------------------------------------
 'Returns        | The error number
-'=======================================================================================
+'======================================================================================
 Public Function Assemble( _
-    ByVal FilePath As String _
+             ByVal SourceFile As String, _
+    Optional ByRef LogFile As String = vbNullString _
 ) As OZ80_ERROR
     'This will be a crude overall timer for the assembly
     Dim Begin As Single
     Let Begin = Timer
     
-    'Reset the error number
-    Let My_Error = OZ80_ERROR_NONE
+    'Initialise the internal state
+    Call Reset
+    
+    'Begin logging
+    '----------------------------------------------------------------------------------
+    'This is OZ80's write-only logger. Anything sent to this is appended to the log
+    Set Log = New bluLog
+    
+    'If a log file is not provided, _
+     we'll take the source file's name
+    If LogFile = vbNullString Then
+        'Replace the file-extension with ".log"
+        Let LogFile = blu.FileSystem.PathChangeExtension(SourceFile, ".log")
+    End If
+    
+    'Re-base the log file
+    Let LogFile = FileSelectPath(LogFile)
+    
+    If Not Log.SetFilePath(LogFile) Then
+        'ERROR: The log file could not be used
+        Stop
+    End If
     
     'Announce ourselves
     Call RaiseMessage(OZ80_LOG_INFO, LOG_VERSION, App.Major, App.Minor, App.Revision)
     
-    'Clean up stuff from any previous assemble
-    Call Reset
-    
-    '-----------------------------------------------------------------------------------
-    'Phase 1: Parse & Assemble _
-     -----------------------------------------------------------------------------------
+    '----------------------------------------------------------------------------------
+    'Phase 1: Parse & Assemble
+    '----------------------------------------------------------------------------------
     Call RaiseMessage(OZ80_LOG_ACTION, LOG_PHASE1)
     
     'Start with parsing the given file; the assembler does not work with the original _
-     text directly. If there was a problem parsing the file, an error message will _
-     already have been raised by an event, we only need to exit
-     
-    'Source code is first parsed into tokens and then executed, once an `INCLUDE` _
-     statement occurs, the next file is parsed and executed
-    If FileAssemble(FilePath) Then GoTo Finish
+     text directly. Source code is first parsed into tokens and then executed, once _
+     an `INCLUDE` statement occurs, the next file is parsed and executed in-situ
+    Call FileAssemble(SourceFile)
     
-    '-----------------------------------------------------------------------------------
+    'If there was a problem parsing the file, an error message will _
+     already have been raised by an event, we only need to exit
+    If Error Then GoTo Finish
+    
+    '----------------------------------------------------------------------------------
     'Phase 2: Layout the ROM _
-     -----------------------------------------------------------------------------------
+     ----------------------------------------------------------------------------------
     Call RaiseMessage(OZ80_LOG_ACTION, LOG_PHASE2)
     
     'Now that the size of each Chunk is known, we can arrange the Chunks in the ROM _
      space and determine each Label location
-    If ROMLayout() Then GoTo Finish
+    Call ROMLayout
     
-    '-----------------------------------------------------------------------------------
+    If Error Then GoTo Finish
+    
+    '----------------------------------------------------------------------------------
     'Phase 3: Calculate Deferred Expressions _
-     -----------------------------------------------------------------------------------
+     ----------------------------------------------------------------------------------
     Call RaiseMessage(OZ80_LOG_ACTION, LOG_PHASE3)
     
     
     
-    Call RaiseMessage(OZ80_LOG_INFO, LOG_LINEDOUBLE)
-    Dim Key As Variant
-    For Each Key In Values.Keys
-        Call RaiseMessage(OZ80_LOG_INFO, Key & " = " & Hex(Values.Item(Key)))
-    Next
-    Call RaiseMessage(OZ80_LOG_INFO, LOG_LINEDOUBLE)
-    Call RaiseMessage(OZ80_LOG_INFO, vbNullString)
+'    Call RaiseMessage(OZ80_LOG_INFO, LOG_LINEDOUBLE)
+'    Dim Key As Variant
+'    For Each Key In Values.Keys
+'        Call RaiseMessage(OZ80_LOG_INFO, Key & " = " & Hex(Values.Item(Key)))
+'    Next
+'    Call RaiseMessage(OZ80_LOG_INFO, LOG_LINEDOUBLE)
+'    Call RaiseMessage(OZ80_LOG_INFO, vbNullString)
     
     Dim i As Long
     For i = 1 To DeferredCount: With Deferred(i)
         
-        Call RaiseMessage(OZ80_LOG_INFO, "File : {$}", Files(.File).Path)
-        Call RaiseMessage(OZ80_LOG_INFO, _
-            "Line : {$} Col : {$}", _
-            CStr(Files(.File).Tokens(.TokenIndex).Line), _
-            CStr(Files(.File).Tokens(.TokenIndex).Col) _
-        )
-        Call RaiseMessage(OZ80_LOG_INFO, Chunks(.ChunkID).LabelName)
+'        Call RaiseMessage(OZ80_LOG_INFO, "File : {$}", Files(.File).Path)
+'        Call RaiseMessage(OZ80_LOG_INFO, _
+'            "Line : {$} Col : {$}", _
+'            CStr(Files(.File).Tokens(.TokenIndex).Line), _
+'            CStr(Files(.File).Tokens(.TokenIndex).Col) _
+'        )
+'        Call RaiseMessage(OZ80_LOG_INFO, Chunks(.ChunkID).LabelName)
         
         'Point OZ80 at the Expression
         Let File = .File: Let TokenIndex = .TokenIndex - 1
@@ -2086,7 +2028,9 @@ Public Function Assemble( _
         
         'Now calculate the Expression
         Dim Value As Double
-        If ParseExpression(Value, .ChunkID) Then
+        Call ParseExpression(Value, .ChunkID)
+        
+        If Error Then
             'TODO: Unexpected; considering the Expression will already have _
                    been walked when it was deferred!
             Stop
@@ -2109,7 +2053,7 @@ Public Function Assemble( _
 '            Stop
             
         Else
-            Call RaiseMessage(OZ80_LOG_STATUS, Hex(Value))
+'            Call RaiseMessage(OZ80_LOG_STATUS, Hex(Value))
             If .Kind = ASM_JR Then
                 Dim From As Long
                 Let From = Chunks(.ChunkID).AddrReal + .ROMOffset
@@ -2149,15 +2093,15 @@ Public Function Assemble( _
             End If
         End If
         
-        Call RaiseMessage(OZ80_LOG_INFO, vbNullString)
+'        Call RaiseMessage(OZ80_LOG_INFO, vbNullString)
     End With: Next i
     
-    Call RaiseMessage(OZ80_LOG_INFO, "Number of Deferred Expressions: " & DeferredCount)
-    Call RaiseMessage(OZ80_LOG_INFO, "Number of Indefinite Expressions: " & IndefiniteCount)
+'    Call RaiseMessage(OZ80_LOG_INFO, "Number of Deferred Expressions: " & DeferredCount)
+'    Call RaiseMessage(OZ80_LOG_INFO, "Number of Indefinite Expressions: " & IndefiniteCount)
     
-    '-----------------------------------------------------------------------------------
+    '----------------------------------------------------------------------------------
     'Phase 4: Post Processing, e.g. Checksum _
-     -----------------------------------------------------------------------------------
+     ----------------------------------------------------------------------------------
     Call RaiseMessage(OZ80_LOG_ACTION, LOG_PHASE4)
     
     'TODO
@@ -2174,74 +2118,79 @@ Public Function Assemble( _
     Call RaiseMessage(OZ80_LOG_INFO, LOG_TIME, Format$(Timer - Begin, "0.000"))
     
 Finish:
-    'Clean up
+    '----------------------------------------------------------------------------------
+    'Return the error number
+    Let Assemble = Error
+    
+    'Clean up (resets error number)
     Call Reset
-    'Return the error code (also available in the `Error` property)
-    Let Assemble = My_Error
 End Function
 
-'/// TOKENISING ////////////////////////////////////////////////////////////////////////
-'/// The first process is read the text and turn these into machine tokens
-
-'FileAssemble : Tokenise a source code file and then begin assembling it
-'=======================================================================================
-'FilePath       | File path to the source code file (".oz80")
-'---------------¦-----------------------------------------------------------------------
-'Returns        | The error number
-'=======================================================================================
-Private Function FileAssemble( _
+'FileSelectPath : Given a relative path, convert it to absolute
+'======================================================================================
+'FilePath       |
+'---------------¦----------------------------------------------------------------------
+'Returns        |
+'======================================================================================
+Private Function FileSelectPath( _
     ByRef FilePath As String _
-) As OZ80_ERROR
-    'Since we have a "scrrun.dll" reference for Dictionary object, this also gives _
-     us the `FileSystemObject` to simplify a lot of mucky folder / file checking
-    'TODO: This will be replaced with Unicode-safe file handling
-    Dim FSO As FileSystemObject
-    Set FSO = New FileSystemObject
-    
-    '[1] Normalise the file path: _
-     -----------------------------------------------------------------------------------
-    'The file path handed to us might be just a file name and/or contain a relative _
-     path (i.e. "..\"). We need to normalise this given path into an absolute path _
-     (e.g. "C:\Folder\File.ext")
-    Dim TestPath As bluString
-    Set TestPath = New bluString
-    
-    'If the given path is already absolute, it does not need normalising. _
-     NOTE: Upper/lower case will be auto-corrected and could throw a false negative
-    If LCase$(FSO.GetAbsolutePathName(FilePath)) = LCase$(FilePath) Then
-        'We'll skip ahead to checking the file exists
-        Let TestPath.Text = FilePath
+) As String
+    'If the file is already absolute, it does not need a base path
+    If blu.FileSystem.PathIsAbsolute(FilePath) Then
+        Let FileSelectPath = FilePath
     Else
         'Path is relative! If no other file has been parsed yet _
          we will need to use the current directory as a base
         If File = 0 Then
-            Let TestPath.Text = FSO.BuildPath(CurDir(), FilePath)
+            Let FileSelectPath = blu.FileSystem.PathCombine( _
+                blu.WorkingDirectory, FilePath _
+            )
         Else
             'When another file has been parsed before, _
              we work relatively from that file's directory
-            Let TestPath.Text = FSO.GetFile(Files(File).Path).ParentFolder.Path
-            'TODO: Error?
-            Let TestPath.Text = FSO.BuildPath(TestPath.Text, FilePath)
+            Let FileSelectPath = blu.FileSystem.PathCombine( _
+                blu.FileSystem.FileFolder(Files(File).Path), _
+                FilePath _
+            )
         End If
     End If
+End Function
+
+'/// TOKENISING ///////////////////////////////////////////////////////////////////////
+'/// The first process is read the text and turn these into machine tokens
+
+'FileAssemble : Tokenise a source code file and then begin assembling it
+'======================================================================================
+'SourceFile     | File path to the source code file (".oz80")
+'======================================================================================
+Private Sub FileAssemble( _
+    ByRef SourceFile As String _
+)
+    '[1] Normalise the file path: _
+     ----------------------------------------------------------------------------------
+    'The file path handed to us might be just a file name and/or contain a relative _
+     path (i.e. "..\"). We need to normalise this given path into an absolute path _
+     (e.g. "C:\Folder\File.ext")
+    Dim FilePath As String
+    Let FilePath = FileSelectPath(SourceFile)
     
     '[2] Check file exists: _
-     -----------------------------------------------------------------------------------
-    If Not bluFileSystem.FileExists(TestPath.Text) Then
+     ----------------------------------------------------------------------------------
+    If Not blu.FileSystem.FileExists(FilePath) Then
         'ERROR: File Not Found
         Call RaiseError(OZ80_ERROR_FILE_NOTFOUND, _
             "The following file could not be found:" & vbCrLf & vbCrLf & "{$}", _
-            TestPath.Text _
+            FilePath _
         )
-        GoTo Finish
+        Exit Sub
     End If
     
     '[3] Tokenise the file: _
-     -----------------------------------------------------------------------------------
+     ----------------------------------------------------------------------------------
     'Check to see if the file has already been tokenised
     Dim Index As Long, i As Long
     For i = 1 To FileCount
-        If Files(i).Path = TestPath.Text Then Let Index = i: Exit For
+        If Files(i).Path = FilePath Then Let Index = i: Exit For
     Next
     
     'If the file has already been tokenised, re-use it
@@ -2258,12 +2207,13 @@ Private Function FileAssemble( _
         ReDim Preserve Files(1 To FileCount) As oz80File
         
         'Record the file path in the File class for easy reference in the future
-        Let Files(File).Path = TestPath.Text
+        Let Files(File).Path = FilePath
         
         'Explode the source code file into tokens:
+        Call FileTokenise(FilePath)
         'If the file failed to parse, an error code / message will already have _
          been raised via an event, we only need to exit
-        If FileTokenise(TestPath.Text) Then GoTo Finish
+        If Error Then Exit Sub
         
         Call Profiler.EventEnd(EVENT_TOKENISE)
         '*** TIMER END ***
@@ -2274,8 +2224,8 @@ Private Function FileAssemble( _
     Call FileRewind
     
     '[4] Assemble the file: _
-     -----------------------------------------------------------------------------------
-    Call RaiseMessage(OZ80_LOG_ACTION, "Assembling ""{$}""", FilePath)
+     ----------------------------------------------------------------------------------
+'    Call RaiseMessage(OZ80_LOG_ACTION, "Assembling ""{$}""", FilePath)
     
     '*** TIMER BEGIN ***
     Call Profiler.EventBegin(EVENT_ASSEMBLE)
@@ -2287,27 +2237,17 @@ Private Function FileAssemble( _
     Call Profiler.EventEnd(EVENT_ASSEMBLE)
     '*** TIMER END ***
     
-    If My_Error Then GoTo Finish
-    Call RaiseMessage(OZ80_LOG_INFO, "Assembly Complete for ""{$}""", FilePath)
-    
-Finish:
-    Set FSO = Nothing
-    Set TestPath = Nothing
-    
-    'If there were any error, an error event and message would already have been _
-     raised, we only need to fold upwards and the parent will handle terminating the _
-     assembling process early
-    Let FileAssemble = My_Error
-End Function
+'    If not Error Then Call RaiseMessage(OZ80_LOG_INFO, "Assembly Complete for ""{$}""", FilePath)
+End Sub
 
 'EOF : End Of File?
-'=======================================================================================
+'======================================================================================
 Private Property Get EOF() As Boolean
     Let EOF = (TokenIndex = TokensLength)
 End Property
 
 'TokenText : Gets the string associated with a token (e.g. `TOKEN_TEXT`)
-'=======================================================================================
+'======================================================================================
 Private Property Get TokenText() As String
     'Only valid for tokens that reference text _
      (null-string will be returned otherwise)
@@ -2318,9 +2258,9 @@ Private Property Get TokenText() As String
 End Property
 
 'NextToken : Move onto the next token
-'=======================================================================================
+'======================================================================================
 'Returns        | False if the token stream hit the end
-'=======================================================================================
+'======================================================================================
 Private Sub NextToken()
 '    'Generate a debug message with the details of the current token
 '    RaiseEvent Message(OZ80_LOG_DEBUG, FormatToken())
@@ -2333,9 +2273,9 @@ Private Sub NextToken()
 End Sub
 
 'NextTokenError : Move onto the next token and error if the file ended
-'=======================================================================================
+'======================================================================================
 'Returns        | The error number
-'=======================================================================================
+'======================================================================================
 Private Function NextTokenError( _
 ) As OZ80_ERROR
 '    'Generate a debug message with the details of the current token
@@ -2349,7 +2289,7 @@ Private Function NextTokenError( _
         'Raise an error message
         Call RaiseError(OZ80_ERROR_FILE_END, STR_ERR_FILE_END)
         'Return the error number for easy tail-recursion
-        Let NextTokenError = My_Error
+        Let NextTokenError = Error
     Else
         Let TokenIndex = TokenIndex + 1
         With Files(File).Tokens(TokenIndex)
@@ -2362,7 +2302,7 @@ Private Function NextTokenError( _
 End Function
 
 'FileRewind : Go back to the start of the token stream
-'=======================================================================================
+'======================================================================================
 Private Sub FileRewind()
     Let TokenIndex = 0
     Let TokensLength = Files(File).TokensLength
@@ -2376,43 +2316,41 @@ Private Sub FileRewind()
 End Sub
 
 'FileTokenise : Break the source file into words and convert to machine tokens
-'=======================================================================================
+'======================================================================================
 'FilePath       | Path to the source file to tokenise into this class instance
-'---------------¦-----------------------------------------------------------------------
-'Returns        | The error number
-'=======================================================================================
-Private Function FileTokenise( _
+'======================================================================================
+Private Sub FileTokenise( _
     ByRef FilePath As String _
-) As OZ80_ERROR
+)
     'This function is tuned for speed -- it does not conform to "best practices", _
      or even structured code; GOTOs are fast, deal with it
     
-    '-----------------------------------------------------------------------------------
-    'Read the whole file into a single string
-    '-----------------------------------------------------------------------------------
-    'This function will be called by `File_Assemble`, so the file path will already _
+    '----------------------------------------------------------------------------------
+    '[1] Read the file
+    '----------------------------------------------------------------------------------
+    'This function will be called by `FileAssemble`, so the file path will already _
      have been normalised and file existance checked
     
     '*** TIMER BEGIN ***
     Call Profiler.EventBegin(EVENT_FILELOAD_API)
-
+    
     Dim Buffer() As Integer
-    Call bluFileSystem.ReadTextFile_AsArray(FilePath, Buffer)
-
+    Call blu.FileSystem.FileReadText_AsArray(FilePath, Buffer)
+    
     'Cache this for speed, we'll be referring to it every loop
     Dim SourceLen As Long
     Let SourceLen = UBound(Buffer) + 1
-
+    
     Call Profiler.EventEnd(EVENT_FILELOAD_API)
     '*** TIMER END ***
     
-    Call RaiseMessage(OZ80_LOG_ACTION, _
-        "Tokenising ""{$}""", FilePath _
-    )
+'    Call RaiseMessage(OZ80_LOG_ACTION, _
+'        "Tokenising ""{$}""", FilePath _
+'    )
     
-    '-----------------------------------------------------------------------------------
-    'Begin parsing words:
-    '-----------------------------------------------------------------------------------
+    '----------------------------------------------------------------------------------
+    '[2] Extract words from text
+    '----------------------------------------------------------------------------------
     'Prepare a large buffer to accept the token stream (using `ReDim` for every token _
      added is *incredibly* slow). If the tokens overflow this buffer, we'll increase _
      it by another chunk there and then
@@ -2442,14 +2380,12 @@ Private Function FileTokenise( _
     Dim Line As Long, Col As Long
     Let Line = 1: Let PrevLine = 1
     
-    
-    
+    'These will be the deduced information from the word
     Dim Token As OZ80_TOKEN
     Dim Value As Double
     
-    
     'Read a single word:
-    '-----------------------------------------------------------------------------------
+    '----------------------------------------------------------------------------------
 ReadWord:
     '*** TIMER BEGIN ***
     Call Profiler.EventBegin(EVENT_TOKENISE_READWORD)
@@ -2479,7 +2415,7 @@ ReadChar:
     
     'Keep track of line and column position in the source file _
      (for helpful error messages, even at the tokenising stage)
-    '...................................................................................
+    '..................................................................................
     
     'New line:
     If Char = C0_LF Then
@@ -2503,7 +2439,7 @@ ReadChar:
         GoTo SkipChar
     End If
     
-    'Comments: .........................................................................
+    'Comments: ........................................................................
     If IsComment Then
         'For single-line comments:
         If Not IsCommentMulti Then
@@ -2528,7 +2464,7 @@ ReadChar:
         'Skip to the next character in the comment
         GoTo SkipChar
         
-    'Parsable Text: ....................................................................
+    'Parsable Text: ...................................................................
     '(NOTE: Falsey checks are slightly faster)
     ElseIf IsText = 0 Then
         'Special handling for the beginning of a word
@@ -2609,7 +2545,7 @@ ReadChar:
             End If
         End If
         
-    'Text: .............................................................................
+    'Text: ............................................................................
     ElseIf TextMode = 0 Then
         'Check for multiple opening quotes
         If WordLength = 1 And Char = SYNTAX_TEXT Then
@@ -2633,7 +2569,7 @@ ReadChar:
     ElseIf TextMode < 5 Then
         If Char = SYNTAX_TEXT Then Let TextMode = TextMode + 1: GoTo SkipChar
         Stop
-    
+        
     ElseIf TextMode = 5 Then
         'Triple text mode has ended
         Let IsText = False: GoTo TokenWord
@@ -2647,7 +2583,7 @@ NextChar:
     Call Word.CharPushInt(Char): Let WordLength = WordLength + 1
     GoTo SkipChar
 
-    '-----------------------------------------------------------------------------------
+    '----------------------------------------------------------------------------------
 Punctuation:
     Call Word.Clear.CharPush(Char): Let WordLength = 1
     Let TokenLine = Line: Let TokenCol = Col
@@ -2659,9 +2595,9 @@ WordBreak:
      before the comma as a word, and take the comma as the next word
     Let SourcePos = SourcePos - 1: Let Col = Col - 1
     
-    '-----------------------------------------------------------------------------------
-    'Tokenise the word:
-    '-----------------------------------------------------------------------------------
+    '----------------------------------------------------------------------------------
+    '[3] Tokenise the word
+    '----------------------------------------------------------------------------------
 TokenWord:
     '*** TIMER END ***
     Call Profiler.EventEnd(EVENT_TOKENISE_READWORD)
@@ -2681,7 +2617,7 @@ TokenWord:
     If WordLength > 1 Then Let Asc2 = CharToUpperCase(Word.Char(1)) Else Let Asc2 = ASC_NUL
     
     'Comma (very common!) _
-     ........................................................................... `,` ...
+     .......................................................................... `,` ...
     If Asc1 = SYNTAX_NEXT Then
         'NOTE: At this point we can only see one word at a time (and not look ahead), _
          so we cannot know when a list has started, and even if the grammer is valid _
@@ -2690,13 +2626,13 @@ TokenWord:
         GoTo SkipWord
         
     'Register Hints
-    '.......................................................................... `;'` ...
+    '......................................................................... `;'` ...
     ElseIf (Asc1 = SYNTAX_HINT1) Or (Asc1 = SYNTAX_HINT2) Then
         'These are not used by the assembler, they're purely for commenting code
         GoTo SkipWord
         
     'A decimal number? _
-     ......................................................................... `0-9` ...
+     ........................................................................ `0-9` ...
     ElseIf Word.CharIsNumeric(0, True) Then
         'Validate the number
         Let Number = 0: Let Multiplier = 1
@@ -2719,7 +2655,7 @@ TokenWord:
         Let Value = Number
     
     'Constant? _
-     ........................................................................... `!` ...
+     .......................................................................... `!` ...
     ElseIf Asc1 = SYNTAX_CONSTANT Then
         'ERROR: Invalid Constant name?
         If Not FileTokenise_IsValidName() Then Call RaiseError( _
@@ -2732,7 +2668,7 @@ TokenWord:
         Let Value = TokenStrings.Add(Word.Text)
     
     'Binary number? _
-     ........................................................................... `%` ...
+     .......................................................................... `%` ...
     ElseIf Asc1 = SYNTAX_NUMBER_BIN Then
         'ERROR: Cannot be longer than 32-bits
         If WordLength > 33 Then GoTo ErrorOverflow
@@ -2751,7 +2687,7 @@ TokenWord:
         Let Value = Number
         
     'Type name? _
-     ........................................................................... `#` ...
+     .......................................................................... `#` ...
     ElseIf Asc1 = SYNTAX_TYPE Then
         'ERROR: Invalid type name?
         If Not FileTokenise_IsValidName() Then Call RaiseError( _
@@ -2764,7 +2700,7 @@ TokenWord:
         Let Value = TokenStrings.Add(Word.Text)
     
     'RAM name, e.g. `$.gamevar`, `$#RAM_BANK.gamevar` _
-     ........................................................................... `$` ...
+     .......................................................................... `$` ...
     ElseIf Asc1 = SYNTAX_RAM _
     And (Asc2 = ASC_NUL Or Asc2 = SYNTAX_PROPERTY Or Asc2 = SYNTAX_TYPE) Then
         'ERROR: Invalid RAM name?
@@ -2778,7 +2714,7 @@ TokenWord:
         Let Value = TokenStrings.Add(Word.Text)
         
     'Hexadecimal number _
-     ........................................................................... `$` ...
+     .......................................................................... `$` ...
     ElseIf Asc1 = SYNTAX_NUMBER_HEX Then
         'Any more than 8-digits will be an overflow (32-bit number maximum)
         If WordLength > 9 Then GoTo ErrorOverflow
@@ -2800,7 +2736,7 @@ TokenWord:
         Let Token = TOKEN_NUMBER
         Let Value = Number
         
-    '........................................................................... `:` ...
+    '.......................................................................... `:` ...
     ElseIf Asc1 = SYNTAX_LABEL Then
         'A label can be `:` only, without a name (when used within a PROC)
         If Asc2 = ASC_NUL Then
@@ -2821,7 +2757,7 @@ TokenWord:
             Let Value = TokenStrings.Add(Word.Text)
         End If
     
-    '........................................................................... `.` ...
+    '.......................................................................... `.` ...
     ElseIf Asc1 = SYNTAX_PROPERTY Then
         'At this stage the grammer is not validated, so we have no idea which label _
          this property attaches to. We store the name in an array and add the index _
@@ -2849,12 +2785,12 @@ TokenWord:
         End If
         
     'Text _
-     ........................................................................... `"` ...
+     .......................................................................... `"` ...
     ElseIf Asc1 = SYNTAX_TEXT Then
         Let Token = TOKEN_TEXT
         Let Value = TokenStrings.Add(Word.Mid(1).Text)
         
-    ElseIf Asc1 = ASC_A Then '.................................................. `A` ...
+    ElseIf Asc1 = ASC_A Then '................................................. `A` ...
         'Z80 instructions
         If Word.Equals(STR_ADC) Then
             Let Token = TOKEN_Z80_ADC
@@ -2867,7 +2803,7 @@ TokenWord:
         ElseIf (Asc3 = ASC_NUL) And (Asc2 = ASC_F) Then Let Token = TOKEN_Z80_AF
         Else: GoTo WordError: End If
         
-    ElseIf Asc1 = ASC_B Then '.................................................. `B` ...
+    ElseIf Asc1 = ASC_B Then '................................................. `B` ...
         'Z80 instructions
         If Word.Equals(STR_BIT) Then
             Let Token = TOKEN_Z80_BIT
@@ -2879,7 +2815,7 @@ TokenWord:
         ElseIf (Asc3 = ASC_NUL) And (Asc2 = ASC_C) Then Let Token = TOKEN_Z80_BC
         Else: GoTo WordError: End If
         
-    ElseIf Asc1 = ASC_C Then '.................................................. `C` ...
+    ElseIf Asc1 = ASC_C Then '................................................. `C` ...
         'Z80 instructions
         If Word.Equals(STR_CALL) Then
             Let Token = TOKEN_Z80_CALL
@@ -2894,7 +2830,7 @@ TokenWord:
         ElseIf (Asc2 = ASC_NUL) Then Let Token = TOKEN_Z80_C
         Else: GoTo WordError: End If
         
-    ElseIf Asc1 = ASC_D Then '.................................................. `D` ...
+    ElseIf Asc1 = ASC_D Then '................................................. `D` ...
         'Z80 instructions
         If Word.Equals(STR_DAA) Then
             Let Token = TOKEN_Z80_DAA
@@ -2908,7 +2844,7 @@ TokenWord:
         ElseIf (Asc3 = ASC_NUL) And (Asc2 = ASC_E) Then Let Token = TOKEN_Z80_DE
         Else: GoTo WordError: End If
         
-    ElseIf Asc1 = ASC_E Then '.................................................. `E` ...
+    ElseIf Asc1 = ASC_E Then '................................................. `E` ...
         'Z80 instructions
         If Word.Equals(STR_EI) Then
             Let Token = TOKEN_Z80_EI
@@ -2918,7 +2854,7 @@ TokenWord:
         ElseIf (Asc2 = ASC_NUL) Then Let Token = TOKEN_Z80_E
         Else: GoTo WordError: End If
         
-    ElseIf Asc1 = ASC_H Then '.................................................. `H` ...
+    ElseIf Asc1 = ASC_H Then '................................................. `H` ...
         'Z80 instructions
         If Word.Equals(STR_HLT) Then
             Let Token = TOKEN_Z80_HALT
@@ -2931,7 +2867,7 @@ TokenWord:
         ElseIf (Asc3 = ASC_NUL) And (Asc2 = ASC_L) Then Let Token = TOKEN_Z80_HL
         Else: GoTo WordError: End If
         
-    ElseIf Asc1 = ASC_I Then '.................................................. `I` ...
+    ElseIf Asc1 = ASC_I Then '................................................. `I` ...
         'Z80 instructions
         If Word.Equals(STR_IM) Then
             Let Token = TOKEN_Z80_IM
@@ -2955,7 +2891,7 @@ TokenWord:
         ElseIf Word.Equals(STR_IYL) Then Let Token = TOKEN_Z80_IYL
         Else: GoTo WordError: End If
         
-    ElseIf Asc1 = ASC_J Then '.................................................. `J` ...
+    ElseIf Asc1 = ASC_J Then '................................................. `J` ...
         'Z80 instructions
         If Word.Equals(STR_JP) Then
             Let Token = TOKEN_Z80_JP
@@ -2963,7 +2899,7 @@ TokenWord:
         'There are no `J` registers
         Else: GoTo WordError: End If
         
-    ElseIf Asc1 = ASC_K Then '.................................................. `K` ...
+    ElseIf Asc1 = ASC_K Then '................................................. `K` ...
         'Number suffixes K & KB
         If (Asc2 = ASC_NUL) Then
             'Just `K`
@@ -2974,7 +2910,7 @@ TokenWord:
         'There are no `K` registers
         Else: GoTo WordError: End If
                 
-    ElseIf Asc1 = ASC_L Then '.................................................. `L` ...
+    ElseIf Asc1 = ASC_L Then '................................................. `L` ...
         'Z80 instructions
         If Word.Equals(STR_LD) Then
             Let Token = TOKEN_Z80_LD
@@ -2989,14 +2925,14 @@ TokenWord:
         ElseIf (Asc2 = ASC_NUL) Then Let Token = TOKEN_Z80_L
         Else: GoTo WordError: End If
         
-    ElseIf Asc1 = ASC_M Then '.................................................. `M` ...
+    ElseIf Asc1 = ASC_M Then '................................................. `M` ...
         'Z80 flag conditions
         If (Asc2 = ASC_NUL) Then
             Let Token = TOKEN_Z80_M
         'There is no `M` register
         Else: GoTo WordError: End If
         
-    ElseIf Asc1 = ASC_N Then '.................................................. `N` ...
+    ElseIf Asc1 = ASC_N Then '................................................. `N` ...
         'Z80 instructions
         If Word.Equals(STR_NEG) Then
             Let Token = TOKEN_Z80_NEG
@@ -3009,7 +2945,7 @@ TokenWord:
         'There are no `N` registers
         Else: GoTo WordError: End If
         
-    ElseIf Asc1 = ASC_O Then '.................................................. `O` ...
+    ElseIf Asc1 = ASC_O Then '................................................. `O` ...
         'Z80 instructions
         If Word.Equals(STR_OR) Then
             Let Token = TOKEN_Z80_OR
@@ -3021,7 +2957,7 @@ TokenWord:
         'There are no `O` registers
         Else: GoTo WordError: End If
         
-    ElseIf Asc1 = ASC_P Then '.................................................. `P` ...
+    ElseIf Asc1 = ASC_P Then '................................................. `P` ...
         'Z80 instructions
         If Word.Equals(STR_POP) Then
             Let Token = TOKEN_Z80_POP
@@ -3035,7 +2971,7 @@ TokenWord:
         ElseIf Word.Equals(STR_PROC) Then Let Token = TOKEN_KEYWORD_PROC
         Else: GoTo WordError: End If
         
-    ElseIf Asc1 = ASC_R Then '.................................................. `R` ...
+    ElseIf Asc1 = ASC_R Then '................................................. `R` ...
         'Z80 instructions
         If Word.Equals(STR_RES) Then
             Let Token = TOKEN_Z80_RES
@@ -3060,7 +2996,7 @@ TokenWord:
         ElseIf (Asc2 = ASC_NUL) Then Let Token = TOKEN_Z80_R
         Else: GoTo WordError: End If
         
-    ElseIf Asc1 = ASC_S Then '.................................................. `S` ...
+    ElseIf Asc1 = ASC_S Then '................................................. `S` ...
         'Z80 instructions
         If Word.Equals(STR_SBC) Then
             Let Token = TOKEN_Z80_SBC
@@ -3080,7 +3016,7 @@ TokenWord:
         ElseIf (Asc3 = ASC_NUL) And (Asc2 = ASC_P) Then Let Token = TOKEN_Z80_SP
         Else: GoTo WordError: End If
         
-    ElseIf Asc1 = ASC_T Then '.................................................. `T` ...
+    ElseIf Asc1 = ASC_T Then '................................................. `T` ...
         'Keywords
         If Word.Equals(STR_TABLE) Then
             Let Token = TOKEN_KEYWORD_TABLE
@@ -3089,14 +3025,14 @@ TokenWord:
         'There is no `T` register
         Else: GoTo WordError: End If
         
-    ElseIf Asc1 = ASC_W Then '.................................................. `W` ...
+    ElseIf Asc1 = ASC_W Then '................................................. `W` ...
         'Keywords
         If Word.Equals(STR_WORD) Then
             Let Token = TOKEN_KEYWORD_WORD
         'There is no `W` register
         Else: GoTo WordError: End If
         
-    ElseIf Asc1 = ASC_X Then '.................................................. `X` ...
+    ElseIf Asc1 = ASC_X Then '................................................. `X` ...
         'If only `x`, then it's the repeat operator
         If (Asc2 = ASC_NUL) Then
             Let Token = TOKEN_OPERATOR_REP
@@ -3105,66 +3041,66 @@ TokenWord:
         'There is no `X` register
         Else: GoTo WordError: End If
         
-    ElseIf Asc1 = ASC_Z Then '.................................................. `Z` ...
+    ElseIf Asc1 = ASC_Z Then '................................................. `Z` ...
         'Z80 flag conditions
         If (Asc2 = ASC_NUL) Then
             Let Token = TOKEN_Z80_Z
         'There is no 'z' register
         Else: GoTo WordError: End If
         
-    ElseIf Asc1 = SYNTAX_BRACES_OPEN Then '..................................... `{` ...
+    ElseIf Asc1 = SYNTAX_BRACES_OPEN Then '.................................... `{` ...
         'Open another nesting level (if there was an error, stop parsing)
         If FileTokenise_NestIn(TOKEN_BRACES_OPEN) Then GoTo Finish
         Let Token = TOKEN_BRACES_OPEN
         
-    ElseIf Asc1 = SYNTAX_BRACES_CLOSE Then  '................................... `}` ...
+    ElseIf Asc1 = SYNTAX_BRACES_CLOSE Then  '.................................. `}` ...
         'Close the current nesting level, error if incorrect bracket-matching
         Let Token = TOKEN_BRACES_CLOSE: Let Value = Nesting(NestingDepth).Index
         If FileTokenise_NestOut(TOKEN_BRACES_OPEN, TOKEN_BRACES_CLOSE) Then GoTo Finish
         
-    ElseIf Asc1 = SYNTAX_PARENS_OPEN Then '..................................... `(` ...
+    ElseIf Asc1 = SYNTAX_PARENS_OPEN Then '.................................... `(` ...
         'Open another nesting level (if there was an error, stop parsing)
         If FileTokenise_NestIn(TOKEN_PARENS_OPEN) Then GoTo Finish
         Let Token = TOKEN_PARENS_OPEN
         
-    ElseIf Asc1 = SYNTAX_PARENS_CLOSE Then '.................................... `)` ...
+    ElseIf Asc1 = SYNTAX_PARENS_CLOSE Then '................................... `)` ...
         'Close the current nesting level, error if incorrect bracket-matching
         Let Token = TOKEN_PARENS_CLOSE: Let Value = Nesting(NestingDepth).Index
         If FileTokenise_NestOut(TOKEN_PARENS_OPEN, TOKEN_PARENS_CLOSE) Then GoTo Finish
         
-    ElseIf Asc1 = SYNTAX_SQUARE_OPEN Then '..................................... `[` ...
+    ElseIf Asc1 = SYNTAX_SQUARE_OPEN Then '.................................... `[` ...
         'Open another nesting level (if there was an error, stop parsing)
         If FileTokenise_NestIn(TOKEN_SQUARE_OPEN) Then GoTo Finish
         Let Token = TOKEN_SQUARE_OPEN
         
-    ElseIf Asc1 = SYNTAX_SQUARE_CLOSE Then '.................................... `]` ...
+    ElseIf Asc1 = SYNTAX_SQUARE_CLOSE Then '................................... `]` ...
         'Close the current nesting level, error if incorrect bracket-matching
         Let Token = TOKEN_SQUARE_CLOSE: Let Value = Nesting(NestingDepth).Index
         If FileTokenise_NestOut(TOKEN_SQUARE_OPEN, TOKEN_SQUARE_CLOSE) Then GoTo Finish
         
-    ElseIf Asc1 = SYNTAX_OPERATOR_ADD Then '.................................... `+` ...
+    ElseIf Asc1 = SYNTAX_OPERATOR_ADD Then '................................... `+` ...
         Let Token = TOKEN_OPERATOR_ADD
-    ElseIf Asc1 = SYNTAX_OPERATOR_SUB Then '.................................... `-` ...
+    ElseIf Asc1 = SYNTAX_OPERATOR_SUB Then '................................... `-` ...
         Let Token = TOKEN_OPERATOR_SUB
-    ElseIf Asc1 = SYNTAX_OPERATOR_MUL Then '.................................... `*` ...
+    ElseIf Asc1 = SYNTAX_OPERATOR_MUL Then '................................... `*` ...
         Let Token = TOKEN_OPERATOR_MUL
-    ElseIf Asc1 = SYNTAX_OPERATOR_DIV Then '.................................... `/` ...
+    ElseIf Asc1 = SYNTAX_OPERATOR_DIV Then '................................... `/` ...
         Let Token = TOKEN_OPERATOR_DIV
-    ElseIf Asc1 = SYNTAX_OPERATOR_POW Then '.................................... `^` ...
+    ElseIf Asc1 = SYNTAX_OPERATOR_POW Then '................................... `^` ...
         Let Token = TOKEN_OPERATOR_POW
-    ElseIf Asc1 = SYNTAX_OPERATOR_MOD Then '.................................... `\` ...
+    ElseIf Asc1 = SYNTAX_OPERATOR_MOD Then '................................... `\` ...
         Let Token = TOKEN_OPERATOR_MOD
-    ElseIf Asc1 = SYNTAX_OPERATOR_OR Then  '.................................... `|` ...
+    ElseIf Asc1 = SYNTAX_OPERATOR_OR Then  '................................... `|` ...
         Let Token = TOKEN_OPERATOR_OR
-    ElseIf Asc1 = SYNTAX_OPERATOR_AND Then '.................................... `&` ...
+    ElseIf Asc1 = SYNTAX_OPERATOR_AND Then '................................... `&` ...
         Let Token = TOKEN_OPERATOR_AND
-    ElseIf Asc1 = SYNTAX_OPERATOR_XOR Then '.................................... `~` ...
+    ElseIf Asc1 = SYNTAX_OPERATOR_XOR Then '................................... `~` ...
         Let Token = TOKEN_OPERATOR_XOR
     Else
         GoTo WordError
     End If
     
-    '-----------------------------------------------------------------------------------
+    '----------------------------------------------------------------------------------
 NextWord:
     With Files(File)
         'Add the information gleaned to the current token _
@@ -3195,23 +3131,29 @@ NextWord:
             ReDim Preserve .Tokens(0 To .TokensBuffer) As oz80Token
         End If
     End With
+    
+    '----------------------------------------------------------------------------------
+    '[4] Validate Syntax Tree
+    '----------------------------------------------------------------------------------
         
+        
+    '----------------------------------------------------------------------------------
 SkipWord:
     Call Profiler.EventEnd(EVENT_TOKENISE_TOKENWORD)
     '*** TIMER END ***
     GoTo ReadWord
 
-ErrorOverflow: '........................................................................
+ErrorOverflow: '.......................................................................
     On Error GoTo 0
     Call RaiseError(OZ80_ERROR_OVERFLOW, STR_ERR_OVERFLOW)
     GoTo Finish
     
-WordError: '............................................................................
+WordError: '...........................................................................
     Call RaiseError(OZ80_ERROR_INVALID, STR_ERR_INVALID_WORD)
     
-    '-----------------------------------------------------------------------------------
+    '----------------------------------------------------------------------------------
 Finish:
-    If My_Error = OZ80_ERROR_NONE Then
+    If Error = OZ80_ERROR_NONE Then
         'Reduce the buffer to the final size
         Let Files(File).TokensBuffer = Files(File).TokensLength
         ReDim Preserve Files(File).Tokens(0 To Files(File).TokensLength) As oz80Token
@@ -3219,10 +3161,10 @@ Finish:
         Call FileRewind
         
         'Log the results of the tokenisation
-        Call RaiseMessage(OZ80_LOG_INFO, LOG_FILE_LENGTH, Format$(SourceLen, "#,0"))
-        Call RaiseMessage(OZ80_LOG_INFO, LOG_FILE_TOKENS, _
-            Format$(Files(File).TokensLength + 1, "#,0") _
-        )
+'        Call RaiseMessage(OZ80_LOG_INFO, LOG_FILE_LENGTH, Format$(SourceLen, "#,0"))
+'        Call RaiseMessage(OZ80_LOG_INFO, LOG_FILE_TOKENS, _
+'            Format$(Files(File).TokensLength + 1, "#,0") _
+'        )
     Else
         'clean up!
         'TODO: This leaves the class in a broken state?
@@ -3234,17 +3176,14 @@ Finish:
     Erase Buffer
     'Clear the nesting information
     Erase Nesting: Let NestingDepth = 0
-    
-    'Return the error number to the assembler
-    Let FileTokenise = My_Error
-End Function
+End Sub
 
-'/// PRIVATE PROCEDURES ////////////////////////////////////////////////////////////////
+'/// PRIVATE PROCEDURES ///////////////////////////////////////////////////////////////
 
 'FormatToken : Format the details of the current token for logging
-'=======================================================================================
+'======================================================================================
 'Returns        | A new bluString containing the details of the current token
-'=======================================================================================
+'======================================================================================
 Private Function FormatToken( _
 ) As bluString
     '*** TIMER BEGIN ***
@@ -3263,99 +3202,99 @@ Private Function FormatToken( _
     
     If TokenKind = TOKEN_BRACES_OPEN _
     Or TokenKind = TOKEN_BRACES_CLOSE Then
-        '...............................................................................
+        '..............................................................................
         Let Format_Msg.Text = TokenNames(TokenKind)
         Let Format_TokenType = FORMAT_TOKEN_CHUNK
         
     ElseIf TokenKind = TOKEN_PARENS_OPEN _
         Or TokenKind = TOKEN_PARENS_CLOSE Then
-        '...............................................................................
+        '..............................................................................
         Let Format_Msg.Text = TokenNames(TokenKind)
         Let Format_TokenType = FORMAT_TOKEN_EXPR
         
     ElseIf TokenKind = TOKEN_SQUARE_OPEN _
         Or TokenKind = TOKEN_SQUARE_CLOSE Then
-        '...............................................................................
+        '..............................................................................
         Let Format_Msg.Text = TokenNames(TokenKind)
         Let Format_TokenType = FORMAT_TOKEN_SQUARE
         
     ElseIf TokenKind = TOKEN_CONST Then
-        '...............................................................................
+        '..............................................................................
         Let Format_Msg.Text = TokenStrings.Item(TokenValue)
         Call Format_Msg.Wrap(FORMAT_QUOTE)
         Let Format_TokenType = FORMAT_TOKEN_CONST
         
     ElseIf TokenIsFlag(TokenKind) Then
-        '..............................................................................
+        '.............................................................................
         Let Format_Msg.Text = TokenNames(TokenKind)
         Let Format_TokenType = FORMAT_TOKEN_FLAG
         
     ElseIf TokenKind = TOKEN_TYPE Then
-        '...............................................................................
+        '..............................................................................
         Let Format_Msg.Text = TokenStrings.Item(TokenValue)
         Call Format_Msg.Wrap(FORMAT_QUOTE)
         Let Format_TokenType = FORMAT_TOKEN_SQUARE
         
     ElseIf TokenIsInstruction(TokenKind) Then
-        '...............................................................................
+        '..............................................................................
         Let Format_Msg.Text = TokenNames(TokenKind)
         Let Format_TokenType = FORMAT_TOKEN_Z80
         
     ElseIf TokenIsKeyword(TokenKind) Then
-        '...............................................................................
+        '..............................................................................
         Let Format_Msg.Text = TokenNames(TokenKind)
         Call Format_Msg.UCase
         Let Format_TokenType = FORMAT_TOKEN_KEYWORD
         
     ElseIf TokenKind = TOKEN_LABEL Then
-        '...............................................................................
+        '..............................................................................
         Let Format_Msg.Text = TokenStrings.Item(TokenValue)
         Call Format_Msg.Wrap(FORMAT_QUOTE)
         Let Format_TokenType = FORMAT_TOKEN_LABEL
         
     ElseIf TokenKind = TOKEN_NUMBER Then
-        '...............................................................................
+        '..............................................................................
         'TODO: Don't try and display an indefinite value
         Let Format_Msg.Text = Format$(TokenValue, "#,0")
         Let Format_TokenType = FORMAT_TOKEN_NUMBER
         
     ElseIf TokenIsOperator(TokenKind) Then
-        '...............................................................................
+        '..............................................................................
         Let Format_Msg.Text = TokenNames(TokenKind)
         Let Format_TokenType = FORMAT_TOKEN_OPERATOR
         
     ElseIf TokenKind = TOKEN_SUFFIX_K _
         Or TokenKind = TOKEN_SUFFIX_KB Then
-        '...............................................................................
+        '..............................................................................
         Let Format_Msg.Text = TokenNames(TokenKind)
         Let Format_TokenType = FORMAT_TOKEN_PREFIX
         
     ElseIf TokenKind = TOKEN_PROPERTY_NEW _
         Or TokenKind = TOKEN_PROPERTY_USE Then
-        '...............................................................................
+        '..............................................................................
         Let Format_Msg.Text = TokenStrings.Item(TokenValue)
         Call Format_Msg.Wrap(FORMAT_QUOTE)
         Let Format_TokenType = FORMAT_TOKEN_PROPERTY
             
     ElseIf TokenKind = TOKEN_RAM Then
-        '...............................................................................
+        '..............................................................................
         Let Format_Msg.Text = TokenStrings.Item(TokenValue)
         Call Format_Msg.Wrap(FORMAT_QUOTE)
         Let Format_TokenType = FORMAT_TOKEN_RAM
         
     ElseIf TokenIsRegister(TokenKind) Then
-        '...............................................................................
+        '..............................................................................
         Let Format_Msg.Text = TokenNames(TokenKind)
         Let Format_TokenType = FORMAT_TOKEN_REGISTER
         
     ElseIf TokenKind = TOKEN_SECTION Then
-        '...............................................................................
+        '..............................................................................
         Let Format_Msg.Text = TokenStrings.Item(TokenValue)
         Call Format_Msg.Wrap(FORMAT_QUOTE)
         Let Format_TokenType = FORMAT_TOKEN_SECTION
         
     ElseIf TokenKind = TOKEN_TEXT Then
-        '...............................................................................
+        '..............................................................................
         Let Format_Msg.Text = TokenStrings.Item(TokenValue)
         Call Format_Msg.Wrap(FORMAT_QUOTE)
         Let Format_TokenType = FORMAT_TOKEN_TEXT
@@ -3377,9 +3316,9 @@ Private Function FormatToken( _
 End Function
 
 'FileTokenise_IsValidName : Check validity for named items
-'=======================================================================================
+'======================================================================================
 'Returns        | True if the captured word conforms to name item syntax
-'=======================================================================================
+'======================================================================================
 Private Function FileTokenise_IsValidName( _
 ) As Boolean
     'Variable, label and property names can contain A-Z, 0-9 underscore and dot with _
@@ -3450,11 +3389,11 @@ Private Function FileTokenise_IsValidName( _
 End Function
 
 'FileTokenise_NestIn : Track an additional level of bracket nesting
-'=======================================================================================
+'======================================================================================
 'BracketType    | Token number to represent "{", "(" or "["
-'---------------¦-----------------------------------------------------------------------
+'---------------¦----------------------------------------------------------------------
 'Returns        | An error number, should the nesting be invalid
-'=======================================================================================
+'======================================================================================
 Private Function FileTokenise_NestIn( _
     ByRef BracketType As OZ80_TOKEN _
 ) As OZ80_ERROR
@@ -3466,12 +3405,12 @@ Private Function FileTokenise_NestIn( _
 End Function
 
 'FileTokenise_NestOut : Finish a level of bracket nesting, folding up to the previous
-'=======================================================================================
+'======================================================================================
 'BracketOpen    | Token number for the opening bracket "{", "(" or "["
 'BracketClose   | Token number for the closing bracket "}", ")" or "]"
-'---------------¦-----------------------------------------------------------------------
+'---------------¦----------------------------------------------------------------------
 'Returns        | An error number, should the nesting be invalid
-'=======================================================================================
+'======================================================================================
 Private Function FileTokenise_NestOut( _
     ByRef BracketOpen As OZ80_TOKEN, _
     ByRef BracketClose As OZ80_TOKEN _
@@ -3480,7 +3419,9 @@ Private Function FileTokenise_NestOut( _
         'Check that the nesting is correct; you cannot close a bracket without an _
          open one before, nor can you close a bracket when a different one is open
         If .Token <> BracketOpen Then
-            Let FileTokenise_NestOut = RaiseError(OZ80_ERROR_EXPECTED, STR_ERR_EXPECTED_BRACKET)
+            Let FileTokenise_NestOut = RaiseError( _
+                OZ80_ERROR_EXPECTED, STR_ERR_EXPECTED_BRACKET _
+            )
             Exit Function
         End If
         'Update the opening brace to reference the closing brace
@@ -3490,7 +3431,7 @@ Private Function FileTokenise_NestOut( _
     Let NestingDepth = NestingDepth - 1
 End Function
 
-'/// PARSING ///////////////////////////////////////////////////////////////////////////
+'/// PARSING //////////////////////////////////////////////////////////////////////////
 
 'This is a structured map of the OZ80 syntax: _
  The first column on the left is the name of a scope. For each scope, the columns to _
@@ -3504,7 +3445,7 @@ End Function
         *   `{operator}` can be any one of `+ - * / ^ \ & | << >>`
 
 'Scope    : 1           2           3           4         ' Comment
-'---------|-----------------------------------------------'-----------------------------
+'---------|-----------------------------------------------'----------------------------
 '<value>  | {number}                                      '
 '         | !{name}                                       ' "Constant"
 '         | :{name}                                       ' "Label"
@@ -3529,7 +3470,7 @@ End Function
 '         | $.{name}   [HELP        <text>]               '
 '         | {number}   [HELP        <text>]               '
 '         |                                               '
-'.........|...............................................'.............................
+'.........|...............................................'............................
 '         |                                               '
 '<root>   | DEF         <def>                             ' Define ...
 '         |                                               '
@@ -3569,14 +3510,14 @@ End Function
 '         |                        [ELSE        <if>]     '
 
 'ScopeRoot : When we're not within the scope of anything else
-'=======================================================================================
+'======================================================================================
 Private Sub ScopeRoot()
     'When a file begins, it is at the top-most scope. Certain keywords are only _
      allowed here. Once all nested scopes are exhausted, we return here
     
 Continue:
     'Append to an existing Chunk / Type
-    '-----------------------------------------------------------------------------------
+    '----------------------------------------------------------------------------------
     If TokenKind = TOKEN_KEYWORD_APPEND Then
         'Pass over the `APPEND` keyword
         If NextTokenError() Then Exit Sub
@@ -3597,7 +3538,7 @@ Continue:
         End If
         
     'Define Constant / RAM Bank / Section / System:
-    '-----------------------------------------------------------------------------------
+    '----------------------------------------------------------------------------------
     ElseIf TokenKind = TOKEN_KEYWORD_DEF Then
         'Pass over the `DEF` keyword
         'TODO: DEF specific error
@@ -3630,60 +3571,60 @@ Continue:
         End If
     
     'Define a Type:
-    '-----------------------------------------------------------------------------------
+    '----------------------------------------------------------------------------------
     '`TYPE #<type> [ ... ]`
-    '-----------------------------------------------------------------------------------
+    '----------------------------------------------------------------------------------
     ElseIf TokenKind = TOKEN_KEYWORD_TYPE Then
         'Hand off to the function that will process this
         Call DefineType
     
     'Inlcude another source file:
-    '-----------------------------------------------------------------------------------
+    '----------------------------------------------------------------------------------
     '`INCLUDE <text>`
-    '-----------------------------------------------------------------------------------
+    '----------------------------------------------------------------------------------
     ElseIf TokenKind = TOKEN_KEYWORD_INCLUDE Then
         'Hand off to the function that will process this
         Call ProcessInclude
     
     'Define a Procedure:
-    '-----------------------------------------------------------------------------------
+    '----------------------------------------------------------------------------------
     '`PROC :<label> { [...] }`
-    '-----------------------------------------------------------------------------------
+    '----------------------------------------------------------------------------------
     ElseIf TokenKind = TOKEN_KEYWORD_PROC Then
         'Hand off to the function that will process this
         Call DefineProc
     
     'Create some RAM variables:
-    '-----------------------------------------------------------------------------------
+    '----------------------------------------------------------------------------------
     '`RAM [<expr>] [ ... ]`
-    '-----------------------------------------------------------------------------------
+    '----------------------------------------------------------------------------------
     ElseIf TokenKind = TOKEN_KEYWORD_RAM Then
         'Hand off to the function that will process this
         Call DefineRAMType
     
     'Define the starting Procedure:
-    '-----------------------------------------------------------------------------------
+    '----------------------------------------------------------------------------------
     '`START {...}`
-    '-----------------------------------------------------------------------------------
+    '----------------------------------------------------------------------------------
     ElseIf TokenKind = TOKEN_KEYWORD_START Then
         'Hand off to the function that will process this
         Call DefineStart
         
     'Defing a data table:
-    '-----------------------------------------------------------------------------------
+    '----------------------------------------------------------------------------------
     '`TABLE :<name> {...}`
-    '-----------------------------------------------------------------------------------
+    '----------------------------------------------------------------------------------
     ElseIf TokenKind = TOKEN_KEYWORD_TABLE Then
         'Hand off to the function that will process this
         Call DefineTable
     
     'ERROR: Not a valid keyword at this scope! _
-     -----------------------------------------------------------------------------------
+     ----------------------------------------------------------------------------------
     Else
         Call RaiseError(OZ80_ERROR_EXPECTED, "")
     End If
     
-    If My_Error Then Exit Sub
+    If Error Then Exit Sub
     'As we loop, other functions will move the Token pointer forward (such as when _
      evaluating expressions). Check if we've hit the end of the file
     If EOF Then Exit Sub
@@ -3692,9 +3633,9 @@ Continue:
 End Sub
 
 'DefineConst : Define a Constant value
-'=======================================================================================
+'======================================================================================
 'DEF        !<name>     [<expr>]
-'=======================================================================================
+'======================================================================================
 Private Sub DefineConst()
     '`ScopeRoot` has already verified that the current token is a Constant name; _
      check if the Constant has already been defined
@@ -3728,16 +3669,18 @@ Private Sub DefineConst()
     '(If there was an error in the Expression, the error event _
       will already have been raised, we only need to fold upwards)
     Dim Value As Double
-    If ParseExpression(Value) Then Exit Sub
+    Call ParseExpression(Value)
+    
+    If Error Then Exit Sub
     
     'Define the Constant:
     Call Values.Add(ConstName, Value)
 End Sub
 
 'DefineType : Define a Type block
-'=======================================================================================
+'======================================================================================
 'TYPE       #<name>     [ ... ]
-'=======================================================================================
+'======================================================================================
 Private Sub DefineType()
     'ERROR: The file ended before the first parameter
     If NextTokenError() Then Exit Sub
@@ -3745,12 +3688,12 @@ Private Sub DefineType()
     Dim TypeName As String
     Let TypeName = TokenText
     
-    Call RaiseMessage(OZ80_LOG_STATUS, "TYPE {$}", TypeName)
-    Call RaiseMessage(OZ80_LOG_INFO, LOG_LINEDOUBLE)
-    Call RaiseMessage(OZ80_LOG_INFO, _
-                      "ADDR | UNIT | QTY   | NAME")
-    Call RaiseMessage(OZ80_LOG_INFO, _
-                      "-----¦------¦-------¦----------------------------------------------------")
+'    Call RaiseMessage(OZ80_LOG_STATUS, "TYPE {$}", TypeName)
+'    Call RaiseMessage(OZ80_LOG_INFO, LOG_LINEDOUBLE)
+'    Call RaiseMessage(OZ80_LOG_INFO, _
+'                      "ADDR | UNIT | QTY   | NAME")
+'    Call RaiseMessage(OZ80_LOG_INFO, _
+'                      "-----¦------¦-------¦---------------------------------------------------")
     
     'Skip the param
     If NextTokenError() Then Exit Sub
@@ -3762,16 +3705,16 @@ Private Sub DefineType()
     
     Call ScopeType(Types(TypeCount))
     
-    Call RaiseMessage(OZ80_LOG_INFO, LOG_LINEDOUBLE & vbCrLf)
+'    Call RaiseMessage(OZ80_LOG_INFO, LOG_LINEDOUBLE & vbCrLf)
 End Sub
 
-'=======================================================================================
+'======================================================================================
 'ScopeType : Walks a Type block and defines the structure within
-'=======================================================================================
+'======================================================================================
 'BaseType       | Which Type to populate
 '[BaseOffset]   | Where the properties should begin addressing from
 '[BaseName]     | The name heirarchy to prepend (when nesting Types)
-'=======================================================================================
+'======================================================================================
 Private Sub ScopeType( _
              ByRef BaseType As OZ80Type, _
     Optional ByVal BaseOffset As Long = 0, _
@@ -3796,7 +3739,7 @@ Private Sub ScopeType( _
     
 Continue:
     'Property Name:
-    '-----------------------------------------------------------------------------------
+    '----------------------------------------------------------------------------------
     With BaseType
     
     'Type definitions should begin with a property
@@ -3816,15 +3759,16 @@ Continue:
     If NextTokenError() Then Exit Sub
     
     'Offset Value:
-    '-----------------------------------------------------------------------------------
+    '----------------------------------------------------------------------------------
     'An optional Value can be provided before the size to set the current enumeration _
      address; that is, you can skip to anywhere in the address space
     
     'Is there a Value preceeding the unit size?
-    '...................................................................................
+    '..................................................................................
     If TokenIsExpression(TokenKind) Then
         'Fetch the Value given. Any error, fold upwards
-        If ParseExpression(Value) Then Exit Sub
+        Call ParseExpression(Value)
+        If Error Then Exit Sub
         
         'An indefinite Value cannot be used (yet?) as the addressing of the remainder _
          of the Type will depend upon this Value and we haven't a means of deferring _
@@ -3841,33 +3785,33 @@ Continue:
         'The next property will begin after this new address
         Let BaseOffset = .Properties(.PropertyCount).Offset
         
-    '...................................................................................
+    '..................................................................................
     Else
         'The new Property's reserved data size will begin ater the previous
         Let .Properties(.PropertyCount).Offset = BaseOffset
     End If
     
-    Let LogMsg.Text = "     |      |       |                                                    "
-    Call LogMsg.Overwrite(0, HexStr16(.Properties(.PropertyCount).Offset \ 8))
-    Call LogMsg.Overwrite(22, .Properties(.PropertyCount).Name)
+    Let LogStr.Text = "     |      |       |                                                    "
+    Call LogStr.Overwrite(0, HexStr16(.Properties(.PropertyCount).Offset \ 8))
+    Call LogStr.Overwrite(22, .Properties(.PropertyCount).Name)
     
      
     'Record the type of unit used
     Let .Properties(.PropertyCount).Unit = TokenKind
     
     'Nested Types:
-    '-----------------------------------------------------------------------------------
+    '----------------------------------------------------------------------------------
     'If the unit for a Property is `TYPE` then we append another Type at this point, _
      either pre-existing (by name), or an anonymous Type, embedded here-in
     If TokenKind = TOKEN_KEYWORD_TYPE Then
         'Skip oiver the `TYPE` keyword
         If NextTokenError() Then Exit Sub
         
-        Call LogMsg.Overwrite(7, STR_TYPE)
-        Call RaiseMessage(OZ80_LOG_INFO, LogMsg.Text)
-        Call RaiseMessage(OZ80_LOG_INFO, _
-            "-----.------.-------.----------------------------------------------------" _
-        )
+        Call LogStr.Overwrite(7, STR_TYPE)
+'        Call RaiseMessage(OZ80_LOG_INFO, LogMsg.Text)
+'        Call RaiseMessage(OZ80_LOG_INFO, _
+'            "-----.------.-------.----------------------------------------------------" _
+'        )
         
         'Define the nested Type's address; that is, `#type.subtype` will give you the _
          address of the nested Type, which will be the same as the first Property _
@@ -3879,7 +3823,7 @@ Continue:
         )
         
         'Is this a pre-existing Type name?
-        '...............................................................................
+        '..............................................................................
         If TokenKind = TOKEN_TYPE Then
             'Retrieve the name of the Type
             Dim CopyTypeName As String
@@ -3923,10 +3867,10 @@ Continue:
                 
                 'Start assigning the Property details
                 With Types(CopyTypeIndex).Properties(i)
-                    Let LogMsg.Text = "     |      |       |                                                    "
-                    Call LogMsg.Overwrite(0, HexStr16(BaseOffset \ 8))
-                    Call LogMsg.Overwrite(22, BaseName & CopyBaseName & .Name)
-                    Call LogMsg.Overwrite(7, TokenNames(.Unit))
+                    Let LogStr.Text = "     |      |       |                                                    "
+                    Call LogStr.Overwrite(0, HexStr16(BaseOffset \ 8))
+                    Call LogStr.Overwrite(22, BaseName & CopyBaseName & .Name)
+                    Call LogStr.Overwrite(7, TokenNames(.Unit))
                     
                     'Copy the Property across
                     Let BaseType.Properties(BaseType.PropertyCount).Offset = BaseOffset
@@ -3938,7 +3882,7 @@ Continue:
                     'Add the size of this Property to the parent-Type
                     Let BaseType.Size = BaseType.Size + .Size
                     
-                    Call RaiseMessage(OZ80_LOG_INFO, LogMsg.Text)
+'                    Call RaiseMessage(OZ80_LOG_INFO, LogMsg.Text)
                 End With
                 
                 'Add the Type Property to the global Label database
@@ -3954,20 +3898,20 @@ Continue:
             Next i
             
         'An anonymous (embedded) Type:
-        '...............................................................................
+        '..............................................................................
         Else
             'Walk the Type within this Type...
             Call ScopeType(BaseType, BaseOffset, .Properties(.PropertyCount).Name)
             'For any error within the sub-Type, don't continue with the outer Type
-            If My_Error Then Exit Sub
+            If Error Then Exit Sub
         End If
         
-        Call RaiseMessage(OZ80_LOG_INFO, _
-            "-----'------'-------'----------------------------------------------------" _
-        )
+'        Call RaiseMessage(OZ80_LOG_INFO, _
+'            "-----'------'-------'----------------------------------------------------" _
+'        )
         
     'Unit:
-    '-----------------------------------------------------------------------------------
+    '----------------------------------------------------------------------------------
     'Each Property of a Type must define a size (Bytes, Words, Longs &c.), _
      this is used to enumerate the addresses automatically
     Else
@@ -3986,20 +3930,21 @@ Continue:
             Exit Sub
         End If
         
-        Call LogMsg.Overwrite(7, TokenNames(TokenKind))
+        Call LogStr.Overwrite(7, TokenNames(TokenKind))
         
         'Pass over the Unit token
         If NextTokenError() Then Exit Sub
         
         'Multiplier?
-        '...............................................................................
+        '..............................................................................
         'A Unit size (e.g. `WORD` -- 16 bits) can be multiplied as needed using the _
          'repeat' operator "x". E.g. `WORD x 6` will give you 6 pairs of bytes
         If TokenKind = TOKEN_OPERATOR_REP Then
             'Pass over the repeat operator
             If NextTokenError() Then Exit Sub
             'Get the multiplier Value
-            If ParseExpression(Value) Then Exit Sub
+            Call ParseExpression(Value)
+            If Error Then Exit Sub
             
             'This cannot be indefinite because the size of structures must be known _
              in order to layout the ROM and therefore define the Label addresses
@@ -4011,14 +3956,14 @@ Continue:
                 'TODO: Overflow check
                 'Assign the size in bits (unit x multiplier)
                 Let .Properties(.PropertyCount).Size = UnitBits * Value
-                Call LogMsg.Overwrite(14, CStr(Value))
+                Call LogStr.Overwrite(14, CStr(Value))
             End If
             
         'No multipler -- just use a single unit
-        '...............................................................................
+        '..............................................................................
         Else
             Let .Properties(.PropertyCount).Size = UnitBits
-            Call LogMsg.Overwrite(14, "1")
+            Call LogStr.Overwrite(14, "1")
         End If
         
         'Shift forward the enumeration address according to the size of the structure; _
@@ -4028,7 +3973,7 @@ Continue:
         Let .Size = .Size + .Properties(.PropertyCount).Size
         
         'Default Value?
-        '...............................................................................
+        '..............................................................................
         'TODO: Is there a default value?
         If TokenIsList(TokenKind) Then
             Dim Default As Scripting.Dictionary
@@ -4047,11 +3992,11 @@ Continue:
             Abs(Int(-.Properties(.PropertyCount).Size / 8)) _
         )
         
-        Call RaiseMessage(OZ80_LOG_INFO, LogMsg.Text)
+'        Call RaiseMessage(OZ80_LOG_INFO, LogMsg.Text)
     End If
         
     End With
-    '-----------------------------------------------------------------------------------
+    '----------------------------------------------------------------------------------
     
     'Has the Type come to an end? If not, loop for the next Property
     If TokenKind = TOKEN_SQUARE_CLOSE _
@@ -4070,9 +4015,9 @@ Continue:
 End Sub
 
 'ProcessInclude : Process an Include statement
-'=======================================================================================
+'======================================================================================
 'INCLUDE    <text>
-'=======================================================================================
+'======================================================================================
 Private Sub ProcessInclude()
     'ERROR: The file ended before the first parameter
     If NextTokenError() Then Exit Sub
@@ -4088,7 +4033,8 @@ Private Sub ProcessInclude()
     Let ReturnToken = TokenIndex
     
     'Tokenise & assemble the included file
-    If FileAssemble(FilePath.Text) Then Exit Sub
+    Call FileAssemble(FilePath.Text)
+    If Error Then Exit Sub
     
     'Reattach the previous file
     Let File = ReturnFile
@@ -4102,21 +4048,21 @@ Private Sub ProcessInclude()
         Let TokenCol = .Col
     End With
     
-    Call RaiseMessage( _
-        OZ80_LOG_ACTION, "Continuing Assembly of ""{$}""", _
-        Files(File).Path _
-    )
+'    Call RaiseMessage( _
+'        OZ80_LOG_ACTION, "Continuing Assembly of ""{$}""", _
+'        Files(File).Path _
+'    )
 End Sub
 
 'DefineProc : Process a Procedure Chunk
-'=======================================================================================
+'======================================================================================
 'PROC   :<label>
 '       [HELP       <text>]
 '       [SECTION    ::<section>]    |   [INTERRUPT  <expr>]
 '       [PARAMS     <params>]
 '       [RETURN     <params>]
 '{ [...] }
-'=======================================================================================
+'======================================================================================
 Private Sub DefineProc()
     'ERROR: The file ended before the first parameter
     If NextTokenError() Then GoTo Finish
@@ -4146,9 +4092,9 @@ ReadParams:
     Dim IsReturnDefined As Boolean
     Dim IsHelpDefined As Boolean
     
-    '-----------------------------------------------------------------------------------
+    '----------------------------------------------------------------------------------
     '`SECTION` Parameter : Set which Section the Procedure belongs to _
-     -----------------------------------------------------------------------------------
+     ----------------------------------------------------------------------------------
     If TokenKind = TOKEN_KEYWORD_SECTION Then
         'ERROR: The Section parameter has already been specified
         If IsSectionDefined Then Call RaiseError( _
@@ -4195,9 +4141,9 @@ ReadParams:
         
         GoTo ReadParams
     
-    '-----------------------------------------------------------------------------------
+    '----------------------------------------------------------------------------------
     '`HELP` Parameter : Provide a description for the procedure
-    '-----------------------------------------------------------------------------------
+    '----------------------------------------------------------------------------------
     ElseIf TokenKind = TOKEN_KEYWORD_HELP Then
         'ERROR: The `HELP` parameter has already been specified
         If IsParamsDefined Then Call RaiseError( _
@@ -4219,9 +4165,9 @@ ReadParams:
         Let IsHelpDefined = True
         GoTo ReadParams
         
-    '-----------------------------------------------------------------------------------
+    '----------------------------------------------------------------------------------
     '`PARAMS` Parameter : Document which Z80 parameters the Procedure uses _
-     -----------------------------------------------------------------------------------
+     ----------------------------------------------------------------------------------
     ElseIf TokenKind = TOKEN_KEYWORD_PARAMS Then
         'The `PARAMS` parameter is not used by the assembler at this time, _
          neither is it a standard list as it consists of Registers and/or RAM Names, _
@@ -4278,9 +4224,9 @@ ReadParams:
             End If
         Loop
         
-    '-----------------------------------------------------------------------------------
-    '`RETURN` Parameter : Document what the Procedure sets / returns _
-     -----------------------------------------------------------------------------------
+    '----------------------------------------------------------------------------------
+    '`RETURN` Parameter : Document what the Procedure sets / returns
+    '----------------------------------------------------------------------------------
     ElseIf TokenKind = TOKEN_KEYWORD_RETURN Then
         'The `RETURN` parameter is not used by the assembler at this time, _
          neither is it a standard list as it consists of Registers and/or RAM Names
@@ -4336,9 +4282,9 @@ ReadParams:
             End If
         Loop
         
-    '-----------------------------------------------------------------------------------
-    '`INTERRUPT` Parameter : Define a fixed-location Interrupt Procedure _
-     -----------------------------------------------------------------------------------
+    '----------------------------------------------------------------------------------
+    '`INTERRUPT` Parameter : Define a fixed-location Interrupt Procedure
+    '----------------------------------------------------------------------------------
     ElseIf TokenKind = TOKEN_KEYWORD_INTERRUPT Then
         'The `INTERRUPT` parameter fixes a Procedure to a specific location in the _
          ROM intended for hardware interrupts. This parameter cannot co-exist with _
@@ -4365,7 +4311,8 @@ ReadParams:
         'Calculate the Expression:
         '(If there was an error in the Expression, the error event _
           will already have been raised, we only need to fold upwards)
-        If ParseExpression(Interrupt) Then GoTo Finish
+        Call ParseExpression(Interrupt)
+        If Error Then GoTo Finish
         
         'An indefinite Value cannot be used for an Interrupt address, we will only be _
          able to define the indefinite Values (i.e. Label locations in ROM) once _
@@ -4386,7 +4333,7 @@ ReadParams:
         GoTo ReadParams
     End If
     
-    '-----------------------------------------------------------------------------------
+    '----------------------------------------------------------------------------------
     
     'With the parameters read, the only allowed token is the opening of the Chunk
     If TokenKind <> TOKEN_BRACES_OPEN Then Call RaiseError( _
@@ -4441,8 +4388,8 @@ ReadParams:
     Let ChunksSize = ChunksSize + Chunks(Chunk).Size
     
     'Log a header for the disassembly
-    Call Chunks(Chunk).LogASM.LogFormat("PROC {$}", LabelName)
-    Call Chunks(Chunk).LogASM.Log(LOG_LINEDOUBLE)
+'    Call Chunks(Chunk).LogASM.Add("PROC " & LabelName)
+'    Call Chunks(Chunk).LogASM.Add(LOG_LINEDOUBLE)
     Let ChunkMode = MODE_UNSET
     
     'Enter the Procedure Chunk to process its innards
@@ -4452,19 +4399,19 @@ ReadParams:
     If ChunkMode = MODE_DATA Then
         'If data bytes have been assembled, ensure the remainder are added to _
          the log since we only output the disassembly line every 16 data bytes
-        If ChunkDataIndex <> 0 Then Call Chunks(Chunk).LogASM.Log(ChunkDataLog)
+'        If ChunkDataIndex <> 0 Then Call Chunks(Chunk).LogASM.Add(ChunkDataLog)
     End If
-    Call Chunks(Chunk).LogASM.Log(LOG_LINEDOUBLE)
-    Call Chunks(Chunk).LogASM.Log("Size: " & Format$(Chunks(Chunk).Size, "#,0") & " bytes")
-    Call RaiseMessage(OZ80_LOG_DEBUG, Chunks(Chunk).LogASM.Concatenate())
+'    Call Chunks(Chunk).LogASM.Add(LOG_LINEDOUBLE)
+'    Call Chunks(Chunk).LogASM.Add("Size: " & Format$(Chunks(Chunk).Size, "#,0") & " bytes")
+'    Call RaiseMessage(OZ80_LOG_DEBUG, Chunks(Chunk).LogASM.Concatenate())
     
 Finish:
 End Sub
 
 'DefineSection : Define a Section
-'=======================================================================================
+'======================================================================================
 'DEF SECTION    ::<section>    [SLOT   <list>]
-'=======================================================================================
+'======================================================================================
 Private Sub DefineSection()
     'ERROR: The file ended before the first parameter
     If NextTokenError() Then Exit Sub
@@ -4487,7 +4434,7 @@ Private Sub DefineSection()
         ): Exit Sub
     Next s
     
-    '-----------------------------------------------------------------------------------
+    '----------------------------------------------------------------------------------
     
     'If the file ends here it's valid, as the params are optional
     If EOF Then GoTo Finish
@@ -4548,9 +4495,9 @@ Private Sub DefineSection()
     End If
 
 Finish:
-    '-----------------------------------------------------------------------------------
+    '----------------------------------------------------------------------------------
     'Record the result:
-    Call RaiseMessage(OZ80_LOG_STATUS, LOG_SECTION, SectionName)
+'    Call RaiseMessage(OZ80_LOG_STATUS, LOG_SECTION, SectionName)
     
     Let SectionCount = SectionCount + 1
     ReDim Preserve Sections(0 To SectionCount) As oz80Section
@@ -4563,7 +4510,7 @@ Finish:
     
     Exit Sub
     
-    '-----------------------------------------------------------------------------------
+    '----------------------------------------------------------------------------------
 ErrInvalid:
     'Only a specific Slot pattern can be used
     Call RaiseError(OZ80_ERROR_INVALID, "TODO")
@@ -4577,9 +4524,9 @@ ErrIndefinite:
 End Sub
 
 'DefineRAMBank : Define a RAM Block
-'=======================================================================================
+'======================================================================================
 'DEF RAM    $#{name}    <expr>      <expr>
-'=======================================================================================
+'======================================================================================
 Private Sub DefineRAMBank()
     'ERROR: The file ended before the first parameter
     If NextTokenError() Then Exit Sub
@@ -4591,9 +4538,9 @@ Private Sub DefineRAMBank()
 End Sub
 
 'DefineRAMType : Process a RAM block
-'=======================================================================================
+'======================================================================================
 'RAM       [<expr>]     [ ... ]
-'=======================================================================================
+'======================================================================================
 Private Sub DefineRAMType()
     'ERROR: The file ended before the first parameter
     If NextTokenError() Then Exit Sub
@@ -4601,12 +4548,12 @@ Private Sub DefineRAMType()
     Dim TypeName As String
     Let TypeName = TokenText
     
-    Call RaiseMessage(OZ80_LOG_STATUS, "TYPE {$}", TypeName)
-    Call RaiseMessage(OZ80_LOG_INFO, LOG_LINEDOUBLE)
-    Call RaiseMessage(OZ80_LOG_INFO, _
-                      "ADDR | UNIT | QTY   | NAME")
-    Call RaiseMessage(OZ80_LOG_INFO, _
-                      "-----¦------¦-------¦----------------------------------------------------")
+'    Call RaiseMessage(OZ80_LOG_STATUS, "TYPE {$}", TypeName)
+'    Call RaiseMessage(OZ80_LOG_INFO, LOG_LINEDOUBLE)
+'    Call RaiseMessage(OZ80_LOG_INFO, _
+'                      "ADDR | UNIT | QTY   | NAME")
+'    Call RaiseMessage(OZ80_LOG_INFO, _
+'                      "-----¦------¦-------¦----------------------------------------------------")
     
     'Skip the param
     If NextTokenError() Then Exit Sub
@@ -4623,13 +4570,13 @@ Private Sub DefineRAMType()
         Call ScopeType(Types(TypeCount))
     End If
     
-    Call RaiseMessage(OZ80_LOG_INFO, LOG_LINEDOUBLE & vbCrLf)
+'    Call RaiseMessage(OZ80_LOG_INFO, LOG_LINEDOUBLE & vbCrLf)
 End Sub
 
 'DefineStart : Define the System's boot Procedure
-'=======================================================================================
+'======================================================================================
 'START      { ... }
-'=======================================================================================
+'======================================================================================
 Private Sub DefineStart()
     'You can't define the START procedure twice
     If ChunkExists(STR_START) Then Call RaiseError( _
@@ -4656,9 +4603,9 @@ Private Sub DefineStart()
 End Sub
 
 'DefineSystem : Define the target system (e.g. SEGA Master System)
-'=======================================================================================
+'======================================================================================
 'SYSTEM     <text>
-'=======================================================================================
+'======================================================================================
 Private Sub DefineSystem()
     'ERROR: The file ended before the first parameter
     If NextTokenError() Then Exit Sub
@@ -4676,7 +4623,7 @@ Private Sub DefineSystem()
     'Check if it's any of the allowed System names
     If SystemName.Equals(STR_SMS) Then
         'Configure the assembler for the SEGA Master System
-        Let My_System = SYSTEM_SMS
+        Let System = SYSTEM_SMS
     Else
         'Not a valid system name
         Call RaiseError(OZ80_ERROR_EXPECTED, "TODO")
@@ -4684,12 +4631,12 @@ Private Sub DefineSystem()
 End Sub
 
 'DefineTable : Process a data table Chunk
-'=======================================================================================
+'======================================================================================
 'TABLE  :<label>
 '       [HELP       <text>]
 '       [SECTION    ::<section>]
 '{ [...] }
-'=======================================================================================
+'======================================================================================
 Private Sub DefineTable()
     'ERROR: The file ended before the first parameter
     If NextTokenError() Then GoTo Finish
@@ -4711,9 +4658,9 @@ ReadParams:
     'Keep track of which params have been included or not
     Dim IsSectionDefined As Boolean
     
-    '-----------------------------------------------------------------------------------
+    '----------------------------------------------------------------------------------
     '`SECTION` Parameter : Set which Section the Table belongs to _
-     -----------------------------------------------------------------------------------
+     ----------------------------------------------------------------------------------
     If TokenKind = TOKEN_KEYWORD_SECTION Then
         'ERROR: The Section parameter has already been specified
         If IsSectionDefined Then Call RaiseError( _
@@ -4764,7 +4711,7 @@ ReadParams:
     'The Chunk cannot be left open
     If NextTokenError() Then GoTo Finish
     
-    '-----------------------------------------------------------------------------------
+    '----------------------------------------------------------------------------------
     
     'Now define the Label name; if a Section was given, it needs to be prepended
     Dim FullLabelName As String
@@ -4780,8 +4727,8 @@ ReadParams:
     Let Chunk = Chunk_Begin(LabelName, SectionIndex)
     
     'Log a header for the disassembly
-    Call Chunks(Chunk).LogASM.LogFormat("TABLE {$}", LabelName)
-    Call Chunks(Chunk).LogASM.Log(LOG_LINEDOUBLE)
+'    Call Chunks(Chunk).LogASM.Add("TABLE " & LabelName)
+'    Call Chunks(Chunk).LogASM.Add(LOG_LINEDOUBLE)
     Let ChunkMode = MODE_UNSET
     
     'Enter the Table Chunk to process its innards
@@ -4789,11 +4736,11 @@ ReadParams:
     
     'Finalise the disassembly log
     If ChunkMode = MODE_DATA Then
-        If ChunkDataIndex <> 0 Then Call Chunks(Chunk).LogASM.Log(ChunkDataLog)
+'        If ChunkDataIndex <> 0 Then Call Chunks(Chunk).LogASM.Add(ChunkDataLog)
     End If
-    Call Chunks(Chunk).LogASM.Log(LOG_LINEDOUBLE)
-    Call Chunks(Chunk).LogASM.Log("Size: " & Format$(Chunks(Chunk).Size, "#,0") & " bytes")
-    Call RaiseMessage(OZ80_LOG_DEBUG, Chunks(Chunk).LogASM.Concatenate())
+'    Call Chunks(Chunk).LogASM.Add(LOG_LINEDOUBLE)
+'    Call Chunks(Chunk).LogASM.Add("Size: " & Format$(Chunks(Chunk).Size, "#,0") & " bytes")
+'    Call RaiseMessage(OZ80_LOG_DEBUG, Chunks(Chunk).LogASM.Concatenate())
     
     'Count this toward the total size of all Chunks, _
      which we will use to determine the size of output ROM needed
@@ -4803,7 +4750,7 @@ Finish:
 End Sub
 
 'ScopeChunk: Within a code/data Chunk, i.e. `PROC`/`TABLE`
-'=======================================================================================
+'======================================================================================
 Private Sub ScopeChunk( _
     ByRef ChunkID As Long _
 )
@@ -4811,20 +4758,20 @@ Private Sub ScopeChunk( _
     Dim Value As Double
     
 Continue:
-    '-----------------------------------------------------------------------------------
+    '----------------------------------------------------------------------------------
     'Z80 code?
-    '-----------------------------------------------------------------------------------
+    '----------------------------------------------------------------------------------
     If TokenIsInstruction(TokenKind) Then
         'Assemble the Z80 instruction...
-        Call Z80_Assemble(ChunkID): If My_Error Then Exit Sub
+        Call Z80Assemble(ChunkID): If Error Then Exit Sub
         
         'Processing of the Z80 instruction (and parameters) will have moved the token _
          pointer on to the next unread token already, so we can just loop right back
         GoTo Continue
     
-    '-----------------------------------------------------------------------------------
+    '----------------------------------------------------------------------------------
     'Local Label definition?
-    '-----------------------------------------------------------------------------------
+    '----------------------------------------------------------------------------------
     ElseIf TokenKind = TOKEN_PROPERTY_NEW Then
         'Define the local property
         'TODO: Duplicates?
@@ -4832,9 +4779,9 @@ Continue:
         'Fully qualify the local Label name to its global identifier
         Call AddUpdateLabel(Chunks(ChunkID).FullName & TokenText, INDEFINITE)
     
-    '-----------------------------------------------------------------------------------
+    '----------------------------------------------------------------------------------
     'INDEX
-    '-----------------------------------------------------------------------------------
+    '----------------------------------------------------------------------------------
     ElseIf TokenKind = TOKEN_KEYWORD_INDEX Then
         'Move past the `INDEX` keyword; _
          error if the file ends because the scope is obviously still open
@@ -4865,9 +4812,9 @@ Continue:
         'TODO: Too many indicies at 256?
         Let Chunks(ChunkID).TableIndex = Chunks(ChunkID).TableIndex + 1
         
-    '-----------------------------------------------------------------------------------
+    '----------------------------------------------------------------------------------
     'BYTE Data
-    '-----------------------------------------------------------------------------------
+    '----------------------------------------------------------------------------------
     ElseIf TokenKind = TOKEN_KEYWORD_BYTE Then
         'Move past the `BYTE` keyword; _
          error if the file ends because the scope is obviously still open
@@ -4884,7 +4831,8 @@ Continue:
             If TokenIsExpression(TokenKind) Then
                 Let ExprToken = TokenIndex
                 
-                If ParseExpression(Value, ChunkID) Then Stop
+                Call ParseExpression(Value, ChunkID)
+                If Error Then Stop
                 
                 If Value = INDEFINITE Then
                     Call DeferExpression( _
@@ -4897,10 +4845,10 @@ Continue:
                 
             ElseIf TokenKind = TOKEN_TEXT Then
                 'Walk the Text bytes
-                Let LogMsg.Text = TokenText
+                Let LogStr.Text = TokenText
                 Dim i As Long
-                For i = 0 To LogMsg.Length - 1
-                    Call Chunk_AddBYTE(ChunkID, LogMsg.Char(i) And &HFF&)
+                For i = 0 To LogStr.Length - 1
+                    Call Chunk_AddBYTE(ChunkID, LogStr.Char(i) And &HFF&)
                 Next i
                 If NextTokenError Then Exit Sub
                 
@@ -4914,9 +4862,9 @@ Continue:
         Loop
         GoTo Continue
         
-    '-----------------------------------------------------------------------------------
+    '----------------------------------------------------------------------------------
     'WORD Data
-    '-----------------------------------------------------------------------------------
+    '----------------------------------------------------------------------------------
     ElseIf TokenKind = TOKEN_KEYWORD_WORD Then
         'Move past the `WORD` keyword; _
          error if the file ends because the scope is obviously still open
@@ -4933,7 +4881,8 @@ Continue:
             If TokenIsExpression(TokenKind) Then
                 Let ExprToken = TokenIndex
                 
-                If ParseExpression(Value, ChunkID) Then Stop
+                Call ParseExpression(Value, ChunkID)
+                If Error Then Stop
                 
                 If Value = INDEFINITE Then
                     Call DeferExpression( _
@@ -4953,7 +4902,7 @@ Continue:
         Loop
         GoTo Continue
         
-    '-----------------------------------------------------------------------------------
+    '----------------------------------------------------------------------------------
     'The chunk might be empty `{}`, in which case we don't want to walk it
     ElseIf TokenKind = TOKEN_BRACES_CLOSE Then
         GoTo Finish
@@ -4963,7 +4912,7 @@ Continue:
         Exit Sub
     End If
     
-    '-----------------------------------------------------------------------------------
+    '----------------------------------------------------------------------------------
     
     'Move to the next token. If the file ends unexpectedly, the chunk has not been _
      closed properly (closing brace is expected)
@@ -4979,9 +4928,9 @@ Finish:
 End Sub
 
 'Chunk_AddBYTE
-'=======================================================================================
+'======================================================================================
 'Value          | The "BYTE" to add to the current Chunk
-'=======================================================================================
+'======================================================================================
 Private Sub Chunk_AddBYTE( _
     ByRef ChunkID As Long, _
     ByRef Value As Double _
@@ -5006,9 +4955,9 @@ Private Sub Chunk_AddBYTE( _
 End Sub
 
 'Chunk_AddWORD
-'=======================================================================================
+'======================================================================================
 'Value          | The "WORD" (2-bytes) to add to the current Chunk
-'=======================================================================================
+'======================================================================================
 Private Sub Chunk_AddWORD( _
     ByRef ChunkID As Long, _
     ByRef Value As Double _
@@ -5035,9 +4984,9 @@ Private Sub Chunk_AddWORD( _
 End Sub
 
 'Chunk_LogByte
-'=======================================================================================
+'======================================================================================
 'Value          | The byte to add to the current disassembly line
-'=======================================================================================
+'======================================================================================
 Private Sub Chunk_LogByte( _
     ByRef ChunkID As Long, _
     ByRef Value As Byte _
@@ -5048,27 +4997,28 @@ Private Sub Chunk_LogByte( _
         'Start a new disassembly log line
         Let ChunkDataLog = LOG_DATA
         'Include the current address on the log line
-        Call api_RtlMoveMemory( _
-            DestinationPointer:=StrPtr(ChunkDataLog), _
-                 SourcePointer:=StrPtr(HexStr16(Chunks(ChunkID).Size - 1)), _
-                        Length:=8 _
+        Call Win32.MemoryCopyBetween( _
+              LengthBytes:=8, _
+            OutputPointer:=StrPtr(ChunkDataLog), _
+            SourcePointer:=StrPtr(HexStr16(Chunks(ChunkID).Size - 1)) _
         )
         'Bytes will be logged according to the current offset _
          (so that the data is displayed aligned to 16 bytes)
         Let ChunkDataIndex = (Chunks(ChunkID).Size - 1) Mod 16
         
         If ChunkMode <> MODE_UNSET Then
-            Call Chunks(ChunkID).LogASM.Log(LOG_ASM_FOOT)
+'            Call Chunks(ChunkID).LogASM.Add(LOG_ASM_FOOT)
         End If
-        Call Chunks(ChunkID).LogASM.Log(LOG_DATA_COLS)
-        Call Chunks(ChunkID).LogASM.Log(LOG_DATA_HEAD)
+'        Call Chunks(ChunkID).LogASM.Add(LOG_DATA_COLS)
+'        Call Chunks(ChunkID).LogASM.Add(LOG_DATA_HEAD)
         Let ChunkMode = MODE_DATA
     End If
     
     'Place the byte into the disassembly line
-    Call api_RtlMoveMemory( _
-        DestinationPointer:=StrPtr(ChunkDataLog) + 14 + (ChunkDataIndex * 6), _
-        SourcePointer:=StrPtr(HexStr8(Value)), Length:=4 _
+    Call Win32.MemoryCopyBetween( _
+          LengthBytes:=4, _
+        OutputPointer:=StrPtr(ChunkDataLog) + 14 + (ChunkDataIndex * 6), _
+        SourcePointer:=StrPtr(HexStr8(Value)) _
     )
     
     'TODO: Adding the ASCII disply of bytes will require a Unicode textbox
@@ -5076,15 +5026,15 @@ Private Sub Chunk_LogByte( _
     'If we've reached the end of a disassembly line then log it and start a new one
     If ChunkDataIndex = 15 Then
         'Add the prepared line to the log
-        Call Chunks(ChunkID).LogASM.Log(ChunkDataLog)
+'        Call Chunks(ChunkID).LogASM.Add(ChunkDataLog)
         'Start the next line
         Let ChunkDataLog = LOG_DATA
         Let ChunkDataIndex = 0
         'Include the next address on the log line
-        Call api_RtlMoveMemory( _
-            DestinationPointer:=StrPtr(ChunkDataLog), _
-                 SourcePointer:=StrPtr(HexStr16(Chunks(ChunkID).Size)), _
-                        Length:=8 _
+        Call Win32.MemoryCopyBetween( _
+              LengthBytes:=8, _
+            OutputPointer:=StrPtr(ChunkDataLog), _
+            SourcePointer:=StrPtr(HexStr16(Chunks(ChunkID).Size)) _
         )
     Else
         'Move on to the next byte in the line
@@ -5092,9 +5042,9 @@ Private Sub Chunk_LogByte( _
     End If
 End Sub
 
-'Z80_Assemble : Assemble bytes from a Z80 instruction and parameters
-'=======================================================================================
-Private Sub Z80_Assemble( _
+'Z80Assemble : Assemble bytes from a Z80 instruction and parameters
+'======================================================================================
+Private Sub Z80Assemble( _
     ByRef ChunkID As Long _
 )
     '*** TIMER BEGIN ***
@@ -5114,9 +5064,9 @@ Private Sub Z80_Assemble( _
     Dim LogPtr As Long:     Let LogPtr = StrPtr(LogStr)
     
     'We already know the instruction, so we can add that to the disassembly now
-    Call api_RtlMoveMemory(LogPtr + 54, StrPtr( _
+    Call Win32.MemoryCopyBetween(20, LogPtr + 54, StrPtr( _
         ParamText(PARAMTEXT_Z80 + (Mnemonic - [_TOKEN_Z80_BEGIN])) _
-    ), 20)
+    ))
     
     'Initialse variables to hold pieces of the assembly
     Dim Prefix As Long, Offset As Double
@@ -5128,7 +5078,7 @@ Private Sub Z80_Assemble( _
     
     'A built in macro allows `PUSH` and `POP` Z80 instructions to handle multiple _
      parameters; each parameter is broken into its own `PUSH`/`POP` instruction
-    '-----------------------------------------------------------------------------------
+    '----------------------------------------------------------------------------------
     If (Mnemonic = TOKEN_Z80_PUSH) _
     Or (Mnemonic = TOKEN_Z80_POP) _
     Then
@@ -5146,9 +5096,10 @@ PushPop:
         If TokenIsRegister(TokenKind) = 0 Then GoTo Finish
         
         'Fetch a parameter
+        Call Z80GetParameter(Instruction.Param1, ChunkID)
         '(If there was an error, the error number will already have been set, _
           we only need to fold upwards to end the assembling)
-        If Z80_GetParameter(Instruction.Param1, ChunkID) Then GoTo Finish
+        If Error Then GoTo Finish
         
         'If it's not a pushable/poppable register, then it's invalid
         If (Instruction.Param1.Mask And PARAM_REGS_AF_BC_DE_HL_IXY) = 0 Then
@@ -5157,8 +5108,8 @@ PushPop:
         End If
                 
         'Add the param to the log
-        Call api_RtlMoveMemory( _
-            LogPtr + 74, StrPtr(ParamText(Instruction.Param1.LogText)), 20 _
+        Call Win32.MemoryCopyBetween(20, _
+            LogPtr + 74, StrPtr(ParamText(Instruction.Param1.LogText)) _
         )
         
         'Is it IX/IY?
@@ -5170,12 +5121,12 @@ PushPop:
             'We can already add this to the bytes to output
             Let Bytes(0) = Prefix
             'And include it in the disassembly log
-            Call api_RtlMoveMemory(LogPtr + 14, StrPtr(HexStr8(Prefix)), 4)
+            Call Win32.MemoryCopyBetween(4, LogPtr + 14, StrPtr(HexStr8(Prefix)))
         Else
             Let Bytes(0) = 0
         End If
         
-    '-----------------------------------------------------------------------------------
+    '----------------------------------------------------------------------------------
     Else
         'Up to 3 parameters are supported to allow for the undocumented instructions, _
          e.g. `SET 0 [IX+$8] A` which sets bit 0 of the address and copies the result _
@@ -5185,9 +5136,10 @@ PushPop:
              (such as when a Label, which has not yet been addressed, is used)
             
             'Get the first parameter
+            Call Z80GetParameter(Instruction.Param1, ChunkID)
             '(If there was an error, the error number will already have been set, _
-              we only need to fold upwards to end the assembling
-            If Z80_GetParameter(Instruction.Param1, ChunkID) Then GoTo Finish
+              we only need to fold upwards to end the assembling)
+            If Error Then GoTo Finish
             
             Dim Mask As OZ80_MASK
             
@@ -5258,15 +5210,16 @@ PushPop:
             End If
                         
             'Add param 1 to the log
-            Call api_RtlMoveMemory( _
-                LogPtr + 74, StrPtr(ParamText(Instruction.Param1.LogText)), 20 _
+            Call Win32.MemoryCopyBetween(20, _
+                LogPtr + 74, StrPtr(ParamText(Instruction.Param1.LogText)) _
             )
             
             'Check if a second parameter exists
-            '...........................................................................
+            '..........................................................................
             If TokenIsParameter(TokenKind) Then
                 'Fetch the second parameter
-                If Z80_GetParameter(Instruction.Param2, ChunkID) Then GoTo Finish
+                Call Z80GetParameter(Instruction.Param2, ChunkID)
+                If Error Then GoTo Finish
                 
                 
                 'Is Parameter 2 `A`?
@@ -5328,21 +5281,22 @@ PushPop:
                 End If
                 
                 'Add param 2 to the log
-                Call api_RtlMoveMemory(LogPtr + 94, _
-                    StrPtr(ParamText(Instruction.Param2.LogText)), 20 _
+                Call Win32.MemoryCopyBetween(20, LogPtr + 94, _
+                    StrPtr(ParamText(Instruction.Param2.LogText)) _
                 )
                 
                 'Check if a third parameter exists
-                '.......................................................................
+                '......................................................................
                 If TokenIsParameter(TokenKind) Then
                     'Fetch the third parameter (very uncommon)
                     'NOTE: Parameter 3 is only used for some undocumented instructions _
                      and will not be IX/IY (though IX/IY can be in previous parameters)
-                    If Z80_GetParameter(Instruction.Param3, ChunkID) Then GoTo Finish
+                    Call Z80GetParameter(Instruction.Param3, ChunkID)
+                    If Error Then GoTo Finish
                     
                     'Add param 3 to the log
-                    Call api_RtlMoveMemory(LogPtr + 114, _
-                        StrPtr(ParamText(Instruction.Param3.LogText)), 20 _
+                    Call Win32.MemoryCopyBetween(20, LogPtr + 114, _
+                        StrPtr(ParamText(Instruction.Param3.LogText)) _
                     )
                     
                     'Is Param 3 `A|B|C|D|E|H|L`?
@@ -5361,7 +5315,7 @@ PushPop:
                 'We can already add this to the bytes to output
                 Let Bytes(0) = Prefix
                 'And include it in the disassembly log
-                Call api_RtlMoveMemory(LogPtr + 14, StrPtr(HexStr8(Prefix)), 4)
+                Call Win32.MemoryCopyBetween(4, LogPtr + 14, StrPtr(HexStr8(Prefix)))
                 
                 'Does it include an offset byte? i.e. "[IX+$FF]"
                 If (ParamIXY.Mask And PARAM_MEM_IXY) <> 0 Then
@@ -5370,27 +5324,27 @@ PushPop:
                     
                     'Include this in the disassembly log
                     If Offset = INDEFINITE Then
-                        Call api_RtlMoveMemory(LogPtr + 26, StrPtr(HexStr8(-1)), 4)
+                        Call Win32.MemoryCopyBetween(4, LogPtr + 26, StrPtr(HexStr8(-1)))
                     Else
                         Let Bytes(2) = Offset
-                        Call api_RtlMoveMemory(LogPtr + 26, StrPtr(HexStr8(Offset)), 4)
+                        Call Win32.MemoryCopyBetween(4, LogPtr + 26, StrPtr(HexStr8(Offset)))
                     End If
                     
                     If Instruction.Param1.Defer = 1 Then
                         If Prefix = &HDD& _
-                            Then Call api_RtlMoveMemory(LogPtr + 74, StrPtr("[IX+$??]  "), 20) _
-                            Else Call api_RtlMoveMemory(LogPtr + 74, StrPtr("[IY+$??]  "), 20)
+                            Then Call Win32.MemoryCopyBetween(20, LogPtr + 74, StrPtr("[IX+$??]  ")) _
+                            Else Call Win32.MemoryCopyBetween(20, LogPtr + 74, StrPtr("[IY+$??]  "))
                     ElseIf Instruction.Param2.Defer = 1 Then
                         If Prefix = &HDD& _
-                            Then Call api_RtlMoveMemory(LogPtr + 94, StrPtr("[IX+$??]  "), 20) _
-                            Else Call api_RtlMoveMemory(LogPtr + 94, StrPtr("[IY+$??]  "), 20)
+                            Then Call Win32.MemoryCopyBetween(20, LogPtr + 94, StrPtr("[IX+$??]  ")) _
+                            Else Call Win32.MemoryCopyBetween(20, LogPtr + 94, StrPtr("[IY+$??]  "))
                     End If
                 End If
             End If
         End If
     End If
     
-    '-----------------------------------------------------------------------------------
+    '----------------------------------------------------------------------------------
     
     With Chunks(ChunkID)
         'If the disassembly log is not yet set for Z80, do so now
@@ -5399,13 +5353,13 @@ PushPop:
             If ChunkMode = MODE_DATA Then
                 'Have any binary bytes have been prepared, but not logged yet?
                 If ChunkDataIndex <> 0 Then
-                    Call .LogASM.Log(ChunkDataLog)
-                    Call .LogASM.Log(LOG_ASM_FOOT)
+'                    Call .LogASM.Add(ChunkDataLog)
+'                    Call .LogASM.Add(LOG_ASM_FOOT)
                 End If
             End If
             'Add the table header for Z80 disassembly logging
-            Call .LogASM.Log(LOG_ASM_COLS)
-            Call .LogASM.Log(LOG_ASM_HEAD)
+'            Call .LogASM.Add(LOG_ASM_COLS)
+'            Call .LogASM.Add(LOG_ASM_HEAD)
             Let ChunkMode = MODE_Z80
         End If
         
@@ -5419,7 +5373,7 @@ PushPop:
         If Bytes(0) <> 0 Then Let BinaryOffset = BinaryOffset + 1
         
         'Write the current Chunk address on the disassembly log
-        Call api_RtlMoveMemory(LogPtr, StrPtr(HexStr16(.Size)), 8)
+        Call Win32.MemoryCopyBetween(8, LogPtr, StrPtr(HexStr16(.Size)))
     End With
     
     Dim Opcode As Long
@@ -5437,24 +5391,24 @@ PushPop:
     Stop
     
 InvalidParams:
-    '-----------------------------------------------------------------------------------
+    '----------------------------------------------------------------------------------
     'ERROR: Wrong parameters for Z80 instruction
     Call RaiseError(OZ80_ERROR_INVALID, "TODO")
     GoTo Finish
     
 iADC:
     'Add with Carry _
-     ...................................................................................
+     ..................................................................................
     '`ADC A, A|B|C|D|E|H|IXH|IYH|L|IXL|IYL|[HL|IX+$8|IY+$8]`
-    If Z80_TestParams(Instruction, PARAM_REG_A, PARAM_REGS_ABCDEIXYHL_MEM_HLIXY) Then
+    If Z80TestParams(Instruction, PARAM_REG_A, PARAM_REGS_ABCDEIXYHL_MEM_HLIXY) Then
 '    If (Mask And TEST_P1_A) <> 0 And (Mask Or TEST_P2_ABCDEHL_IXYHL_MEM_HLIXY) <> 0 Then
         Let Opcode = X2 Or Y1 Or OpcodeZ_Register(Instruction.Param2.Mask)
         GoTo OutputOffset_2Param
     '`ADC A, $8`
-    ElseIf Z80_TestParams(Instruction, PARAM_REG_A, PARAM_VAL) Then
+    ElseIf Z80TestParams(Instruction, PARAM_REG_A, PARAM_VAL) Then
         Let Opcode = X3 Or Y1 Or Z6: GoTo Output8_2Param
     '`ADC HL, BC|DE|HL|SP`
-    ElseIf Z80_TestParams(Instruction, PARAM_REG_HL, PARAM_REGS_BC_DE_HL_SP) Then
+    ElseIf Z80TestParams(Instruction, PARAM_REG_HL, PARAM_REGS_BC_DE_HL_SP) Then
         Let Opcode = X1 Or Q1 Or Z2 Or OpcodeP_RegisterPair(Instruction.Param2.Token)
         GoTo OutputED0
     End If
@@ -5463,29 +5417,29 @@ iADC:
     
 iADD:
     'Add: _
-     ...................................................................................
+     ..................................................................................
     '`ADD HL, BC|DE|HL|SP`
-    If Z80_TestParams(Instruction, PARAM_REG_HL, PARAM_REGS_BC_DE_HL_SP) Then
+    If Z80TestParams(Instruction, PARAM_REG_HL, PARAM_REGS_BC_DE_HL_SP) Then
         Let Opcode = OpcodeP_RegisterPair(Instruction.Param2.Token) Or Q1 Or Z1
         GoTo Output0
     '`ADD IX, BC|DE|IX|SP`
-    ElseIf Z80_TestParams(Instruction, PARAM_REG_IX, PARAM_REG_BC Or PARAM_REG_DE Or PARAM_REG_IX Or PARAM_REG_SP) Then
+    ElseIf Z80TestParams(Instruction, PARAM_REG_IX, PARAM_REG_BC Or PARAM_REG_DE Or PARAM_REG_IX Or PARAM_REG_SP) Then
         'Even though this is the same opcode as above (the prefix denotes "IX"), _
          we still need to validate the params to ensure HL & IX are not mixed
         Let Opcode = OpcodeP_RegisterPair(Instruction.Param2.Token) Or Q1 Or Z1
         GoTo Output0
     '`ADD IY, BC|DE|IY|SP`
-    ElseIf Z80_TestParams(Instruction, PARAM_REG_IY, PARAM_REG_BC Or PARAM_REG_DE Or PARAM_REG_IY Or PARAM_REG_SP) Then
+    ElseIf Z80TestParams(Instruction, PARAM_REG_IY, PARAM_REG_BC Or PARAM_REG_DE Or PARAM_REG_IY Or PARAM_REG_SP) Then
         'Even though this is the same opcode as above (the prefix denotes "IY"), _
          we still need to validate the params to ensure HL & IY are not mixed
         Let Opcode = OpcodeP_RegisterPair(Instruction.Param2.Token) Or Q1 Or Z1
         GoTo Output0
     '`ADD A, A|B|C|D|E|H|IXH|IYH|L|IYH|IYL|[HL|IX+$8|IY+$8]`
-    ElseIf Z80_TestParams(Instruction, PARAM_REG_A, PARAM_REGS_ABCDEIXYHL_MEM_HLIXY) Then
+    ElseIf Z80TestParams(Instruction, PARAM_REG_A, PARAM_REGS_ABCDEIXYHL_MEM_HLIXY) Then
         Let Opcode = X2 Or OpcodeZ_Register(Instruction.Param2.Mask)
         GoTo OutputOffset_2Param
     '`ADD A, $8`
-    ElseIf Z80_TestParams(Instruction, PARAM_REG_A, PARAM_VAL) Then
+    ElseIf Z80TestParams(Instruction, PARAM_REG_A, PARAM_VAL) Then
         Let Opcode = X3 Or Z6: GoTo Output8_2Param
     End If
     'ERROR: Wrong parameters for Z80 instruction
@@ -5493,13 +5447,13 @@ iADD:
     
 iAND:
     'Bitwise AND: _
-     ...................................................................................
+     ..................................................................................
     '`AND A|B|C|D|E|H|IXH|IYH|L|IXL|IYL|[HL|IX+$8|IY+$8]`
-    If Z80_TestParams(Instruction, PARAM_REGS_ABCDEIXYHL_MEM_HLIXY) Then
+    If Z80TestParams(Instruction, PARAM_REGS_ABCDEIXYHL_MEM_HLIXY) Then
         Let Opcode = X2 Or Y4 Or OpcodeZ_Register(Instruction.Param1.Mask)
         GoTo OutputOffset_1Param
     '`AND $8`
-    ElseIf Z80_TestParams(Instruction, PARAM_VAL) Then
+    ElseIf Z80TestParams(Instruction, PARAM_VAL) Then
         Let Opcode = X3 Or Y4 Or Z6: GoTo Output8_1Param
     End If
     'ERROR: Wrong parameters for Z80 instruction
@@ -5507,9 +5461,9 @@ iAND:
     
 iBIT:
     'Test a bit: _
-     ...................................................................................
+     ..................................................................................
     '`BIT 0-7, A|B|C|D|E|H|L|[HL|IX+$8|IY+$8]`
-    If Z80_TestParams(Instruction, PARAM_VAL, PARAM_REGS_ABCDEHL_MEM_HLIXY) Then
+    If Z80TestParams(Instruction, PARAM_VAL, PARAM_REGS_ABCDEHL_MEM_HLIXY) Then
         Let Opcode = X1 Or OpcodeY_Bit(Instruction.Param1.Value) _
                   Or OpcodeZ_Register(Instruction.Param2.Mask)
         GoTo OutputCB_2Param
@@ -5519,84 +5473,84 @@ iBIT:
     
 iCALL:
     'Call Procedure: _
-     ...................................................................................
+     ..................................................................................
     '`CALL NZ|Z|NC|C|PO|PE|P|M, $16` - conditional call
-    If Z80_TestParams(Instruction, PARAM_FLAGS, PARAM_VAL) Then
+    If Z80TestParams(Instruction, PARAM_FLAGS, PARAM_VAL) Then
         Let Opcode = X3 Or OpcodeY_Condition(Instruction.Param1.Token) Or Z4
         GoTo Output16_2Param
     '`CALL $16` - absolute call
-    ElseIf Z80_TestParams(Instruction, PARAM_VAL) Then
+    ElseIf Z80TestParams(Instruction, PARAM_VAL) Then
         Let Opcode = X3 Or Q1 Or Z5: GoTo Output16_1Param
     End If
     'ERROR: Wrong parameters for Z80 instruction
     GoTo InvalidParams
     
 iCCF:
-    '...................................................................................
-    If Z80_TestParams(Instruction) Then Let Opcode = Y7 Or Z7: GoTo Output0
+    '..................................................................................
+    If Z80TestParams(Instruction) Then Let Opcode = Y7 Or Z7: GoTo Output0
     'ERROR: Wrong parameters for Z80 instruction
     GoTo InvalidParams
     
 iCP:
-    '...................................................................................
+    '..................................................................................
     '`CP A|B|C|D|E|H|IXH|IYH|L|IXL|IYL|[HL|IX+$8|IY+$8]`
-    If Z80_TestParams(Instruction, PARAM_REGS_ABCDEIXYHL_MEM_HLIXY) Then
+    If Z80TestParams(Instruction, PARAM_REGS_ABCDEIXYHL_MEM_HLIXY) Then
         Let Opcode = X2 Or Y7 Or OpcodeZ_Register(Instruction.Param1.Mask)
         GoTo OutputOffset_1Param
     '`CP $8`
-    ElseIf Z80_TestParams(Instruction, PARAM_VAL) Then
+    ElseIf Z80TestParams(Instruction, PARAM_VAL) Then
         Let Opcode = X3 Or Y7 Or Z6: GoTo Output8_1Param
     End If
     'ERROR: Wrong parameters for Z80 instruction
     GoTo InvalidParams
     
 iCPD:
-    '...................................................................................
-    If Z80_TestParams(Instruction) Then: Let Opcode = X2 Or Y5 Or Z1: GoTo OutputED0
+    '..................................................................................
+    If Z80TestParams(Instruction) Then: Let Opcode = X2 Or Y5 Or Z1: GoTo OutputED0
     'ERROR: Wrong parameters for Z80 instruction
     GoTo InvalidParams
     
 iCPDR:
-    '...................................................................................
-    If Z80_TestParams(Instruction) Then: Let Opcode = X2 Or Y7 Or Z1: GoTo OutputED0
+    '..................................................................................
+    If Z80TestParams(Instruction) Then: Let Opcode = X2 Or Y7 Or Z1: GoTo OutputED0
     'ERROR: Wrong parameters for Z80 instruction
     GoTo InvalidParams
 
 iCPI:
-    '...................................................................................
-    If Z80_TestParams(Instruction) Then: Let Opcode = X2 Or Y4 Or Z1: GoTo OutputED0
+    '..................................................................................
+    If Z80TestParams(Instruction) Then: Let Opcode = X2 Or Y4 Or Z1: GoTo OutputED0
     'ERROR: Wrong parameters for Z80 instruction
     GoTo InvalidParams
     
 iCPIR:
-    '...................................................................................
-    If Z80_TestParams(Instruction) Then: Let Opcode = X2 Or Y6 Or Z1: GoTo OutputED0
+    '..................................................................................
+    If Z80TestParams(Instruction) Then: Let Opcode = X2 Or Y6 Or Z1: GoTo OutputED0
     'ERROR: Wrong parameters for Z80 instruction
     GoTo InvalidParams
     
 iCPL:
     'Compliment: Flip the bits of the Accumulator _
-     ...................................................................................
-    If Z80_TestParams(Instruction) Then Let Opcode = Y5 Or Z7: GoTo Output0
+     ..................................................................................
+    If Z80TestParams(Instruction) Then Let Opcode = Y5 Or Z7: GoTo Output0
     'ERROR: Wrong parameters for Z80 instruction
     GoTo InvalidParams
     
 iDAA:
     'Decimal Adjust Accumulator: _
-     ...................................................................................
-    If Z80_TestParams(Instruction) Then Let Opcode = Y4 Or Z7: GoTo Output0
+     ..................................................................................
+    If Z80TestParams(Instruction) Then Let Opcode = Y4 Or Z7: GoTo Output0
     'ERROR: Wrong parameters for Z80 instruction
     GoTo InvalidParams
 
 iDEC:
     'Decrement: _
-     ...................................................................................
+     ..................................................................................
     '`DEC BC|DE|HL|SP|IX|IY`
-    If Z80_TestParams(Instruction, PARAM_REGS_BC_DE_HL_SP_IXY) Then
+    If Z80TestParams(Instruction, PARAM_REGS_BC_DE_HL_SP_IXY) Then
         Let Opcode = OpcodeP_RegisterPair(Instruction.Param1.Token) Or Q1 Or Z3
         GoTo Output0
     '`DEC A|B|C|D|E|H|IXH|IYH|L|IXL|IYL|[HL|IX+$8|IY+$8]`
-    ElseIf Z80_TestParams(Instruction, PARAM_REGS_ABCDEIXYHL_MEM_HLIXY) Then
+    ElseIf Z80TestParams(Instruction, PARAM_REGS_ABCDEIXYHL_MEM_HLIXY) Then
         Let Opcode = OpcodeY_Register(Instruction.Param1.Mask) Or Z5
         GoTo OutputOffset_1Param
     End If
@@ -5605,15 +5559,15 @@ iDEC:
     
 iDI:
     'Disable Interrupts: _
-     ...................................................................................
-    If Z80_TestParams(Instruction) Then Let Opcode = X3 Or Y6 Or Z3: GoTo Output0
+     ..................................................................................
+    If Z80TestParams(Instruction) Then Let Opcode = X3 Or Y6 Or Z3: GoTo Output0
     'ERROR: Wrong parameters for Z80 instruction
     GoTo InvalidParams
     
 iDJNZ:
     'Decrement, Jump if Not Zero: _
-     ...................................................................................
-    If Z80_TestParams(Instruction, PARAM_VAL) Then
+     ..................................................................................
+    If Z80TestParams(Instruction, PARAM_VAL) Then
         Let Opcode = Y2
         GoTo Output8_1Param
     End If
@@ -5622,22 +5576,22 @@ iDJNZ:
      
 iEI:
     'Enable Interrupts: _
-     ...................................................................................
-    If Z80_TestParams(Instruction) Then Let Opcode = X3 Or Y7 Or Z3: GoTo Output0
+     ..................................................................................
+    If Z80TestParams(Instruction) Then Let Opcode = X3 Or Y7 Or Z3: GoTo Output0
     'ERROR: Wrong parameters for Z80 instruction
     GoTo InvalidParams
     
 iEX:
     'Exchange: _
-     ...................................................................................
+     ..................................................................................
     '`EX AF AF'`
-    If Z80_TestParams(Instruction, PARAM_REG_AF, PARAM_REG_AF) Then
+    If Z80TestParams(Instruction, PARAM_REG_AF, PARAM_REG_AF) Then
         Let Opcode = Y1: GoTo Output0
     '`EX [SP], HL|IX|IY`
-    ElseIf Z80_TestParams(Instruction, PARAM_MEM_SP, PARAM_REGS_HL_IXY) Then
+    ElseIf Z80TestParams(Instruction, PARAM_MEM_SP, PARAM_REGS_HL_IXY) Then
         Let Opcode = X3 Or Y4 Or Z3: GoTo Output0
     '`EX DE, HL`
-    ElseIf Z80_TestParams(Instruction, PARAM_REG_DE, PARAM_REG_HL) Then
+    ElseIf Z80TestParams(Instruction, PARAM_REG_DE, PARAM_REG_HL) Then
         Let Opcode = X3 Or Y5 Or Z3: GoTo Output0
     End If
     'ERROR: Wrong parameters for Z80 instruction
@@ -5645,23 +5599,23 @@ iEX:
     
 iEXX:
     'Exchange All: _
-     ...................................................................................
-    If Z80_TestParams(Instruction) Then Let Opcode = X3 Or Q1 Or P1 Or Z1: GoTo Output0
+     ..................................................................................
+    If Z80TestParams(Instruction) Then Let Opcode = X3 Or Q1 Or P1 Or Z1: GoTo Output0
     'ERROR: Wrong parameters for Z80 instruction
     GoTo InvalidParams
 
 iHALT:
     'Halt: Stop the processor and wait for interrupts _
-     ...................................................................................
-    If Z80_TestParams(Instruction) Then Let Opcode = X1 Or Y6 Or Z6: GoTo Output0
+     ..................................................................................
+    If Z80TestParams(Instruction) Then Let Opcode = X1 Or Y6 Or Z6: GoTo Output0
     'ERROR: Wrong parameters for Z80 instruction
     GoTo InvalidParams
         
 iIM:
     'Interrupt Mode: _
-     ...................................................................................
+     ..................................................................................
     '`IM 0|1|2`
-    If Z80_TestParams(Instruction, PARAM_VAL) Then
+    If Z80TestParams(Instruction, PARAM_VAL) Then
         If Instruction.Param1.Value = 0 Then
             Let Opcode = X1 Or Z6
         ElseIf Instruction.Param1.Value = 1 Then
@@ -5681,15 +5635,15 @@ iIM:
 
 iIN:
     'Read from port: _
-     ...................................................................................
+     ..................................................................................
     '`IN A, [$8]`
-    If Z80_TestParams(Instruction, PARAM_REG_A, PARAM_MEM_VAL) Then
+    If Z80TestParams(Instruction, PARAM_REG_A, PARAM_MEM_VAL) Then
         Let Opcode = X3 Or Y3 Or Z3: GoTo Output8_2Param
     '`IN A|B|C|D|E|H|L, [C]`
-    ElseIf Z80_TestParams(Instruction, PARAM_REGS_ABCDEHL, PARAM_MEM_BC) Then
+    ElseIf Z80TestParams(Instruction, PARAM_REGS_ABCDEHL, PARAM_MEM_BC) Then
         Let Opcode = X1 Or OpcodeY_Register(Instruction.Param1.Mask): GoTo OutputED0
     '`IN [C]`
-    ElseIf Z80_TestParams(Instruction, PARAM_MEM_BC) Then
+    ElseIf Z80TestParams(Instruction, PARAM_MEM_BC) Then
         Let Opcode = X1 Or Y6: GoTo OutputED0
     End If
     'ERROR: Wrong parameters for Z80 instruction
@@ -5697,12 +5651,12 @@ iIN:
     
 iINC:
     'Increment: _
-     ...................................................................................
+     ..................................................................................
     '`INC BC|DE|HL|SP|IX|IY`
-    If Z80_TestParams(Instruction, PARAM_REGS_BC_DE_HL_SP_IXY) Then
+    If Z80TestParams(Instruction, PARAM_REGS_BC_DE_HL_SP_IXY) Then
         Let Opcode = OpcodeP_RegisterPair(Instruction.Param1.Token) Or Z3: GoTo Output0
     '`INC A|B|C|D|E|H|IXH|IYH|L|IXL|IYL|[HL|IX+$8|IY+$8]`
-    ElseIf Z80_TestParams(Instruction, PARAM_REGS_ABCDEIXYHL_MEM_HLIXY) Then
+    ElseIf Z80TestParams(Instruction, PARAM_REGS_ABCDEIXYHL_MEM_HLIXY) Then
         Let Opcode = OpcodeY_Register(Instruction.Param1.Mask) Or Z4
         GoTo OutputOffset_1Param
     End If
@@ -5710,41 +5664,41 @@ iINC:
     GoTo InvalidParams
     
 iIND:
-    '...................................................................................
-    If Z80_TestParams(Instruction) Then Let Opcode = X2 Or Y5 Or Z2: GoTo OutputED0
+    '..................................................................................
+    If Z80TestParams(Instruction) Then Let Opcode = X2 Or Y5 Or Z2: GoTo OutputED0
     'ERROR: Wrong parameters for Z80 instruction
     GoTo InvalidParams
     
 iINDR:
-    '...................................................................................
-    If Z80_TestParams(Instruction) Then Let Opcode = X2 Or Y7 Or Z2: GoTo OutputED0
+    '..................................................................................
+    If Z80TestParams(Instruction) Then Let Opcode = X2 Or Y7 Or Z2: GoTo OutputED0
     'ERROR: Wrong parameters for Z80 instruction
     GoTo InvalidParams
 
 iINI:
-    '...................................................................................
-    If Z80_TestParams(Instruction) Then Let Opcode = X2 Or Y4 Or Z2: GoTo OutputED0
+    '..................................................................................
+    If Z80TestParams(Instruction) Then Let Opcode = X2 Or Y4 Or Z2: GoTo OutputED0
     'ERROR: Wrong parameters for Z80 instruction
     GoTo InvalidParams
     
 iINIR:
-    '...................................................................................
-    If Z80_TestParams(Instruction) Then Let Opcode = X2 Or Y6 Or Z2: GoTo OutputED0
+    '..................................................................................
+    If Z80TestParams(Instruction) Then Let Opcode = X2 Or Y6 Or Z2: GoTo OutputED0
     'ERROR: Wrong parameters for Z80 instruction
     GoTo InvalidParams
 
 iJP:
     'Jump: _
-     ...................................................................................
+     ..................................................................................
     '`JP [HL|IX|IY]` or `JP HL|IX|IY` - indirect absolute jump
-    If Z80_TestParams(Instruction, PARAM_MEM_HLIXY Or PARAM_REGS_HL_IXY) Then
+    If Z80TestParams(Instruction, PARAM_MEM_HLIXY Or PARAM_REGS_HL_IXY) Then
         Let Opcode = X3 Or P2 Or Q1 Or Z1: GoTo Output0
     '`JP NZ|Z|NC|C|PO|PE|P|M, $16` - conditional absolute jump
-    ElseIf Z80_TestParams(Instruction, PARAM_FLAGS, PARAM_VAL) Then
+    ElseIf Z80TestParams(Instruction, PARAM_FLAGS, PARAM_VAL) Then
         Let Opcode = X3 Or OpcodeY_Condition(Instruction.Param1.Token) Or Z2
         GoTo Output16_2Param
     '`JP $16` - absolute jump
-    ElseIf Z80_TestParams(Instruction, PARAM_VAL) Then
+    ElseIf Z80TestParams(Instruction, PARAM_VAL) Then
         Let Opcode = X3 Or Z3: GoTo Output16_1Param
     End If
     'ERROR: Wrong parameters for Z80 instruction
@@ -5752,12 +5706,12 @@ iJP:
     
 iJR:
     'Jump Relative: _
-     ...................................................................................
+     ..................................................................................
     '`JR $8` - relative immediate jump
-    If Z80_TestParams(Instruction, PARAM_VAL) Then
+    If Z80TestParams(Instruction, PARAM_VAL) Then
         Let Opcode = Y3: GoTo Output8_1Param
     '`JR NZ|Z|NC|C, $8` - conditional relative immediate jump
-    ElseIf Z80_TestParams(Instruction, PARAM_FLAGS_CZ, PARAM_VAL) Then
+    ElseIf Z80TestParams(Instruction, PARAM_FLAGS_CZ, PARAM_VAL) Then
         Let Opcode = OpcodeY_Condition(Instruction.Param1.Token) + Y4
         GoTo Output8_2Param
     End If
@@ -5766,42 +5720,42 @@ iJR:
     
 iLD:
     'The Mother-Load: _
-     ...................................................................................
+     ..................................................................................
     '`LD BC|DE|HL|SP|IX|IY, $16`
-    If Z80_TestParams(Instruction, PARAM_REGS_BC_DE_HL_SP_IXY, PARAM_VAL) Then
+    If Z80TestParams(Instruction, PARAM_REGS_BC_DE_HL_SP_IXY, PARAM_VAL) Then
         Let Opcode = OpcodeP_RegisterPair(Instruction.Param1.Token) Or Z1
         GoTo Output16_2Param
     '`LD [BC], A`
-    ElseIf Z80_TestParams(Instruction, PARAM_MEM_BC, PARAM_REG_A) Then
+    ElseIf Z80TestParams(Instruction, PARAM_MEM_BC, PARAM_REG_A) Then
         Let Opcode = Z2: GoTo Output0
     '`LD [DE], A`
-    ElseIf Z80_TestParams(Instruction, PARAM_MEM_DE, PARAM_REG_A) Then
+    ElseIf Z80TestParams(Instruction, PARAM_MEM_DE, PARAM_REG_A) Then
         Let Opcode = P1 Or Z2: GoTo Output0
     '`LD A, [BC]`
-    ElseIf Z80_TestParams(Instruction, PARAM_REG_A, PARAM_MEM_BC) Then
+    ElseIf Z80TestParams(Instruction, PARAM_REG_A, PARAM_MEM_BC) Then
         Let Opcode = Q1 Or Z2: GoTo Output0
     '`LD A, [DE]`
-    ElseIf Z80_TestParams(Instruction, PARAM_REG_A, PARAM_MEM_DE) Then
+    ElseIf Z80TestParams(Instruction, PARAM_REG_A, PARAM_MEM_DE) Then
         Let Opcode = P1 Or Q1 Or Z2: GoTo Output0
     '`LD [$16], HL|IX|IY`
-    ElseIf Z80_TestParams(Instruction, PARAM_MEM_VAL, PARAM_REGS_HL_IXY) Then
+    ElseIf Z80TestParams(Instruction, PARAM_MEM_VAL, PARAM_REGS_HL_IXY) Then
         Let Opcode = P2 Or Z2: GoTo Output16_1Param
     '`LD [$16], A`
-    ElseIf Z80_TestParams(Instruction, PARAM_MEM_VAL, PARAM_REG_A) Then
+    ElseIf Z80TestParams(Instruction, PARAM_MEM_VAL, PARAM_REG_A) Then
         Let Opcode = P3 Or Z2: GoTo Output16_1Param
     '`LD HL|IX|IY, [$16]`
-    ElseIf Z80_TestParams(Instruction, PARAM_REGS_HL_IXY, PARAM_MEM_VAL) Then
+    ElseIf Z80TestParams(Instruction, PARAM_REGS_HL_IXY, PARAM_MEM_VAL) Then
         Let Opcode = P2 Or Q1 Or Z2: GoTo Output16_2Param
     '`LD A, [$16]`
-    ElseIf Z80_TestParams(Instruction, PARAM_REG_A, PARAM_MEM_VAL) Then
+    ElseIf Z80TestParams(Instruction, PARAM_REG_A, PARAM_MEM_VAL) Then
         Let Opcode = P3 Or Q1 Or Z2: GoTo Output16_2Param
     '`LD A|B|C|D|E|H|IXH|IYH|L|IXL|IYL|[HL|IX+$8|IY+$8], $8`
-    ElseIf Z80_TestParams(Instruction, PARAM_REGS_ABCDEIXYHL_MEM_HLIXY, PARAM_VAL) Then
+    ElseIf Z80TestParams(Instruction, PARAM_REGS_ABCDEIXYHL_MEM_HLIXY, PARAM_VAL) Then
         Let Opcode = OpcodeY_Register(Instruction.Param1.Mask) Or Z6: GoTo OutputOff8
     'You can't combine IX and IY use in the same opcode, there's only one prefix, _
      so these two following checks ensure that IX & IY are not used together
     '`LD A|B|C|D|E|H|IXH|L|IXL[HL|IX+$8], A|B|C|D|E|H|IXH|L|IXL`
-    ElseIf Z80_TestParams(Instruction, _
+    ElseIf Z80TestParams(Instruction, _
         PARAM_REGS_ABCDEHL Or PARAM_REGS_IXHL Or PARAM_MEM_HL Or PARAM_MEM_IX, _
         PARAM_REGS_ABCDEHL Or PARAM_REGS_IXHL _
     ) Then
@@ -5809,7 +5763,7 @@ iLD:
                   Or OpcodeZ_Register(Instruction.Param2.Mask)
         GoTo OutputOffset_1Param
     '`LD A|B|C|D|E|H|IYH|L|IYL[HL|IY+$8], A|B|C|D|E|H|IYH|L|IYL`
-    ElseIf Z80_TestParams(Instruction, _
+    ElseIf Z80TestParams(Instruction, _
         PARAM_REGS_ABCDEHL Or PARAM_REGS_IYHL Or PARAM_MEM_HL Or PARAM_MEM_IY, _
         PARAM_REGS_ABCDEHL Or PARAM_REGS_IYHL _
     ) Then
@@ -5818,7 +5772,7 @@ iLD:
         GoTo OutputOffset_1Param
     'You can't have `LD [IX+$8], [IX+$8]!
     '`LD A|B|C|D|E|H|IXH|L|IXL, A|B|C|D|E|H|IXH|L|IXL|[HL|IX+$8]`
-    ElseIf Z80_TestParams(Instruction, _
+    ElseIf Z80TestParams(Instruction, _
         PARAM_REGS_ABCDEHL Or PARAM_REGS_IXHL, _
         PARAM_REGS_ABCDEHL Or PARAM_REGS_IXHL Or PARAM_MEM_HL Or PARAM_MEM_IX _
     ) Then
@@ -5826,7 +5780,7 @@ iLD:
                   Or OpcodeZ_Register(Instruction.Param2.Mask)
         GoTo OutputOffset_2Param
     '`LD A|B|C|D|E|H|IYH|L|IYL, A|B|C|D|E|H|IYH|L|IYL|[HL|IY+$8]`
-    ElseIf Z80_TestParams(Instruction, _
+    ElseIf Z80TestParams(Instruction, _
         PARAM_REGS_ABCDEHL Or PARAM_REGS_IYHL, _
         PARAM_REGS_ABCDEHL Or PARAM_REGS_IYHL Or PARAM_MEM_HL Or PARAM_MEM_IY _
     ) Then
@@ -5834,80 +5788,80 @@ iLD:
                   Or OpcodeZ_Register(Instruction.Param2.Mask)
         GoTo OutputOffset_2Param
     '`LD SP, HL|IX|IY`
-    ElseIf Z80_TestParams(Instruction, PARAM_REG_SP, PARAM_REGS_HL_IXY) Then
+    ElseIf Z80TestParams(Instruction, PARAM_REG_SP, PARAM_REGS_HL_IXY) Then
         Let Opcode = X3 Or P3 Or Q1 Or Z1: GoTo Output0
     '`LD [$16], BC|DE|SP`
-    ElseIf Z80_TestParams(Instruction, PARAM_MEM_VAL, PARAM_REGS_BC_DE_SP) Then
+    ElseIf Z80TestParams(Instruction, PARAM_MEM_VAL, PARAM_REGS_BC_DE_SP) Then
         Let Opcode = X1 Or OpcodeP_RegisterPair(Instruction.Param2.Token) Or Z3
         GoTo OutputED16_1Param
     '`LD BC|DE|SP, [$16]`
-    ElseIf Z80_TestParams(Instruction, PARAM_REGS_BC_DE_SP, PARAM_MEM_VAL) Then
+    ElseIf Z80TestParams(Instruction, PARAM_REGS_BC_DE_SP, PARAM_MEM_VAL) Then
         Let Opcode = X1 Or OpcodeP_RegisterPair(Instruction.Param1.Token) Or Q1 Or Z3
         GoTo OutputED16_2Param
     '`LD I, A`
-    ElseIf Z80_TestParams(Instruction, PARAM_REG_I, PARAM_REG_A) Then
+    ElseIf Z80TestParams(Instruction, PARAM_REG_I, PARAM_REG_A) Then
         Let Opcode = X1 Or Z7: GoTo OutputED0
     '`LD R, A`
-    ElseIf Z80_TestParams(Instruction, PARAM_REG_R, PARAM_REG_A) Then
+    ElseIf Z80TestParams(Instruction, PARAM_REG_R, PARAM_REG_A) Then
         Let Opcode = X1 Or Y1 Or Z7: GoTo OutputED0
     '`LD A, I`
-    ElseIf Z80_TestParams(Instruction, PARAM_REG_A, PARAM_REG_I) Then
+    ElseIf Z80TestParams(Instruction, PARAM_REG_A, PARAM_REG_I) Then
         Let Opcode = X1 Or Y2 Or Z7: GoTo OutputED0
     '`LD A, R`
-    ElseIf Z80_TestParams(Instruction, PARAM_REG_A, PARAM_REG_R) Then
+    ElseIf Z80TestParams(Instruction, PARAM_REG_A, PARAM_REG_R) Then
         Let Opcode = X1 Or Y3 Or Z7: GoTo OutputED0
     End If
     'ERROR: Wrong parameters for Z80 instruction
     GoTo InvalidParams
     
 iLDD:
-    '...................................................................................
-    If Z80_TestParams(Instruction) Then: Let Opcode = X2 Or Y5: GoTo OutputED0
+    '..................................................................................
+    If Z80TestParams(Instruction) Then: Let Opcode = X2 Or Y5: GoTo OutputED0
     'ERROR: Wrong parameters for Z80 instruction
     GoTo InvalidParams
     
 iLDDR:
-    '...................................................................................
-    If Z80_TestParams(Instruction) Then: Let Opcode = X2 Or Y7: GoTo OutputED0
+    '..................................................................................
+    If Z80TestParams(Instruction) Then: Let Opcode = X2 Or Y7: GoTo OutputED0
     'ERROR: Wrong parameters for Z80 instruction
     GoTo InvalidParams
 
 iLDI:
-    '...................................................................................
-    If Z80_TestParams(Instruction) Then Let Opcode = X2 Or Y4: GoTo OutputED0
+    '..................................................................................
+    If Z80TestParams(Instruction) Then Let Opcode = X2 Or Y4: GoTo OutputED0
     'ERROR: Wrong parameters for Z80 instruction
     GoTo InvalidParams
         
 iLDIR:
-    '...................................................................................
-    If Z80_TestParams(Instruction) Then Let Opcode = X2 Or Y6: GoTo OutputED0
+    '..................................................................................
+    If Z80TestParams(Instruction) Then Let Opcode = X2 Or Y6: GoTo OutputED0
     'ERROR: Wrong parameters for Z80 instruction
     GoTo InvalidParams
 
 iNEG:
     'Negate the Accumulator: _
-     ...................................................................................
-    If Z80_TestParams(Instruction) Then Let Opcode = X1 Or Z4: GoTo OutputED0
+     ..................................................................................
+    If Z80TestParams(Instruction) Then Let Opcode = X1 Or Z4: GoTo OutputED0
     'ERROR: Wrong parameters for Z80 instruction
     GoTo InvalidParams
     
 iNOP:
     'No Operation: _
-     ...................................................................................
+     ..................................................................................
     '`NOP` - Opcode is 0
-    If Z80_TestParams(Instruction) Then: Let Opcode = 0: GoTo Output0
+    If Z80TestParams(Instruction) Then: Let Opcode = 0: GoTo Output0
     'ERROR: Wrong parameters for Z80 instruction
     GoTo InvalidParams
     
 iOR:
     'Bitwise OR: _
-     ...................................................................................
+     ..................................................................................
     '`OR A|B|C|D|E|H|IXH|IYH|L|IXL|IYL|[HL|IX+$8|IY+$8]`
-    If Z80_TestParams(Instruction, PARAM_REGS_ABCDEIXYHL_MEM_HLIXY) Then
+    If Z80TestParams(Instruction, PARAM_REGS_ABCDEIXYHL_MEM_HLIXY) Then
         Let Opcode = X2 Or Y6 Or OpcodeZ_Register(Instruction.Param1.Mask)
         GoTo OutputOffset_1Param
     '`OR $8`
-    ElseIf Z80_TestParams(Instruction, PARAM_VAL) Then
+    ElseIf Z80TestParams(Instruction, PARAM_VAL) Then
         Let Opcode = X3 Or Y6 Or Z6: GoTo Output8_1Param
     End If
     'ERROR: Wrong parameters for Z80 instruction
@@ -5915,50 +5869,50 @@ iOR:
     
 iOUT:
     'Write to port: _
-     ...................................................................................
+     ..................................................................................
     '`OUT [$8], A`
-    If Z80_TestParams(Instruction, PARAM_MEM_VAL, PARAM_REG_A) Then
+    If Z80TestParams(Instruction, PARAM_MEM_VAL, PARAM_REG_A) Then
         Let Opcode = X3 Or Y2 Or Z3: GoTo Output8_1Param
     '`OUT [C], A|B|C|D|E|H|L`
-    ElseIf Z80_TestParams(Instruction, PARAM_MEM_BC, PARAM_REGS_ABCDEHL) Then
+    ElseIf Z80TestParams(Instruction, PARAM_MEM_BC, PARAM_REGS_ABCDEHL) Then
         Let Opcode = X1 Or OpcodeY_Register(Instruction.Param2.Mask) Or Z1
         GoTo OutputED0
     '`OUT [C], 0`
-    ElseIf Z80_TestParams(Instruction, PARAM_MEM_BC, PARAM_VAL) Then
+    ElseIf Z80TestParams(Instruction, PARAM_MEM_BC, PARAM_VAL) Then
         Let Opcode = X1 Or Y6 Or Z1: GoTo OutputED0
     End If
     'ERROR: Wrong parameters for Z80 instruction
     GoTo InvalidParams
     
 iOUTD:
-    '...................................................................................
-    If Z80_TestParams(Instruction) Then Let Opcode = X2 Or Y5 Or Z3: GoTo OutputED0
+    '..................................................................................
+    If Z80TestParams(Instruction) Then Let Opcode = X2 Or Y5 Or Z3: GoTo OutputED0
     'ERROR: Wrong parameters for Z80 instruction
     GoTo InvalidParams
     
 iOTDR:
-    '...................................................................................
-    If Z80_TestParams(Instruction) Then Let Opcode = X2 Or Y7 Or Z3: GoTo OutputED0
+    '..................................................................................
+    If Z80TestParams(Instruction) Then Let Opcode = X2 Or Y7 Or Z3: GoTo OutputED0
     'ERROR: Wrong parameters for Z80 instruction
     GoTo InvalidParams
 
 iOUTI:
-    '...................................................................................
-    If Z80_TestParams(Instruction) Then Let Opcode = X2 Or Y4 Or Z3: GoTo OutputED0
+    '..................................................................................
+    If Z80TestParams(Instruction) Then Let Opcode = X2 Or Y4 Or Z3: GoTo OutputED0
     'ERROR: Wrong parameters for Z80 instruction
     GoTo InvalidParams
     
 iOTIR:
-    '...................................................................................
-    If Z80_TestParams(Instruction) Then Let Opcode = X2 Or Y6 Or Z3: GoTo OutputED0
+    '..................................................................................
+    If Z80TestParams(Instruction) Then Let Opcode = X2 Or Y6 Or Z3: GoTo OutputED0
     'ERROR: Wrong parameters for Z80 instruction
     GoTo InvalidParams
 
 iPOP:
     'Fetch from stack: _
-     ...................................................................................
+     ..................................................................................
     '`POP AF|BC|DE|HL|IX|IY`
-    If Z80_TestParams(Instruction, PARAM_REGS_AF_BC_DE_HL_IXY) Then
+    If Z80TestParams(Instruction, PARAM_REGS_AF_BC_DE_HL_IXY) Then
         Let Opcode = X3 Or OpcodeP_RegisterPair(Instruction.Param1.Token) Or Z1
         GoTo Output0
     End If
@@ -5967,9 +5921,9 @@ iPOP:
     
 iPUSH:
     'Push a register on to the stack: _
-     ...................................................................................
+     ..................................................................................
     '`PUSH AF|BC|DE|HL|IX|IY`
-    If Z80_TestParams(Instruction, PARAM_REGS_AF_BC_DE_HL_IXY) Then
+    If Z80TestParams(Instruction, PARAM_REGS_AF_BC_DE_HL_IXY) Then
         Let Opcode = X3 Or OpcodeP_RegisterPair(Instruction.Param1.Token) Or Z5
         GoTo Output0
     End If
@@ -5978,14 +5932,14 @@ iPUSH:
     
 iRES:
     'Reset a bit: _
-     ...................................................................................
+     ..................................................................................
     '`RES 0-7, A|B|C|D|E|H|L|[HL|IX+$8|IY+$8]`
-    If Z80_TestParams(Instruction, PARAM_VAL, PARAM_REGS_ABCDEHL_MEM_HLIXY) Then
+    If Z80TestParams(Instruction, PARAM_VAL, PARAM_REGS_ABCDEHL_MEM_HLIXY) Then
         Let Opcode = X2 Or OpcodeY_Bit(Instruction.Param1.Value) _
                   Or OpcodeZ_Register(Instruction.Param2.Mask)
         GoTo OutputCB_2Param
     '`RES 0-7, [IX+$8|IY+$8], A|B|C|D|E|H|L` - undocumented RES memory & register
-    ElseIf Z80_TestParams(Instruction, PARAM_VAL, PARAM_MEM_IXY, PARAM_REGS_ABCDEHL) Then
+    ElseIf Z80TestParams(Instruction, PARAM_VAL, PARAM_MEM_IXY, PARAM_REGS_ABCDEHL) Then
         Let Opcode = X2 Or OpcodeY_Bit(Instruction.Param1.Value) _
                   Or OpcodeZ_Register(Instruction.Param3.Mask)
         GoTo OutputCB_2Param
@@ -5995,12 +5949,12 @@ iRES:
     
 iRET:
     'Return: _
-     ...................................................................................
+     ..................................................................................
     '`RET NZ|Z|NC|C|PO|PE|P|M` - conditional return
-    If Z80_TestParams(Instruction, PARAM_FLAGS) Then
+    If Z80TestParams(Instruction, PARAM_FLAGS) Then
         Let Opcode = X3 Or OpcodeY_Condition(Instruction.Param1.Token): GoTo Output0
     '`RET`
-    ElseIf Z80_TestParams(Instruction) Then
+    ElseIf Z80TestParams(Instruction) Then
         Let Opcode = X3 Or Q1 Or Z1: GoTo Output0
     End If
     'ERROR: Wrong parameters for Z80 instruction
@@ -6008,32 +5962,32 @@ iRET:
 
 iRETI:
     'Return from Interrupt: _
-     ...................................................................................
-    If Z80_TestParams(Instruction) Then Let Opcode = X1 Or Y1 Or Z5: GoTo OutputED0
+     ..................................................................................
+    If Z80TestParams(Instruction) Then Let Opcode = X1 Or Y1 Or Z5: GoTo OutputED0
     'ERROR: Wrong parameters for Z80 instruction
     GoTo InvalidParams
     
 iRETN:
     'Return from NMI: _
-     ...................................................................................
-    If Z80_TestParams(Instruction) Then Let Opcode = X1 Or Z5: GoTo OutputED0
+     ..................................................................................
+    If Z80TestParams(Instruction) Then Let Opcode = X1 Or Z5: GoTo OutputED0
     'ERROR: Wrong parameters for Z80 instruction
     GoTo InvalidParams
     
 iRLA:
-    '...................................................................................
-    If Z80_TestParams(Instruction) Then Let Opcode = Y2 Or Z7: GoTo Output0
+    '..................................................................................
+    If Z80TestParams(Instruction) Then Let Opcode = Y2 Or Z7: GoTo Output0
     'ERROR: Wrong parameters for Z80 instruction
     GoTo InvalidParams
     
 iRL:
-    '...................................................................................
+    '..................................................................................
     '`RL A|B|C|D|E|H|L|[HL|IX+$8|IY+$8]`
-    If Z80_TestParams(Instruction, PARAM_REGS_ABCDEHL_MEM_HLIXY) Then
+    If Z80TestParams(Instruction, PARAM_REGS_ABCDEHL_MEM_HLIXY) Then
         Let Opcode = Y2 Or OpcodeZ_Register(Instruction.Param1.Mask)
         GoTo OutputCB_1Param
     '`RL [IX+$8|IY+$8], A|B|C|D|E|H|L` - undocumented RL memory and copy to register
-    ElseIf Z80_TestParams(Instruction, PARAM_MEM_IXY, PARAM_REGS_ABCDEHL) Then
+    ElseIf Z80TestParams(Instruction, PARAM_MEM_IXY, PARAM_REGS_ABCDEHL) Then
         Let Opcode = Y2 Or OpcodeZ_Register(Instruction.Param2.Mask)
         GoTo OutputCB_1Param
     End If
@@ -6041,43 +5995,43 @@ iRL:
     GoTo InvalidParams
 
 iRLCA:
-    '...................................................................................
-    If Z80_TestParams(Instruction) Then Let Opcode = Z7: GoTo Output0
+    '..................................................................................
+    If Z80TestParams(Instruction) Then Let Opcode = Z7: GoTo Output0
     'ERROR: Wrong parameters for Z80 instruction
     GoTo InvalidParams
     
 iRLC:
-    '...................................................................................
+    '..................................................................................
     '`RLC A|B|C|D|E|H|L|[HL|IX+$8|IY+$8]`
-    If Z80_TestParams(Instruction, PARAM_REGS_ABCDEHL_MEM_HLIXY) Then
+    If Z80TestParams(Instruction, PARAM_REGS_ABCDEHL_MEM_HLIXY) Then
         Let Opcode = OpcodeZ_Register(Instruction.Param1.Mask): GoTo OutputCB_1Param
     '`RLC [IX+$8|IY+$8], A|B|C|D|E|H|L` - undocumented RLC memory and copy to register
-    ElseIf Z80_TestParams(Instruction, PARAM_MEM_IXY, PARAM_REGS_ABCDEHL) Then
+    ElseIf Z80TestParams(Instruction, PARAM_MEM_IXY, PARAM_REGS_ABCDEHL) Then
         Let Opcode = OpcodeZ_Register(Instruction.Param2.Mask): GoTo OutputCB_1Param
     End If
     'ERROR: Wrong parameters for Z80 instruction
     GoTo InvalidParams
     
 iRLD:
-    '...................................................................................
-    If Z80_TestParams(Instruction) Then Let Opcode = X1 Or Y5 Or Z7: GoTo OutputED0
+    '..................................................................................
+    If Z80TestParams(Instruction) Then Let Opcode = X1 Or Y5 Or Z7: GoTo OutputED0
     'ERROR: Wrong parameters for Z80 instruction
     GoTo InvalidParams
     
 iRRA:
-    '...................................................................................
-    If Z80_TestParams(Instruction) Then Let Opcode = Y3 Or Z7: GoTo Output0
+    '..................................................................................
+    If Z80TestParams(Instruction) Then Let Opcode = Y3 Or Z7: GoTo Output0
     'ERROR: Wrong parameters for Z80 instruction
     GoTo InvalidParams
     
 iRR:
-    '...................................................................................
+    '..................................................................................
     '`RR A|B|C|D|E|H|L|[HL|IX+$8|IY+$8]`
-    If Z80_TestParams(Instruction, PARAM_REGS_ABCDEHL_MEM_HLIXY) Then
+    If Z80TestParams(Instruction, PARAM_REGS_ABCDEHL_MEM_HLIXY) Then
         Let Opcode = Y3 Or OpcodeZ_Register(Instruction.Param1.Mask)
         GoTo OutputCB_1Param
     '`RR [IX+$8|IY+$8], A|B|C|D|E|H|L` - undocumented RR memory and copy to register
-    ElseIf Z80_TestParams(Instruction, PARAM_MEM_IXY, PARAM_REGS_ABCDEHL) Then
+    ElseIf Z80TestParams(Instruction, PARAM_MEM_IXY, PARAM_REGS_ABCDEHL) Then
         Let Opcode = Y3 Or OpcodeZ_Register(Instruction.Param2.Mask)
         GoTo OutputCB_1Param
     End If
@@ -6085,19 +6039,19 @@ iRR:
     GoTo InvalidParams
 
 iRRCA:
-    '...................................................................................
-    If Z80_TestParams(Instruction) Then Let Opcode = Y1 Or Z7: GoTo Output0
+    '..................................................................................
+    If Z80TestParams(Instruction) Then Let Opcode = Y1 Or Z7: GoTo Output0
     'ERROR: Wrong parameters for Z80 instruction
     GoTo InvalidParams
 
 iRRC:
-    '...................................................................................
+    '..................................................................................
     '`RRC A|B|C|D|E|H|L|[HL|IX+$8|IY+$8]`
-    If Z80_TestParams(Instruction, PARAM_REGS_ABCDEHL_MEM_HLIXY) Then
+    If Z80TestParams(Instruction, PARAM_REGS_ABCDEHL_MEM_HLIXY) Then
         Let Opcode = Y1 Or OpcodeZ_Register(Instruction.Param1.Mask)
         GoTo OutputCB_1Param
     '`RRC [IX+$8|IY+$8], A|B|C|D|E|H|L` - undocumented RRC memory and copy to register
-    ElseIf Z80_TestParams(Instruction, PARAM_MEM_IXY, PARAM_REGS_ABCDEHL) Then
+    ElseIf Z80TestParams(Instruction, PARAM_MEM_IXY, PARAM_REGS_ABCDEHL) Then
         Let Opcode = Y1 Or OpcodeZ_Register(Instruction.Param2.Mask)
         GoTo OutputCB_1Param
     End If
@@ -6105,16 +6059,16 @@ iRRC:
     GoTo InvalidParams
     
 iRRD:
-    '...................................................................................
-    If Z80_TestParams(Instruction) Then Let Opcode = X1 Or Y4 Or Z7: GoTo OutputED0
+    '..................................................................................
+    If Z80TestParams(Instruction) Then Let Opcode = X1 Or Y4 Or Z7: GoTo OutputED0
     'ERROR: Wrong parameters for Z80 instruction
     GoTo InvalidParams
 
 iRST:
     '"Reset" - Fire specific interrupt vector: _
-     ...................................................................................
+     ..................................................................................
     '`RST $00|$08|$10|$18|$20|$28|$30|$38`
-    If Z80_TestParams(Instruction, PARAM_VAL) Then
+    If Z80TestParams(Instruction, PARAM_VAL) Then
         'TODO: Need to validate the number is in range at some point in the chain
         'TODO: Best way to handle INDEFINITE?
         If Instruction.Value <> INDEFINITE Then
@@ -6132,16 +6086,16 @@ iRST:
     GoTo InvalidParams
     
 iSBC:
-    '...................................................................................
+    '..................................................................................
     '`SBC A, A|B|C|D|E|H|IXH|IYH|L|IXL|IYL|[HL|IX+$8|IY+$8]`
-    If Z80_TestParams(Instruction, PARAM_REG_A, PARAM_REGS_ABCDEIXYHL_MEM_HLIXY) Then
+    If Z80TestParams(Instruction, PARAM_REG_A, PARAM_REGS_ABCDEIXYHL_MEM_HLIXY) Then
         Let Opcode = X2 Or Y3 Or OpcodeZ_Register(Instruction.Param2.Mask)
         GoTo OutputOffset_2Param
     '`SBC A, $8`
-    ElseIf Z80_TestParams(Instruction, PARAM_REG_A, PARAM_VAL) Then
+    ElseIf Z80TestParams(Instruction, PARAM_REG_A, PARAM_VAL) Then
         Let Opcode = X3 Or Y3 Or Z6: GoTo Output8_2Param
     '`SBC HL, BC|DE|HL|SP`
-    ElseIf Z80_TestParams(Instruction, PARAM_REG_HL, PARAM_REGS_BC_DE_HL_SP) Then
+    ElseIf Z80TestParams(Instruction, PARAM_REG_HL, PARAM_REGS_BC_DE_HL_SP) Then
         Let Opcode = X1 Or OpcodeP_RegisterPair(Instruction.Param2.Token) Or Z2
         GoTo OutputED0
     End If
@@ -6149,21 +6103,21 @@ iSBC:
     GoTo InvalidParams
 
 iSCF:
-    '...................................................................................
-    If Z80_TestParams(Instruction) Then Let Opcode = Y6 Or Z7: GoTo Output0
+    '..................................................................................
+    If Z80TestParams(Instruction) Then Let Opcode = Y6 Or Z7: GoTo Output0
     'ERROR: Wrong parameters for Z80 instruction
     GoTo InvalidParams
     
 iSET:
     'Set a bit: _
-     ...................................................................................
+     ..................................................................................
     '`SET 0-7, A|B|C|D|E|H|L|[HL|IX+$8|IY+$8]`
-    If Z80_TestParams(Instruction, PARAM_VAL, PARAM_REGS_ABCDEHL_MEM_HLIXY) Then
+    If Z80TestParams(Instruction, PARAM_VAL, PARAM_REGS_ABCDEHL_MEM_HLIXY) Then
         Let Opcode = X3 Or OpcodeY_Bit(Instruction.Param1.Value) _
                   Or OpcodeZ_Register(Instruction.Param2.Mask)
         GoTo OutputCB_2Param
     '`SET 0-7, [IX+$8|IY+$8], A|B|C|D|E|H|L` - undocumented SET memory & register
-    ElseIf Z80_TestParams(Instruction, PARAM_VAL, PARAM_MEM_IXY, PARAM_REGS_ABCDEHL) Then
+    ElseIf Z80TestParams(Instruction, PARAM_VAL, PARAM_MEM_IXY, PARAM_REGS_ABCDEHL) Then
         Let Opcode = X3 Or OpcodeY_Bit(Instruction.Param1.Value) _
                   Or OpcodeZ_Register(Instruction.Param3.Mask)
         GoTo OutputCB_2Param
@@ -6172,13 +6126,13 @@ iSET:
     GoTo InvalidParams
     
 iSLA:
-    '...................................................................................
+    '..................................................................................
     '`SLA A|B|C|D|E|H|L|[HL|IX+$8|IY+$8]`
-    If Z80_TestParams(Instruction, PARAM_REGS_ABCDEHL_MEM_HLIXY) Then
+    If Z80TestParams(Instruction, PARAM_REGS_ABCDEHL_MEM_HLIXY) Then
         Let Opcode = Y4 Or OpcodeZ_Register(Instruction.Param1.Mask)
         GoTo OutputCB_1Param
     '`SLA [IX+$8|IY+$8], A|B|C|D|E|H|L` - undocumented SLA memory and copy to register
-    ElseIf Z80_TestParams(Instruction, PARAM_MEM_IXY, PARAM_REGS_ABCDEHL) Then
+    ElseIf Z80TestParams(Instruction, PARAM_MEM_IXY, PARAM_REGS_ABCDEHL) Then
         Let Opcode = Y4 Or OpcodeZ_Register(Instruction.Param2.Mask)
         GoTo OutputCB_1Param
     End If
@@ -6186,13 +6140,13 @@ iSLA:
     GoTo InvalidParams
 
 iSRA:
-    '...................................................................................
+    '..................................................................................
     '`SRA A|B|C|D|E|H|L|[HL|IX+$8|IY+$8]`
-    If Z80_TestParams(Instruction, PARAM_REGS_ABCDEHL_MEM_HLIXY) Then
+    If Z80TestParams(Instruction, PARAM_REGS_ABCDEHL_MEM_HLIXY) Then
         Let Opcode = Y5 Or OpcodeZ_Register(Instruction.Param1.Mask)
         GoTo OutputCB_1Param
     '`SRA [IX+$8|IY+$8], A|B|C|D|E|H|L` - undocumented SRA memory and copy to register
-    ElseIf Z80_TestParams(Instruction, PARAM_MEM_IXY, PARAM_REGS_ABCDEHL) Then
+    ElseIf Z80TestParams(Instruction, PARAM_MEM_IXY, PARAM_REGS_ABCDEHL) Then
         Let Opcode = Y5 Or OpcodeZ_Register(Instruction.Param2.Mask)
         GoTo OutputCB_1Param
     End If
@@ -6200,13 +6154,13 @@ iSRA:
     GoTo InvalidParams
     
 iSLL:
-    '...................................................................................
+    '..................................................................................
     '`SLL A|B|C|D|E|H|L|[HL|IX+$8|IY+$8]`
-    If Z80_TestParams(Instruction, PARAM_REGS_ABCDEHL_MEM_HLIXY) Then
+    If Z80TestParams(Instruction, PARAM_REGS_ABCDEHL_MEM_HLIXY) Then
         Let Opcode = Y6 Or OpcodeZ_Register(Instruction.Param1.Mask)
         GoTo OutputCB_1Param
     '`SLL [IX+$8|IY+$8], A|B|C|D|E|H|L` - undocumented SLL memory and copy to register
-    ElseIf Z80_TestParams(Instruction, PARAM_MEM_IXY, PARAM_REGS_ABCDEHL) Then
+    ElseIf Z80TestParams(Instruction, PARAM_MEM_IXY, PARAM_REGS_ABCDEHL) Then
         Let Opcode = Y6 Or OpcodeZ_Register(Instruction.Param2.Mask)
         GoTo OutputCB_1Param
     End If
@@ -6214,13 +6168,13 @@ iSLL:
     GoTo InvalidParams
     
 iSRL:
-    '...................................................................................
+    '..................................................................................
     '`SRL A|B|C|D|E|H|L|[HL|IX+$8|IY+$8]`
-    If Z80_TestParams(Instruction, PARAM_REGS_ABCDEHL_MEM_HLIXY) Then
+    If Z80TestParams(Instruction, PARAM_REGS_ABCDEHL_MEM_HLIXY) Then
         Let Opcode = Y7 Or OpcodeZ_Register(Instruction.Param1.Mask)
         GoTo OutputCB_1Param
     '`SRL [IX+$8|IY+$8], A|B|C|D|E|H|L` - undocumented SRL memory and copy to register
-    ElseIf Z80_TestParams(Instruction, PARAM_MEM_IXY, PARAM_REGS_ABCDEHL) Then
+    ElseIf Z80TestParams(Instruction, PARAM_MEM_IXY, PARAM_REGS_ABCDEHL) Then
         Let Opcode = Y7 Or OpcodeZ_Register(Instruction.Param2.Mask)
         GoTo OutputCB_1Param
     End If
@@ -6229,13 +6183,13 @@ iSRL:
 
 iSUB:
     'Subtract: _
-     ...................................................................................
+     ..................................................................................
     '`SUB A|B|C|D|E|H|IXH|IYH|L|IXL|IYL|[HL|IX+$8|IY+$8]`
-    If Z80_TestParams(Instruction, PARAM_REGS_ABCDEIXYHL_MEM_HLIXY) Then
+    If Z80TestParams(Instruction, PARAM_REGS_ABCDEIXYHL_MEM_HLIXY) Then
         Let Opcode = X2 Or Y2 Or OpcodeZ_Register(Instruction.Param1.Mask)
         GoTo OutputOffset_1Param
     '`SUB $8`
-    ElseIf Z80_TestParams(Instruction, PARAM_VAL) Then
+    ElseIf Z80TestParams(Instruction, PARAM_VAL) Then
         Let Opcode = X3 Or Y2 Or Z6: GoTo Output8_1Param
     End If
     'ERROR: Wrong parameters for Z80 instruction
@@ -6243,37 +6197,37 @@ iSUB:
     
 iXOR:
     'Bitwise XOR: _
-     ...................................................................................
+     ..................................................................................
     '`XOR A|B|C|D|E|H|IXH|IYH|L|IXL|IYL|[HL|IX+$8|IY+$8]`
-    If Z80_TestParams(Instruction, PARAM_REGS_ABCDEIXYHL_MEM_HLIXY) Then
+    If Z80TestParams(Instruction, PARAM_REGS_ABCDEIXYHL_MEM_HLIXY) Then
         Let Opcode = X2 Or Y5 Or OpcodeZ_Register(Instruction.Param1.Mask)
         GoTo OutputOffset_1Param
     '`XOR $8`
-    ElseIf Z80_TestParams(Instruction, PARAM_VAL) Then
+    ElseIf Z80TestParams(Instruction, PARAM_VAL) Then
         Let Opcode = X3 Or Y5 Or Z6: GoTo Output8_1Param
     End If
     'ERROR: Wrong parameters for Z80 instruction
     GoTo InvalidParams
     
-    '-----------------------------------------------------------------------------------
+    '----------------------------------------------------------------------------------
     'Write the assembled bytes to the Chunk
-    '-----------------------------------------------------------------------------------
+    '----------------------------------------------------------------------------------
     'Output only the Opcode, no Value or Offset required:
-    '...................................................................................
+    '..................................................................................
 Output0:
     Let Bytes(1) = Opcode
     'Add the opcode to the disassembly log
-    Call api_RtlMoveMemory(LogPtr + 20, StrPtr(HexStr8(Opcode)), 4)
+    Call Win32.MemoryCopyBetween(4, LogPtr + 20, StrPtr(HexStr8(Opcode)))
     
     Let ByteCount = 1
     GoTo AddBytes
 
     'Output an Opcode with optional Offset, no Value
-    '...................................................................................
+    '..................................................................................
 OutputOffset_1Param:
     Let Bytes(1) = Opcode
     'Add the opcode to the disassembly log
-    Call api_RtlMoveMemory(LogPtr + 20, StrPtr(HexStr8(Opcode)), 4)
+    Call Win32.MemoryCopyBetween(4, LogPtr + 20, StrPtr(HexStr8(Opcode)))
     
     If Instruction.HasOffset = 0 Then
         Let ByteCount = 1
@@ -6287,10 +6241,10 @@ OutputOffset_1Param:
     GoTo AddBytes
 
 OutputOffset_2Param:
-    '...................................................................................
+    '..................................................................................
     Let Bytes(1) = Opcode
     'Add the opcode to the disassembly log
-    Call api_RtlMoveMemory(LogPtr + 20, StrPtr(HexStr8(Opcode)), 4)
+    Call Win32.MemoryCopyBetween(4, LogPtr + 20, StrPtr(HexStr8(Opcode)))
     
     If Instruction.HasOffset = 0 Then
         Let ByteCount = 1
@@ -6304,17 +6258,17 @@ OutputOffset_2Param:
     GoTo AddBytes
     
     'Output an Opcode with 8-bit Value
-    '...................................................................................
+    '..................................................................................
 Output8_1Param:
     Let Bytes(1) = Opcode
     'Add the opcode to the disassembly log
-    Call api_RtlMoveMemory(LogPtr + 20, StrPtr(HexStr8(Opcode)), 4)
+    Call Win32.MemoryCopyBetween(4, LogPtr + 20, StrPtr(HexStr8(Opcode)))
     
     'If the Value cannot be calculated yet, we'll need to defer it
     If Instruction.Value = INDEFINITE Then
         'Add the indefinite value to the disassembly log and params list
-        Call api_RtlMoveMemory(LogPtr + 38, StrPtr(HexStr8(-1)), 4)
-        Call api_RtlMoveMemory(LogPtr + 74, StrPtr("$??       "), 20)
+        Call Win32.MemoryCopyBetween(4, LogPtr + 38, StrPtr(HexStr8(-1)))
+        Call Win32.MemoryCopyBetween(20, LogPtr + 74, StrPtr("$??       "))
         If (Mnemonic = TOKEN_Z80_JR) _
         Or (Mnemonic = TOKEN_Z80_DJNZ) Then
             Call DeferExpression( _
@@ -6329,21 +6283,21 @@ Output8_1Param:
         'Add the Value to the opcode bytes
         Let Bytes(2) = Instruction.Value
         'Add this to the disassembly log
-        Call api_RtlMoveMemory(LogPtr + 38, StrPtr(HexStr8(Instruction.Value)), 4)
+        Call Win32.MemoryCopyBetween(4, LogPtr + 38, StrPtr(HexStr8(Instruction.Value)))
     End If
     
     Let ByteCount = 2
     GoTo AddBytes
 
 Output8_2Param:
-    '...................................................................................
+    '..................................................................................
     Let Bytes(1) = Opcode
-    Call api_RtlMoveMemory(LogPtr + 20, StrPtr(HexStr8(Opcode)), 4)
+    Call Win32.MemoryCopyBetween(4, LogPtr + 20, StrPtr(HexStr8(Opcode)))
     
     'If the Value cannot be calculated yet, we'll need to defer it
     If Instruction.Value = INDEFINITE Then
-        Call api_RtlMoveMemory(LogPtr + 38, StrPtr(HexStr8(-1)), 4)
-        Call api_RtlMoveMemory(LogPtr + 94, StrPtr("$??       "), 20)
+        Call Win32.MemoryCopyBetween(4, LogPtr + 38, StrPtr(HexStr8(-1)))
+        Call Win32.MemoryCopyBetween(20, LogPtr + 94, StrPtr("$??       "))
         If Mnemonic = TOKEN_Z80_JR Or Mnemonic = TOKEN_Z80_DJNZ Then
             Call DeferExpression( _
                 ASM_JR, File, ChunkID, Instruction.Param2.Expression, BinaryOffset, From _
@@ -6357,18 +6311,18 @@ Output8_2Param:
         'Add the Value to the opcode bytes
         Let Bytes(2) = Instruction.Value
         'Add this to the disassembly log
-        Call api_RtlMoveMemory(LogPtr + 38, StrPtr(HexStr8(Instruction.Value)), 4)
+        Call Win32.MemoryCopyBetween(4, LogPtr + 38, StrPtr(HexStr8(Instruction.Value)))
     End If
     
     Let ByteCount = 2
     GoTo AddBytes
     
     'Output an Opcode with Value and optional Offset:
-    '...................................................................................
+    '..................................................................................
 OutputOff8:
     Let ByteCount = 1
     Let Bytes(1) = Opcode
-    Call api_RtlMoveMemory(LogPtr + 20, StrPtr(HexStr8(Opcode)), 4)
+    Call Win32.MemoryCopyBetween(4, LogPtr + 20, StrPtr(HexStr8(Opcode)))
     
     'Is there an offset Value? (e.g. `[IX+$FF]`)
     If Instruction.HasOffset = 1 Then
@@ -6391,20 +6345,20 @@ OutputOff8:
         )
     Else
         Let Bytes(ByteCount) = Instruction.Value
-        Call api_RtlMoveMemory(LogPtr + 38, StrPtr(HexStr8(Instruction.Value)), 4)
+        Call Win32.MemoryCopyBetween(4, LogPtr + 38, StrPtr(HexStr8(Instruction.Value)))
     End If
     
     GoTo AddBytes
     
 Output16_1Param:
-    '...................................................................................
+    '..................................................................................
     Let Bytes(1) = Opcode
-    Call api_RtlMoveMemory(LogPtr + 20, StrPtr(HexStr8(Opcode)), 4)
+    Call Win32.MemoryCopyBetween(4, LogPtr + 20, StrPtr(HexStr8(Opcode)))
     
     If Instruction.Value = INDEFINITE Then
-        Call api_RtlMoveMemory(LogPtr + 38, StrPtr(HexStr8(-1)), 4)
-        Call api_RtlMoveMemory(LogPtr + 44, StrPtr(HexStr8(-1)), 4)
-        Call api_RtlMoveMemory(LogPtr + 74, StrPtr("$????     "), 20)
+        Call Win32.MemoryCopyBetween(4, LogPtr + 38, StrPtr(HexStr8(-1)))
+        Call Win32.MemoryCopyBetween(4, LogPtr + 44, StrPtr(HexStr8(-1)))
+        Call Win32.MemoryCopyBetween(20, LogPtr + 74, StrPtr("$????     "))
         
         Call DeferExpression( _
             ASM_JP, File, ChunkID, Instruction.Param1.Expression, BinaryOffset, From _
@@ -6412,22 +6366,22 @@ Output16_1Param:
     Else
         Let Bytes(2) = (Instruction.Value And &HFF&)
         Let Bytes(3) = ((Instruction.Value \ &H100&) And &HFF&)
-        Call api_RtlMoveMemory(LogPtr + 38, StrPtr(HexStr8(Instruction.Value And &HFF&)), 4)
-        Call api_RtlMoveMemory(LogPtr + 44, StrPtr(HexStr8((Instruction.Value \ &H100&) And &HFF&)), 4)
+        Call Win32.MemoryCopyBetween(4, LogPtr + 38, StrPtr(HexStr8(Instruction.Value And &HFF&)))
+        Call Win32.MemoryCopyBetween(4, LogPtr + 44, StrPtr(HexStr8((Instruction.Value \ &H100&) And &HFF&)))
     End If
     
     Let ByteCount = 3
     GoTo AddBytes
 
 Output16_2Param:
-    '...................................................................................
+    '..................................................................................
     Let Bytes(1) = Opcode
-    Call api_RtlMoveMemory(LogPtr + 20, StrPtr(HexStr8(Opcode)), 4)
+    Call Win32.MemoryCopyBetween(4, LogPtr + 20, StrPtr(HexStr8(Opcode)))
     
     If Instruction.Value = INDEFINITE Then
-        Call api_RtlMoveMemory(LogPtr + 38, StrPtr(HexStr8(-1)), 4)
-        Call api_RtlMoveMemory(LogPtr + 44, StrPtr(HexStr8(-1)), 4)
-        Call api_RtlMoveMemory(LogPtr + 74, StrPtr("$????     "), 20)
+        Call Win32.MemoryCopyBetween(4, LogPtr + 38, StrPtr(HexStr8(-1)))
+        Call Win32.MemoryCopyBetween(4, LogPtr + 44, StrPtr(HexStr8(-1)))
+        Call Win32.MemoryCopyBetween(20, LogPtr + 74, StrPtr("$????     "))
         
         Call DeferExpression( _
             ASM_JP, File, ChunkID, Instruction.Param2.Expression, BinaryOffset, From _
@@ -6435,37 +6389,37 @@ Output16_2Param:
     Else
         Let Bytes(2) = (Instruction.Value And &HFF&)
         Let Bytes(3) = ((Instruction.Value \ &H100&) And &HFF&)
-        Call api_RtlMoveMemory(LogPtr + 38, StrPtr(HexStr8(Instruction.Value And &HFF&)), 4)
-        Call api_RtlMoveMemory(LogPtr + 44, StrPtr(HexStr8((Instruction.Value \ &H100&) And &HFF&)), 4)
+        Call Win32.MemoryCopyBetween(4, LogPtr + 38, StrPtr(HexStr8(Instruction.Value And &HFF&)))
+        Call Win32.MemoryCopyBetween(4, LogPtr + 44, StrPtr(HexStr8((Instruction.Value \ &H100&) And &HFF&)))
     End If
     
     Let ByteCount = 3
     GoTo AddBytes
         
 OutputED0:
-    '...................................................................................
+    '..................................................................................
     'Push the implied prefix on the list of bytes to output
     Let Bytes(0) = &HED&: Let BinaryOffset = BinaryOffset + 1
     Let Bytes(1) = Opcode
     
-    Call api_RtlMoveMemory(LogPtr + 14, StrPtr(HexStr8(&HED&)), 4)
-    Call api_RtlMoveMemory(LogPtr + 20, StrPtr(HexStr8(Opcode)), 4)
+    Call Win32.MemoryCopyBetween(4, LogPtr + 14, StrPtr(HexStr8(&HED&)))
+    Call Win32.MemoryCopyBetween(4, LogPtr + 20, StrPtr(HexStr8(Opcode)))
     
     Let ByteCount = 1
     GoTo AddBytes
     
 OutputED16_1Param:
-    '...................................................................................
+    '..................................................................................
     'Push the implied prefix on the list of bytes to output
     Let Bytes(0) = &HED&: Let BinaryOffset = BinaryOffset + 1
     Let Bytes(1) = Opcode
     
-    Call api_RtlMoveMemory(LogPtr + 14, StrPtr(HexStr8(&HED&)), 4)
-    Call api_RtlMoveMemory(LogPtr + 20, StrPtr(HexStr8(Opcode)), 4)
+    Call Win32.MemoryCopyBetween(4, LogPtr + 14, StrPtr(HexStr8(&HED&)))
+    Call Win32.MemoryCopyBetween(4, LogPtr + 20, StrPtr(HexStr8(Opcode)))
         
     If Instruction.Value = INDEFINITE Then
-        Call api_RtlMoveMemory(LogPtr + 38, StrPtr(HexStr8(-1)), 4)
-        Call api_RtlMoveMemory(LogPtr + 44, StrPtr(HexStr8(-1)), 4)
+        Call Win32.MemoryCopyBetween(4, LogPtr + 38, StrPtr(HexStr8(-1)))
+        Call Win32.MemoryCopyBetween(4, LogPtr + 44, StrPtr(HexStr8(-1)))
         
         Call DeferExpression( _
             ASM_JP, File, ChunkID, Instruction.Param1.Expression, BinaryOffset, From _
@@ -6473,25 +6427,25 @@ OutputED16_1Param:
     Else
         Let Bytes(2) = (Instruction.Value And &HFF&)
         Let Bytes(3) = ((Instruction.Value \ &H100&) And &HFF&)
-        Call api_RtlMoveMemory(LogPtr + 38, StrPtr(HexStr8(Instruction.Value And &HFF&)), 4)
-        Call api_RtlMoveMemory(LogPtr + 44, StrPtr(HexStr8((Instruction.Value \ &H100&) And &HFF&)), 4)
+        Call Win32.MemoryCopyBetween(4, LogPtr + 38, StrPtr(HexStr8(Instruction.Value And &HFF&)))
+        Call Win32.MemoryCopyBetween(4, LogPtr + 44, StrPtr(HexStr8((Instruction.Value \ &H100&) And &HFF&)))
     End If
     
     Let ByteCount = 3
     GoTo AddBytes
 
 OutputED16_2Param:
-    '...................................................................................
+    '..................................................................................
     'Push the implied prefix on the list of bytes to output
     Let Bytes(0) = &HED&: Let BinaryOffset = BinaryOffset + 1
     Let Bytes(1) = Opcode
     
-    Call api_RtlMoveMemory(LogPtr + 14, StrPtr(HexStr8(&HED&)), 4)
-    Call api_RtlMoveMemory(LogPtr + 20, StrPtr(HexStr8(Opcode)), 4)
+    Call Win32.MemoryCopyBetween(4, LogPtr + 14, StrPtr(HexStr8(&HED&)))
+    Call Win32.MemoryCopyBetween(4, LogPtr + 20, StrPtr(HexStr8(Opcode)))
         
     If Instruction.Value = INDEFINITE Then
-        Call api_RtlMoveMemory(LogPtr + 38, StrPtr(HexStr8(-1)), 4)
-        Call api_RtlMoveMemory(LogPtr + 44, StrPtr(HexStr8(-1)), 4)
+        Call Win32.MemoryCopyBetween(4, LogPtr + 38, StrPtr(HexStr8(-1)))
+        Call Win32.MemoryCopyBetween(4, LogPtr + 44, StrPtr(HexStr8(-1)))
         
         Call DeferExpression( _
             ASM_JP, File, ChunkID, Instruction.Param2.Expression, BinaryOffset, From _
@@ -6499,20 +6453,20 @@ OutputED16_2Param:
     Else
         Let Bytes(2) = (Instruction.Value And &HFF&)
         Let Bytes(3) = ((Instruction.Value \ &H100&) And &HFF&)
-        Call api_RtlMoveMemory(LogPtr + 38, StrPtr(HexStr8(Instruction.Value And &HFF&)), 4)
-        Call api_RtlMoveMemory(LogPtr + 44, StrPtr(HexStr8((Instruction.Value \ &H100&) And &HFF&)), 4)
+        Call Win32.MemoryCopyBetween(4, LogPtr + 38, StrPtr(HexStr8(Instruction.Value And &HFF&)))
+        Call Win32.MemoryCopyBetween(4, LogPtr + 44, StrPtr(HexStr8((Instruction.Value \ &H100&) And &HFF&)))
     End If
     
     Let ByteCount = 3
     GoTo AddBytes
     
 OutputCB_1Param:
-    '...................................................................................
+    '..................................................................................
     'The double-opcodes use $CB as the primary opcode and then a second opcode after _
      the offset byte. It's fastest to handle and log this special case specifically
     Let Bytes(1) = &HCB&
-    Call api_RtlMoveMemory(LogPtr + 20, StrPtr(HexStr8(&HCB&)), 4)
-    Call api_RtlMoveMemory(LogPtr + 32, StrPtr(HexStr8(Opcode)), 4)
+    Call Win32.MemoryCopyBetween(4, LogPtr + 20, StrPtr(HexStr8(&HCB&)))
+    Call Win32.MemoryCopyBetween(4, LogPtr + 32, StrPtr(HexStr8(Opcode)))
     
     If Instruction.HasOffset = 1 Then
         Let Bytes(3) = Opcode
@@ -6529,12 +6483,12 @@ OutputCB_1Param:
     GoTo AddBytes
 
 OutputCB_2Param:
-    '...................................................................................
+    '..................................................................................
     'The double-opcodes use $CB as the primary opcode and then a second opcode after _
      the offset byte. It's fastest to handle and log this special case specifically
     Let Bytes(1) = &HCB&
-    Call api_RtlMoveMemory(LogPtr + 20, StrPtr(HexStr8(&HCB&)), 4)
-    Call api_RtlMoveMemory(LogPtr + 32, StrPtr(HexStr8(Opcode)), 4)
+    Call Win32.MemoryCopyBetween(4, LogPtr + 20, StrPtr(HexStr8(&HCB&)))
+    Call Win32.MemoryCopyBetween(4, LogPtr + 32, StrPtr(HexStr8(Opcode)))
     
     If Instruction.HasOffset = 1 Then
         Let Bytes(3) = Opcode
@@ -6550,7 +6504,7 @@ OutputCB_2Param:
     End If
     
 AddBytes:
-    '-----------------------------------------------------------------------------------
+    '----------------------------------------------------------------------------------
     'Now the assembled bytes have been queued, add them to the Chunk
     With Chunks(ChunkID)
         'Increase the Chunk accordingly
@@ -6567,24 +6521,24 @@ AddBytes:
         
         'Copy the bytes into the Chunk
         If Bytes(0) = 0 Then
-            Call api_RtlMoveMemory( _
-                DestinationPointer:=VarPtr(.Data(BinaryOffset)), _
-                     SourcePointer:=VarPtr(Bytes(1)), _
-                            Length:=ByteCount _
+            Call Win32.MemoryCopyBetween( _
+                  LengthBytes:=ByteCount, _
+                OutputPointer:=VarPtr(.Data(BinaryOffset)), _
+                SourcePointer:=VarPtr(Bytes(1)) _
             )
         Else
-            Call api_RtlMoveMemory( _
-                DestinationPointer:=VarPtr(.Data(BinaryOffset - 1)), _
-                     SourcePointer:=VarPtr(Bytes(0)), _
-                            Length:=ByteCount + 1 _
+            Call Win32.MemoryCopyBetween( _
+                  LengthBytes:=ByteCount + 1, _
+                OutputPointer:=VarPtr(.Data(BinaryOffset - 1)), _
+                SourcePointer:=VarPtr(Bytes(0)) _
             )
         End If
         
         'Add the disassembly to the log
-        Call .LogASM.Log(LogStr)
+'        Call .LogASM.Add(LogStr)
     End With
     
-    '-----------------------------------------------------------------------------------
+    '----------------------------------------------------------------------------------
     
     'Don't push me, push a push-pop! _
      (if doing the Push/Pop macro, loop back for more)
@@ -6595,32 +6549,30 @@ Finish:
     '*** TIMER END ***
 End Sub
 
-'Z80_GetParameter : Fetch the type / value of a Z80 instruction parameter
-'=======================================================================================
+'Z80GetParameter : Fetch the type / value of a Z80 instruction parameter
+'======================================================================================
 'ReturnParam    | An `oz80_Param` structure to populate
 '[ChunkID]      | The Chunk ID is used to apply scope to Values that require scope,
 '               | such as Label names that assume the Chunk's Section name. If this is
 '               | ommitted (such as Expressions outside of Chunks), an error is raised
 '               | if a Scope-dependent Value appears
-'---------------¦-----------------------------------------------------------------------
-'Returns        | The error number
-'=======================================================================================
-Private Function Z80_GetParameter( _
+'======================================================================================
+Private Sub Z80GetParameter( _
              ByRef ReturnParam As oz80Param, _
     Optional ByRef ChunkID As Long = 0 _
-) As OZ80_ERROR
+)
     'Default to "no Value", it could be a Register
     Let ReturnParam.Value = INDEFINITE
     
-    '-----------------------------------------------------------------------------------
+    '----------------------------------------------------------------------------------
     'A memory reference, such as `[IX+$FF]` _
-     -----------------------------------------------------------------------------------
+     ----------------------------------------------------------------------------------
     If TokenKind = TOKEN_SQUARE_OPEN Then
         'ERROR: File ends just as the memory expression is opened
-        If NextTokenError() Then GoTo Finish
+        If NextTokenError() Then Exit Sub
         
         'The first item in the memory expression can be a register _
-         ...............................................................................
+         ..............................................................................
         If TokenIsRegister(TokenKind) Then
             'Copy the register type to the parameter being built
             Let ReturnParam.Token = TokenKind
@@ -6663,25 +6615,26 @@ Private Function Z80_GetParameter( _
             End If
             
             'ERROR: File ends before the memory expression is closed
-            If NextTokenError() Then GoTo Finish
+            If NextTokenError() Then Exit Sub
             
             GoTo EndScope
             
 AddExpr:    'Look for the `+` following the register name
-            If NextTokenError() Then GoTo Finish
+            If NextTokenError() Then Exit Sub
                         
             'If present, skip over it and check for an expression
             If TokenKind = TOKEN_OPERATOR_ADD Then
                 'ERROR: Something must follow the "+"!
-                If NextTokenError() Then GoTo Finish
+                If NextTokenError() Then Exit Sub
                 
                 'Remember where this Expression begins, should it be deferred
                 Let ReturnParam.Expression = TokenIndex
                 
                 'Try and calculate the Expression
+                Call ParseExpression(ReturnParam.Value, ChunkID)
                 '(If there was an error in the Expression, the error event _
                   will already have been raised, we only need to fold upwards)
-                If ParseExpression(ReturnParam.Value, ChunkID) Then GoTo Finish
+                If Error Then Exit Sub
                 
                 'TODO: Error if number is over 16-bit
                 'TODO: Issue warning for rounding
@@ -6702,14 +6655,14 @@ AddExpr:    'Look for the `+` following the register name
                  select the appropriate cached text for logging
                 If TokenKind = TOKEN_SQUARE_CLOSE Then
                     Call NextToken
-                    GoTo Finish
+                    Exit Sub
                 End If
                 
                 'ERROR: Unexpected token in memory expression
                 Stop
             End If
         
-        '...............................................................................
+        '..............................................................................
         Else
             'Is it an expression at all?
             'TODO: ERROR: Not a valid expression
@@ -6722,9 +6675,10 @@ AddExpr:    'Look for the `+` following the register name
             Let ReturnParam.Expression = TokenIndex
             
             'Try and calculate the expression
+            Call ParseExpression(ReturnParam.Value, ChunkID)
             '(If there was an error in the Expression, the error event _
               will already have been raised, we only need to fold upwards)
-            If ParseExpression(ReturnParam.Value, ChunkID) Then GoTo Finish
+            If Error Then Exit Sub
             
             'TODO: Error if number is over 16-bit
             'TODO: Issue warning for rounding
@@ -6740,17 +6694,17 @@ AddExpr:    'Look for the `+` following the register name
         End If
     
 EndScope:
-        '...............................................................................
+        '..............................................................................
         If TokenKind = TOKEN_SQUARE_CLOSE Then
             Call NextToken
-            GoTo Finish
+            Exit Sub
         End If
         'ERROR: Unexpected token in memory expression
         Stop
     
-    '-----------------------------------------------------------------------------------
+    '----------------------------------------------------------------------------------
     'A Register _
-     -----------------------------------------------------------------------------------
+     ----------------------------------------------------------------------------------
     ElseIf TokenIsRegister(TokenKind) _
         Or TokenIsFlag(TokenKind) _
     Then
@@ -6768,9 +6722,9 @@ EndScope:
         'Now move beyond the register token
         Call NextToken
     
-    '-----------------------------------------------------------------------------------
+    '----------------------------------------------------------------------------------
     'Anything else classes as a calculable expression _
-     -----------------------------------------------------------------------------------
+     ----------------------------------------------------------------------------------
     ElseIf TokenIsExpression(TokenKind) Then
         'We manually build a number token, since we don't want to use the first _
          token of the expression -- it might be a Label for instance and we can _
@@ -6782,9 +6736,10 @@ EndScope:
         Let ReturnParam.Expression = TokenIndex
                 
         'Try and calculate the expression
+        Call ParseExpression(ReturnParam.Value, ChunkID)
         '(If there was an error in the Expression, the error event _
           will already have been raised, we only need to fold upwards)
-        If ParseExpression(ReturnParam.Value, ChunkID) Then GoTo Finish
+        If Error Then Exit Sub
         
         'TODO: Error if number is over 16-bit
         'TODO: Issue warning for rounding
@@ -6795,27 +6750,23 @@ EndScope:
             Let ReturnParam.LogText = PARAMTEXT_VAL16 + ReturnParam.Value
         End If
         
-    '-----------------------------------------------------------------------------------
+    '----------------------------------------------------------------------------------
     Else
         'ERROR: Not a Z80 parameter
         Call RaiseError(OZ80_ERROR_INVALID, "TODO")
     End If
+End Sub
 
-Finish:
-    'Return the error number
-    Let Z80_GetParameter = My_Error
-End Function
-
-'Z80_TestParams : Check if parameters are of the right type desired
-'=======================================================================================
+'Z80TestParams : Check if parameters are of the right type desired
+'======================================================================================
 'Instruction    | An `oz80Instruction` type containing the parameters
 '[Test1]        | A bit-pattern of allowed parameters to check parameter 1 against
 '[Test2]        | A bit-pattern of allowed parameters to check parameter 2 against
 '[Test3]        | A bit-pattern of allowed parameters to check parameter 3 against
-'---------------¦-----------------------------------------------------------------------
+'---------------¦----------------------------------------------------------------------
 'Returns        | True if all given parameters fulfill the tests, False otherwise
-'=======================================================================================
-Private Function Z80_TestParams( _
+'======================================================================================
+Private Function Z80TestParams( _
              ByRef Instruction As oz80Instruction, _
     Optional ByRef Test1 As OZ80_PARAM, _
     Optional ByRef Test2 As OZ80_PARAM, _
@@ -6833,7 +6784,7 @@ Private Function Z80_TestParams( _
     End If
     
     '1st Parameter Test: _
-     -----------------------------------------------------------------------------------
+     ----------------------------------------------------------------------------------
     
     'Does the parameter appear in the test? E.g. Param = A, Test = A/B/C/D/E/H/L
     If (Instruction.Param1.Mask And Test1) = 0 Then Exit Function
@@ -6847,7 +6798,7 @@ Private Function Z80_TestParams( _
     End If
     
     '2nd Parameter Test: _
-     -----------------------------------------------------------------------------------
+     ----------------------------------------------------------------------------------
         
     'Does the parameter appear in the test? E.g. Param = A, Test = A/B/C/D/E/H/L
     If (Instruction.Param2.Mask And Test2) = 0 Then Exit Function
@@ -6858,17 +6809,17 @@ Private Function Z80_TestParams( _
     If (Test3 = 0) And (Instruction.Param3.Mask = 0) Then GoTo Finish
     
     '3rd Parameter Test: _
-     -----------------------------------------------------------------------------------
+     ----------------------------------------------------------------------------------
     
     'Does the parameter appear in the test? E.g. Param = A, Test = A/B/C/D/E/H/L
     If (Instruction.Param3.Mask And Test3) = 0 Then Exit Function
     
 Finish:
-    Let Z80_TestParams = True
+    Let Z80TestParams = True
 End Function
 
 'GetListAsDictionary : Reads a whole list into a Dictionary
-'=======================================================================================
+'======================================================================================
 Private Function GetListAsDictionary( _
     Optional ByRef ChunkID As Long = 0 _
 ) As Scripting.Dictionary
@@ -6880,9 +6831,10 @@ Private Function GetListAsDictionary( _
         'Parse the Expression; if it's indefinite, _
          leave that up to the caller to handle
         Dim Value As Double
-        'If there was an error in the expression, the error event _
-         will already have been raised, we only need to fold upwards
-        If ParseExpression(Value, ChunkID) Then Exit Function
+        Call ParseExpression(Value, ChunkID)
+        '(If there was an error in the expression, the error event _
+         will already have been raised, we only need to fold upwards)
+        If Error Then Exit Function
         
         Call GetListAsDictionary.Add( _
             GetListAsDictionary.Count, Value _
@@ -6891,11 +6843,11 @@ Private Function GetListAsDictionary( _
 End Function
 
 'GetText : Reads a list, interpretting Values as Unicode points
-'=======================================================================================
+'======================================================================================
 'ReturnText     | A bluString object that will be populated with the text
-'---------------¦-----------------------------------------------------------------------
+'---------------¦----------------------------------------------------------------------
 'Returns        | The error number
-'=======================================================================================
+'======================================================================================
 Private Function GetText( _
              ByRef ReturnText As bluString, _
     Optional ByRef ChunkID As Long = 0 _
@@ -6917,7 +6869,8 @@ Private Function GetText( _
             Dim Value As Double
             'If there were an error in parsing the Expression, fold up
             'TODO: Does this need a Section/Label reference?
-            If ParseExpression(Value, ChunkID) Then GoTo ErrOut
+            Call ParseExpression(Value, ChunkID)
+            If Error Then GoTo ErrOut
             
             'TODO: Indefnite values? Allowed or not in Text? _
                    If we allow for text mapping with different sized strings then _
@@ -6939,14 +6892,14 @@ Private Function GetText( _
     Loop
     
     'The resultant string won't be changing any more
-    Call ReturnText.ReduceBuffer
+    Call ReturnText.TrimBuffer
 ErrOut:
     'Return the error number
-    Let GetText = My_Error
+    Let GetText = Error
 End Function
 
 'ParseExpression : Evaluate a calculation into a Value
-'=======================================================================================
+'======================================================================================
 'ReturnValue    | Gets set to the calculated Value, or `INDEFINITE`.
 '               | Note that this is a 64-bit floating-pointer number, so it's up to
 '               | the caller to validate the number according to their needs
@@ -6954,19 +6907,18 @@ End Function
 '               | such as Label names that assume the Chunk's Section name. If this is
 '               | ommitted (such as Expressions outside of Chunks), an error is raised
 '               | if a Scope-dependent Value appears
-'---------------¦-----------------------------------------------------------------------
-'Returns        | The error number
-'=======================================================================================
-Private Function ParseExpression( _
+'======================================================================================
+Private Sub ParseExpression( _
              ByRef ReturnValue As Double, _
     Optional ByRef ChunkID As Long = 0 _
-) As OZ80_ERROR
+)
     Dim Operand1 As Double              'Left-hand value in a calculation
     Dim Operand2 As Double              'Right-hand value in a calculation
     Dim Operator As OZ80_TOKEN          'Operator to use
     
     'Begin with fetching the first operand
-    If ParseValue(Operand1, ChunkID) Then GoTo ErrOut
+    Call ParseValue(Operand1, ChunkID)
+    If Error Then Exit Sub
     'For the moment the Expression's calculated Value will be this unless we find _
      an Operator to extend the Expression
     Let ReturnValue = Operand1
@@ -6974,11 +6926,11 @@ Private Function ParseExpression( _
     'The file could legitimately end with an Expression, so don't error out if the _
      token stream comes to an end since the Expression is valid. The parent scopes _
      will handle an unexpected end error
-    If EOF Then Exit Function
+    If EOF Then Exit Sub
     
     'If next token is not an Operator assume the Expression has finished, _
       the parent will handle whatever the next token is used for
-    If Not TokenIsOperator(TokenKind) Then Exit Function
+    If Not TokenIsOperator(TokenKind) Then Exit Sub
     
 Continue:
     'Remember the Operator for after we have operand 2 to work with
@@ -6989,7 +6941,8 @@ Continue:
     If EOF Then Stop
     Call NextToken
     'Cannot have an operator hanging there without an operand following
-    If ParseValue(Operand2, ChunkID) Then Stop
+    Call ParseValue(Operand2, ChunkID)
+    If Error Then Stop
         
     'If either operand were a yet-unknowable value (such as a label or property), _
      then don't bother applying the operator, but do continue the expression so that _
@@ -7041,14 +6994,10 @@ Continue:
         Let Operand1 = ReturnValue
         GoTo Continue
     End If
-    
-ErrOut:
-    'Return the error number
-    Let ParseExpression = My_Error
-End Function
+End Sub
 
 'ParseValue : Get a single Value as part of an Expression
-'=======================================================================================
+'======================================================================================
 'ReturnValue    | Gets set to the calculated Value, or `INDEFINITE`.
 '               | Note that this is a 64-bit floating-pointer number, so it's up to
 '               | the caller to validate the number according to their needs
@@ -7056,27 +7005,26 @@ End Function
 '               | such as Label names that assume the Chunk's Section name. If this is
 '               | ommitted (such as Expressions outside of Chunks), an error is raised
 '               | if a Scope-dependent Value appears
-'---------------¦-----------------------------------------------------------------------
-'Returns        | The error number
-'=======================================================================================
-Private Function ParseValue( _
+'======================================================================================
+Private Sub ParseValue( _
              ByRef ReturnValue As Double, _
     Optional ByRef ChunkID As Long = 0 _
-) As OZ80_ERROR
+)
     '----------------------------------------------------------------------------------
     'A nested Expression?
     '----------------------------------------------------------------------------------
     If TokenKind = TOKEN_PARENS_OPEN Then
         'Move over the open parentheses. If the file ends here, it's an error
-        If NextTokenError() Then GoTo ErrOut
+        If NextTokenError() Then Exit Sub
         
         'Parse the nested Expression and return its Value as our own
-        If ParseExpression(ReturnValue, ChunkID) Then GoTo ErrOut
+        Call ParseExpression(ReturnValue, ChunkID)
+        If Error Then Exit Sub
         
         'The nested Expression has to be closed
         If TokenKind <> TOKEN_PARENS_CLOSE Then Call RaiseError( _
             OZ80_ERROR_EXPECTED, "TODO" _
-        ): GoTo ErrOut
+        ): Exit Sub
         
         'Move over the closing parentehses. The Expression can end here, so it's not _
          necessarily an error if the file suddenly ends. The parent can check for _
@@ -7085,43 +7033,45 @@ Private Function ParseValue( _
         
         'The token pointer will already be at the next token to read, _
          so we exit without moving it forward any more
-        Exit Function
+        Exit Sub
         
-    '-----------------------------------------------------------------------------------
+    '----------------------------------------------------------------------------------
     'The `HI` function -- returns the high-byte of a 16-bit Value
-    '-----------------------------------------------------------------------------------
+    '----------------------------------------------------------------------------------
     ElseIf TokenKind = TOKEN_KEYWORD_HI Then
         'Move over the `HI` keyword. If the file ends here, it's an error
-        If NextTokenError() Then GoTo ErrOut
+        If NextTokenError() Then Exit Sub
         
         'Fetch the parameter to the `HI` function
-        If ParseExpression(ReturnValue, ChunkID) Then GoTo ErrOut
+        Call ParseExpression(ReturnValue, ChunkID)
+        If Error Then Exit Sub
         'If that is indefinite, so will our result
-        If ReturnValue = INDEFINITE Then Exit Function
+        If ReturnValue = INDEFINITE Then Exit Sub
         
         'Check that this is no more than a 16-bit number
         'TODO: Z80/16-bit specific error message
         If ReturnValue > 65535 Then Call RaiseError( _
             OZ80_ERROR_OVERFLOW, STR_ERR_OVERFLOW _
-        ): GoTo ErrOut
+        ): Exit Sub
         
         'Extract the high-byte
         Let ReturnValue = (ReturnValue And &HFF00&) \ &H100&
         'The token pointer will already be at the next token to read, _
          so we exit without moving it forward any more
-        Exit Function
+        Exit Sub
         
-    '-----------------------------------------------------------------------------------
+    '----------------------------------------------------------------------------------
     'The `LO` function -- returns the low-byte of a 16-bit Value
-    '-----------------------------------------------------------------------------------
+    '----------------------------------------------------------------------------------
     ElseIf TokenKind = TOKEN_KEYWORD_LO Then
         'Move over the `LO` keyword. If the file ends here, it's an error
-        If NextTokenError() Then GoTo ErrOut
+        If NextTokenError() Then Exit Sub
         
         'Fetch the parameter to the `LO` function
-        If ParseExpression(ReturnValue, ChunkID) Then GoTo ErrOut
+        Call ParseExpression(ReturnValue, ChunkID)
+        If Error Then Exit Sub
         'If that is indefinite, so will be our result
-        If ReturnValue = INDEFINITE Then Exit Function
+        If ReturnValue = INDEFINITE Then Exit Sub
         
         'Check that this is no more than a 16-bit number _
          (despite this not being an issue to the low 8-bits, we prevent numbers _
@@ -7129,30 +7079,30 @@ Private Function ParseValue( _
         'TODO: Z80/16-bit specific error message
         If ReturnValue > 65535 Then Call RaiseError( _
             OZ80_ERROR_OVERFLOW, STR_ERR_OVERFLOW _
-        ): GoTo ErrOut
+        ): Exit Sub
         
         'Extract the low-byte
         Let ReturnValue = ReturnValue And &HFF&
         'The token pointer will already be at the next token to read, _
          so we exit without moving it forward any more
-        Exit Function
+        Exit Sub
         
-    '-----------------------------------------------------------------------------------
+    '----------------------------------------------------------------------------------
     'Negative Numbers
-    '-----------------------------------------------------------------------------------
+    '----------------------------------------------------------------------------------
     ElseIf TokenKind = TOKEN_OPERATOR_SUB Then
         'If the negative sign preceeds, remember this until the full number has _
          been calculated. ONLY decimal numbers can be negative, you cannot negate _
          hexadecimal/binary numbers or named-items (Constants, RAM names, Labels etc.)
         Dim IsNegative As Boolean: Let IsNegative = True
         'Move forward past the negative sign. If the file ends here, it's an error
-        If NextTokenError() Then GoTo ErrOut
+        If NextTokenError() Then Exit Sub
         'Continue parsing the number...
         GoTo GetNumber
         
-    '-----------------------------------------------------------------------------------
+    '----------------------------------------------------------------------------------
     'A decimal number:
-    '-----------------------------------------------------------------------------------
+    '----------------------------------------------------------------------------------
     ElseIf TokenKind = TOKEN_NUMBER Then
 GetNumber:
         'Begin with getting the given value
@@ -7164,55 +7114,55 @@ GetNumber:
          so no error. The parent can check if any scope has been left open. We skip _
          checking for a number prefix, but we do need to apply any negative sign
         If EOF Then
-            GoTo ErrOut
+            Exit Sub
         Else
             Call NextToken
             
             'Check for a number suffixes, e.g. `KB`
-            '...........................................................................
+            '..........................................................................
             If TokenKind = TOKEN_SUFFIX_K Then
                 'Check for min/max number you can multiply by 1'000 without overflowing
                 If (ReturnValue < NUMBER_MIN_K) Or (ReturnValue > NUMBER_MAX_K) Then
                     Call RaiseError(OZ80_ERROR_OVERFLOW, STR_ERR_OVERFLOW)
-                    GoTo ErrOut
+                    Exit Sub
                 End If
                 'Multiply by 1'000
                 Let ReturnValue = ReturnValue * 1000
                 'Move over the prefix
                 Call NextToken
                 
-            '...........................................................................
+            '..........................................................................
             ElseIf TokenKind = TOKEN_SUFFIX_KB Then
                 'Check for min/max number you can multiply by 1'024 without overflowing
                 If (ReturnValue < NUMBER_MIN_KB) Or (ReturnValue > NUMBER_MAX_KB) Then
                     Call RaiseError(OZ80_ERROR_OVERFLOW, STR_ERR_OVERFLOW)
-                    GoTo ErrOut
+                    Exit Sub
                 End If
                 'Multiply by 1'024
                 Let ReturnValue = ReturnValue * 1024
             Else
                 'If the token is not a prefix, exit this function without moving the _
                  token pointer forward (as we've already done that)
-                GoTo ErrOut
+                Exit Sub
             End If
         End If
     
-    '-----------------------------------------------------------------------------------
+    '----------------------------------------------------------------------------------
     'Constants
-    '-----------------------------------------------------------------------------------
+    '----------------------------------------------------------------------------------
     ElseIf TokenKind = TOKEN_CONST Then
         'Has the constant been defined?
         If Not Values.Exists(TokenText) Then
             'ERROR: Constant not yet defined. Constants cannot be indefinite
             Call RaiseError(OZ80_ERROR_UNDEFINED, "TODO")
-            GoTo ErrOut
+            Exit Sub
         End If
         'Retrieve the Constant value
         Let ReturnValue = Values.Item(TokenText)
         
-    '-----------------------------------------------------------------------------------
+    '----------------------------------------------------------------------------------
     'RAM Names
-    '-----------------------------------------------------------------------------------
+    '----------------------------------------------------------------------------------
     ElseIf TokenKind = TOKEN_RAM _
         Or TokenKind = TOKEN_TYPE _
     Then
@@ -7225,9 +7175,9 @@ GetNumber:
             Let ReturnValue = Values.Item(TokenText)
         End If
         
-    '-----------------------------------------------------------------------------------
+    '----------------------------------------------------------------------------------
     'The `START` keyword refers to the System's boot vector
-    '-----------------------------------------------------------------------------------
+    '----------------------------------------------------------------------------------
     ElseIf TokenKind = TOKEN_KEYWORD_START Then
         'TODO: This is determined by the System, so we can forgo having to reference it
         If Not Labels.Exists(STR_START) Then
@@ -7238,9 +7188,9 @@ GetNumber:
             Let ReturnValue = Labels.Item(STR_START)
         End If
     
-    '-----------------------------------------------------------------------------------
+    '----------------------------------------------------------------------------------
     'Labels
-    '-----------------------------------------------------------------------------------
+    '----------------------------------------------------------------------------------
     ElseIf TokenKind = TOKEN_LABEL Then
         'If no scope is provided, we cannot qualify local names to global names
         If ChunkID = 0 Then
@@ -7280,9 +7230,9 @@ GetNumber:
             If ReturnValue < 0 Then ReturnValue = INDEFINITE
         End If
         
-    '-----------------------------------------------------------------------------------
+    '----------------------------------------------------------------------------------
     'Properties
-    '-----------------------------------------------------------------------------------
+    '----------------------------------------------------------------------------------
     ElseIf TokenKind = TOKEN_PROPERTY_USE Then
         'Property names have to be expanded to their fully-qualified form
         If Not Labels.Exists(Chunks(ChunkID).FullName & TokenText) Then
@@ -7293,7 +7243,7 @@ GetNumber:
             Let ReturnValue = Labels.Item(Chunks(ChunkID).FullName & TokenText)
         End If
         
-    '-----------------------------------------------------------------------------------
+    '----------------------------------------------------------------------------------
     Else
         Debug.Print TokenNames(TokenKind)
         
@@ -7303,7 +7253,7 @@ GetNumber:
             Call RaiseError(OZ80_ERROR_INVALID, _
                 "Z80 registers are not valid within expressions. Remeber that Z80 " & _
                 "memory references use square brackets, not parentheses." _
-            ): GoTo ErrOut
+            ): Exit Sub
         End If
         
         Stop
@@ -7312,19 +7262,16 @@ GetNumber:
     'Move over the processed token, the parent expects the token pointer _
      to be on the next unread token
     Call NextToken
-ErrOut:
-    'Return the error number
-    Let ParseValue = My_Error
-End Function
+End Sub
 
 'Chunk_Begin : Begin a new Chunk to hold assembled Z80 code / data
-'=======================================================================================
+'======================================================================================
 'LabelName      | String of the fully-qualified Label name, i.e. "::section:label"
 '[SectionIndex] | Which Section this belongs to, index of `Sections` array
 '[Address]      | Optional address to place the Chunk in ROM
-'---------------¦-----------------------------------------------------------------------
+'---------------¦----------------------------------------------------------------------
 'Returns        | The index number of the new Chunk created
-'=======================================================================================
+'======================================================================================
 Private Function Chunk_Begin( _
              ByRef LabelName As String, _
     Optional ByRef SectionID As Long = -1, _
@@ -7367,17 +7314,17 @@ Private Function Chunk_Begin( _
         Let .Buffer = 1024
         ReDim .Data(1 To 1024) As Byte
         'As we assemble, we'll also provide a disassembly listing
-        Set .LogASM = New bluLog
+        Set .LogASM = New bluArrayStrings
         
         Set .Properties = New Scripting.Dictionary
     End With
 End Function
 
 'AddUpdateLabel: Blindly adds to or updates the Label database
-'=======================================================================================
+'======================================================================================
 'LabelName      | The fully-qualified Label name, i.e. including the Section name
 '[Value]        | The new address to set for the Label
-'=======================================================================================
+'======================================================================================
 Private Sub AddUpdateLabel( _
     ByRef LabelName As String, _
     ByRef Value As Double _
@@ -7389,99 +7336,107 @@ Private Sub AddUpdateLabel( _
 End Sub
 
 'ROMLayout : Calculate the placement of the code/data Chunks in the output ROM
-'=======================================================================================
-'Returns        | The error number
-'=======================================================================================
-Private Function ROMLayout( _
-) As OZ80_ERROR
+'======================================================================================
+Private Sub ROMLayout()
     '*** TIMER BEGIN ***
     Call Profiler.EventBegin(EVENT_ROM_LAYOUT)
     
     'How many bytes do we have?
-    Call RaiseMessage(OZ80_LOG_INFO, _
-        "Total Chunks Size: " & Format$(ChunksSize, "#,0") & " bytes" _
-    )
+'    Call RaiseMessage(OZ80_LOG_INFO, _
+'        "Total Chunks Size: " & Format$(ChunksSize, "#,0") & " bytes" _
+'    )
     
     'Assign the default ROM space
     ReDim ROM(0 To ROMSize - 1) As Byte
     
     'Log the Sections defined
     Dim s As Long, c As Long
-    For s = 1 To SectionCount
-        Call RaiseMessage(OZ80_LOG_INFO, _
-            "Section " & Sections(s).Name & ": " & _
-            Format$(Sections(s).Size, "#,0") & " bytes" _
-        )
-    Next s
+'    For s = 1 To SectionCount
+'        Call RaiseMessage(OZ80_LOG_INFO, _
+'            "Section " & Sections(s).Name & ": " & _
+'            Format$(Sections(s).Size, "#,0") & " bytes" _
+'        )
+'    Next s
     
-    Call RaiseMessage(OZ80_LOG_INFO, "ROM Layout:")
-    Call RaiseMessage(OZ80_LOG_INFO, LOG_LINEDOUBLE)
-    Call RaiseMessage(OZ80_LOG_INFO, "ADDRESS  |   SIZE | LABEL")
-    Call RaiseMessage(OZ80_LOG_INFO, "---------¦--------¦------------------------------------------------------")
+'    Call RaiseMessage(OZ80_LOG_INFO, "ROM Layout:")
+'    Call RaiseMessage(OZ80_LOG_INFO, LOG_LINEDOUBLE)
+'    Call RaiseMessage(OZ80_LOG_INFO, "ADDRESS  |   SIZE | LABEL")
+'    Call RaiseMessage(OZ80_LOG_INFO, "---------¦--------¦------------------------------------------------------")
     
-    '-----------------------------------------------------------------------------------
+    '----------------------------------------------------------------------------------
     '[1]: Place the Interrupt Procedures
-    '-----------------------------------------------------------------------------------
+    '----------------------------------------------------------------------------------
     If Chunk_Interrupt00 <> 0 Then
         'TODO: Check for clash with START routine on Master System
-        If ROMLayoutChunk(Chunk_Interrupt00, 0) Then GoTo FinishLayout
+        Call ROMLayoutChunk(Chunk_Interrupt00, 0)
+        If Error Then GoTo FinishLayout
     End If
     If Chunk_Interrupt08 <> 0 Then
-        If ROMLayoutChunk(Chunk_Interrupt08, &H8&) Then GoTo FinishLayout
+        Call ROMLayoutChunk(Chunk_Interrupt08, &H8&)
+        If Error Then GoTo FinishLayout
     End If
     If Chunk_Interrupt10 <> 0 Then
-        If ROMLayoutChunk(Chunk_Interrupt10, &H10&) Then GoTo FinishLayout
+        Call ROMLayoutChunk(Chunk_Interrupt10, &H10&)
+        If Error Then GoTo FinishLayout
     End If
     If Chunk_Interrupt18 <> 0 Then
-        If ROMLayoutChunk(Chunk_Interrupt18, &H18&) Then GoTo FinishLayout
+        Call ROMLayoutChunk(Chunk_Interrupt18, &H18&)
+        If Error Then GoTo FinishLayout
     End If
     If Chunk_Interrupt20 <> 0 Then
-        If ROMLayoutChunk(Chunk_Interrupt20, &H20&) Then GoTo FinishLayout
+        Call ROMLayoutChunk(Chunk_Interrupt20, &H20&)
+        If Error Then GoTo FinishLayout
     End If
     If Chunk_Interrupt28 <> 0 Then
-        If ROMLayoutChunk(Chunk_Interrupt28, &H28&) Then GoTo FinishLayout
+        Call ROMLayoutChunk(Chunk_Interrupt28, &H28&)
+        If Error Then GoTo FinishLayout
     End If
     If Chunk_Interrupt30 <> 0 Then
-        If ROMLayoutChunk(Chunk_Interrupt30, &H30&) Then GoTo FinishLayout
+        Call ROMLayoutChunk(Chunk_Interrupt30, &H30&)
+        If Error Then GoTo FinishLayout
     End If
     If Chunk_Interrupt38 <> 0 Then
-        If ROMLayoutChunk(Chunk_Interrupt38, &H38&) Then GoTo FinishLayout
+        Call ROMLayoutChunk(Chunk_Interrupt38, &H38&)
+        If Error Then GoTo FinishLayout
     End If
     If Chunk_Interrupt66 <> 0 Then
-        If ROMLayoutChunk(Chunk_Interrupt66, &H66&) Then GoTo FinishLayout
+        Call ROMLayoutChunk(Chunk_Interrupt66, &H66&)
+        If Error Then GoTo FinishLayout
     End If
     
-    '-----------------------------------------------------------------------------------
+    '----------------------------------------------------------------------------------
     '[2]: Place the ROM Header
-    '-----------------------------------------------------------------------------------
+    '----------------------------------------------------------------------------------
     
-    '-----------------------------------------------------------------------------------
+    '----------------------------------------------------------------------------------
     '[3]: Place the START Procedure
-    '-----------------------------------------------------------------------------------
+    '----------------------------------------------------------------------------------
     'The `START` Procedure is where the System begins running code first, _
      usually this is $0000, but can be elsewhere on other Systems
     If Chunk_Start <> 0 Then
-        Call RaiseMessage(OZ80_LOG_INFO, "---------¦--------¦------------------------------------------------------")
+'        Call RaiseMessage(OZ80_LOG_INFO, "---------¦--------¦------------------------------------------------------")
         
         'TODO: Check for clash with INTERRUPT 0 routine on Master System
-        If ROMLayoutChunk(Chunk_Start, 0) Then GoTo FinishLayout
+        Call ROMLayoutChunk(Chunk_Start, 0)
+        If Error Then GoTo FinishLayout
     End If
     
-    '-----------------------------------------------------------------------------------
+    '----------------------------------------------------------------------------------
     '[4]: Place the 1 KB SEGA Slot
-    '-----------------------------------------------------------------------------------
+    '----------------------------------------------------------------------------------
     'The special SEGA 1 KB Slot ($0000-$03FF) stays paged-in at all times regardless _
      of which Bank is in Slot 0 ($0000-$3FFF). Therefore we have to place these Chunks _
      before other Un/Sectioned code as all data MUST appear within the first 1 KB of _
      the ROM
-    Call RaiseMessage(OZ80_LOG_INFO, "---------¦--------¦------------------------------------------------------")
+'    Call RaiseMessage(OZ80_LOG_INFO, "---------¦--------¦------------------------------------------------------")
     
     For s = 1 To SectionCount
         If Sections(s).Slot = SLOT1KB Then
             'Walk through the Chunks in this Slot
             For c = 1 To Sections(s).ChunkCount
                 'Place this Chunk
-                If ROMLayoutChunk(Sections(s).Chunks(c)) Then GoTo FinishLayout
+                Call ROMLayoutChunk(Sections(s).Chunks(c))
+                If Error Then GoTo FinishLayout
             Next c
             'Record the base address & bank of the Section
             Call AddUpdateLabel(Sections(s).Name, 0)
@@ -7489,22 +7444,23 @@ Private Function ROMLayout( _
         End If
     Next s
     
-    '-----------------------------------------------------------------------------------
+    '----------------------------------------------------------------------------------
     '[5]: Place un-Sectioned Chunks
-    '-----------------------------------------------------------------------------------
-    Call RaiseMessage(OZ80_LOG_INFO, "---------¦--------¦------------------------------------------------------")
+    '----------------------------------------------------------------------------------
+'    Call RaiseMessage(OZ80_LOG_INFO, "---------¦--------¦------------------------------------------------------")
     
     For c = 1 To Sections(0).ChunkCount
-        If ROMLayoutChunk(Sections(0).Chunks(c)) Then GoTo FinishLayout
+        Call ROMLayoutChunk(Sections(0).Chunks(c))
+        If Error Then GoTo FinishLayout
     Next c
     
-    '-----------------------------------------------------------------------------------
+    '----------------------------------------------------------------------------------
     '[6]: Place un-paged Sections
-    '-----------------------------------------------------------------------------------
+    '----------------------------------------------------------------------------------
     'Chunks that are assigned to Sections, but which Sections do not assign a Slot _
      pattern (for paging) are treated the same as un-Sectioned code and lumped into _
      the first 48 KB of ROM
-    Call RaiseMessage(OZ80_LOG_INFO, "---------¦--------¦------------------------------------------------------")
+'    Call RaiseMessage(OZ80_LOG_INFO, "---------¦--------¦------------------------------------------------------")
     
     'Go through the defined Sections looking for Sections with no Slots assigned
     For s = 1 To SectionCount
@@ -7513,7 +7469,8 @@ Private Function ROMLayout( _
             'Walk through the Chunks in this Slot
             For c = 1 To Sections(s).ChunkCount
                 'Place this Chunk
-                If ROMLayoutChunk(Sections(s).Chunks(c)) Then GoTo FinishLayout
+                Call ROMLayoutChunk(Sections(s).Chunks(c))
+                If Error Then GoTo FinishLayout
             Next c
             If Sections(s).ChunkCount <> 0 Then
                 'Record the base address & bank of the Section
@@ -7527,11 +7484,11 @@ Private Function ROMLayout( _
         End If
     Next s
     
-    '-----------------------------------------------------------------------------------
+    '----------------------------------------------------------------------------------
     '[7]: Place paged Sections
-    '-----------------------------------------------------------------------------------
+    '----------------------------------------------------------------------------------
     'TODO: Obviously implement correct rules for Slots...
-    Call RaiseMessage(OZ80_LOG_INFO, "---------¦--------¦------------------------------------------------------")
+'    Call RaiseMessage(OZ80_LOG_INFO, "---------¦--------¦------------------------------------------------------")
     
     For s = 1 To SectionCount
         'Is this Section assigned to a Slot pattern other than 'SEGA 1 KB'?
@@ -7539,7 +7496,8 @@ Private Function ROMLayout( _
             'Walk through the Chunks in this Section
             For c = 1 To Sections(s).ChunkCount
                 'Place this Chunk
-                If ROMLayoutChunk(Sections(s).Chunks(c)) Then GoTo FinishLayout
+                Call ROMLayoutChunk(Sections(s).Chunks(c))
+                If Error Then GoTo FinishLayout
             Next c
             If Sections(s).ChunkCount <> 0 Then
                 'Record the base address & bank of the Section
@@ -7553,249 +7511,24 @@ Private Function ROMLayout( _
         End If
     Next s
     
-    Call RaiseMessage(OZ80_LOG_INFO, LOG_LINEDOUBLE)
+'    Call RaiseMessage(OZ80_LOG_INFO, LOG_LINEDOUBLE)
     GoTo FinishLayout
     
-    '-----------------------------------------------------------------------------------
-    
-'    '*** TIMER BEGIN ***
-'    Call Profiler.EventBegin(EVENT_ROM_ADDCHUNK)
-'
-'    'TODO: If the ChunkSize is zero, discard it? _
-'           (We need to handle zero-sized Chunks earlier though -- how do we handle _
-'            references to empty Chunks? -- fixed and non-fixed)
-'
-'    'How big is the Chunk we're handling?
-'    Dim ChunkSize As Long: Let ChunkSize = Chunks(ChunkRef).Size
-'    Dim ChunkEnd As Long:  Let ChunkEnd = ChunkAddr + (ChunkSize - 1)
-'
-'    'The Layout is a 'linked-list' where each link contains a reference to the next _
-'     link in the chain. This allows us to re-order the items in the chain quickly _
-'     without having to shift up/down the entire list. The Layout list needs to always _
-'     be in order so that we can find the gaps between Chunks in the ROM Layout
-'    Dim i As Long
-'    Dim PrevLink As Long, NextLink As Long
-'
-'    'If there are no layout items yet, start the linked list
-'    '-----------------------------------------------------------------------------------
-'    If LayoutCount = 0 Then
-'        'TODO: Check the address is within the ROM space / overflow
-'        'Define the first Chunk in the layout _
-'         (fall through to `AddLink`)
-'
-'    '-----------------------------------------------------------------------------------
-'    'Do we have an address for the Chunk already?
-'    '-----------------------------------------------------------------------------------
-'    ElseIf ChunkAddr <> -1 Then
-'        'Search through the layout chain and find the point where our Chunk goes
-'        Let i = 1
-'        Do
-'            'Remember this link, should we reach a successful conclusion and need _
-'             to insert a link between this one and the next
-'            Let PrevLink = i
-'
-'            'Check if the current link comes after our Chunk's desired location
-'            '...........................................................................
-'            If Layout(i).AddrBegin > ChunkAddr Then
-'                'Check that our Chunk won't overlap the following one
-'                If ChunkEnd >= Layout(i).AddrBegin Then
-'                    'ERROR: Our Chunk will not fit in the desired location
-'                    Call RaiseError(OZ80_ERROR_LAYOUT, "TODO"): GoTo Finish
-'                End If
-'
-'                'TODO: Check our Chunk won't overlap the end of the ROM
-'
-'                Let NextLink = Layout(i).NextIndex
-'                GoTo AddLink
-'
-'            'If any Chunk is in the same place as our desired location, error
-'            '...........................................................................
-'            ElseIf Layout(i).AddrBegin = ChunkAddr Then
-'                'ERROR: Two Chunks want the same address
-'                Call RaiseError(OZ80_ERROR_LAYOUT, "TODO"): GoTo Finish
-'
-'            'If a Chunk comes before our desired location, _
-'             but its size precludes our desired location, then error
-'            '...........................................................................
-'            ElseIf Layout(i).AddrEnd >= ChunkAddr Then
-'                'ERROR: A Chunk is trying to be placed within another
-'                Call RaiseError(OZ80_ERROR_LAYOUT, "TODO"): GoTo Finish
-'            End If
-'
-'            'Follow the chain to the next item in the list
-'            Let i = Layout(i).NextIndex
-'            'If this is the end of the list, do not continue
-'            If i = 0 Then Exit Do
-'
-'        Loop
-'
-'        'If all links in the chain have been tested then we have come to the _
-'         conclusion that there is no Chunk after our desired address, and no Chunk _
-'         before that would overlap. We can go ahead and use the address we want
-'        '(fall through to `AddLink` below)
-'
-'    '-----------------------------------------------------------------------------------
-'    'Find the first available space to put the Chunk:
-'    '-----------------------------------------------------------------------------------
-'    Else
-'        'We will begin with attempting to place our Chunk from $67 onwards
-'        'TODO: Refine this definition -- System dependent
-'        Let ChunkAddr = &H67&
-'
-'        'Search through the layout chain and find the point where our Chunk goes
-'        Let i = 1
-'        Do
-'            'Remember this link, should we reach a successful conclusion and need _
-'             to insert a link between this one and the next
-'            Let PrevLink = i
-'            Let NextLink = Layout(i).NextIndex
-'
-'            'If the beginning of our Chunk clips the current Chunk:
-'            '...........................................................................
-'            If (ChunkAddr >= Layout(i).AddrBegin) _
-'            And (ChunkAddr <= Layout(i).AddrEnd) _
-'            Then
-'                'Push our location forward
-'                Let ChunkAddr = Layout(i).AddrEnd + 1
-'
-'            'If the end of our Chunk clips the current Chunk:
-'            '...........................................................................
-'            ElseIf (ChunkAddr + ChunkSize >= Layout(i).AddrBegin) _
-'               And (ChunkAddr + ChunkSize < Layout(i).AddrEnd) _
-'            Then
-'                'Push our location forward
-'                Let ChunkAddr = Layout(i).AddrEnd + 1
-'
-'            'If the current Chunk lies entirely within our Chunk:
-'            '...........................................................................
-'            ElseIf (Layout(i).AddrBegin >= ChunkAddr) _
-'               And (Layout(i).AddrEnd < ChunkAddr + ChunkSize) _
-'            Then
-'                'Push our location forward
-'                Let ChunkAddr = Layout(i).AddrEnd + 1
-'            End If
-'
-'            'Follow the chain to the next item in the list
-'            Let i = Layout(i).NextIndex
-'            'If this is the end of the list, do not continue
-'            If i = 0 Then Exit Do
-'        Loop
-'
-'        Let ChunkEnd = ChunkAddr + (ChunkSize - 1)
-'    End If
-'
-'    '-----------------------------------------------------------------------------------
-'AddLink:
-'    'Increase the number of links in the chain. _
-'     Note that they won't necessarily link in array order
-'    Let LayoutCount = LayoutCount + 1
-'    ReDim Preserve Layout(1 To LayoutCount) As oz80Layout
-'
-'    'Set the Chunk information on the newly crerated link
-'    Let Layout(LayoutCount).AddrBegin = ChunkAddr
-'    Let Layout(LayoutCount).AddrSize = ChunkSize
-'    Let Layout(LayoutCount).AddrEnd = ChunkEnd
-'
-'    If PrevLink <> 0 Then
-'        Let Layout(LayoutCount).PrevIndex = PrevLink
-'        Let Layout(PrevLink).NextIndex = LayoutCount
-'    End If
-'    If NextLink <> 0 Then
-'        Let Layout(LayoutCount).NextIndex = NextLink
-'        Let Layout(NextLink).PrevIndex = LayoutCount
-'    End If
-'
-'    '-----------------------------------------------------------------------------------
-'    With Chunks(ChunkRef)
-'
-'        Dim BankAddr As Long
-'        Let BankAddr = ChunkAddr Mod &H4000&
-'
-'        'Set the absolute ROM address on the Chunk
-'        Let .AddrReal = ChunkAddr
-'
-'        'Calculate the banked address (based on the Slot pattern)
-'        If (.Slot And SLOT1) <> 0 Then
-'            Let .AddrSlot = &H4000& + ChunkAddr
-'
-'        ElseIf (.Slot And SLOT2) <> 0 Then
-'            Let .AddrSlot = &H8000& + BankAddr
-'
-'        Else
-'            Let .AddrSlot = BankAddr
-'        End If
-'
-'        'Update the Label database with the new address
-'        Call AddUpdateLabel(.FullName, CDbl(.AddrSlot))
-'
-'        'TODO: Calculate Bank and apply to Chunk?
-'
-'        If ChunkEnd > ROMUsed Then Let ROMUsed = ChunkEnd
-'        'Is this going to fit in the ROM?
-'        If ROMUsed >= ROMSize Then
-'            'Keep doubling the ROM size until the contents fits
-'            Do While ROMUsed >= ROMSize: Let ROMSize = ROMSize * 2: Loop
-'            'TODO: Check for ROM too big (hard limit -- 32 MB -- and user limit)
-'            ReDim Preserve ROM(0 To ROMSize - 1) As Byte
-'        End If
-'
-'        'Copy the Chunk bytes into the ROM
-'        Call api_RtlMoveMemory( _
-'            DestinationPointer:=VarPtr(ROM(ChunkAddr)), _
-'                 SourcePointer:=VarPtr(.Data(1)), _
-'                        Length:=ChunkSize _
-'        )
-'
-'        Call RaiseMessage(OZ80_LOG_INFO, _
-'            "${$}:{$} | {$} | {$}", _
-'            HexStr8((ChunkAddr And &HFF0000) \ &H10000), _
-'            HexStr16(ChunkAddr And &HFFFF&), _
-'            Right$("      " & Format$(ChunkSize, "#,0"), 6), _
-'            .FullName _
-'        )
-'
-'        'Walk through the local properties in the Chunk and update their addresses too
-'        'TODO: Replace this Dictionary with something much faster
-'        Dim Key As Variant
-'        For Each Key In .Properties
-'            Call AddUpdateLabel( _
-'                .FullName & Key, _
-'                .AddrReal + .Properties(Key) _
-'            )
-'            Call RaiseMessage(OZ80_LOG_INFO, _
-'                "${$}:{$} | {$} | {$}", _
-'                HexStr8((.AddrReal + .Properties(Key) And &HFF0000) \ &H10000), _
-'                HexStr16(.AddrReal + .Properties(Key) And &HFFFF&), _
-'                "     .", _
-'                .FullName & Key _
-'            )
-'        Next
-'
-'    End With
-'
-'FinishChunk:
-'    Call Profiler.EventEnd(EVENT_ROM_ADDCHUNK)
-'    '*** TIMER END ***
-'    Return
-    
 FinishLayout:
-    '-----------------------------------------------------------------------------------
-    Let ROMLayout = My_Error
+    '----------------------------------------------------------------------------------
     Call Profiler.EventEnd(EVENT_ROM_LAYOUT)
     '*** TIMER END ***
-End Function
+End Sub
 
 'ROMLayoutChunk : Add a Chunk to the ROM, checking for collisions with other Chunks
-'=======================================================================================
+'======================================================================================
 'ChunkRef       | Which Chunk to add to the ROM
 '[ChunkAddr]    | Where specifically to put the Chunk, otherwise find a place
-'---------------¦-----------------------------------------------------------------------
-'Returns        | The error number
-'=======================================================================================
-Private Function ROMLayoutChunk( _
+'======================================================================================
+Private Sub ROMLayoutChunk( _
              ByRef ChunkRef As Long, _
     Optional ByRef ChunkAddr As Long = -1 _
-) As OZ80_ERROR
+)
     '*** TIMER BEGIN ***
     Call Profiler.EventBegin(EVENT_ROM_ADDCHUNK)
     
@@ -7815,15 +7548,15 @@ Private Function ROMLayoutChunk( _
     Dim PrevLink As Long, NextLink As Long
     
     'If there are no layout items yet, start the linked list
-    '-----------------------------------------------------------------------------------
+    '----------------------------------------------------------------------------------
     If LayoutCount = 0 Then
         'TODO: Check the address is within the ROM space / overflow
         'Define the first Chunk in the layout _
          (fall through to `AddLink`)
         
-    '-----------------------------------------------------------------------------------
+    '----------------------------------------------------------------------------------
     'Do we have an address for the Chunk already?
-    '-----------------------------------------------------------------------------------
+    '----------------------------------------------------------------------------------
     ElseIf ChunkAddr <> -1 Then
         'Search through the layout chain and find the point where our Chunk goes
         Let i = 1
@@ -7833,7 +7566,7 @@ Private Function ROMLayoutChunk( _
             Let PrevLink = i
             
             'Check if the current link comes after our Chunk's desired location
-            '...........................................................................
+            '..........................................................................
             If Layout(i).AddrBegin > ChunkAddr Then
                 'Check that our Chunk won't overlap the following one
                 If ChunkEnd >= Layout(i).AddrBegin Then
@@ -7847,14 +7580,14 @@ Private Function ROMLayoutChunk( _
                 GoTo AddLink
                 
             'If any Chunk is in the same place as our desired location, error
-            '...........................................................................
+            '..........................................................................
             ElseIf Layout(i).AddrBegin = ChunkAddr Then
                 'ERROR: Two Chunks want the same address
                 Call RaiseError(OZ80_ERROR_LAYOUT, "TODO"): GoTo Finish
                 
             'If a Chunk comes before our desired location, _
              but its size precludes our desired location, then error
-            '...........................................................................
+            '..........................................................................
             ElseIf Layout(i).AddrEnd >= ChunkAddr Then
                 'ERROR: A Chunk is trying to be placed within another
                 Call RaiseError(OZ80_ERROR_LAYOUT, "TODO"): GoTo Finish
@@ -7872,9 +7605,9 @@ Private Function ROMLayoutChunk( _
          before that would overlap. We can go ahead and use the address we want
         '(fall through to `AddLink` below)
         
-    '-----------------------------------------------------------------------------------
+    '----------------------------------------------------------------------------------
     'Find the first available space to put the Chunk:
-    '-----------------------------------------------------------------------------------
+    '----------------------------------------------------------------------------------
     Else
         'We will begin with attempting to place our Chunk from $67 onwards
         'TODO: Refine this definition -- System dependent
@@ -7889,7 +7622,7 @@ Private Function ROMLayoutChunk( _
             Let NextLink = Layout(i).NextIndex
             
             'If the beginning of our Chunk clips the current Chunk:
-            '...........................................................................
+            '..........................................................................
             If (ChunkAddr >= Layout(i).AddrBegin) _
             And (ChunkAddr <= Layout(i).AddrEnd) _
             Then
@@ -7897,7 +7630,7 @@ Private Function ROMLayoutChunk( _
                 Let ChunkAddr = Layout(i).AddrEnd + 1
             
             'If the end of our Chunk clips the current Chunk:
-            '...........................................................................
+            '..........................................................................
             ElseIf (ChunkAddr + ChunkSize >= Layout(i).AddrBegin) _
                And (ChunkAddr + ChunkSize < Layout(i).AddrEnd) _
             Then
@@ -7905,7 +7638,7 @@ Private Function ROMLayoutChunk( _
                 Let ChunkAddr = Layout(i).AddrEnd + 1
             
             'If the current Chunk lies entirely within our Chunk:
-            '...........................................................................
+            '..........................................................................
             ElseIf (Layout(i).AddrBegin >= ChunkAddr) _
                And (Layout(i).AddrEnd < ChunkAddr + ChunkSize) _
             Then
@@ -7922,7 +7655,7 @@ Private Function ROMLayoutChunk( _
         Let ChunkEnd = ChunkAddr + (ChunkSize - 1)
     End If
     
-    '-----------------------------------------------------------------------------------
+    '----------------------------------------------------------------------------------
 AddLink:
     'Increase the number of links in the chain. _
      Note that they won't necessarily link in array order
@@ -7943,7 +7676,7 @@ AddLink:
         Let Layout(NextLink).PrevIndex = LayoutCount
     End If
     
-    '-----------------------------------------------------------------------------------
+    '----------------------------------------------------------------------------------
     With Chunks(ChunkRef)
         Dim BankAddr As Long
         Let BankAddr = ChunkAddr Mod &H4000&
@@ -7979,19 +7712,19 @@ AddLink:
             End If
             
             'Copy the Chunk bytes into the ROM
-            Call api_RtlMoveMemory( _
-                DestinationPointer:=VarPtr(ROM(ChunkAddr)), _
-                     SourcePointer:=VarPtr(.Data(1)), _
-                            Length:=ChunkSize _
+            Call Win32.MemoryCopyBetween( _
+                  LengthBytes:=ChunkSize, _
+                OutputPointer:=VarPtr(ROM(ChunkAddr)), _
+                SourcePointer:=VarPtr(.Data(1)) _
             )
             
-            Call RaiseMessage(OZ80_LOG_INFO, _
-                "${$}:{$} | {$} | {$}", _
-                HexStr8((ChunkAddr And &HFF0000) \ &H10000), _
-                HexStr16(ChunkAddr And &HFFFF&), _
-                Right$("      " & Format$(ChunkSize, "#,0"), 6), _
-                .FullName _
-            )
+'            Call RaiseMessage(OZ80_LOG_INFO, _
+'                "${$}:{$} | {$} | {$}", _
+'                HexStr8((ChunkAddr And &HFF0000) \ &H10000), _
+'                HexStr16(ChunkAddr And &HFFFF&), _
+'                Right$("      " & Format$(ChunkSize, "#,0"), 6), _
+'                .FullName _
+'            )
             
             'Walk through the local properties in the Chunk and update their addresses too
             'TODO: Replace this Dictionary with something much faster
@@ -8001,33 +7734,29 @@ AddLink:
                     .FullName & Key, _
                     .AddrSlot + .Properties(Key) _
                 )
-                Call RaiseMessage(OZ80_LOG_INFO, _
-                    "${$}:{$} | {$} | {$}", _
-                    HexStr8((.AddrReal + .Properties(Key) And &HFF0000) \ &H10000), _
-                    HexStr16(.AddrReal + .Properties(Key) And &HFFFF&), _
-                    "     .", _
-                    .FullName & Key _
-                )
+'                Call RaiseMessage(OZ80_LOG_INFO, _
+'                    "${$}:{$} | {$} | {$}", _
+'                    HexStr8((.AddrReal + .Properties(Key) And &HFF0000) \ &H10000), _
+'                    HexStr16(.AddrReal + .Properties(Key) And &HFFFF&), _
+'                    "     .", _
+'                    .FullName & Key _
+'                )
             Next
         End If
     
     End With
     
 Finish:
-    Let ROMLayoutChunk = My_Error
     Call Profiler.EventEnd(EVENT_ROM_ADDCHUNK)
     '*** TIMER END ***
-End Function
-
-'/// GENERIC ///////////////////////////////////////////////////////////////////////////
-'/// Functions used anywhere throughout the class
+End Sub
 
 'ChunkExists : Test if a Chunk is in the array by the Label name
-'=======================================================================================
+'======================================================================================
 'LabelName      | Fully-qualified Label Name for the Chunk, e.g. "::Section:Label"
-'---------------¦-----------------------------------------------------------------------
+'---------------¦----------------------------------------------------------------------
 'Returns        | True if the Chunk exists, False otherwise
-'=======================================================================================
+'======================================================================================
 Private Property Get ChunkExists( _
     ByRef LabelName As String _
 ) As Boolean
@@ -8044,7 +7773,7 @@ Private Property Get ChunkExists( _
 End Property
 
 'GetChunk : Retrieves a Chunk in the array by its Label Name
-'=======================================================================================
+'======================================================================================
 Private Function GetChunk( _
     ByRef LabelName As String _
 ) As Long
@@ -8059,12 +7788,12 @@ Private Function GetChunk( _
 End Function
 
 'DeferExpression
-'=======================================================================================
+'======================================================================================
 'Kind           | Where the deferred Expression needs to be applied, ie. ROM / CONST ...
 'File           | Which file number the Expression is located within
 'TokenIndex     | Which Token within the file the Expression begins
 'ROMOffset      | For Z80 use, where in the ROM to write the calculated Value
-'=======================================================================================
+'======================================================================================
 Private Sub DeferExpression( _
     ByRef Kind As OZ80_DEFERRED, _
     ByRef File As Long, _
@@ -8087,45 +7816,47 @@ Private Sub DeferExpression( _
 End Sub
 
 'RaiseMessage : Provide a progress message
-'=======================================================================================
+'======================================================================================
 'LogLevel       | The type of log message, for filtering out lower-level messages
 'FormatText     | The message to log, which can include "{$}" markers to be replaced
 '               | with the values provided below
 'FormatValues...| A list of Variant values (Strings, Longs &c.) to fill in
-'=======================================================================================
+'======================================================================================
 Private Sub RaiseMessage( _
          ByRef LogLevel As OZ80_LOG, _
          ByRef FormatText As String, _
     ParamArray FormatValues() As Variant _
 )
-    Let LogMsg.Text = FormatText
+    Let LogStr.Text = FormatText
 
     'Are there any values to format?
     If UBound(FormatValues) < 0 Then
         'No, raise just the text given
-        RaiseEvent Message(LogLevel, LogMsg)
+        RaiseEvent Message(LogLevel, LogStr)
+        Call Log.Log(LogStr.Text)
     Else
         'Format the given log message before sending it up
-        RaiseEvent Message(LogLevel, LogMsg.Format(FormatValues))
+        RaiseEvent Message(LogLevel, LogStr.Format(FormatValues))
+        Call Log.Log(LogStr.Format(FormatValues).Text)
     End If
 End Sub
 
 'RiaseError : Provide error details through an event
-'=======================================================================================
+'======================================================================================
 'Number         | Error number to set on the Class and raise via Event
 'Message        | A context-specific error message
 '[FormatValues] | A list of values to replace string markers "{$}" in the error message
-'---------------¦-----------------------------------------------------------------------
+'---------------¦----------------------------------------------------------------------
 'Returns        | The same error number, for simple tail recursion
-'=======================================================================================
+'======================================================================================
 Private Function RaiseError( _
          ByRef Number As OZ80_ERROR, _
          ByRef Message As String, _
     ParamArray FormatValues() As Variant _
 ) As OZ80_ERROR
     'Set the error number on this class
-    Let My_Error = Number
-
+    Let Error = Number
+    
     If UBound(FormatValues) > LBound(FormatValues) Then
         'We're going to use a bluString for the handy formatting
         Dim StrError As bluString

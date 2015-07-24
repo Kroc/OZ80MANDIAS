@@ -1363,9 +1363,9 @@ Private Sub Class_Initialize()
     If blu.sys.WindowsAPILevel = VISTA_OR_HIGHER Then
         'NOTE: The use of null on the first parameter causes Windows to use the _
          user's current locale, so we don't need to manually fetch the locale name
-        Call Win32.TextConvertCase_NT6( _
+        Call Win32.StringConvertCase_NT6( _
                    LocaleNamePointer:=0&, _
-                               Flags:=vbCaseUpper Or vbCaseLinguistic, _
+                               Flags:=w32CaseUpper Or w32CaseLinguistic, _
                  SourceStringPointer:=VarPtr(Unicode(0)), _
                   SourceStringLength:=UBound(Unicode) + 1, _
                  ResultStringPointer:=VarPtr(CharToUpperCase(0)), _
@@ -1374,9 +1374,9 @@ Private Sub Class_Initialize()
         )
     Else
         'Use the Windows XP compatible API
-        Debug.Print Win32.TextConvertCase_NT5( _
+        Debug.Print Win32.StringConvertCase_NT5( _
                             LocaleID:=Win32.ThreadLocale, _
-                               Flags:=vbCaseUpper Or vbCaseLinguistic, _
+                               Flags:=w32CaseUpper Or w32CaseLinguistic, _
                  SourceStringPointer:=VarPtr(Unicode(0)), _
                   SourceStringLength:=UBound(Unicode) + 1, _
                  ResultStringPointer:=VarPtr(CharToUpperCase(0)), _

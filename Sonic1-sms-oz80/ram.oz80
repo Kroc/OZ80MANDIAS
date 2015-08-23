@@ -10,67 +10,67 @@
 
 TYPE    #levelHeader
 [
-.solidity                       BYTE            ;solidity data index
-.floorWidth                     WORD            ;width of the floor in blocks
-.floorHeight                    WORD            ;height of the floor in blocks
-.levelLeft                      WORD            ;left side of level on the floor px
-.levelRight                     WORD            ;right side of level on the floor (px)
-.levelTop                       WORD            ;top of the level on the floor (px)
-.levelBottom                    WORD            ;bottom of the level on the floor (px)
-.startX                         BYTE            ;Sonic's starting X position in blocks
-.startY                         BYTE            ;Sonic's starting Y position in blocks
-.floorLayout                    WORD            ;address of the floor layout data
-.floorSize                      WORD            ;size in bytes of the compressed data
-.blockMapping                   WORD            ;address for level's block mappings
-.levelArt                       WORD            ;address of compressed level art
-.spriteArt                      WORD            ;address of compressed sprite art
-.bank                           BYTE            ;bank number for sprite art (always 9)
-.initialPalette                 BYTE            ;index of initial level palette
-.cycleSpeed                     BYTE            ;speed of palette animation
-.cycleCount                     BYTE            ;number of palettes in cycle
-.cyclePalette                   BYTE            ;index of cycle palette
-.objectLayout                   WORD            ;address of Object layout data
-.scrollRingFlags                BYTE            
-.underwaterFlag                 BYTE    
-.timeLightningFlags             BYTE    
-.zero                           BYTE    
-.music                          BYTE            ;index of music
+    .solidity                   BYTE            ;solidity data index
+    .floorWidth                 WORD            ;width of the floor in blocks
+    .floorHeight                WORD            ;height of the floor in blocks
+    .levelLeft                  WORD            ;left side of level on the floor px
+    .levelRight                 WORD            ;right side of level on the floor (px)
+    .levelTop                   WORD            ;top of the level on the floor (px)
+    .levelBottom                WORD            ;bottom of the level on the floor (px)
+    .startX                     BYTE            ;Sonic's starting X position in blocks
+    .startY                     BYTE            ;Sonic's starting Y position in blocks
+    .floorLayout                WORD            ;address of the floor layout data
+    .floorSize                  WORD            ;size in bytes of the compressed data
+    .blockMapping               WORD            ;address for level's block mappings
+    .levelArt                   WORD            ;address of compressed level art
+    .spriteArt                  WORD            ;address of compressed sprite art
+    .bank                       BYTE            ;bank number for sprite art (always 9)
+    .initialPalette             BYTE            ;index of initial level palette
+    .cycleSpeed                 BYTE            ;speed of palette animation
+    .cycleCount                 BYTE            ;number of palettes in cycle
+    .cyclePalette               BYTE            ;index of cycle palette
+    .objectLayout               WORD            ;address of Object layout data
+    .scrollRingFlags            BYTE            
+    .underwaterFlag             BYTE    
+    .timeLightningFlags         BYTE    
+    .zero                       BYTE    
+    .music                      BYTE            ;index of music
 ]
 
 ;---------------------------------------------------------------------------------------
 
 TYPE    #mob                    ;26 bytes
 [
-.type                           BYTE    ;IX+$00    - the object type index number
-.Xsubpixel                      BYTE    ;IX+$01    - sub-pixel accuracy of X position
-.X                              WORD    ;IX+$02/03 - in px
-.Ysubpixel                      BYTE    ;IX+$04    - sub-pixel accuracy of Y position
-.Y                              WORD    ;IX+$05/06 - in px
-.Xspeed                         WORD    ;IX+$07/08 - in px, signed (i.e. $F??? = left)
-.Xdirection                     BYTE    ;IX+$09    - $FF for left, else $00
-.Yspeed                         WORD    ;IX+$0A/0B - in px, signed  (i.e. $F??? = up)
-.Ydirection                     BYTE    ;IX+$0C    - $FF for up, else $00
-.width                          BYTE    ;IX+$0D    - in px
-.height                         BYTE    ;IX+$0E    - in px
-.spriteLayout                   WORD    ;IX+$0F/10 - address to current sprite layout
-.unknown11                      BYTE    
-.unknown12                      BYTE    
-.unknown13                      BYTE    
-.unknown14                      BYTE    
-.unknown15                      BYTE    
-.unknown16                      BYTE    
-.unknown17                      BYTE    
-.flags                          TYPE [  ;various object flags
-        .unknown0               BOOL
-        .unknown1               BOOL
-        .unknown2               BOOL
-        .unknown3               BOOL
-        .underwater             BOOL    ;underwater flag
-        .noCollision            BOOL    ;whether the mob adheres to the floor or not
-        .unknown6               BOOL
-        .unknown7               BOOL
+    .type                       BYTE    ;IX+$00    - the object type index number
+    .Xsubpixel                  BYTE    ;IX+$01    - sub-pixel accuracy of X position
+    .X                          WORD    ;IX+$02/03 - in px
+    .Ysubpixel                  BYTE    ;IX+$04    - sub-pixel accuracy of Y position
+    .Y                          WORD    ;IX+$05/06 - in px
+    .Xspeed                     WORD    ;IX+$07/08 - in px, signed (i.e. $F??? = left)
+    .Xdirection                 BYTE    ;IX+$09    - $FF for left, else $00
+    .Yspeed                     WORD    ;IX+$0A/0B - in px, signed  (i.e. $F??? = up)
+    .Ydirection                 BYTE    ;IX+$0C    - $FF for up, else $00
+    .width                      BYTE    ;IX+$0D    - in px
+    .height                     BYTE    ;IX+$0E    - in px
+    .spriteLayout               WORD    ;IX+$0F/10 - address to current sprite layout
+    .unknown11                  BYTE    
+    .unknown12                  BYTE    
+    .unknown13                  BYTE    
+    .unknown14                  BYTE    
+    .unknown15                  BYTE    
+    .unknown16                  BYTE    
+    .unknown17                  BYTE    
+    .flags                      TYPE [  ;various mob flags
+            .unknown0           BOOL
+            .unknown1           BOOL
+            .unknown2           BOOL
+            .unknown3           BOOL
+            .underwater         BOOL    ;4 - underwater flag
+            .noCollision        BOOL    ;5 - whether the mob adheres to the floor or not
+            .unknown6           BOOL
+            .unknown7           BOOL
                                 ]
-.unknown19                      BYTE    ;unused?
+    .unknown19                  BYTE    ;unused?
 ]
 
 ;---------------------------------------------------------------------------------------

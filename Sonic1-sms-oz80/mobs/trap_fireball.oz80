@@ -12,7 +12,7 @@
 
 PROC    :mob_trap_fireball                      SECTION ::mobs                  ;$8C16
         ;==============================================================================
-PARAMS  IX`mob          HELP ""Address of the current mob being processed
+PARAMS  IX`mob          ``Address of the current mob being processed
 {
         res     5,[ix+#mob.flags]               ;mob adheres to the floor
                                                  ;(it doesn't move, so this is odd)

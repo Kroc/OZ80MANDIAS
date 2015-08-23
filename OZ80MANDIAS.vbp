@@ -1,6 +1,6 @@
 Type=Exe
-Reference=*\G{420B2830-E718-11CF-893D-00A0C9054228}#1.0#0#..\..\..\..\Windows\SysWOW64\scrrun.dll#Microsoft Scripting Runtime
-Reference=*\G{A6E3802C-CD9B-421B-9C8C-898318446C79}#0.1#0#CODE\blu\TLB\WIN32.tlb#WIN32
+Reference=*\G{420B2830-E718-11CF-893D-00A0C9054228}#1.0#0#..\..\Windows\SysWOW64\scrrun.dll#Microsoft Scripting Runtime
+Reference=*\G{11D1E60D-5A07-44A9-AED6-0DB03A024EBB}#0.d#0#CODE\blu\W32TLB\W32TLB.tlb#Make WIN32 API access easy!
 Form=CODE\UI.frm
 Class=bluString; CODE\blu\CORE\bluString.cls
 Class=bluProfiler; CODE\blu\DEBUG\bluProfiler.cls
@@ -12,6 +12,8 @@ Module=blu; CODE\blu\blu.bas
 Class=blu_Sys; CODE\blu\blu_Sys.cls
 Class=blu_Strings; CODE\blu\blu_Strings.cls
 Class=blu_FileSystem; CODE\blu\blu_FileSystem.cls
+Module=W32; CODE\blu\W32TLB\W32.bas
+RelatedDoc=CODE\blu\W32TLB\W32TLB.idl
 IconForm="UI"
 Startup="Sub Main"
 HelpFile=""

@@ -8,6 +8,8 @@
    =====================================================================================
 ;;
 
+SECTION ::sound         SLOT 1
+
 INCLUDE "driver.oz80"
 
 TABLE   :S1_MusicPointers                       SECTION ::sound                 ;$C716

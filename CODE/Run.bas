@@ -12,7 +12,7 @@ Private Sub Main()
     Let CommandArgs = blu.CommandParams()
     
     If LBound(CommandArgs) = 0 Then
-        MsgBox "OZ80MANDIAS usage:" & vbCrLf & vbCrLf _
+        MsgBox "OZ80MANDIAS usage:" & vbNewLine & vbNewLine _
              & "oz80mandias.exe <filePath>"
         Exit Sub
     End If

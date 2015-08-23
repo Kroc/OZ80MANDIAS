@@ -11,7 +11,7 @@
 PROC    :_LABEL_C52_106                         SECTION ::screens               ;$0C52
         ;==============================================================================
         ;map screen?
-PARAMS  IY`vars         HELP ""Address of the common variables (used throughout)
+PARAMS  IY`vars         ``Address of the common variables (used throughout)
 {
         ;reset horizontal / vertical scroll
         xor     A`zero                          ;set A to 0
@@ -66,7 +66,7 @@ PARAMS  IY`vars         HELP ""Address of the common variables (used throughout)
         
         ;load page 1 ($4000-$7FFF) with bank 5 ($14000-$17FFF)
         ld      A`bank          5
-        ld      [$#SMS.SLOT1]   A`bank
+        ld      [$#SMS.MAPPER.SLOT1]   A`bank
         ld      [$.SLOT1]       A`bank
         
         ;map 1 background
@@ -120,7 +120,7 @@ PARAMS  IY`vars         HELP ""Address of the common variables (used throughout)
         
         ;load page 1 ($4000-$7FFF) with bank 5 ($14000-$17FFF)
         ld      A`bank          5
-        ld      [$#SMS.SLOT1]   A`bank
+        ld      [$#SMS.MAPPER.SLOT1]   A`bank
         ld      [$.SLOT1]       A`bank
         
         ;map screen 2 background
@@ -249,7 +249,7 @@ PARAMS  IY`vars         HELP ""Address of the common variables (used throughout)
 PROC    :_0dd9                                  SECTION ::screens               ;$0DD9
         ;==============================================================================
         ;referenced by table at $1201
-PARAMS  IY`vars         HELP ""Address of the common variables (used throughout)
+PARAMS  IY`vars         ``Address of the common variables (used throughout)
 {    
         ld      hl,$0000
         ld      [$.TEMP1],hl
@@ -291,7 +291,7 @@ PARAMS  IY`vars         HELP ""Address of the common variables (used throughout)
 PROC    :_0e24                                  SECTION ::screens               ;$0E24
         ;==============================================================================
         ;referenced by table at $1201
-PARAMS  IY`vars         HELP ""Address of the common variables (used throughout)
+PARAMS  IY`vars         ``Address of the common variables (used throughout)
 {        
         ld      hl,$0000
         ld      [$.TEMP1],hl
@@ -316,7 +316,7 @@ PARAMS  IY`vars         HELP ""Address of the common variables (used throughout)
 PROC    :_0e4b                                  SECTION ::screens               ;$04EB
         ;==============================================================================
         ;referenced by table at $1201
-PARAMS  IY`vars         HELP ""Address of the common variables (used throughout)
+PARAMS  IY`vars         ``Address of the common variables (used throughout)
 {       
         ld      hl,$0000
         ld      [$.TEMP1],hl
@@ -355,7 +355,7 @@ TABLE   :_0e82                                  SECTION ::screens               
 
 PROC    :_LABEL_E86_110                         SECTION ::screens               ;$0E86
         ;==============================================================================
-PARAMS  IY`vars         HELP ""Address of the common variables (used throughout)
+PARAMS  IY`vars         ``Address of the common variables (used throughout)
         $.TEMP1
 {       
         push    HL, DE, BC
@@ -773,7 +773,7 @@ TABLE   :S1_ZoneTitles                          SECTION ::screens               
 
 PROC    :titleScreen                            SECTION ::screens               ;$1287
         ;==============================================================================
-PARAMS  IY`vars         HELP ""Address of the common variables (used throughout)
+PARAMS  IY`vars         ``Address of the common variables (used throughout)
 {        
         ;turn off screen
         ld      A, [$.VDPREGISTER_1]
@@ -800,7 +800,7 @@ PARAMS  IY`vars         HELP ""Address of the common variables (used throughout)
         
         ;now switch page 1 ($4000-$7FFF) to bank 5 ($14000-$17FFF)
         ld      A`bank          5
-        ld      [$#SMS.SLOT1]   A`bank
+        ld      [$#SMS.MAPPER.SLOT1]   A`bank
         ld      [$.SLOT1]       A`bank
         
         ;load the title screen itself
@@ -953,7 +953,7 @@ PARAMS  IY`vars         HELP ""Address of the common variables (used throughout)
 PROC    :_1401                                  SECTION ::screens               ;$1401
         ;==============================================================================
         ;Act Complete screen?
-PARAMS  IY`vars         HELP ""Address of the common variables (used throughout)
+PARAMS  IY`vars         ``Address of the common variables (used throughout)
 {        
         ;turn off the screen
         ld      a,[$.VDPREGISTER_1]
@@ -972,7 +972,7 @@ PARAMS  IY`vars         HELP ""Address of the common variables (used throughout)
         
         ;switch page 1 ($4000-$7FFF) to bank 5 ($14000-$17FFF)
         ld      A`bank          5
-        ld      [$#SMS.SLOT1]   A`bank
+        ld      [$#SMS.MAPPER.SLOT1]   A`bank
         ld      [$.SLOT1]       A`bank
         
         ;act complete background
@@ -1108,7 +1108,7 @@ PARAMS  IY`vars         HELP ""Address of the common variables (used throughout)
 PROC    :_155e                                  SECTION ::screens               ;$155E
         ;==============================================================================
         ;Act Complete screen?
-PARAMS  IY`vars         HELP ""Address of the common variables (used throughout)
+PARAMS  IY`vars         ``Address of the common variables (used throughout)
 {        
         ld      a, [$.CURRENT_LEVEL]
         cp      19
@@ -1135,7 +1135,7 @@ PARAMS  IY`vars         HELP ""Address of the common variables (used throughout)
         
         ;load page 1 ($4000-$7FFF) with bank 5 ($14000-$17FFF)
         ld      a,5
-        ld      [$#SMS.SLOT1],a
+        ld      [$#SMS.MAPPER.SLOT1],a
         ld      [$.SLOT1],a
         
         ;UNKNOWN
@@ -1361,7 +1361,7 @@ TABLE   :_1711                                  SECTION ::screens               
 
 PROC    :_1719                                  SECTION ::screens               ;$1719
         ;==============================================================================
-PARAMS  IY`vars         HELP ""Address of the common variables (used throughout)
+PARAMS  IY`vars         ``Address of the common variables (used throughout)
 {        
         xor     A`zero                          ;set A to 0
         ld      [$.RINGS]       A`zero          ;set ring-count to 0
@@ -1375,7 +1375,7 @@ PARAMS  IY`vars         HELP ""Address of the common variables (used throughout)
 PROC    :_1726                                  SECTION ::screens               ;$1726
         ;==============================================================================
         ;called by Act Complete screen?
-PARAMS  IY`vars         HELP ""Address of the common variables (used throughout)
+PARAMS  IY`vars         ``Address of the common variables (used throughout)
 {        
         ld      hl,$.D284
         inc     [hl]
@@ -1546,7 +1546,7 @@ PROC    :_172f                                  SECTION ::screens               
 
 PROC    :_1860                                  SECTION ::screens               ;$1860
         ;==============================================================================
-PARAMS  IY`vars         HELP ""Address of the common variables (used throughout)
+PARAMS  IY`vars         ``Address of the common variables (used throughout)
 {        
         push    bc
         
@@ -1770,7 +1770,7 @@ TABLE   :_1a14                                  SECTION ::screens               
 
 PROC    :_1a18                                  SECTION ::screens               ;$1A18
         ;==============================================================================
-PARAMS  IY`vars         HELP ""Address of the common variables (used throughout)
+PARAMS  IY`vars         ``Address of the common variables (used throughout)
 {        
         ld      [iy+#vars.spriteUpdateCount],$00
         ld      hl,$.SPRITETABLE
@@ -1970,7 +1970,7 @@ TABLE   :S1_ActComplete_Palette                 SECTION ::screens               
 PROC    :_1bad                                  SECTION ::screens               ;$1BAD
         ;==============================================================================
         ;Demo playback??
-PARAMS  IY`vars         HELP ""Address of the common variables (used throughout)
+PARAMS  IY`vars         ``Address of the common variables (used throughout)
 {        
         ld      hl,[$.D2B5]
         ld      de,._1bc6
@@ -1999,7 +1999,7 @@ PARAMS  IY`vars         HELP ""Address of the common variables (used throughout)
 
 PROC    :_LABEL_1C49_62                         SECTION ::screens               ;$1C49
         ;==============================================================================
-PARAMS  IY`vars         HELP ""Address of the common variables (used throughout)
+PARAMS  IY`vars         ``Address of the common variables (used throughout)
 {        
         ;;set bit 0 of the parameter address (IY=$D200); `waitForInterrupt` will pause
           until an interrupt event switches bit 0 of $D200 on ;;
@@ -2102,11 +2102,11 @@ PARAMS  hl`addr         ;memory address
 PROC    :_LABEL_1CED_131                        SECTION ::screens               ;$1CED
         ;==============================================================================
         ;start level? (could be main gameplay loop)
-PARAMS  IY`vars         HELP ""Address of the common variables (used throughout)
+PARAMS  IY`vars         ``Address of the common variables (used throughout)
 {        
         ;load page 1 (Z80:$4000-$7FFF) with bank 5 (ROM:$14000-$17FFF)
         ld      A`bank          5
-        ld      [$#SMS.SLOT1]   A`bank
+        ld      [$#SMS.MAPPER.SLOT1]   A`bank
         ld      [$.SLOT1]       A`bank
         
         ld      a, [$.CURRENT_LEVEL]
@@ -2162,7 +2162,7 @@ PARAMS  IY`vars         HELP ""Address of the common variables (used throughout)
         
         ;switch page 1 ($4000-$7FFF) to bank 11 ($2C000-$2FFFF)
         ld      a,11
-        ld      [$#SMS.SLOT1],a
+        ld      [$#SMS.MAPPER.SLOT1],a
         ld      [$.SLOT1],a
         
         ;are rings enabled?
@@ -2186,10 +2186,10 @@ PARAMS  IY`vars         HELP ""Address of the common variables (used throughout)
         
         ;switch pages 1 & 2 ($4000-$BFFF) to banks 1 & 2 ($4000-$BFFF)
         ld      a,1
-        ld      [$#SMS.SLOT1],a
+        ld      [$#SMS.MAPPER.SLOT1],a
         ld      [$.SLOT1],a
         ld      a,2
-        ld      [$#SMS.SLOT2],a
+        ld      [$#SMS.MAPPER.SLOT2],a
         ld      [$.SLOT2],a
         
         call    ::mobs:_2e5a
@@ -2214,7 +2214,7 @@ PARAMS  IY`vars         HELP ""Address of the common variables (used throughout)
         
         ;switch page 1 ($4000-$7FFF) to bank 11 ($2C000-$2FFFF)
         ld      a,11
-        ld      [$#SMS.SLOT1],a
+        ld      [$#SMS.MAPPER.SLOT1],a
         ld      [$.SLOT1],a
         
         ;are rings enabled?
@@ -2302,10 +2302,10 @@ PARAMS  IY`vars         HELP ""Address of the common variables (used throughout)
         
         ;switch pages 1 & 2 ($4000-$BFFF) to banks 1 & 2 ($4000-$BFFF)
         ld      a,1
-        ld      [$#SMS.SLOT1],a
+        ld      [$#SMS.MAPPER.SLOT1],a
         ld      [$.SLOT1],a
         ld      a,2
-        ld      [$#SMS.SLOT2],a
+        ld      [$#SMS.MAPPER.SLOT2],a
         ld      [$.SLOT2],a
         
         call    ::mobs:_2e5a
@@ -2347,7 +2347,7 @@ PARAMS  IY`vars         HELP ""Address of the common variables (used throughout)
 PROC    :_1e9e                                  SECTION ::screens               ;$1E9E
         ;==============================================================================
         ;demo mode?
-PARAMS  IY`vars         HELP ""Address of the common variables (used throughout)
+PARAMS  IY`vars         ``Address of the common variables (used throughout)
 {        
         bit     1,[iy+#vars.scrollRingFlags]
         ret     nz
@@ -2359,7 +2359,7 @@ PARAMS  IY`vars         HELP ""Address of the common variables (used throughout)
         call    ::interrupts:waitForInterrupt
         ld      [iy+#vars.spriteUpdateCount],a
         ld      a,11
-        ld      [$#SMS.SLOT1],a
+        ld      [$#SMS.MAPPER.SLOT1],a
         ld      [$.SLOT1],a
         
         ;are rings enabled?
@@ -2372,7 +2372,7 @@ PARAMS  IY`vars         HELP ""Address of the common variables (used throughout)
         jr      nz,._1
         
         ld      A`bank          ::sound.bank
-        ld      [$#SMS.SLOT1]   A`bank
+        ld      [$#SMS.MAPPER.SLOT1]   A`bank
         ld      [$.SLOT1]       A`bank
         call    ::sound:public.unpause
         
@@ -2446,10 +2446,10 @@ PROC    :_1f06                                  SECTION ::screens               
         
         di      
         ld      a,1
-        ld      [$#SMS.SLOT1],a
+        ld      [$#SMS.MAPPER.SLOT1],a
         ld      [$.SLOT1],a
         ld      a,2
-        ld      [$#SMS.SLOT2],a
+        ld      [$#SMS.MAPPER.SLOT2],a
         ld      [$.SLOT2],a
         
         ld      e,$00
@@ -2464,15 +2464,15 @@ PROC    :_1f06                                  SECTION ::screens               
         ld      b,$00
         add     hl,bc
         add     a,e
-        out     [$#SMS.VDP.CONTROL],a
+        out     [$#SMS_PORTS.VDP.CONTROL],a
         ld      a,%11000000
-        out     [$#SMS.VDP.CONTROL],a
+        out     [$#SMS_PORTS.VDP.CONTROL],a
         ld      a,[$.D2B1]
         and     $01
         ld      a,[hl]
         jr      z,._2
         ld      a,[$.D2B3]
-._2     out     [$#SMS.VDP.DATA],a
+._2     out     [$#SMS_PORTS.VDP.DATA],a
         
         ei      
         ret
@@ -2552,7 +2552,7 @@ TABLE   :_1fa5                                  SECTION ::screens               
 
 PROC    :_1fa9                                  SECTION ::screens               ;$1FA9
         ;==============================================================================
-PARAMS  IY`vars         HELP ""Address of the common variables (used throughout)
+PARAMS  IY`vars         ``Address of the common variables (used throughout)
 {        
         dec     a
         ld      [$.D289],a
@@ -2654,7 +2654,7 @@ PROC    :add10Rings                             SECTION ::screens               
 
 PROC    :_203f                                  SECTION ::screens               ;$203F
         ;==============================================================================
-PARAMS  IY`vars         HELP ""Address of the common variables (used throughout)
+PARAMS  IY`vars         ``Address of the common variables (used throughout)
 {        
         ld      a,$07
         rst     :rst_playSFX
@@ -2670,7 +2670,7 @@ TABLE   :_2047                                  SECTION ::screens               
 
 PROC    :_2067                                  SECTION ::screens               ;$2067
         ;==============================================================================
-PARAMS  IY`vars         HELP ""Address of the common variables (used throughout)
+PARAMS  IY`vars         ``Address of the common variables (used throughout)
 {        
         dec     a
         ld      [$.D287],a
@@ -2702,7 +2702,7 @@ PARAMS  IY`vars         HELP ""Address of the common variables (used throughout)
 
 PROC    :disableWaterline                       SECTION ::screens               ;$20A4
         ;==============================================================================
-PARAMS  IY`vars         HELP ""Address of the common variables (used throughout)
+PARAMS  IY`vars         ``Address of the common variables (used throughout)
 {        
         ;;wait until the water raster effect has finished its work
          (it requires three interrupts to produce);;
@@ -2724,7 +2724,7 @@ PROC    :_20b8                                  SECTION ::screens               
         ;==============================================================================
 {        
         ld      A`bank          ::sound.bank
-        ld      [$#SMS.SLOT1]   A`bank
+        ld      [$#SMS.MAPPER.SLOT1]   A`bank
         ld      [$.SLOT1]       A`bank
         
         ld      hl,$0028
@@ -2737,8 +2737,8 @@ PROC    :_20b8                                  SECTION ::screens               
         
 PROC    :loadLevel                              SECTION ::screens               ;$20CB
         ;==============================================================================
-PARAMS  IY`vars         HELP ""Address of the common variables (used throughout)
-        HL`header       HELP ""Address of the level header
+PARAMS  IY`vars         ``Address of the common variables (used throughout)
+        HL`header       ``Address of the level header
 {
         ;PAGE 1 ($4000-$7FFF) is at BANK 5 ($14000-$17FFF)
         
@@ -3018,18 +3018,18 @@ PARAMS  IY`vars         HELP ""Address of the common variables (used throughout)
         sub     $40
         ld      h,a
         ld      a,6
-        ld      [$#SMS.SLOT1],a
+        ld      [$#SMS.MAPPER.SLOT1],a
         ld      [$.SLOT1],a
         ld      a,7
-        ld      [$#SMS.SLOT2],a
+        ld      [$#SMS.MAPPER.SLOT2],a
         ld      [$.SLOT2],a
         jr      ._10
         
 ._9     ld      a,5
-        ld      [$#SMS.SLOT1],a
+        ld      [$#SMS.MAPPER.SLOT1],a
         ld      [$.SLOT1],a
         ld      a,6
-        ld      [$#SMS.SLOT2],a
+        ld      [$#SMS.MAPPER.SLOT2],a
         ld      [$.SLOT2],a
         
 ._10    ei                                      ;enable interrupts
@@ -3116,10 +3116,10 @@ PARAMS  IY`vars         HELP ""Address of the common variables (used throughout)
         ;switch pages 1 & 2 ($4000-$BFFF) to banks 1 & 2 ($4000-$BFFF)
         di      
         ld      a,1
-        ld      [$#SMS.SLOT1],a
+        ld      [$#SMS.MAPPER.SLOT1],a
         ld      [$.SLOT1],a
         ld      a,2
-        ld      [$#SMS.SLOT2],a
+        ld      [$#SMS.MAPPER.SLOT2],a
         ld      [$.SLOT2],a
         ei      
         
@@ -3178,10 +3178,10 @@ PARAMS  IY`vars         HELP ""Address of the common variables (used throughout)
         ;switch pages 1 & 2 ($4000-$BFFF) to banks 1 & 2 ($4000-$BFFF)
         di      
         ld      a,1
-        ld      [$#SMS.SLOT1],a
+        ld      [$#SMS.MAPPER.SLOT1],a
         ld      [$.SLOT1],a
         ld      a,2
-        ld      [$#SMS.SLOT2],a
+        ld      [$#SMS.MAPPER.SLOT2],a
         ld      [$.SLOT2],a
         ei      
         
@@ -3212,7 +3212,7 @@ PARAMS  IY`vars         HELP ""Address of the common variables (used throughout)
         
         ;switch page 1 ($4000-$BFFF) to page 5 ($14000-$17FFF)
         ld      a,5
-        ld      [$#SMS.SLOT1],a
+        ld      [$#SMS.MAPPER.SLOT1],a
         ld      [$.SLOT1],a
         call    :loadObjectLayout
         
@@ -3328,7 +3328,7 @@ PARAMS  hl      ;address of an object layout
 
 PROC    :loadObject                             SECTION ::screens               ;$235E
         ;------------------------------------------------------------------------------
-PARAMS  IX`mob          HELP ""Address of the current mob being processed
+PARAMS  IX`mob          ``Address of the current mob being processed
         a               ;object type
         de              ;?
         hl              ;address with the X & Y positions of the object
@@ -3530,7 +3530,7 @@ TABLE   :_2405                                  SECTION ::screens               
 ;end sequence screens?
 PROC    :_LABEL_258B_133                        SECTION ::screens               ;$258B
         ;==============================================================================
-PARAMS  IY`vars         HELP ""Address of the common variables (used throughout)
+PARAMS  IY`vars         ``Address of the common variables (used throughout)
 {
         ld      a, [$.VDPREGISTER_1]
         and     %10111111
@@ -3556,7 +3556,7 @@ PARAMS  IY`vars         HELP ""Address of the common variables (used throughout)
         
         ;load page 1 ($4000-$7FFF) with bank 5 ($14000-$17FFF)
         ld      a,5
-        ld      [$#SMS.SLOT1],a
+        ld      [$#SMS.MAPPER.SLOT1],a
         ld      [$.SLOT1],a
         
         ;map 3 screen (end of game)
@@ -3575,7 +3575,7 @@ PARAMS  IY`vars         HELP ""Address of the common variables (used throughout)
         call    ::interrupts:waitForInterrupt
         
         ld      a,1
-        ld      [$#SMS.SLOT1],a
+        ld      [$#SMS.MAPPER.SLOT1],a
         ld      [$.SLOT1],a
         ld      a,[$.D27F]
         cp      $06
@@ -3657,7 +3657,7 @@ PARAMS  IY`vars         HELP ""Address of the common variables (used throughout)
         ld      [iy+#vars.spriteUpdateCount],$00
         
         ld      a,5
-        ld      [$#SMS.SLOT1],a
+        ld      [$#SMS.MAPPER.SLOT1],a
         ld      [$.SLOT1],a
         
         ;UNKNOWN
@@ -3698,7 +3698,7 @@ PARAMS  IY`vars         HELP ""Address of the common variables (used throughout)
         call    ::main:decompressArt
         
         ld      a,5
-        ld      [$#SMS.SLOT1],a
+        ld      [$#SMS.MAPPER.SLOT1],a
         ld      [$.SLOT1],a
         
         ;credits screen
@@ -3757,7 +3757,7 @@ PARAMS  IY`vars         HELP ""Address of the common variables (used throughout)
 
 PROC    :_2718                                  SECTION ::screens               ;$2718
         ;==============================================================================
-PARAMS  IY`vars         HELP ""Address of the common variables (used throughout)
+PARAMS  IY`vars         ``Address of the common variables (used throughout)
 {        
         push    AF, HL, DE, BC
 ._1     push    BC
@@ -3789,9 +3789,9 @@ PARAMS  IY`vars         HELP ""Address of the common variables (used throughout)
 
 PROC    :waitFrames                             SECTION ::screens               ;$2745
         ;==============================================================================
-HELP  ""Wait a given number of frames
-PARAMS  IY`vars         HELP ""Address of the common variables (used throughout)
-        BC`count        HELP ""Number of frames to wait
+HELP  ``Wait a given number of frames
+PARAMS  IY`vars         ``Address of the common variables (used throughout)
+        BC`count        ``Number of frames to wait
 {        
         push    BC`count
         
@@ -3935,24 +3935,24 @@ PROC    :_2795                                  SECTION ::screens               
         
 ._5     di      
         ld      a,l
-        out     [$#SMS.VDP.CONTROL],a
+        out     [$#SMS_PORTS.VDP.CONTROL],a
         ld      a,h
-        out     [$#SMS.VDP.CONTROL],a
+        out     [$#SMS_PORTS.VDP.CONTROL],a
         push    ix
         pop     ix
-        in      a,[$#SMS.VDP.DATA]
+        in      a,[$#SMS_PORTS.VDP.DATA]
         ld      c,a
         push    ix
         pop     ix
         ld      a,e
-        out     [$#SMS.VDP.CONTROL],a
+        out     [$#SMS_PORTS.VDP.CONTROL],a
         ld      a,d
         or      $40
-        out     [$#SMS.VDP.CONTROL],a
+        out     [$#SMS_PORTS.VDP.CONTROL],a
         push    ix
         pop     ix
         ld      a,c
-        out     [$#SMS.VDP.DATA],a
+        out     [$#SMS_PORTS.VDP.DATA],a
         push    ix
         pop     ix
         ei      

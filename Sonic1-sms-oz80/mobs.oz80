@@ -166,7 +166,7 @@ PROC    :_2e5a                                  SECTION ::mobs                  
         ;update display -- refreshes the lives & time display, updates the camera
          ;and processes all the mobs in the level
         
-PARAMS  IY`vars         HELP ""Address of the common variables (used throughout)
+PARAMS  IY`vars         ``Address of the common variables (used throughout)
 {        
         ;do not update the Sonic sprite frame
         res     7,[IY+#vars.timeLightningFlags]
@@ -260,7 +260,7 @@ PARAMS  IY`vars         HELP ""Address of the common variables (used throughout)
 
 PROC    :displayRingCount                       SECTION ::mobs                  ;$2EE6
         ;===============================================================================
-HELP  ""Update the player's ring-count on the screen
+HELP  ``Update the player's ring-count on the screen
 {        
         ld      A`rings         [$.RINGS]
         ld      C`rings         A`rings
@@ -298,7 +298,7 @@ HELP  ""Update the player's ring-count on the screen
 
 PROC    :displayTime                            SECTION ::mobs                  ;$2F1F
         ;===============================================================================
-HELP  ""Draws the level time on the screen
+HELP  ``Draws the level time on the screen
 {        
         ld      HL`buffer       $.LAYOUT_BUFFER
         
@@ -355,7 +355,7 @@ HELP  ""Draws the level time on the screen
         ;update camera? called only by ":_2e5a"
 PROC    :_2f66                                  SECTION ::mobs                  ;$2F66
         ;===============================================================================
-PARAMS  IY`vars         HELP ""Address of the common variables (used throughout)
+PARAMS  IY`vars         ``Address of the common variables (used throughout)
 {
         ;if scrolling is locked, do nothing
         bit     6,[IY+#vars.timeLightningFlags]
@@ -730,7 +730,7 @@ PROC    :unused_31d7                            SECTION ::mobs                  
 
 PROC    :_31db                                  SECTION ::mobs                  ;$31DB
         ;===============================================================================
-PARAMS  IY`vars         HELP ""Address of the common variables (used throughout)
+PARAMS  IY`vars         ``Address of the common variables (used throughout)
         HL
 {       ;not applicable with up-down wave scrolling
         bit     6,[IY+#vars.scrollRingFlags]
@@ -744,7 +744,7 @@ PARAMS  IY`vars         HELP ""Address of the common variables (used throughout)
 
 PROC    :_31e6                                  SECTION ::mobs                  ;$31E6
         ;===============================================================================
-PARAMS  IX`mob          HELP ""Address of the current mob being processed
+PARAMS  IX`mob          ``Address of the current mob being processed
 {        
         ld      a,[$.FRAMECOUNT]
         and     $07
@@ -857,7 +857,7 @@ PROC    :doMobs                                 SECTION ::mobs                  
         ;===============================================================================
         ;runs the code for each of the mobs in memory
         
-PARAMS  IY`vars         HELP ""Address of the common variables (used throughout)
+PARAMS  IY`vars         ``Address of the common variables (used throughout)
 {        
         ;;starting from $D37E, read 16-bit numbers until a non-zero one is found,
           or 31 numbers have been read;;
@@ -939,7 +939,7 @@ PROC    :doMobGeneric                          SECTION ::mobs                   
         ;;once a mob has run its personal code, this routine handles things that
           all mobs share, such as moving the mob, and collision with Sonic;;
         
-PARAMS  IX`mob          HELP ""Address of the current mob being processed
+PARAMS  IX`mob          ``Address of the current mob being processed
 {       
         ;move mob
         ;-------------------------------------------------------------------------------
@@ -1280,14 +1280,14 @@ PARAMS  IX`mob          HELP ""Address of the current mob being processed
 
 PROC    :processSpriteLayout                    SECTION ::mobs                  ;$350F
         ;===============================================================================
-HELP """Puts a mob on the screen, combining multiple sprites using a Sprite Layout -
+HELP ```Puts a mob on the screen, combining multiple sprites using a Sprite Layout -
         a list of sprites to arrange in a maximum 6x4 layout
-        """
-PARAMS  IY`vars         HELP ""Address of the common variables (used throughout)
-        hl              HELP ""X-position to place sprite layout on screen
+        ```
+PARAMS  IY`vars         ``Address of the common variables (used throughout)
+        hl              ``X-position to place sprite layout on screen
         d               ;?? (some kind of control flag)
-        e`ypos          HELP ""Y-position to place sprite layout on screen
-        bc`layout       HELP ""Address of a sprite layout
+        e`ypos          ``Y-position to place sprite layout on screen
+        bc`layout       ``Address of a sprite layout
 {
         ;store the X-position of the sprite for aligning the rows
         ld      [$.TEMP6], hl`xpos
@@ -1414,7 +1414,7 @@ PARAMS  IY`vars         HELP ""Address of the common variables (used throughout)
 
 PROC    :_3581                                  SECTION ::mobs                  ;$3581
         ;===============================================================================
-PARAMS  IY`vars         HELP ""Address of the common variables (used throughout)
+PARAMS  IY`vars         ``Address of the common variables (used throughout)
 {        
         ld      hl,[$.TEMP3]
         ld      bc,[$.TEMP6]
@@ -1464,11 +1464,11 @@ PARAMS  IY`vars         HELP ""Address of the common variables (used throughout)
 
 PROC    :layoutSpritesHorizontal                SECTION ::mobs                  ;$35CC
         ;===============================================================================
-HELP """Places a set of sprites next to each other, dictated by a small data stream of
+HELP ```Places a set of sprites next to each other, dictated by a small data stream of
         indexes, with $FE to leave a blank space and $FF to terminate. This routine is
         typically used to place text and numbers on screen.
-        """
-PARAMS  IY`vars         HELP ""Address of the common variables (used throughout)
+        ```
+PARAMS  IY`vars         ``Address of the common variables (used throughout)
         B`ypos
         C`xpos
         HL`addr         ;($.SPRITETABLE_ADDR)  
@@ -1500,7 +1500,7 @@ PARAMS  IY`vars         HELP ""Address of the common variables (used throughout)
 
 PROC    :hitPlayer                              SECTION ::mobs                  ;$35E5
         ;===============================================================================
-PARAMS  IY`vars         HELP ""Address of the common variables (used throughout)
+PARAMS  IY`vars         ``Address of the common variables (used throughout)
 {
         bit     0,[IY+#vars.scrollRingFlags]    ;is the player already dead?
         ret     nz                              ;if so, leave now
@@ -1566,8 +1566,8 @@ PROC    :dropRings                              SECTION ::mobs                  
         ;-------------------------------------------------------------------------------
         ;lose rings!
         
-PARAMS  IX`mob          HELP ""Address of the current mob being processed
-        IY`vars         HELP ""Address of the common variables (used throughout)
+PARAMS  IX`mob          ``Address of the current mob being processed
+        IY`vars         ``Address of the common variables (used throughout)
         HL              ;?
 {       
         ;set player's ring-count to 0
@@ -1631,10 +1631,10 @@ PARAMS  IX`mob          HELP ""Address of the current mob being processed
 
 PROC    :_36be                                  SECTION ::mobs                  ;$36BE
         ;-------------------------------------------------------------------------------
-PARAMS  IX`mob          HELP ""Address of the current mob being processed
+PARAMS  IX`mob          ``Address of the current mob being processed
         ;TODO: we could use BC/DE as parameters instead of RAM addresses?
-        $.TEMP1         HELP ""An X-offset to place the explosion in the right place
-        $.TEMP2         HELP ""A Y-offset to place the explosion in the right place
+        $.TEMP1         ``An X-offset to place the explosion in the right place
+        $.TEMP2         ``A Y-offset to place the explosion in the right place
 {        
         ld      [IX+#mob.type]  $0A             ;change mob to explosion
         
@@ -1678,14 +1678,14 @@ PARAMS  IX`mob          HELP ""Address of the current mob being processed
 
 PROC    :getFloorLayoutRAMAddressForMob         SECTION ::mobs                  ;$36F9
         ;===============================================================================
-HELP """Retrieves a location in the Floor Layout in RAM based on the current mob
-        """
-PARAMS  IX`mob          HELP ""Address of the current mob being processed
-        BC`xOffset      HELP ""Horizontal pixel offset to add to the mob's X position
-                             ""before locating tile
-        DE`yOffset      HELP ""Vertical pixel offset to add to the mob's Y position
-                             ""before locating tile
-RETURN  HL`addr         HELP ""An address within the floor layout in RAM
+HELP ```Retrieves a location in the Floor Layout in RAM based on the current mob
+        ```
+PARAMS  IX`mob          ``Address of the current mob being processed
+        BC`xOffset      ``Horizontal pixel offset to add to the mob's X position
+                        ``before locating tile
+        DE`yOffset      ``Vertical pixel offset to add to the mob's Y position
+                        ``before locating tile
+RETURN  HL`addr         ``An address within the floor layout in RAM
 {
         ;how wide is the floor layout?
         ld      A`floorWidth    [$.LEVEL_FLOORWIDTH]
@@ -1860,9 +1860,9 @@ RETURN  HL`addr         HELP ""An address within the floor layout in RAM
 
 PROC    :updateSonicSpriteFrame                 SECTION ::mobs                  ;$37E0
         ;===============================================================================
-HELP """Copy the current Sonic animation frame into the sprite data
-        """
-PARAMS  IY`vars         HELP ""Address of the common variables (used throughout)
+HELP ```Copy the current Sonic animation frame into the sprite data
+        ```
+PARAMS  IY`vars         ``Address of the common variables (used throughout)
 {        
         ld      DE`frameCurrent [$.SONIC_CURRENT_FRAME]
         ld      HL`framePrev    [$.SONIC_PREVIOUS_FRAME]
@@ -1882,13 +1882,13 @@ PARAMS  IY`vars         HELP ""Address of the common variables (used throughout)
         
         ;-------------------------------------------------------------------------------
         ld      A`low           E`vram          ;$80
-        out     [$#SMS.VDP.CONTROL] A`low
+        out     [$#SMS_PORTS.VDP.CONTROL] A`low
         ld      A`hi            D`vram          ;$36
         or      %01000000                       ;set bit 6 to specify a VDP address
-        out     [$#SMS.VDP.CONTROL] A`hi
+        out     [$#SMS_PORTS.VDP.CONTROL] A`hi
         
         xor     A`zero                          ;set A to 0
-        ld      c, $#SMS.VDP.DATA
+        ld      c, $#SMS_PORTS.VDP.DATA
         ld      e, 24
         
         ;;by nature of the way the VDP stores image colours across bit-planes, and
@@ -1898,19 +1898,19 @@ PARAMS  IY`vars         HELP ""Address of the common variables (used throughout)
 ._1     outi
         outi
         outi
-        out     [$#SMS.VDP.DATA]    A`zero
+        out     [$#SMS_PORTS.VDP.DATA]    A`zero
         outi
         outi
         outi
-        out     [$#SMS.VDP.DATA]    A`zero
+        out     [$#SMS_PORTS.VDP.DATA]    A`zero
         outi
         outi
         outi
-        out     [$#SMS.VDP.DATA]    A`zero
+        out     [$#SMS_PORTS.VDP.DATA]    A`zero
         outi
         outi
         outi
-        out     [$#SMS.VDP.DATA]    A`zero
+        out     [$#SMS_PORTS.VDP.DATA]    A`zero
         
         dec     e
         jp      nz, ._1
@@ -1925,10 +1925,10 @@ PARAMS  IY`vars         HELP ""Address of the common variables (used throughout)
         add     hl, bc
         
         ld      a, e
-        out     [$#SMS.VDP.CONTROL], a
+        out     [$#SMS_PORTS.VDP.CONTROL], a
         ld      a, d
         or      %01000000
-        out     [$#SMS.VDP.CONTROL], a
+        out     [$#SMS_PORTS.VDP.CONTROL], a
         
         exx
         push    bc
@@ -1941,22 +1941,22 @@ PARAMS  IY`vars         HELP ""Address of the common variables (used throughout)
 ._3     outi
         outi
         outi
-        out     [$#SMS.VDP.DATA], a
+        out     [$#SMS_PORTS.VDP.DATA], a
         add     hl, de
         outi
         outi
         outi
-        out     [$#SMS.VDP.DATA], a
+        out     [$#SMS_PORTS.VDP.DATA], a
         add     hl, de
         outi
         outi
         outi
-        out     [$#SMS.VDP.DATA], a
+        out     [$#SMS_PORTS.VDP.DATA], a
         add     hl, de
         outi
         outi
         outi
-        out     [$#SMS.VDP.DATA], a
+        out     [$#SMS_PORTS.VDP.DATA], a
         add     hl, de
         exx
         dec     b
@@ -1985,26 +1985,26 @@ PROC    :updateRingFrame                        SECTION ::mobs                  
         ex      de,hl
         di      
         ld      a,e
-        out     [$#SMS.VDP.CONTROL],a
+        out     [$#SMS_PORTS.VDP.CONTROL],a
         ld      a,d
         or      %01000000
-        out     [$#SMS.VDP.CONTROL],a
+        out     [$#SMS_PORTS.VDP.CONTROL],a
         ld      b,$20
         
 .loop   ld      a,[hl]
-        out     [$#SMS.VDP.DATA],a
+        out     [$#SMS_PORTS.VDP.DATA],a
         nop     
         inc     hl
         ld      a,[hl]
-        out     [$#SMS.VDP.DATA],a
+        out     [$#SMS_PORTS.VDP.DATA],a
         nop     
         inc     hl
         ld      a,[hl]
-        out     [$#SMS.VDP.DATA],a
+        out     [$#SMS_PORTS.VDP.DATA],a
         nop     
         inc     hl
         ld      a,[hl]
-        out     [$#SMS.VDP.DATA],a
+        out     [$#SMS_PORTS.VDP.DATA],a
         inc     hl
         djnz    .loop
         
@@ -2102,28 +2102,28 @@ PROC    :_LABEL_38B0_51                         SECTION ::mobs                  
         ld      b, $02
 
 .loop   ld      a, l
-        out     [$#SMS.VDP.CONTROL], a
+        out     [$#SMS_PORTS.VDP.CONTROL], a
         ld      a, h
         or      %01000000
-        out     [$#SMS.VDP.CONTROL], a
+        out     [$#SMS_PORTS.VDP.CONTROL], a
         
         ld      a, [de]
-        out     [$#SMS.VDP.DATA], a
+        out     [$#SMS_PORTS.VDP.DATA], a
         inc     de
         nop
         nop
         ld      a, [de]
-        out     [$#SMS.VDP.DATA], a
+        out     [$#SMS_PORTS.VDP.DATA], a
         inc     de
         nop
         nop
         ld      a, [de]
-        out     [$#SMS.VDP.DATA], a
+        out     [$#SMS_PORTS.VDP.DATA], a
         inc     de
         nop
         nop
         ld      a, [de]
-        out     [$#SMS.VDP.DATA], a
+        out     [$#SMS_PORTS.VDP.DATA], a
         inc     de
         
         ld      a, b
@@ -2137,13 +2137,13 @@ PROC    :_LABEL_38B0_51                         SECTION ::mobs                  
 
 PROC    :detectCollisionWithSonic               SECTION ::mobs                  ;$3956
         ;===============================================================================
-HELP """Tests to see if the given mob has collided with Sonic
-        """
-PARAMS  IX`mob          HELP ""Address of the current mob being processed
-        IY`vars         HELP ""Address of the common variables (used throughout)
-        $.TEMP6         HELP ""Left indent of the mob, in pixels
-        $.TEMP7         HELP ""Top indent of the mob, in pixels
-RETURN  AF`carry        HELP ""Carry flag is clear if collision, otherwise set
+HELP ```Tests to see if the given mob has collided with Sonic
+        ```
+PARAMS  IX`mob          ``Address of the current mob being processed
+        IY`vars         ``Address of the common variables (used throughout)
+        $.TEMP6         ``Left indent of the mob, in pixels
+        $.TEMP7         ``Top indent of the mob, in pixels
+RETURN  AF`carry        ``Carry flag is clear if collision, otherwise set
 {
         ;is Sonic dead? (no collision detection)
         bit     0,[IY+#vars.scrollRingFlags]
@@ -2226,7 +2226,7 @@ RETURN  AF`carry        HELP ""Carry flag is clear if collision, otherwise set
 PROC    :increaseRings                          SECTION ::mobs                  ;$39AC
         ;===============================================================================
         ;NOTE: why does this not just use DAA?
-PARAMS  A`count         HELP ""Number of rings to add
+PARAMS  A`count         ``Number of rings to add
 {
         ;add the given number to the total ring count
         ld      C`count         A`count
@@ -2278,9 +2278,9 @@ PARAMS  A`count         HELP ""Number of rings to add
 
 PROC    :increaseScore                          SECTION ::mobs                  ;$39D8
         ;===============================================================================
-PARAMS  C`thousands     HELP ""Thousands to add to the score
-        D`hundreds      HELP ""Hundreds to add to the score
-        E`tens          HELP ""Tens to add to the score 
+PARAMS  C`thousands     ``Thousands to add to the score
+        D`hundreds      ``Hundreds to add to the score
+        E`tens          ``Tens to add to the score 
 {
         ld      HL`score        $.SCORE_TENS    ;read the tens unit of the score
         ld      A`tens          E`tens          ;handle the amount to add
@@ -2337,7 +2337,7 @@ PROC    :updateTime                             SECTION ::mobs                  
         ;===============================================================================
         ;called only by `:_LABEL_1CED_131`; main game loop?
         
-PARAMS  IY`vars         HELP ""Address of the common variables (used throughout)
+PARAMS  IY`vars         ``Address of the common variables (used throughout)
 {        
         ;is Sonic dead? if so, exit now
         bit     0,[IY+#vars.scrollRingFlags]
@@ -2784,7 +2784,7 @@ PROC    :_77be                                  SECTION ::mobs                  
         ;===============================================================================
         ;called by the boss mob code -- probably the exploded egg ship
 
-PARAMS  IX`mob          HELP ""Address of the current mob being processed
+PARAMS  IX`mob          ``Address of the current mob being processed
 {
         ld      a,[$.D2EC]
         cp      $08
@@ -3009,7 +3009,7 @@ PROC    :_79fa                                  SECTION ::mobs                  
         ;===============================================================================
         ;called by green hill boss, jungle boss and final animation
         
-PARAMS  IX`mob          HELP ""Address of the current mob being processed
+PARAMS  IX`mob          ``Address of the current mob being processed
 {
         ld      a,[ix+#mob.Xspeed+0]
         or      [ix+#mob.Xspeed+1]
@@ -3042,7 +3042,7 @@ PROC    :_7a3a                                  SECTION ::mobs                  
         ;===============================================================================
         ;called by `:_77be`, capsule and final animation
         
-PARAMS  IX`mob          HELP ""Address of the current mob being processed
+PARAMS  IX`mob          ``Address of the current mob being processed
 {
         call    :findEmptyMob
         ret     c
@@ -3099,7 +3099,7 @@ INCLUDE "mobs\meta_blink.oz80"
 
 PROC    :_7c41                                  SECTION ::mobs                  ;$7C41
         ;===============================================================================
-PARAMS  IX`mob          HELP ""Address of the current mob being processed
+PARAMS  IX`mob          ``Address of the current mob being processed
         de              ;e.g. $7DE1
         bc              ;e.g. $7DDC
 {
@@ -3197,7 +3197,7 @@ PROC    :_7ca6                                  SECTION ::mobs                  
 
 PROC    :_LABEL_7CC1_12                         SECTION ::mobs                  ;$7CC1
         ;===============================================================================
-PARAMS  IX`mob          HELP ""Address of the current mob being processed
+PARAMS  IX`mob          ``Address of the current mob being processed
         D               ;bit 7 sets A to $FF instead of 0 -- direction?
 {
         bit     6, [iy+#vars.flags6]
@@ -3239,7 +3239,7 @@ PROC    :mob_platform_fallVert                  SECTION ::mobs                  
         ;===============================================================================
         ;log - vertical (Jungle)
         
-PARAMS  IX`mob          HELP ""Address of the current mob being processed
+PARAMS  IX`mob          ``Address of the current mob being processed
 {
         set     5,[ix+#mob.flags]               ;mob does not collide with the floor
         ld      hl,$0030
@@ -3302,7 +3302,7 @@ PROC    :mob_platform_fallHoriz                 SECTION ::mobs                  
         ;===============================================================================
         ;log - horizontal (Jungle)
         
-PARAMS  IX`mob          HELP ""Address of the current mob being processed
+PARAMS  IX`mob          ``Address of the current mob being processed
 {
         set     5,[ix+#mob.flags]               ;mob does not collide with the floor
         ld      hl,$0030
@@ -3333,7 +3333,7 @@ PROC    :mob_platform_roll                      SECTION ::mobs                  
         ;===============================================================================
         ;log - floating (Jungle)
         
-PARAMS  IX`mob          HELP ""Address of the current mob being processed
+PARAMS  IX`mob          ``Address of the current mob being processed
 {
         set     5,[ix+#mob.flags]               ;mob does not collide with the floor
         ld      [ix+#mob.width],$0a
@@ -3496,7 +3496,7 @@ INCLUDE "mobs\platform_bridge.oz80"
 
 PROC    :mob_boss_bridge                        SECTION ::mobs                  ;$8496
         ;===============================================================================
-PARAMS  IX`mob          HELP ""Address of the current mob being processed
+PARAMS  IX`mob          ``Address of the current mob being processed
 {
         set     5,[ix+#mob.flags]               ;mob does not collide with the floor
         ld      [ix+#mob.width], 30
@@ -3655,7 +3655,7 @@ PROC    :_85d1                                  SECTION ::mobs                  
         ;===============================================================================
         ;called by bridge & labyrinth boss
         
-PARAMS  IX`mob          HELP ""Address of the current mob being processed
+PARAMS  IX`mob          ``Address of the current mob being processed
 {
         push    bc
         call    :findEmptyMob
@@ -3733,7 +3733,7 @@ PROC    :_8eca                                  SECTION ::mobs                  
         ;===============================================================================
         ;unknown mob
         
-PARAMS  IX`mob          HELP ""Address of the current mob being processed
+PARAMS  IX`mob          ``Address of the current mob being processed
 {
         set     5, [ix+#mob.flags]
         xor     a`zero
@@ -3812,7 +3812,7 @@ INCLUDE "mobs\platform_float.oz80"
 
 PROC    :_91eb                                  SECTION ::mobs                  ;$91EB
         ;===============================================================================
-PARAMS  IX`mob          HELP ""Address of the current mob being processed
+PARAMS  IX`mob          ``Address of the current mob being processed
 {
         call    :findEmptyMob
         ret     c
@@ -3871,7 +3871,7 @@ PARAMS  IX`mob          HELP ""Address of the current mob being processed
 
 PROC    :mob_boss_labyrinth                     SECTION ::mobs                  ;$9267
         ;===============================================================================
-PARAMS  IX`mob          HELP ""Address of the current mob being processed
+PARAMS  IX`mob          ``Address of the current mob being processed
 {
         set     5, [ix+#mob.flags]
         ld      [ix+#mob.width],  32
@@ -4124,7 +4124,7 @@ PROC    :_9c70                                  SECTION ::mobs                  
         ;===============================================================================
         ;unknown mob
         
-PARAMS  IX`mob          HELP ""Address of the current mob being processed
+PARAMS  IX`mob          ``Address of the current mob being processed
 {
         ld      [ix+#mob.Xspeed+0],$80
         ld      [ix+#mob.Xspeed+1],$fe
@@ -4140,7 +4140,7 @@ PARAMS  IX`mob          HELP ""Address of the current mob being processed
 
 PROC    :mob_trap_flameThrower                  SECTION ::mobs                  ;$9C8E
         ;===============================================================================
-PARAMS  IX`mob          HELP ""Address of the current mob being processed
+PARAMS  IX`mob          ``Address of the current mob being processed
 {
         set     5,[ix+#mob.flags]               ;mob does not collide with the floor
         bit     0,[ix+#mob.flags]
@@ -4255,7 +4255,7 @@ TABLE   :_9d6a                                  SECTION ::mobs                  
 PROC    :mob_door_left                          SECTION ::mobs                  ;$9DFA
         ;===============================================================================
         ;door - one way left (Scrap Brain)
-PARAMS  IX`mob          HELP ""Address of the current mob being processed
+PARAMS  IX`mob          ``Address of the current mob being processed
 {
         set     5,[ix+#mob.flags]               ;mob does not collide with the floor
         call    :_9ed4
@@ -4346,7 +4346,7 @@ PARAMS  IX`mob          HELP ""Address of the current mob being processed
 
 PROC    :_9eb4                                  SECTION ::mobs                  ;$9EB4
         ;===============================================================================
-PARAMS  IX`mob          HELP ""Address of the current mob being processed
+PARAMS  IX`mob          ``Address of the current mob being processed
 {
         ld      a,[ix+#mob.unknown11]
         cp      $30
@@ -4363,7 +4363,7 @@ PARAMS  IX`mob          HELP ""Address of the current mob being processed
 ;____________________________________________________________________________[$9EC4]____
 
 PROC    :_9ec4                                  SECTION ::mobs   
-PARAMS  IX`mob          HELP ""Address of the current mob being processed
+PARAMS  IX`mob          ``Address of the current mob being processed
 {
         ld      a,[ix+#mob.unknown11]
         and     a
@@ -4379,7 +4379,7 @@ PARAMS  IX`mob          HELP ""Address of the current mob being processed
 
 PROC    :_9ed4                                  SECTION ::mobs                  ;$9ED4
         ;===============================================================================
-PARAMS  IX`mob          HELP ""Address of the current mob being processed
+PARAMS  IX`mob          ``Address of the current mob being processed
 {
         ld      [ix+#mob.width],$04
         ld      a,[ix+#mob.unknown11]
@@ -4441,7 +4441,7 @@ PROC    :mob_door_right                         SECTION ::mobs                  
         ;===============================================================================
         ;door - one way right (Scrap Brain)
         
-PARAMS  IX`mob          HELP ""Address of the current mob being processed
+PARAMS  IX`mob          ``Address of the current mob being processed
 {
         set     5,[ix+#mob.flags]               ;mob does not collide with the floor
         call    :_9ed4
@@ -4520,7 +4520,7 @@ PARAMS  IX`mob          HELP ""Address of the current mob being processed
 
 PROC    :mob_door                               SECTION ::mobs                  ;$A025
         ;===============================================================================
-PARAMS  IX`mob          HELP ""Address of the current mob being processed
+PARAMS  IX`mob          ``Address of the current mob being processed
 {
         set     5,[ix+#mob.flags]               ;mob does not collide with the floor
         call    :_9ed4
@@ -4605,7 +4605,7 @@ INCLUDE "mobs\trap_electric.oz80"
 
 PROC    :mob_badnick_ballHog                    SECTION ::mobs                  ;$A1AA
         ;===============================================================================
-PARAMS  IX`mob          HELP ""Address of the current mob being processed
+PARAMS  IX`mob          ``Address of the current mob being processed
 {
         ld      [ix+#mob.width],$0a
         ld      [ix+#mob.height],$20
@@ -4761,7 +4761,7 @@ PROC    :_a33c                                  SECTION ::mobs                  
         ;===============================================================================
         ;mob: UNKNOWN (ball from Ball Hog?)
         
-PARAMS  IX`mob          HELP ""Address of the current mob being processed
+PARAMS  IX`mob          ``Address of the current mob being processed
 {
         res     5,[ix+#mob.flags]               ;mob adheres to the floor
         ld      [ix+#mob.width],$0a
@@ -4837,7 +4837,7 @@ TABLE   :_a3bb                                  SECTION ::mobs                  
 
 PROC    :mob_switch                             SECTION ::mobs                  ;$A3F8
         ;===============================================================================
-PARAMS  IX`mob          HELP ""Address of the current mob being processed
+PARAMS  IX`mob          ``Address of the current mob being processed
 {
         ld      [ix+#mob.width],$0a
         ld      [ix+#mob.height],$11
@@ -4916,7 +4916,7 @@ TABLE   :_a49b                                  SECTION ::mobs                  
 
 PROC    :mob_door_switchActivated               SECTION ::mobs                  ;$A4AB
         ;===============================================================================
-PARAMS  IX`mob          HELP ""Address of the current mob being processed
+PARAMS  IX`mob          ``Address of the current mob being processed
 {
         set     5,[ix+#mob.flags]               ;mob does not collide with the floor
         call    :_9ed4
@@ -4991,7 +4991,7 @@ TABLE   :_a51a                                  SECTION ::mobs                  
 
 PROC    :mob_badnick_caterkiller                SECTION ::mobs                  ;$A551
         ;===============================================================================
-PARAMS  IX`mob          HELP ""Address of the current mob being processed
+PARAMS  IX`mob          ``Address of the current mob being processed
 {
         ld      [ix+#mob.width],$06
         ld      [ix+#mob.height],$10
@@ -5123,7 +5123,7 @@ PARAMS  IX`mob          HELP ""Address of the current mob being processed
 
 PROC    :_a688                                  SECTION ::mobs                  ;$A688
         ;===============================================================================
-PARAMS  IX`mob          HELP ""Address of the current mob being processed
+PARAMS  IX`mob          ``Address of the current mob being processed
 {
         push    hl
         ld      e,[hl]
@@ -5193,7 +5193,7 @@ TABLE   :_a795                                  SECTION ::mobs                  
 
 PROC    :mob_boss_scrapBrain                    SECTION ::mobs                  ;$A7ED
         ;===============================================================================
-PARAMS  IX`mob          HELP ""Address of the current mob being processed
+PARAMS  IX`mob          ``Address of the current mob being processed
 {
         ld      [ix+#mob.width],$1e
         ld      [ix+#mob.height],$2f
@@ -5403,7 +5403,7 @@ TABLE   :_a9c0                                  SECTION ::mobs                  
 
 PROC    :mob_meta_clouds                        SECTION ::mobs                  ;$A9C7
         ;===============================================================================
-PARAMS  IX`mob          HELP ""Address of the current mob being processed
+PARAMS  IX`mob          ``Address of the current mob being processed
 {
         set     5,[ix+#mob.flags]               ;mob does not collide with the floor
         ld      a,[iy+#vars.spriteUpdateCount]
@@ -5485,7 +5485,7 @@ INCLUDE "mobs\trap_propeller.oz80"
 
 PROC    :mob_badnick_bomb                       SECTION ::mobs                  ;$AB21
         ;===============================================================================
-PARAMS  IX`mob          HELP ""Address of the current mob being processed
+PARAMS  IX`mob          ``Address of the current mob being processed
 {
         ld      [ix+#mob.width],$0c
         ld      [ix+#mob.height],$10
@@ -5629,7 +5629,7 @@ PARAMS  IX`mob          HELP ""Address of the current mob being processed
 
 PROC    :_ac96                                  SECTION ::mobs                  ;$AC96
         ;===============================================================================
-PARAMS  IX`mob          HELP ""Address of the current mob being processed
+PARAMS  IX`mob          ``Address of the current mob being processed
 {
         push    ix
         push    hl
@@ -5724,7 +5724,7 @@ INCLUDE "mobs\trap_cannon.oz80"
 
 PROC    :mob_badnick_unidos                     SECTION ::mobs                  ;$AE88
         ;===============================================================================
-PARAMS  IX`mob          HELP ""Address of the current mob being processed
+PARAMS  IX`mob          ``Address of the current mob being processed
 {
         set     5,[ix+#mob.flags]               ;mob does not collide with the floor
         bit     0,[ix+#mob.flags]
@@ -5844,7 +5844,7 @@ PARAMS  IX`mob          HELP ""Address of the current mob being processed
 
 PROC    :_af98                                  SECTION ::mobs                  ;$AF98
         ;===============================================================================
-PARAMS  IX`mob          HELP ""Address of the current mob being processed
+PARAMS  IX`mob          ``Address of the current mob being processed
 {
         ld      a,[ix+#mob.unknown15]
         cp      $c8
@@ -5888,7 +5888,7 @@ PARAMS  IX`mob          HELP ""Address of the current mob being processed
 
 PROC    :_afdb                                  SECTION ::mobs                  ;$AFDB
         ;===============================================================================
-PARAMS  IX`mob          HELP ""Address of the current mob being processed
+PARAMS  IX`mob          ``Address of the current mob being processed
 {
         ld      [hl],$fe
         call    :findEmptyMob
@@ -5962,7 +5962,7 @@ TABLE   :_b0e7                                  SECTION ::mobs                  
 
 PROC    :_b0f4                                  SECTION ::mobs                  ;$B0F4
         ;===============================================================================
-PARAMS  IX`mob          HELP ""Address of the current mob being processed
+PARAMS  IX`mob          ``Address of the current mob being processed
 {
         set     5,[ix+#mob.flags]               ;mob does not collide with the floor
         ld      [ix+#mob.spriteLayout+0],$00
@@ -6018,7 +6018,7 @@ PARAMS  IX`mob          HELP ""Address of the current mob being processed
 
 PROC    :mob_trap_turretRotating                SECTION ::mobs                  ;$B16C
         ;===============================================================================
-PARAMS  IX`mob          HELP ""Address of the current mob being processed
+PARAMS  IX`mob          ``Address of the current mob being processed
 {
         set     5,[ix+#mob.flags]               ;mob does not collide with the floor
         bit     0,[ix+#mob.flags]
@@ -6133,7 +6133,7 @@ TABLE   :_b267                                  SECTION ::mobs                  
 
 PROC    :mob_platform_flyingRight               SECTION ::mobs                  ;$B297
         ;===============================================================================
-PARAMS  IX`mob          HELP ""Address of the current mob being processed
+PARAMS  IX`mob          ``Address of the current mob being processed
 {
         set     5, [ix+#mob.flags]
         bit     0, [ix+#mob.flags]
@@ -6252,7 +6252,7 @@ INCLUDE "mobs\trap_spikewall.oz80"
 
 PROC    :mob_trap_turretFixed                   SECTION ::mobs                  ;$B46D
         ;===============================================================================
-PARAMS  IX`mob          HELP ""Address of the current mob being processed
+PARAMS  IX`mob          ``Address of the current mob being processed
 {
         set     5,[ix+#mob.flags]               ;mob does not collide with the floor
         bit     0,[ix+#mob.flags]
@@ -6332,7 +6332,7 @@ PARAMS  IX`mob          HELP ""Address of the current mob being processed
 
 PROC    :mob_platform_flyingUpDown              SECTION ::mobs                  ;$B50E
         ;===============================================================================
-PARAMS  IX`mob          HELP ""Address of the current mob being processed
+PARAMS  IX`mob          ``Address of the current mob being processed
 {
         set     5,[ix+#mob.flags]               ;mob does not collide with the floor
         ld      hl,:_b37b
@@ -6419,7 +6419,7 @@ PARAMS  IX`mob          HELP ""Address of the current mob being processed
 
 PROC    :_b5c2                                  SECTION ::mobs                  ;$B5C2
         ;===============================================================================
-PARAMS  IX`mob          HELP ""Address of the current mob being processed
+PARAMS  IX`mob          ``Address of the current mob being processed
 {
         push    bc
         push    de
@@ -6476,7 +6476,7 @@ PARAMS  IX`mob          HELP ""Address of the current mob being processed
 
 PROC    :mob_boss_skyBase                       SECTION ::mobs                  ;$B634
         ;===============================================================================
-PARAMS  IX`mob          HELP ""Address of the current mob being processed
+PARAMS  IX`mob          ``Address of the current mob being processed
 {
         ld      [ix+#mob.width],$1e
         ld      [ix+#mob.height],$2f
@@ -6976,7 +6976,7 @@ TABLE   :_bb77                                  SECTION ::mobs                  
 
 PROC    :mob_boss_electricBeam                  SECTION ::mobs                  ;$BB84
         ;===============================================================================
-PARAMS  IX`mob          HELP ""Address of the current mob being processed
+PARAMS  IX`mob          ``Address of the current mob being processed
 {
         set     5,[ix+#mob.flags]               ;mob does not collide with the floor
         ld      hl,$0008

@@ -67,8 +67,8 @@
 ;;
 
 
-DEF SYSTEM  "sms"
-INCLUDE     "system.sms.oz80"
+SYSTEM  "sms"
+INCLUDE "system.sms.oz80"
 
 
 
@@ -77,37 +77,36 @@ INCLUDE     "system.sms.oz80"
   register number with bit 7 set. for more details, see
   http://www.smspower.org/Development/VDPRegisters
 ;;
-DEF !VDP_REGISTER_WRITE %10000000
-DEF !VDP_REGISTER_0     !VDP_REGISTER_WRITE | 0
-DEF !VDP_REGISTER_1     !VDP_REGISTER_WRITE | 1
-DEF !VDP_REGISTER_2     !VDP_REGISTER_WRITE | 2
-DEF !VDP_REGISTER_5     !VDP_REGISTER_WRITE | 5
-DEF !VDP_REGISTER_6     !VDP_REGISTER_WRITE | 6
-DEF !VDP_REGISTER_7     !VDP_REGISTER_WRITE | 7
-DEF !VDP_REGISTER_8     !VDP_REGISTER_WRITE | 8
-DEF !VDP_REGISTER_9     !VDP_REGISTER_WRITE | 9
-DEF !VDP_REGISTER_10    !VDP_REGISTER_WRITE | 10
+CONST   !VDP_REGISTER_WRITE     %10000000
+CONST   !VDP_REGISTER_0         !VDP_REGISTER_WRITE | 0
+CONST   !VDP_REGISTER_1         !VDP_REGISTER_WRITE | 1
+CONST   !VDP_REGISTER_2         !VDP_REGISTER_WRITE | 2
+CONST   !VDP_REGISTER_5         !VDP_REGISTER_WRITE | 5
+CONST   !VDP_REGISTER_6         !VDP_REGISTER_WRITE | 6
+CONST   !VDP_REGISTER_7         !VDP_REGISTER_WRITE | 7
+CONST   !VDP_REGISTER_8         !VDP_REGISTER_WRITE | 8
+CONST   !VDP_REGISTER_9         !VDP_REGISTER_WRITE | 9
+CONST   !VDP_REGISTER_10        !VDP_REGISTER_WRITE | 10
 
 
 
 ;how many blocks (32x32px) fit in the screen width / height
-DEF !SCREENWIDTH_PX             256
-DEF !SCREENHEIGHT_PX            192
-DEF !SCREENWIDTH_BLOCKS         !SCREENWIDTH_PX / 32
-DEF !SCREENHEIGHT_BLOCKS        !SCREENHEIGHT_PX / 32
-
+CONST   !SCREENWIDTH_PX         256
+CONST   !SCREENHEIGHT_PX        192
+CONST   !SCREENWIDTH_BLOCKS     !SCREENWIDTH_PX / 32
+CONST   !SCREENHEIGHT_BLOCKS    !SCREENHEIGHT_PX / 32
 
 ;number of thousands of pts to get an extra life
-DEF !SCORE_1UP                  5
+CONST   !SCORE_1UP              5
 
 ;=======================================================================================
 
 INCLUDE "ram.oz80"
 
-DEF SECTION     ::interrupts    SLOT 1 KB
-DEF SECTION     ::main          ;SLOT 0
-DEF SECTION     ::screens       ;SLOT 0
-DEF SECTION     ::mobs          ;SLOT 1, 2
+SECTION ::interrupts    SLOT 1 KB
+SECTION ::main          ;SLOT 0
+SECTION ::screens       ;SLOT 0
+SECTION ::mobs          ;SLOT 1, 2
 
 INCLUDE "interrupts.oz80"
 
@@ -120,13 +119,11 @@ INCLUDE "mobs.oz80"
 ;=======================================================================================
 ;music code and song data
 
-DEF SECTION     ::sound         SLOT 1
-
 INCLUDE "sound\sound.oz80"
 
 ;=======================================================================================
 
-DEF SECTION     ::blocks        SLOT 1, 2
+SECTION ::blocks        SLOT 1, 2
 
 TABLE   :S1_BlockMappings                       SECTION ::blocks                ;$10000
 {

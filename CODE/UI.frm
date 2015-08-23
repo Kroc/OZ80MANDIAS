@@ -64,6 +64,10 @@ Private Sub Form_Initialize()
     Let LogText.AllowDuplicates = True
 End Sub
 
+Private Sub Form_QueryUnload(Cancel As Integer, UnloadMode As Integer)
+    If Not Assembler Is Nothing Then Call Assembler.Abort
+End Sub
+
 Private Sub Form_Terminate()
     Set LogText = Nothing
 End Sub
@@ -251,7 +255,7 @@ Private Sub Log( _
 '
 '    Call SendMessageString( _
 '        Me.txtLog.hWnd, EM_REPLACESEL, _
-'        ByVal 0, Text & vbCrLf _
+'        ByVal 0, Text & vbNewLine _
 '    )
 '
 '    Call SendMessage( _

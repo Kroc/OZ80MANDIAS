@@ -12,7 +12,7 @@
 
 PROC    :mob_badnick_yadrin                     SECTION ::mobs                  ;$82E6
         ;==============================================================================
-PARAMS  IX`mob          HELP ""Address of the current mob being processed
+PARAMS  IX`mob          ``Address of the current mob being processed
 {
         ld      [ix+#mob.width], 16
         ld      [ix+#mob.height],15

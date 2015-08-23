@@ -10,11 +10,11 @@
 
 PROC    :decompressArt                          SECTION ::main                  ;$0405
         ;===============================================================================
-PARAMS  A`bank          HELP ""Bank number for the relative address HL
-        HL`dataAddr     HELP ""Relative address from the beginning of the intended bank
-                             ""(A) to the art data
+PARAMS  A`bank          ``Bank number for the relative address HL
+        HL`dataAddr     ``Relative address from the beginning of the intended bank
+                        ``(A) to the art data
         DE`vdpAddr      ;VDP register number (D) and value byte (E) to send to the VDP
-        IY`vars         HELP ""Address of the common variables (used throughout)
+        IY`vars         ``Address of the common variables (used throughout)
 {
         di                                      ;disable interrupts
         
@@ -25,11 +25,11 @@ PARAMS  A`bank          HELP ""Bank number for the relative address HL
         ;;is the HL parameter address below the $40xx range?
           --that is, does the relative address extend into the second page?;;
         ld      A`dataAddr      H`dataAddr
-        cp      HI $4000
+        cp      HI $#SMS.SLOT1.size             ;=$4000
         jr      c, ._2
         
         ;remove $40xx (e.g. so $562B becomes $162B)
-        sub     HI $4000
+        sub     HI $#SMS.SLOT1.size             ;=$4000
         ld      H`dataAddr      A`dataAddr
         
         ;;restore the A parameter (the starting bank number) and increase it so that
@@ -42,12 +42,12 @@ PARAMS  A`bank          HELP ""Bank number for the relative address HL
         ;--- configure the VDP ---------------------------------------------------------
         
 ._2     ld      a, e                            ;VDP value byte from the DE parameter
-        out     [$#SMS.VDP.CONTROL], a          ;send to the VDP
+        out     [$#SMS_PORTS.VDP.CONTROL], a          ;send to the VDP
         
         ld      a, d
         or      %01000000                       ;add bit 7 (that is, convert A to
                                                  ;a VDP control register number)
-        out     [$#SMS.VDP.CONTROL], a          ;send it to the VDP
+        out     [$#SMS_PORTS.VDP.CONTROL], a          ;send it to the VDP
         
         ;--- switch banks --------------------------------------------------------------
         
@@ -62,11 +62,11 @@ PARAMS  A`bank          HELP ""Bank number for the relative address HL
         push    de
         
         ;change pages 1 & 2 (Z80:$4000-$BFFF) to banks A & A+1
-        ld      [$#SMS.SLOT1], a
-        ld      [$.SLOT1], a
-        inc     a
-        ld      [$#SMS.SLOT2], a
-        ld      [$.SLOT2], a
+        ld      [$#SMS.MAPPER.SLOT1]    A`bank
+        ld      [$.SLOT1]               A`bank
+        inc     A`bank
+        ld      [$#SMS.MAPPER.SLOT2]    A`bank
+        ld      [$.SLOT2]               A`bank
         
         ;--- read header ---------------------------------------------------------------
         
@@ -186,22 +186,22 @@ PARAMS  A`bank          HELP ""Bank number for the relative address HL
         
         ;write 1 row of pixels (4 bytes) to the VDP
         ld      a, [bc]
-        out     [$#SMS.VDP.DATA], a
+        out     [$#SMS_PORTS.VDP.DATA], a
         inc     bc
         nop
         nop
         ld      a, [bc]
-        out     [$#SMS.VDP.DATA], a
+        out     [$#SMS_PORTS.VDP.DATA], a
         inc     bc
         nop
         nop
         ld      a, [bc]
-        out     [$#SMS.VDP.DATA], a
+        out     [$#SMS_PORTS.VDP.DATA], a
         inc     bc
         nop
         nop
         ld      a, [bc]
-        out     [$#SMS.VDP.DATA], a
+        out     [$#SMS_PORTS.VDP.DATA], a
         inc     bc
         
         ;swap BC/DE/HL back again
@@ -253,22 +253,22 @@ PARAMS  A`bank          HELP ""Bank number for the relative address HL
         
         ;write 1 row of pixels (4 bytes) to the VDP
         ld      a, [hl]                 
-        out     [$#SMS.VDP.DATA], a
+        out     [$#SMS_PORTS.VDP.DATA], a
         inc     hl
         nop
         nop
         ld      a, [hl]
-        out     [$#SMS.VDP.DATA], a
+        out     [$#SMS_PORTS.VDP.DATA], a
         inc     hl
         nop
         nop
         ld      a, [hl]
-        out     [$#SMS.VDP.DATA], a
+        out     [$#SMS_PORTS.VDP.DATA], a
         inc     hl
         nop
         nop
         ld      a, [hl]
-        out     [$#SMS.VDP.DATA], a
+        out     [$#SMS_PORTS.VDP.DATA], a
         inc     hl
         
         ;decrease the remaining row count
@@ -283,9 +283,9 @@ PARAMS  A`bank          HELP ""Bank number for the relative address HL
         jr      nz, ._6
         di
 ._6     ;restore the pages to the original banks at the beginning of the procedure
-        pop     de
-        ld      [$.SLOT1], de
-        ld      [$#SMS.SLOT1], de
+        pop     DE`banks
+        ld      [$.SLOT1]               DE`banks
+        ld      [$#SMS.MAPPER.SLOT1]    DE`banks
         
         ei
         res     1, [IY`vars+#vars.flags9]
@@ -316,12 +316,12 @@ PARAMS  bc              ;length of the compressed data
         
         ;configure the VDP based on the DE parameter
         ld      a`vdpValue, e`vdpValue
-        out     [$#SMS.VDP.CONTROL], a`vdpValue
+        out     [$#SMS_PORTS.VDP.CONTROL], a`vdpValue
         
         ;add bit 7 (that is, convert A to a VDP control register number)
         ld      a`vdpRegister, d`vdpRegister
         or      %01000000                       
-        out     [$#SMS.VDP.CONTROL], a`vdpRegister
+        out     [$#SMS_PORTS.VDP.CONTROL], a`vdpRegister
         
         ei                                      ;enable interrupts
         
@@ -341,11 +341,11 @@ PARAMS  bc              ;length of the compressed data
         jr      z, .skip                
         
         ;--- uncompressed byte ---------------------------------------------------------
-        out     [$#SMS.VDP.DATA], a             ;send the tile to the VDP
+        out     [$#SMS_PORTS.VDP.DATA], a             ;send the tile to the VDP
         ld      e, a                            ;update the current byte being compared
         ld      a, [$.TEMP1]                    ;get the upper byte for the tiles
                                                  ;(foreground / background / flip)
-        out     [$#SMS.VDP.DATA], a
+        out     [$#SMS_PORTS.VDP.DATA], a
         
         inc     hl                              ;move to the next byte
         dec     bc                              ;decrease the remaining bytes to read
@@ -369,10 +369,10 @@ PARAMS  bc              ;length of the compressed data
         jr      z, .multiSkip
         
         ;repeat the byte
-._4     out     [$#SMS.VDP.DATA], a
+._4     out     [$#SMS_PORTS.VDP.DATA], a
         push    af
         ld      a, [$.TEMP1]
-        out     [$#SMS.VDP.DATA], a
+        out     [$#SMS_PORTS.VDP.DATA], a
         pop     af
         dec     e
         jp      nz, ._4
@@ -391,11 +391,11 @@ PARAMS  bc              ;length of the compressed data
         
 .skip
         ld      e, a
-        in      a, [$#SMS.VDP.DATA]
+        in      a, [$#SMS_PORTS.VDP.DATA]
         nop
         inc     hl
         dec     bc
-        in      a, [$#SMS.VDP.DATA]
+        in      a, [$#SMS_PORTS.VDP.DATA]
         
         ld      a, b
         or      c
@@ -405,10 +405,10 @@ PARAMS  bc              ;length of the compressed data
         ret
 
 .multiSkip
-        in      a, [$#SMS.VDP.DATA]
+        in      a, [$#SMS_PORTS.VDP.DATA]
         push    af
         pop     af
-        in      a, [$#SMS.VDP.DATA]
+        in      a, [$#SMS_PORTS.VDP.DATA]
         nop
         dec     e
         jp      nz, .multiSkip
@@ -421,7 +421,7 @@ PARAMS  a`flags         ;which palette(s) to set
                          ;bit 0 - tile palette (0-15)
                          ;bit 1 - sprite palette (16-31)
         hl`addr         ;address of palette
-RETURN  $.LOADPALETTE_TILE,
+RETURN  $.LOADPALETTE_TILE
         $.LOADPALETTE_SPRITE
 {        
         push    af`flags
@@ -458,9 +458,9 @@ RETURN  $.LOADPALETTE_TILE,
         
 .sendPalette
         ld      a, c                            ;send palette index number to begin at
-        out     [$#SMS.VDP.CONTROL], a
+        out     [$#SMS_PORTS.VDP.CONTROL], a
         ld      a, %11000000                    ;specify palette operation (bits 7 & 6)
-        out     [$#SMS.VDP.CONTROL], a
+        out     [$#SMS_PORTS.VDP.CONTROL], a
         ld      c, $BE                          ;send the colours to the palette
         otir
         ret
@@ -476,13 +476,13 @@ PARAMS  hl`addr         ;VRAM address
 {        
         ld      e`value, a`value                ;temporarily shift the value to E
         ld      a, l
-        out     [$#SMS.VDP.CONTROL], a
+        out     [$#SMS_PORTS.VDP.CONTROL], a
         ld      a, h
         or      %01000000
-        out     [$#SMS.VDP.CONTROL], a
+        out     [$#SMS_PORTS.VDP.CONTROL], a
         
 .loop   ld      a`value, e`value                ;return the value to A
-        out     [$#SMS.VDP.DATA], a`value       ;send it to the VDP
+        out     [$#SMS_PORTS.VDP.DATA], a`value       ;send it to the VDP
         
         dec     bc`size
         ld      a`size, b`size
@@ -493,10 +493,10 @@ PARAMS  hl`addr         ;VRAM address
 
 PROC    :readJoypad                             SECTION ::main                  ;$05A7
         ;===============================================================================
-PARAMS  IY`vars         HELP ""Address of the common variables (used throughout)
+PARAMS  IY`vars         ``Address of the common variables (used throughout)
 RETURN  $.VARS.joypad
 {       
-        in      A`joypad    [$#SMS.JOY.A]       ;read the joypad port
+        in      A`joypad    [$#SMS_PORTS.JOY.A]       ;read the joypad port
         or      %11000000                       ;mask out bits 7 & 6 -
                                                  ;these are joypad 2 down / up
         ld      [iy+#vars.joypad], a            ;store the joypad value in $D203
@@ -505,8 +505,8 @@ RETURN  $.VARS.joypad
 
 PROC    :print                                  SECTION ::main                  ;$05AF
         ;===============================================================================
-PARAMS  hl`addr         HELP ""Address to memory with column & row numbers,
-                             ""then text data terminated with $FF
+PARAMS  hl`addr         ``Address to memory with column & row numbers,
+                        ``then text data terminated with $FF
 {
         ;get the column number
         ld      c, [hl]
@@ -542,10 +542,10 @@ PARAMS  hl`addr         HELP ""Address to memory with column & row numbers,
         ;set the VDP to point to the screen address calculated
         di
         ld      a, l
-        out     [$#SMS.VDP.CONTROL], a
+        out     [$#SMS_PORTS.VDP.CONTROL], a
         ld      a, h
         or      %01000000
-        out     [$#SMS.VDP.CONTROL], a
+        out     [$#SMS_PORTS.VDP.CONTROL], a
         ei
 
         ;read bytes from memory until hitting $FF
@@ -553,12 +553,12 @@ PARAMS  hl`addr         HELP ""Address to memory with column & row numbers,
         cp      $FF
         ret     z
         
-        out     [$#SMS.VDP.DATA], a
+        out     [$#SMS_PORTS.VDP.DATA], a
         push    af                              ;kill time?
         pop     af
         ld      a, [$.TEMP1]                    ;what to use as the tile upper bits
                                                  ;(front/back, flip &c.)
-        out     [$#SMS.VDP.DATA], a
+        out     [$#SMS_PORTS.VDP.DATA], a
         inc     de
         djnz    .loop
         
@@ -567,7 +567,7 @@ PARAMS  hl`addr         HELP ""Address to memory with column & row numbers,
 
 PROC    :hideSprites                            SECTION ::main                  ;$05E2
         ;===============================================================================
-PARAMS  IY`vars         HELP ""Address of the common variables (used throughout)
+PARAMS  IY`vars         ``Address of the common variables (used throughout)
 {       
         ;get the address of the game's main sprite table
         ld      HL`table        $.SPRITETABLE
@@ -688,7 +688,7 @@ PROC    :updateCamera                           SECTION ::main                  
         ;===============================================================================
         ;calculate the VDP scroll offset according to the camera position?
         
-PARAMS  IY`vars         HELP ""Address of the common variables (used throughout)
+PARAMS  IY`vars         ``Address of the common variables (used throughout)
 {        
         ;fill B with vertical and C with horizontal VDP scroll values
         ld      bc,[$.VDPSCROLL_HORZ]
@@ -791,7 +791,7 @@ PROC    :fillOverscrollCache                    SECTION ::main                  
           scrolls onto new tiles, they can be copied across in a fast and
           straight-forward fashion;;
 
-PARAMS  IY`vars         HELP ""Address of the common variables (used throughout)
+PARAMS  IY`vars         ``Address of the common variables (used throughout)
 {        
         ;scrolling enabled??
         bit     5,[iy+#vars.flags0]
@@ -799,12 +799,12 @@ PARAMS  IY`vars         HELP ""Address of the common variables (used throughout)
         
         di      
         ;switch pages 1 & 2 ($4000-$BFFF) to banks 4 & 5 ($10000-$17FFF)
-        ld      A`bank          ::blocks:S1_BlockMappings.bank
-        ld      [$#SMS.SLOT1]   A`bank
-        ld      [$.SLOT1]       A`bank
-        ld      A`bank          ::blocks:S1_BlockMappings.bank+1
-        ld      [$#SMS.SLOT2]   A`bank
-        ld      [$.SLOT2]       A`bank
+        ld      A`bank                  ::blocks:S1_BlockMappings.bank
+        ld      [$#SMS.MAPPER.SLOT1]    A`bank
+        ld      [$.SLOT1]               A`bank
+        ld      A`bank                  ::blocks:S1_BlockMappings.bank+1
+        ld      [$#SMS.MAPPER.SLOT2]    A`bank
+        ld      [$.SLOT2]               A`bank
         ei
         
         ;-------------------------------------------------------------------------------
@@ -1013,7 +1013,7 @@ PROC    :fillScrollTiles                        SECTION ::main                  
         ;===============================================================================
         ;fill in new tiles when the screen has scrolled
         
-PARAMS  IY`vars         HELP ""Address of the common variables (used throughout)
+PARAMS  IY`vars         ``Address of the common variables (used throughout)
 {        
         bit     0, [iy+#vars.flags2]
         jp      z, ._4
@@ -1086,9 +1086,9 @@ PARAMS  IY`vars         HELP ""Address of the common variables (used throughout)
         ;set the VDP address calculated earlier
 ._2     exx
         ld      a, l
-        out     [$#SMS.VDP.CONTROL], a
+        out     [$#SMS_PORTS.VDP.CONTROL], a
         ld      a, h
-        out     [$#SMS.VDP.CONTROL], a
+        out     [$#SMS_PORTS.VDP.CONTROL], a
         
         ;move to the next row
         add     hl, bc
@@ -1157,11 +1157,11 @@ PARAMS  IY`vars         HELP ""Address of the common variables (used throughout)
         and     %11000000
         ld      [$.TEMP1], a
         ld      a, e
-        out     [$#SMS.VDP.CONTROL], a
+        out     [$#SMS_PORTS.VDP.CONTROL], a
         and     $3F
         ld      e, a
         ld      a, d
-        out     [$#SMS.VDP.CONTROL], a
+        out     [$#SMS_PORTS.VDP.CONTROL], a
         ld      b, $3E
         ld      c, $BE
 
@@ -1175,9 +1175,9 @@ PARAMS  IY`vars         HELP ""Address of the common variables (used throughout)
         ret
 
 ._8     ld      a, [$.TEMP1]
-        out     [$#SMS.VDP.CONTROL], a
+        out     [$#SMS_PORTS.VDP.CONTROL], a
         ld      a, d
-        out     [$#SMS.VDP.CONTROL], a
+        out     [$#SMS_PORTS.VDP.CONTROL], a
         
 ._9     outi
         outi
@@ -1311,12 +1311,12 @@ PROC    :fillScreenWithFloorLayout              SECTION ::main                  
         di
         
         ;page in the Block Mappings
-        ld      A`bank          ::blocks:S1_BlockMappings.bank
-        ld      [$#SMS.SLOT1]   A`bank
-        ld      [$.SLOT1]       A`bank
-        ld      A`bank          ::blocks:S1_BlockMappings.bank + 1
-        ld      [$#SMS.SLOT2]   A`bank
-        ld      [$.SLOT2]       A`bank
+        ld      A`bank                  ::blocks:S1_BlockMappings.bank
+        ld      [$#SMS.MAPPER.SLOT1]    A`bank
+        ld      [$.SLOT1]               A`bank
+        ld      A`bank                  ::blocks:S1_BlockMappings.bank + 1
+        ld      [$#SMS.MAPPER.SLOT2]    A`bank
+        ld      [$.SLOT2]               A`bank
         
         ld      bc,$0000
         call    :getFloorLayoutRAMPosition
@@ -1385,45 +1385,45 @@ PROC    :fillScreenWithFloorLayout              SECTION ::main                  
         
         ;set the screen name address
 ._3     ld      a,l
-        out     [$#SMS.VDP.CONTROL],a
+        out     [$#SMS_PORTS.VDP.CONTROL],a
         ld      a,h
         or      %01000000
-        out     [$#SMS.VDP.CONTROL],a
+        out     [$#SMS_PORTS.VDP.CONTROL],a
         
         ld      a,[de]
-        out     [$#SMS.VDP.DATA],a
+        out     [$#SMS_PORTS.VDP.DATA],a
         inc     de
         exx     
         ld      a,c
         exx     
-        out     [$#SMS.VDP.DATA],a
+        out     [$#SMS_PORTS.VDP.DATA],a
         nop     
         nop     
         ld      a,[de]
-        out     [$#SMS.VDP.DATA],a
+        out     [$#SMS_PORTS.VDP.DATA],a
         inc     de
         exx     
         ld      a,c
         exx     
-        out     [$#SMS.VDP.DATA],a
+        out     [$#SMS_PORTS.VDP.DATA],a
         nop     
         nop     
         ld      a,[de]
-        out     [$#SMS.VDP.DATA],a
+        out     [$#SMS_PORTS.VDP.DATA],a
         inc     de
         exx     
         ld      a,c
         exx     
-        out     [$#SMS.VDP.DATA],a
+        out     [$#SMS_PORTS.VDP.DATA],a
         nop     
         nop     
         ld      a,[de]
-        out     [$#SMS.VDP.DATA],a
+        out     [$#SMS_PORTS.VDP.DATA],a
         inc     de
         exx     
         ld      a,c
         exx     
-        out     [$#SMS.VDP.DATA],a
+        out     [$#SMS_PORTS.VDP.DATA],a
         ld      a,b
         ld      bc,64
         add     hl,bc
@@ -1458,6 +1458,8 @@ PROC    :fillScreenWithFloorLayout              SECTION ::main                  
 
 PROC    :loadFloorLayout                        SECTION ::main                  ;$0A10
         ;===============================================================================
+        ;called only by `:loadLevel`
+        
 PARAMS  hl`addr         ;address of Floor Layout data
         bc`size         ;length of compressed data
 {        
@@ -1513,17 +1515,17 @@ PARAMS  hl`addr         ;address of Floor Layout data
 
 PROC    :fadeOut                                SECTION ::main                  ;$0A40
         ;===============================================================================
-PARAMS  IY`vars         HELP ""Address of the common variables (used throughout)
+PARAMS  IY`vars         ``Address of the common variables (used throughout)
 {        
-        ld      A`bank          1
-        ld      [$#SMS.SLOT1]   A`bank
-        ld      [$.SLOT1]       A`bank
-        ld      A`bank          2
-        ld      [$#SMS.SLOT2]   A`bank
-        ld      [$.SLOT2]       A`bank
+        ld      A`bank                  1
+        ld      [$#SMS.MAPPER.SLOT1]    A`bank
+        ld      [$.SLOT1]               A`bank
+        ld      A`bank                  2
+        ld      [$#SMS.MAPPER.SLOT2]    A`bank
+        ld      [$.SLOT2]               A`bank
         
-        ld      a, [iy+#vars.spriteUpdateCount]
-        res     0, [iy+#vars.flags0]            ;wait for interrupt to occur
+        ld      a, [IY+#vars.spriteUpdateCount]
+        res     0, [IY+#vars.flags0]            ;wait for interrupt to occur
         call    ::interrupts:waitForInterrupt   ;(refresh sprites?)
         
         ;after the interrupt, the sprite update count would be cleared,
@@ -1607,7 +1609,7 @@ PARAMS  hl              ;source palette address
 PROC    :_aae                                   SECTION ::main                  ;$0AAE
         ;===============================================================================
 PARAMS  hl
-        IY`vars         HELP ""Address of the common variables (used throughout)
+        IY`vars         ``Address of the common variables (used throughout)
 {
         ld      [$.TEMP6],hl
         
@@ -1619,12 +1621,12 @@ PARAMS  hl
         ld      bc,32
         ldir    
         
-        ld      a`bank,1
-        ld      [$#SMS.SLOT1],a`bank
-        ld      [$.SLOT1],a`bank
-        ld      a`bank,2
-        ld      [$#SMS.SLOT2],a`bank
-        ld      [$.SLOT2],a`bank
+        ld      A`bank                  1
+        ld      [$#SMS.MAPPER.SLOT1]    A`bank
+        ld      [$.SLOT1]               A`bank
+        ld      A`bank                  2
+        ld      [$#SMS.MAPPER.SLOT2]    A`bank
+        ld      [$.SLOT2]               A`bank
         
         ;switch to using the temporary palette on screen
         ld      hl,$.PALETTE
@@ -1714,7 +1716,7 @@ PARAMS  hl
 
 PROC    :_b50                                   SECTION ::main                  ;$0B50
         ;===============================================================================
-PARAMS  HL`addr         HELP ""Address of a palette
+PARAMS  HL`addr         ``Address of a palette
 {        
         ld      [$.TEMP6]       HL              ;put the palette parameter aside 
         ld      HL              $.PALETTE       ;RAM cache of current palette
@@ -1730,7 +1732,7 @@ PARAMS  HL`addr         HELP ""Address of a palette
 
 PROC    :_b60                                   SECTION ::main                  ;$0B60
         ;-------------------------------------------------------------------------------
-PARAMS  IY`vars         HELP ""Address of the common variables (used throughout)
+PARAMS  IY`vars         ``Address of the common variables (used throughout)
 {
         ld      [$.TEMP6],hl
         
@@ -1739,12 +1741,12 @@ PARAMS  IY`vars         HELP ""Address of the common variables (used throughout)
         ld      bc,32
         ldir    
         
-._1     ld      a`bank,1
-        ld      [$#SMS.SLOT1],a`bank
-        ld      [$.SLOT1],a`bank
-        ld      a`bank,2
-        ld      [$#SMS.SLOT2],a`bank
-        ld      [$.SLOT2],a`bank
+._1     ld      A`bank                  1
+        ld      [$#SMS.MAPPER.SLOT1]    A`bank
+        ld      [$.SLOT1]               A`bank
+        ld      A`bank                  2
+        ld      [$#SMS.MAPPER.SLOT2]    A`bank
+        ld      [$.SLOT2]               A`bank
         
         ld      hl,$.PALETTE
         ld      a,%00000011
@@ -1874,8 +1876,8 @@ PARAMS  hl              ;absolute address to uncompressed art data for the icons
                          ;($14000-$17FFF)
 {        
         di      
-        ld      a`bank,5
-        ld      [$#SMS.SLOT1],a`bank
+        ld      A`bank                  5
+        ld      [$#SMS.MAPPER.SLOT1]    A`bank
         
         ld      a,[$.FRAMECOUNT]
         and     %00001111
@@ -1891,25 +1893,25 @@ PARAMS  hl              ;absolute address to uncompressed art data for the icons
         
         add     hl,bc
         ld      a,l
-        out     [$#SMS.VDP.CONTROL],a
+        out     [$#SMS_PORTS.VDP.CONTROL],a
         ld      a,h
         or      %01000000
-        out     [$#SMS.VDP.CONTROL],a
+        out     [$#SMS_PORTS.VDP.CONTROL],a
         
         ld      b,4
 .loop   ld      a,[de]
-        out     [$#SMS.VDP.DATA],a
+        out     [$#SMS_PORTS.VDP.DATA],a
         nop     
         nop     
         inc     de
         ld      a,[de]
-        out     [$#SMS.VDP.DATA],a
+        out     [$#SMS_PORTS.VDP.DATA],a
         inc     de
         djnz    .loop
         
         ;return to the previous bank number
-        ld      a`bank,[$.SLOT1]
-        ld      [$#SMS.SLOT1],a`bank
+        ld      A`bank                  [$.SLOT1]
+        ld      [$#SMS.MAPPER.SLOT1]    A`bank
         ei      
         ret
 }

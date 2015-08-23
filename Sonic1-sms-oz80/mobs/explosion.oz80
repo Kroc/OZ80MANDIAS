@@ -10,7 +10,7 @@
 
 PROC    :mob_explosion                          SECTION ::mobs                  ;$693F
         ;==============================================================================
-PARAMS  IX`mob          HELP ""Address of the current mob being processed
+PARAMS  IX`mob          ``Address of the current mob being processed
 {
         set     5,[ix+#mob.flags]               ;mob does not collide with the floor
         ld      a,[ix+#mob.unknown15]

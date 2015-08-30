@@ -1,7 +1,7 @@
 
 ;SEGA ROM Header:
 ;=======================================================================================
-TYPE    #SMS.HEADER
+TYPE    #SMS_HEADER
 [   ;property name              ;size           ;default content
     .ID                         BYTE x 8        ;!"TMR SEGA"
     .RESERVED                   BYTE x 2        ;!"  "
@@ -16,7 +16,7 @@ TYPE    #SMS.HEADER
 
 ;SEGA Master System Memory Map
 ;=======================================================================================
-RAM     $#SMS
+RAM     $_SMS
 [
     .SLOT0                      BYTE x 16 KB                                    ;$0000
     .SLOT1                      BYTE x 16 KB                                    ;$4000
@@ -61,7 +61,7 @@ RAM     $#SMS
 ]
 
 ;---------------------------------------------------------------------------------------
-RAM     $#SMS_PORTS
+RAM     $_SMS_PORTS
 [
     .                           BYTE x $3E
     
@@ -124,7 +124,7 @@ RAM     $#SMS_PORTS
     ]
 ]
 
-RAM     $#SMS.VRAM
+RAM     $_SMS_VRAM
 [
     .                           BYTE x $37FF
     .SCREENNAMETABLE            WORD

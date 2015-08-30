@@ -66,13 +66,13 @@ PARAMS  IY`vars         ``Address of the common variables (used throughout)
         
         ;load page 1 ($4000-$7FFF) with bank 5 ($14000-$17FFF)
         ld      A`bank          5
-        ld      [$#SMS.MAPPER.SLOT1]   A`bank
+        ld      [$_SMS.MAPPER.SLOT1]   A`bank
         ld      [$.SLOT1]       A`bank
         
         ;map 1 background
         ld      HL,$627e
         ld      BC,$0178
-        ld      DE,$#SMS.VRAM.SCREENNAMETABLE
+        ld      DE,$_SMS_VRAM.SCREENNAMETABLE
         ld      A,$10
         ld      [$.TEMP1],A
         call    ::main:decompressScreen
@@ -80,7 +80,7 @@ PARAMS  IY`vars         ``Address of the common variables (used throughout)
         ;map 1 foreground
         ld      HL,$63f6
         ld      BC,$0145
-        ld      DE,$#SMS.VRAM.SCREENNAMETABLE
+        ld      DE,$_SMS_VRAM.SCREENNAMETABLE
         ld      A,$00
         ld      [$.TEMP1],A
         call    ::main:decompressScreen
@@ -120,13 +120,13 @@ PARAMS  IY`vars         ``Address of the common variables (used throughout)
         
         ;load page 1 ($4000-$7FFF) with bank 5 ($14000-$17FFF)
         ld      A`bank          5
-        ld      [$#SMS.MAPPER.SLOT1]   A`bank
+        ld      [$_SMS.MAPPER.SLOT1]   A`bank
         ld      [$.SLOT1]       A`bank
         
         ;map screen 2 background
         ld      HL,$653b
         ld      BC,$0170
-        ld      DE,$#SMS.VRAM.SCREENNAMETABLE
+        ld      DE,$_SMS_VRAM.SCREENNAMETABLE
         ld      A,$10
         ld      [$.TEMP1],A
         call    ::main:decompressScreen
@@ -134,7 +134,7 @@ PARAMS  IY`vars         ``Address of the common variables (used throughout)
         ;map screen 2 foreground
         ld      HL,$66ab
         ld      BC,$0153
-        ld      DE,$#SMS.VRAM.SCREENNAMETABLE
+        ld      DE,$_SMS_VRAM.SCREENNAMETABLE
         ld      A,$00
         ld      [$.TEMP1],A
         call    ::main:decompressScreen
@@ -800,12 +800,12 @@ PARAMS  IY`vars         ``Address of the common variables (used throughout)
         
         ;now switch page 1 ($4000-$7FFF) to bank 5 ($14000-$17FFF)
         ld      A`bank          5
-        ld      [$#SMS.MAPPER.SLOT1]   A`bank
+        ld      [$_SMS.MAPPER.SLOT1]   A`bank
         ld      [$.SLOT1]       A`bank
         
         ;load the title screen itself
         ld      HL              $6000           ;ROM:$16000
-        ld      DE              $#SMS.VRAM.SCREENNAMETABLE
+        ld      DE              $_SMS_VRAM.SCREENNAMETABLE
         ld      BC              $012E
         ld      A               $00
         ld      [$.TEMP1]       A
@@ -972,13 +972,13 @@ PARAMS  IY`vars         ``Address of the common variables (used throughout)
         
         ;switch page 1 ($4000-$7FFF) to bank 5 ($14000-$17FFF)
         ld      A`bank          5
-        ld      [$#SMS.MAPPER.SLOT1]   A`bank
+        ld      [$_SMS.MAPPER.SLOT1]   A`bank
         ld      [$.SLOT1]       A`bank
         
         ;act complete background
         ld      hl,$67fe
         ld      bc,$0032
-        ld      de,$#SMS.VRAM.SCREENNAMETABLE
+        ld      de,$_SMS_VRAM.SCREENNAMETABLE
         ld      a,$00
         ld      [$.TEMP1],a
         call    ::main:decompressScreen
@@ -1135,13 +1135,13 @@ PARAMS  IY`vars         ``Address of the common variables (used throughout)
         
         ;load page 1 ($4000-$7FFF) with bank 5 ($14000-$17FFF)
         ld      a,5
-        ld      [$#SMS.MAPPER.SLOT1],a
+        ld      [$_SMS.MAPPER.SLOT1],a
         ld      [$.SLOT1],a
         
         ;UNKNOWN
         ld      hl,$612e
         ld      bc,$00bb
-        ld      de,$#SMS.VRAM.SCREENNAMETABLE
+        ld      de,$_SMS_VRAM.SCREENNAMETABLE
         ld      a,[$.CURRENT_LEVEL]
         cp      28
         jr      c,._1
@@ -1149,7 +1149,7 @@ PARAMS  IY`vars         ``Address of the common variables (used throughout)
         ;UNKNOWN
         ld      hl,$61e9                        ;$161E9?
         ld      bc,$0095
-        ld      de,$#SMS.VRAM.SCREENNAMETABLE
+        ld      de,$_SMS_VRAM.SCREENNAMETABLE
 
 ._1     xor     a`zero
         ld      [$.TEMP1],a`zero
@@ -2106,7 +2106,7 @@ PARAMS  IY`vars         ``Address of the common variables (used throughout)
 {        
         ;load page 1 (Z80:$4000-$7FFF) with bank 5 (ROM:$14000-$17FFF)
         ld      A`bank          5
-        ld      [$#SMS.MAPPER.SLOT1]   A`bank
+        ld      [$_SMS.MAPPER.SLOT1]   A`bank
         ld      [$.SLOT1]       A`bank
         
         ld      a, [$.CURRENT_LEVEL]
@@ -2162,7 +2162,7 @@ PARAMS  IY`vars         ``Address of the common variables (used throughout)
         
         ;switch page 1 ($4000-$7FFF) to bank 11 ($2C000-$2FFFF)
         ld      a,11
-        ld      [$#SMS.MAPPER.SLOT1],a
+        ld      [$_SMS.MAPPER.SLOT1],a
         ld      [$.SLOT1],a
         
         ;are rings enabled?
@@ -2186,10 +2186,10 @@ PARAMS  IY`vars         ``Address of the common variables (used throughout)
         
         ;switch pages 1 & 2 ($4000-$BFFF) to banks 1 & 2 ($4000-$BFFF)
         ld      a,1
-        ld      [$#SMS.MAPPER.SLOT1],a
+        ld      [$_SMS.MAPPER.SLOT1],a
         ld      [$.SLOT1],a
         ld      a,2
-        ld      [$#SMS.MAPPER.SLOT2],a
+        ld      [$_SMS.MAPPER.SLOT2],a
         ld      [$.SLOT2],a
         
         call    ::mobs:_2e5a
@@ -2214,7 +2214,7 @@ PARAMS  IY`vars         ``Address of the common variables (used throughout)
         
         ;switch page 1 ($4000-$7FFF) to bank 11 ($2C000-$2FFFF)
         ld      a,11
-        ld      [$#SMS.MAPPER.SLOT1],a
+        ld      [$_SMS.MAPPER.SLOT1],a
         ld      [$.SLOT1],a
         
         ;are rings enabled?
@@ -2302,10 +2302,10 @@ PARAMS  IY`vars         ``Address of the common variables (used throughout)
         
         ;switch pages 1 & 2 ($4000-$BFFF) to banks 1 & 2 ($4000-$BFFF)
         ld      a,1
-        ld      [$#SMS.MAPPER.SLOT1],a
+        ld      [$_SMS.MAPPER.SLOT1],a
         ld      [$.SLOT1],a
         ld      a,2
-        ld      [$#SMS.MAPPER.SLOT2],a
+        ld      [$_SMS.MAPPER.SLOT2],a
         ld      [$.SLOT2],a
         
         call    ::mobs:_2e5a
@@ -2359,7 +2359,7 @@ PARAMS  IY`vars         ``Address of the common variables (used throughout)
         call    ::interrupts:waitForInterrupt
         ld      [iy+#vars.spriteUpdateCount],a
         ld      a,11
-        ld      [$#SMS.MAPPER.SLOT1],a
+        ld      [$_SMS.MAPPER.SLOT1],a
         ld      [$.SLOT1],a
         
         ;are rings enabled?
@@ -2372,7 +2372,7 @@ PARAMS  IY`vars         ``Address of the common variables (used throughout)
         jr      nz,._1
         
         ld      A`bank          ::sound.bank
-        ld      [$#SMS.MAPPER.SLOT1]   A`bank
+        ld      [$_SMS.MAPPER.SLOT1]   A`bank
         ld      [$.SLOT1]       A`bank
         call    ::sound:public.unpause
         
@@ -2446,10 +2446,10 @@ PROC    :_1f06                                  SECTION ::screens               
         
         di      
         ld      a,1
-        ld      [$#SMS.MAPPER.SLOT1],a
+        ld      [$_SMS.MAPPER.SLOT1],a
         ld      [$.SLOT1],a
         ld      a,2
-        ld      [$#SMS.MAPPER.SLOT2],a
+        ld      [$_SMS.MAPPER.SLOT2],a
         ld      [$.SLOT2],a
         
         ld      e,$00
@@ -2464,15 +2464,15 @@ PROC    :_1f06                                  SECTION ::screens               
         ld      b,$00
         add     hl,bc
         add     a,e
-        out     [$#SMS_PORTS.VDP.CONTROL],a
+        out     [$_SMS_PORTS.VDP.CONTROL],a
         ld      a,%11000000
-        out     [$#SMS_PORTS.VDP.CONTROL],a
+        out     [$_SMS_PORTS.VDP.CONTROL],a
         ld      a,[$.D2B1]
         and     $01
         ld      a,[hl]
         jr      z,._2
         ld      a,[$.D2B3]
-._2     out     [$#SMS_PORTS.VDP.DATA],a
+._2     out     [$_SMS_PORTS.VDP.DATA],a
         
         ei      
         ret
@@ -2724,7 +2724,7 @@ PROC    :_20b8                                  SECTION ::screens               
         ;==============================================================================
 {        
         ld      A`bank          ::sound.bank
-        ld      [$#SMS.MAPPER.SLOT1]   A`bank
+        ld      [$_SMS.MAPPER.SLOT1]   A`bank
         ld      [$.SLOT1]       A`bank
         
         ld      hl,$0028
@@ -3018,18 +3018,18 @@ PARAMS  IY`vars         ``Address of the common variables (used throughout)
         sub     $40
         ld      h,a
         ld      a,6
-        ld      [$#SMS.MAPPER.SLOT1],a
+        ld      [$_SMS.MAPPER.SLOT1],a
         ld      [$.SLOT1],a
         ld      a,7
-        ld      [$#SMS.MAPPER.SLOT2],a
+        ld      [$_SMS.MAPPER.SLOT2],a
         ld      [$.SLOT2],a
         jr      ._10
         
 ._9     ld      a,5
-        ld      [$#SMS.MAPPER.SLOT1],a
+        ld      [$_SMS.MAPPER.SLOT1],a
         ld      [$.SLOT1],a
         ld      a,6
-        ld      [$#SMS.MAPPER.SLOT2],a
+        ld      [$_SMS.MAPPER.SLOT2],a
         ld      [$.SLOT2],a
         
 ._10    ei                                      ;enable interrupts
@@ -3116,10 +3116,10 @@ PARAMS  IY`vars         ``Address of the common variables (used throughout)
         ;switch pages 1 & 2 ($4000-$BFFF) to banks 1 & 2 ($4000-$BFFF)
         di      
         ld      a,1
-        ld      [$#SMS.MAPPER.SLOT1],a
+        ld      [$_SMS.MAPPER.SLOT1],a
         ld      [$.SLOT1],a
         ld      a,2
-        ld      [$#SMS.MAPPER.SLOT2],a
+        ld      [$_SMS.MAPPER.SLOT2],a
         ld      [$.SLOT2],a
         ei      
         
@@ -3178,10 +3178,10 @@ PARAMS  IY`vars         ``Address of the common variables (used throughout)
         ;switch pages 1 & 2 ($4000-$BFFF) to banks 1 & 2 ($4000-$BFFF)
         di      
         ld      a,1
-        ld      [$#SMS.MAPPER.SLOT1],a
+        ld      [$_SMS.MAPPER.SLOT1],a
         ld      [$.SLOT1],a
         ld      a,2
-        ld      [$#SMS.MAPPER.SLOT2],a
+        ld      [$_SMS.MAPPER.SLOT2],a
         ld      [$.SLOT2],a
         ei      
         
@@ -3212,7 +3212,7 @@ PARAMS  IY`vars         ``Address of the common variables (used throughout)
         
         ;switch page 1 ($4000-$BFFF) to page 5 ($14000-$17FFF)
         ld      a,5
-        ld      [$#SMS.MAPPER.SLOT1],a
+        ld      [$_SMS.MAPPER.SLOT1],a
         ld      [$.SLOT1],a
         call    :loadObjectLayout
         
@@ -3556,13 +3556,13 @@ PARAMS  IY`vars         ``Address of the common variables (used throughout)
         
         ;load page 1 ($4000-$7FFF) with bank 5 ($14000-$17FFF)
         ld      a,5
-        ld      [$#SMS.MAPPER.SLOT1],a
+        ld      [$_SMS.MAPPER.SLOT1],a
         ld      [$.SLOT1],a
         
         ;map 3 screen (end of game)
         ld      hl,$6830
         ld      bc,$0179
-        ld      de,$#SMS.VRAM.SCREENNAMETABLE
+        ld      de,$_SMS_VRAM.SCREENNAMETABLE
         xor     A`zero
         ld      [$.TEMP1]       A`zero
         call    ::main:decompressScreen
@@ -3575,7 +3575,7 @@ PARAMS  IY`vars         ``Address of the common variables (used throughout)
         call    ::interrupts:waitForInterrupt
         
         ld      a,1
-        ld      [$#SMS.MAPPER.SLOT1],a
+        ld      [$_SMS.MAPPER.SLOT1],a
         ld      [$.SLOT1],a
         ld      a,[$.D27F]
         cp      $06
@@ -3657,13 +3657,13 @@ PARAMS  IY`vars         ``Address of the common variables (used throughout)
         ld      [iy+#vars.spriteUpdateCount],$00
         
         ld      a,5
-        ld      [$#SMS.MAPPER.SLOT1],a
+        ld      [$_SMS.MAPPER.SLOT1],a
         ld      [$.SLOT1],a
         
         ;UNKNOWN
         ld      hl,$69a9
         ld      bc,$0145
-        ld      de,$#SMS.VRAM.SCREENNAMETABLE
+        ld      de,$_SMS_VRAM.SCREENNAMETABLE
         xor     a`zero
         ld      [$.TEMP1],a`zero
         call    ::main:decompressScreen
@@ -3698,13 +3698,13 @@ PARAMS  IY`vars         ``Address of the common variables (used throughout)
         call    ::main:decompressArt
         
         ld      a,5
-        ld      [$#SMS.MAPPER.SLOT1],a
+        ld      [$_SMS.MAPPER.SLOT1],a
         ld      [$.SLOT1],a
         
         ;credits screen
         ld      hl,$6c61
         ld      bc,$0189
-        ld      de,$#SMS.VRAM.SCREENNAMETABLE
+        ld      de,$_SMS_VRAM.SCREENNAMETABLE
         xor     a`zero
         ld      [$.TEMP1],a`zero
         call    ::main:decompressScreen
@@ -3935,24 +3935,24 @@ PROC    :_2795                                  SECTION ::screens               
         
 ._5     di      
         ld      a,l
-        out     [$#SMS_PORTS.VDP.CONTROL],a
+        out     [$_SMS_PORTS.VDP.CONTROL],a
         ld      a,h
-        out     [$#SMS_PORTS.VDP.CONTROL],a
+        out     [$_SMS_PORTS.VDP.CONTROL],a
         push    ix
         pop     ix
-        in      a,[$#SMS_PORTS.VDP.DATA]
+        in      a,[$_SMS_PORTS.VDP.DATA]
         ld      c,a
         push    ix
         pop     ix
         ld      a,e
-        out     [$#SMS_PORTS.VDP.CONTROL],a
+        out     [$_SMS_PORTS.VDP.CONTROL],a
         ld      a,d
         or      $40
-        out     [$#SMS_PORTS.VDP.CONTROL],a
+        out     [$_SMS_PORTS.VDP.CONTROL],a
         push    ix
         pop     ix
         ld      a,c
-        out     [$#SMS_PORTS.VDP.DATA],a
+        out     [$_SMS_PORTS.VDP.DATA],a
         push    ix
         pop     ix
         ei      

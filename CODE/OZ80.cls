@@ -40,7 +40,7 @@ Public Enum PROFILER_EVENTS
     EVENT_PARSE                         'Parse File (into tree)
     EVENT_PARSE_WORD                    '- Parse out a single word
     EVENT_FORMATTOKEN                   '- Format token data for logging
-    EVENT_ASSEMBLE                      'Assembling a file (after tokenisation)
+    EVENT_ASSEMBLE                      'Assembling a file (after parsing)
     EVENT_Z80ASSEMBLE                   'Assembling a Z80 instruction
     EVENT_ROM_LAYOUT
     EVENT_ROM_ADDCHUNK
@@ -56,6 +56,7 @@ Private Error As OZ80_ERROR
 Public Enum OZ80_ERROR
     OZ80_ERROR_NONE                     'Assembly completed successfully
     OZ80_ERROR_ABORT                    'The user cancelled the assembly
+    OZ80_ERROR_INTERNAL                 'I made a mistake
     
     OZ80_ERROR_DUPLICATE                'A name has been defined twice
     OZ80_ERROR_EXPECTED                 'Incorrect content at the current scope
@@ -148,6 +149,7 @@ Private NUMBER_MAX_KB As Double
 'A lot of the text parsing will be letter-by-letter, so this enum provides the _
  common character codes we'll be referring to, as well as the particular punctuation _
  symbols used for OZ80 syntax. Note that `UCS2` is defined by 'blu_Strings.cls'
+
 Private Enum OZ80_SYNTAX
     ASC_NUL
     ASC_TAB = UCS2.C0_HT
@@ -205,6 +207,9 @@ End Enum
 Private Const TAB_WIDTH As Long = 8
 
 '--------------------------------------------------------------------------------------
+
+'When we parse a source file we extract the words and convert each _
+ into a simple numerical representation (a token)
 
 Private Enum OZ80_TOKEN
     TOKEN_NONE                          'Skip "0"
@@ -330,9 +335,8 @@ Private Enum OZ80_TOKEN
     
     'Keywords .........................................................................
     [_TOKEN_KEYWORDS_BEGIN]
-    'Append more to a Chunk / Type
-    TOKEN_KEYWORD_APPEND = [_TOKEN_KEYWORDS_BEGIN]
-    TOKEN_KEYWORD_BOOL                  'Boolean data type (1-bit)
+    'Boolean data type (1-bit)
+    TOKEN_KEYWORD_BOOL = [_TOKEN_KEYWORDS_BEGIN]
     TOKEN_KEYWORD_BYTE                  'Byte data type
     TOKEN_KEYWORD_CONST                 'Define constant
     TOKEN_KEYWORD_HELP                  'Documentation marker
@@ -375,7 +379,7 @@ Private Enum OZ80_TOKEN
     TOKEN_PROPERTY_USE
     TOKEN_PROPERTY_NEW
     TOKEN_PROPERTY_ANON                 'Anonymous Property, i.e. `.`
-    TOKEN_RAM                           'e.g. `$.RAM`
+    TOKEN_RAM
     TOKEN_SECTION                       'e.g. `::section`
     TOKEN_TEXT                          'e.g. `"..."`
     TOKEN_TYPE                          'e.g. `#type`
@@ -385,6 +389,11 @@ Private Enum OZ80_TOKEN
     [_TOKEN_LAST]                       'Do not go above 255!
 End Enum
 
+'A look-up table of tokens (above) to token attributes (below)
+Private TokenAttributes(0 To [_TOKEN_LAST]) As OZ80_ATTR
+
+'The tokens fit into a variety of overlapping categories. _
+ This bit-mask pattern allows us to compare multiple tokens very quickly
 Private Enum OZ80_ATTR
     ATTR_NONE
     
@@ -394,9 +403,21 @@ Private Enum OZ80_ATTR
     ATTR_EXPR = 2 ^ 3                   'An Expression (calculable value)
     ATTR_OPERTATOR = 2 ^ 4
     ATTR_PARAM = 2 ^ 5
+    
     ATTR_Z80_MNEMONIC = 2 ^ 6           'Z80 instruction, e.g. `djnz`
     ATTR_Z80_REGISTER = 2 ^ 7           'Z80 register, e.g. `A`
     ATTR_Z80_FLAG = 2 ^ 8               'Z80 flag, e.g. `nz`
+    
+    'For defined names (such as Sections, Labels & RAM) we want to be able to
+    ' identify composite names (e.g. "::Section:Label.property") or the lack there-of
+    ' (for example, when only a Section name is allowed, not a fully-qualified Label)
+    
+    ATTR_NAME_CONST = 2 ^ 9             'A Constant, e.g. "!BLUE"
+    ATTR_NAME_LABEL = 2 ^ 11            'A Label name, e.g. ":Label", incl. ":"
+    ATTR_NAME_PROPERTY = 2 ^ 12         'A Property name, e.g. ".property"
+    ATTR_NAME_RAM = 2 ^ 13              'A RAM page name, e.g. "$_SRAM", incl. "$"
+    ATTR_NAME_SECTION = 2 ^ 10          'A Section name, e.g. "::section"
+    ATTR_NAME_TYPE = 2 ^ 15             'A Type name, e.g. "#type"
     
     'Lists can contains Lists and Expressions
     ATTR_LISTEXPR = ATTR_LIST Or ATTR_EXPR
@@ -407,8 +428,6 @@ Private Enum OZ80_ATTR
     'Z80 Parameters can be Expressions or Registers
     ATTR_Z80_PARAM = ATTR_EXPR Or ATTR_Z80_REGFLAG
 End Enum
-
-Private TokenAttributes(0 To [_TOKEN_LAST]) As OZ80_ATTR
 
 '--------------------------------------------------------------------------------------
 
@@ -725,6 +744,7 @@ End Type
 
 'This is unused at this moment, but represents a further attempt to fit all _
  combinations of the three parameters in a single bit-mask
+
 Private Enum OZ80_MASK
     'Param 1 Bits
     '..................................................................................
@@ -988,7 +1008,6 @@ Private Const STR_ADC                   As String = "adc"
 Private Const STR_ADD                   As String = "add"
 Private Const STR_AF                    As String = "AF"
 Private Const STR_AND                   As String = "and"
-Private Const STR_APPEND                As String = "APPEND"
 Private Const STR_B                     As String = "B"
 Private Const STR_BC                    As String = "BC"
 Private Const STR_BIT                   As String = "bit"
@@ -1251,8 +1270,8 @@ Event Error( _
 '======================================================================================
 Private Sub Class_Initialize()
     'Unlike the assemblers of the past, we are not practically memory-constrained; _
-     even though OZ80 would be hard-pushed to use more than a few hundred megs of RAM, _
-     there is always virtual memory, so our work does not have a hard limit. _
+     even though OZ80 would be hard-pushed to use more than a few hundred megs of _
+     RAM, there is always virtual memory, so our work does not have a hard limit. _
      Therefore we aim to trade off memory-usage for speed with a large set of lookup _
      tables which we set up with the class. If you don't want to waste memory whilst _
      the assembler isn't running, only insantiate OZ80 when needed
@@ -1434,7 +1453,6 @@ Private Sub Class_Initialize()
     Let i = i + 1: Let TokenNames(TOKEN_OPERATOR_OR) = ChrW$(SYNTAX_OPERATOR_OR)
     Let i = i + 1: Let TokenNames(TOKEN_OPERATOR_AND) = ChrW$(SYNTAX_OPERATOR_AND)
     'Keywords .........................................................................
-    Let i = i + 1: Let TokenNames(TOKEN_KEYWORD_APPEND) = STR_APPEND
     Let i = i + 1: Let TokenNames(TOKEN_KEYWORD_BOOL) = STR_BOOL
     Let i = i + 1: Let TokenNames(TOKEN_KEYWORD_BYTE) = STR_BYTE
     Let i = i + 1: Let TokenNames(TOKEN_KEYWORD_CONST) = STR_CONST
@@ -1475,7 +1493,7 @@ Private Sub Class_Initialize()
     Let i = i + 1: Let TokenNames(TOKEN_PROPERTY_USE) = ChrW$(SYNTAX_PROPERTY)
     Let i = i + 1: Let TokenNames(TOKEN_PROPERTY_NEW) = ChrW$(SYNTAX_PROPERTY)
     Let i = i + 1: Let TokenNames(TOKEN_PROPERTY_ANON) = ChrW$(SYNTAX_PROPERTY)
-    Let i = i + 1: Let TokenNames(TOKEN_RAM) = ChrW$(SYNTAX_NUMBER_HEX) & ChrW$(SYNTAX_PROPERTY)
+    Let i = i + 1: Let TokenNames(TOKEN_RAM) = ChrW$(SYNTAX_NUMBER_HEX)
     Let i = i + 1: Let TokenNames(TOKEN_SECTION) = String(2, ChrW$(SYNTAX_LABEL))
     Let i = i + 1: Let TokenNames(TOKEN_TEXT) = ChrW$(SYNTAX_TEXT)
     Let i = i + 1: Let TokenNames(TOKEN_TYPE) = ChrW$(SYNTAX_TYPE)
@@ -1598,7 +1616,6 @@ Private Sub Class_Initialize()
     Let i = i + 1: Let TokenAttributes(TOKEN_OPERATOR_OR) = ATTR_OPERTATOR
     Let i = i + 1: Let TokenAttributes(TOKEN_OPERATOR_AND) = ATTR_OPERTATOR
     '
-    Let i = i + 1: Let TokenAttributes(TOKEN_KEYWORD_APPEND) = ATTR_KEYWORD
     Let i = i + 1: Let TokenAttributes(TOKEN_KEYWORD_BOOL) = ATTR_UNIT
     Let i = i + 1: Let TokenAttributes(TOKEN_KEYWORD_BYTE) = ATTR_UNIT
     Let i = i + 1: Let TokenAttributes(TOKEN_KEYWORD_CONST) = ATTR_KEYWORD
@@ -1650,7 +1667,7 @@ Private Sub Class_Initialize()
     '----------------------------------------------------------------------------------
     'Index 0 acts as an "unimplemented" marker so we can see when certain cache _
      indexes haven't been implemented yet
-    Let ParamText(PARAMTEXT_NONE) = "?????????"
+    Let ParamText(PARAMTEXT_NONE) = "!!!!!!!!!!"
     
     For i = 0 To ([_TOKEN_Z80_END] - [_TOKEN_Z80_BEGIN])
         Let ParamText(PARAMTEXT_Z80 + i) = TokenNames([_TOKEN_Z80_BEGIN] + i)
@@ -1888,6 +1905,10 @@ Private Sub Reset()
     Set Values = Nothing: Set Values = New Scripting.Dictionary
     Set Labels = Nothing: Set Labels = New Scripting.Dictionary
     
+    'Erase the Types (which includes `RAM`)
+    Erase Types
+    Let TypeCount = 0
+    
     'Clear ROM layout
     Erase Layout: Let LayoutCount = 0
     Erase ROM
@@ -1950,6 +1971,11 @@ Public Function Assemble( _
     'Phase 1: Parse & Assemble
     '----------------------------------------------------------------------------------
     Call RaiseMessage(OZ80_LOG_ACTION, LOG_PHASE1)
+    
+    'Prepare the default RAM page, _
+     the bounds of this will be set with the `SYSTEM` statement
+    ReDim Types(0) As OZ80Type
+    Let Types(0).Name = "$"
     
     'When building the abstract syntax tree, nodes are created ahead of time and _
      populated with the details once each word is recognised. This makes it easier _
@@ -2354,6 +2380,11 @@ Private Sub FileParse( _
     Dim WordAttr As OZ80_ATTR           'Attributes of the word, e.g. Keyword, List
     Dim WordValue As Double             'If a number, the numerical value
     
+    'Get a reference to the Unicode properties look-up table. This doesn't need to be _
+     manually freed as that Class only goes out of scope when the application quits
+    Dim Unicode() As Integer
+    Let Unicode = blu.Strings.UnicodeProperties()
+    
     'TODO: This block can be removed once we move fully to the syntax tree
     '---
     'Prepare a large buffer to accept the token stream (using `ReDim` for every token _
@@ -2499,15 +2530,19 @@ ScopeRoot:
         'And walk the Type definition block
         GoSub ScopeType
         
-    '[f]    `RAM $<name> {[...]}`
+    '[f]    `RAM [$_<name>] {[...]}`
     '..................................................................................
     ElseIf WordToken = TOKEN_KEYWORD_RAM Then
         'Add the `RAM` keyword to the tree
 '        Call RaiseMessage(OZ80_LOG_INFO, "SCOPE <root> " & vbTab & vbTab & "| " & Word.Text)
         GoSub AddNode
         
-'        Call RaiseMessage(OZ80_LOG_INFO, "SCOPE <root> " & vbTab & vbTab & "| " & Word.Text)
-        GoSub AddNode
+        'TODO: For now skip the param
+        If WordToken = TOKEN_RAM Then
+'            Call RaiseMessage(OZ80_LOG_INFO, "SCOPE <root> " & vbTab & vbTab & "| " & Word.Text)
+            GoSub AddNode
+        End If
+        
         GoSub ScopeType
         
     '[g]    `START {[...]}`
@@ -2530,7 +2565,7 @@ ScopeRoot:
         If WordToken <> TOKEN_LABEL Then Call RaiseError(OZ80_ERROR_EXPECTED, _
             "TODO" _
         ): GoTo Finish
-'        Call RaiseMessage(OZ80_LOG_INFO, "SCOPE <root> " & vbTab & vbTab & "| " & Word.Text)
+        '        Call RaiseMessage(OZ80_LOG_INFO, "SCOPE <root> " & vbTab & vbTab & "| " & Word.Text)
         GoSub AddNode
         
         'Check for the optional Section name
@@ -2650,14 +2685,6 @@ ProcParams:
         Let IsProcReturnDefined = 0
         
     '..................................................................................
-    ElseIf WordToken = TOKEN_KEYWORD_APPEND Then
-'        Call RaiseMessage(OZ80_LOG_INFO, "SCOPE <root> " & vbTab & vbTab & "| " & Word.Text)
-        GoSub AddNode
-'        Call RaiseMessage(OZ80_LOG_INFO, "SCOPE <root> " & vbTab & vbTab & "| " & Word.Text)
-        GoSub AddNode
-        GoSub ScopeType
-        
-    '..................................................................................
     Else
         Debug.Print "***"
         Debug.Print TokenNames(WordToken)
@@ -2767,7 +2794,7 @@ ScopeZ80Param:
                 GoSub ScopeExpr
             End If
         
-        ElseIf (WordAttr And ATTR_Z80_REGISTER) Then
+        ElseIf (WordAttr And ATTR_Z80_REGISTER) <> 0 Then
 '            Call RaiseMessage(OZ80_LOG_INFO, "SCOPE <z80Param> " & vbTab & "| " & Word.Text)
             GoSub AddNode
             
@@ -2775,7 +2802,9 @@ ScopeZ80Param:
             GoSub ScopeExpr
         
         Else
-            Stop
+            Call RaiseError(OZ80_ERROR_INTERNAL, _
+                "That's not something I know" _
+            ): GoTo Finish
         End If
         
         If WordToken = TOKEN_SQUARE_CLOSE Then
@@ -2807,7 +2836,7 @@ ScopeType:
         "Type definition block expected" _
     ): GoTo Finish
     'Add the opening bracket to the tree
-'    Call RaiseMessage(OZ80_LOG_INFO, "SCOPE <type> " & vbTab & vbTab & "| " & Word.Text)
+'        Call RaiseMessage(OZ80_LOG_INFO, "SCOPE <type> " & vbTab & vbTab & "| " & Word.Text)
     GoSub AddNode
     
     Do
@@ -3041,12 +3070,14 @@ AddNode:
     
     
 SkipWord:
+    'When we need to ignore a word (comments for example), it's faster to jump up _
+     here and drop into the routine again. We also need to ensure that our profiling _
+     timer does not stretch across multiple ignored words and real words
     Call Profiler.EventEnd(EVENT_PARSE_WORD)
-    '*** TIMER END ***
     
     '[3]    Extract Word From Source Text
     '==================================================================================
-    '[3.1]  Read a single word:
+    '[3.1]  Initialisation:
     '----------------------------------------------------------------------------------
 ReadWord:
     '*** TIMER BEGIN ***
@@ -3060,6 +3091,9 @@ ReadWord:
     
     Dim WordContinue As OZ80_SYNTAX
     Dim WordBlock As Long
+    
+    Let WordAttr = ATTR_NONE
+    Let WordValue = 0
         
     '----------------------------------------------------------------------------------
 SkipChar:
@@ -3134,6 +3168,8 @@ ReadChar:
         
         'Capture the start of the word
         Let TokenLine = Line: Let TokenCol = Col
+        Dim FirstChar As Long
+        Let FirstChar = Char
         
     '[b]    Processing of single words: (end on whitespace)
     '----------------------------------------------------------------------------------
@@ -3281,6 +3317,7 @@ ReadChar:
 EndWord:
     Call Word.Clear.CharPush(Char): Let WordLength = 1
     Let TokenLine = Line: Let TokenCol = Col
+    Let FirstChar = Char
     GoTo TokenWord
     
 WordBreak:
@@ -3292,7 +3329,7 @@ WordBreak:
 
     '[4]    Tokenise Word                                                                '
     '==================================================================================
-    'Recognise the word:
+    '[4.1]  Identify the word:
     '----------------------------------------------------------------------------------
 TokenWord:
     
@@ -3314,18 +3351,17 @@ TokenWord:
     ' n o p q r s t u v w x y z         'There are no Q, U, V or Y words
     ' { | } ~                           'Tilde is unused at this moment
     
-    'TODO: Check for codes 0 - 32
-    On Word.Char(0) - 32 GoTo _
-        excl, smark, hash, dollar, perc, amp, SkipWord, lbr, rbr _
-       , star, plus, SkipWord, dash, dot, fs _
-       , num, num, num, num, num, num, num, num, num, num _
-       , colon, SkipWord, WordError, WordError, WordError, WordError, WordError _
-       , a, b, c, d, e, WordError, WordError, h, i, j, k, l, m _
-       , n, o, p, WordError, r, s, t, WordError, WordError, w, x, WordError, z _
-       , lsb, bs, rsb, acute, WordError, backtick _
-       , a, b, c, d, e, WordError, WordError, h, i, j, k, l, m _
-       , n, o, p, WordError, r, s, t, WordError, WordError, w, x, WordError, z _
-       , lcb, bar, rcb, WordError
+    On FirstChar - 32 GoTo _
+        excl, smark, hash, isName, perc, amp, SkipWord, lbr, rbr _
+      , star, plus, SkipWord, dash, dot, fs _
+      , num, num, num, num, num, num, num, num, num, num _
+      , isName, SkipWord, WordError, WordError, WordError, WordError, WordError _
+      , a, b, c, d, e, WordError, WordError, h, i, j, k, l, m _
+      , n, o, p, WordError, r, s, t, WordError, WordError, w, x, WordError, z _
+      , lsb, bs, rsb, acute, WordError, backtick _
+      , a, b, c, d, e, WordError, WordError, h, i, j, k, l, m _
+      , n, o, p, WordError, r, s, t, WordError, WordError, w, x, WordError, z _
+      , lcb, bar, rcb, WordError
     
     'Null, or not an ASCII char from 33 to 126
     GoTo WordError
@@ -3334,6 +3370,202 @@ TokenWord:
     Dim i As Long
     'These are used whilst converting words into real numbers
     Dim Number As Double, Multiplier As Long
+    
+isName:
+    '[a]    Defined Names (i.e. Constants, Labels &c.)
+    '----------------------------------------------------------------------------------
+    '[a.1]  Check the one-letter names:
+    '..................................................................................
+    If WordLength = 1 Then
+        'Which one is it?
+        If FirstChar = SYNTAX_PROPERTY Then
+            'An anonymous property, "."
+            Let WordToken = TOKEN_PROPERTY_ANON
+            Let WordAttr = TokenAttributes(WordToken) Or ATTR_NAME_PROPERTY
+            
+        ElseIf FirstChar = SYNTAX_LABEL Then
+            'Self-reference Label, ":"
+            Let WordToken = TOKEN_LABEL
+            Let WordAttr = TokenAttributes(WordToken) Or ATTR_NAME_LABEL
+            
+        ElseIf FirstChar = SYNTAX_RAM Then
+            'Default RAM page, "$"
+            Let WordToken = TOKEN_RAM
+            Let WordAttr = TokenAttributes(WordToken) Or ATTR_NAME_RAM
+            
+        Else
+            'It's life Jim, but not as we know it
+            Call RaiseError(OZ80_ERROR_INTERNAL, _
+                "A one-letter word was believed to be a Name (such as a Label, " _
+              & "Constant or Property) but was not identified by its first letter. " _
+              & "This is a mistake on OZ80's part." _
+            ): GoTo Finish
+        End If
+        GoTo NextWordSkipAttr
+    End If
+    
+    '[a.2]  Walk through the characters and validate
+    '..................................................................................
+    
+    'Get raw access to the characters in the word; this will be faster than using _
+     the `Word.Char` accessor repeatedly, though we will have to avoid leaving the _
+     function without calling `CharArrayUnaccess` first, to free the reference
+    Dim Chars() As Integer
+    Let Chars = Word.CharArrayAccess
+    
+    'The Name's prefix will determine where we begin typical validation; _
+     some prefixes are longer than others
+    Let i = 0
+    
+    'The beginning of the name will determine what is allowed to follow
+    If FirstChar = SYNTAX_PROPERTY Then
+        'TODO: NEW/USE property tokens (or do away with this distinction entirely)
+        'A property can only be followed by other properties
+        Let WordAttr = TokenAttributes(TOKEN_PROPERTY_USE) Or ATTR_NAME_PROPERTY
+        'Begin validating after the dot
+        Let i = 1
+        
+    ElseIf FirstChar = SYNTAX_LABEL Then
+        'Could be a Label, ":", or a Section, "::"
+        If Chars(1) = SYNTAX_LABEL Then
+            'It's a Section name
+            Let WordToken = TOKEN_SECTION
+            Let WordAttr = TokenAttributes(WordToken) Or ATTR_NAME_SECTION
+            Let i = 2
+        Else
+            'It's a Label
+            Let WordToken = TOKEN_LABEL
+            Let WordAttr = TokenAttributes(WordToken) Or ATTR_NAME_LABEL
+            Let i = 1
+        End If
+        
+    ElseIf FirstChar = SYNTAX_NUMBER_HEX Then
+        'Check for a valid hexadecimal digit after the "$"
+        If (Unicode(Chars(1)) And C1_XDIGIT) <> 0 Then
+        
+            'TODO: Gotta go fast...
+    
+            'Any more than 8-digits will be an overflow (32-bit number maximum)
+            If WordLength > 9 Then
+                'TODO: Will not unlock the `Word` bluString
+                GoTo ErrorOverflow
+            End If
+            'Check the digits are 0-9, A-F
+            For i = 1 To WordLength - 1
+                'ERROR: Invalid hexadecimal number!
+                If Not Word.CharIsHex(i) Then Call RaiseError( _
+                    OZ80_ERROR_INVALID, STR_ERR_INVALID_NUMBER_HEX _
+                ): GoTo NameErrorOut
+            Next i
+            
+            'Now cast the string into a real number _
+             (Note: The digits are valid, but it could be an overflow)
+            'TODO: Will not unlock the `Word` bluString, _
+                   replace with look-up tables or something
+            On Error GoTo ErrorOverflow
+            Let Number = Val("&H" & Mid$(Word.Text, 2) & "&")
+            On Error GoTo 0
+            
+            'Add the token for the number
+            Let WordToken = TOKEN_NUMBER
+            Let WordValue = Number
+            
+            'Free the array reference into the bluString
+            Call Word.CharArrayUnaccess(Chars)
+            GoTo NextWord
+        
+        End If
+        
+        Let WordToken = TOKEN_RAM
+        Let WordAttr = TokenAttributes(WordToken) Or ATTR_NAME_RAM
+        Let i = 1
+    End If
+    
+    '[a.3]
+    '..................................................................................
+    
+    'Now walk the remainder of the Name and validate
+    Dim c As Long
+    For c = i To WordLength
+        'Have we encountered a property?
+        If Chars(c) = SYNTAX_PROPERTY Then
+            Let c = c + 1
+            Let WordAttr = WordAttr Or ATTR_NAME_PROPERTY
+            
+            'Dot cannot be followed by another dot or number
+            If Chars(c) = SYNTAX_PROPERTY Then GoTo NameError
+            If (Chars(c) >= ASC_0) And (Chars(c) <= ASC_9) Then GoTo NameError
+            'Also dot cannot be the last character
+            If Chars(c) = ASC_NUL Then GoTo NameError
+        
+        'Have we encountered a Label?
+        ElseIf Chars(c) = SYNTAX_LABEL Then
+            'A Label can only occur after a Section,
+            If (WordAttr And ATTR_NAME_SECTION) = 0 Then GoTo NameError
+            'And it cannot occur twice
+            If (WordAttr And ATTR_NAME_LABEL) <> 0 Then GoTo NameError
+            
+            Let c = c + 1
+            Let WordAttr = WordAttr Or ATTR_NAME_LABEL
+            
+            'Colon cannot be followed by dot or number
+            If Chars(c) = SYNTAX_PROPERTY Then GoTo NameError
+            If (Chars(c) >= ASC_0) And (Chars(c) <= ASC_9) Then GoTo NameError
+            'Can't have two colons, since a Section prefix is already parsed
+            If Chars(c) = SYNTAX_LABEL Then GoTo NameError
+            'Also colon cannot be the last character
+            If Chars(c) = ASC_NUL Then GoTo NameError
+        End If
+    Next c
+    
+    'Add the index key to the token so that we can retrieve the string later; _
+     the one-letter names will have a Value of 0 to distinguish them
+    'TODO: Use something faster than a Dictionary
+    Let WordValue = TokenStrings.Add(Word.Text)
+    
+    'Free the array reference into the bluString
+    Call Word.CharArrayUnaccess(Chars)
+    GoTo NextWordSkipAttr
+    
+NameError:
+    '..................................................................................
+    'TODO:
+    Call RaiseError(OZ80_ERROR_INVALID, _
+        "Not a valid Name" _
+    )
+NameErrorOut:
+    'Free the array reference into the bluString
+    Call Word.CharArrayUnaccess(Chars)
+    GoTo Finish
+    
+isHexadecimal:
+    '[b]    Hexadecimal Numbers:
+    '----------------------------------------------------------------------------------
+    'TODO: Gotta go fast...
+    
+    'Any more than 8-digits will be an overflow (32-bit number maximum)
+    If WordLength > 9 Then
+        GoTo ErrorOverflow
+    End If
+    'Check the digits are 0-9, A-F
+    For i = 1 To WordLength - 1
+        'ERROR: Invalid hexadecimal number!
+        If Not Word.CharIsHex(i) Then Call RaiseError( _
+            OZ80_ERROR_INVALID, STR_ERR_INVALID_NUMBER_HEX _
+        ): GoTo Finish
+    Next i
+    
+    'Now cast the string into a real number _
+     (Note: The digits are valid, but it could be an overflow)
+    On Error GoTo ErrorOverflow
+    Let Number = Val("&H" & Mid$(Word.Text, 2) & "&")
+    On Error GoTo 0
+    
+    'Add the token for the number
+    Let WordToken = TOKEN_NUMBER
+    Let WordValue = Number
+        
+    GoTo NextWord
     
 excl:
     '`!CONSTANT`
@@ -3370,58 +3602,12 @@ hash:
     Let WordValue = TokenStrings.Add(Word.Text)
     GoTo NextWord
     
-dollar:
-    'RAM name, e.g. `$.gamevar`, `$#RAM_BANK.gamevar`
-    '.......................................................................... `$` ...
-    'Just `$` refers to the default RAM bank for the target system
-    If WordLength = 1 Then
-        Let WordToken = TOKEN_RAM
-        'Add the index key to the token so that we can retrieve the string later
-        'TODO: For `$`, this should be pre-allocated
-        Let WordValue = TokenStrings.Add(Word.Text)
-    
-    ElseIf (Word.Char(1) = SYNTAX_PROPERTY) _
-        Or (Word.Char(1) = SYNTAX_TYPE) _
-    Then
-        'ERROR: Invalid RAM name?
-        If Not FileParse_IsValidName() Then Call RaiseError( _
-            OZ80_ERROR_INVALID, STR_ERR_INVALID_RAM, STR_ERR_INVALID_NAME _
-        ): GoTo Finish
-        
-        'TODO: Define RAM constant
-        Let WordToken = TOKEN_RAM
-        'Add the index key to the token so that we can retrieve the string later
-        Let WordValue = TokenStrings.Add(Word.Text)
-    
-    'Hexadecimal Number
-    '.......................................................................... `$` ...
-    Else
-        'Any more than 8-digits will be an overflow (32-bit number maximum)
-        If WordLength > 9 Then GoTo ErrorOverflow
-        'Check the digits are 0-9, A-F
-        For i = 1 To WordLength - 1
-            'ERROR: Invalid hexadecimal number!
-            If Not Word.CharIsHex(i) Then Call RaiseError( _
-                OZ80_ERROR_INVALID, STR_ERR_INVALID_NUMBER_HEX _
-            ): GoTo Finish
-        Next i
-        
-        'Now cast the string into a real number _
-         (Note: The digits are valid, but it could be an overflow)
-        On Error GoTo ErrorOverflow
-        Let Number = Val("&H" & Mid$(Word.Text, 2) & "&")
-        On Error GoTo 0
-        
-        'Add the token for the number
-        Let WordToken = TOKEN_NUMBER
-        Let WordValue = Number
-    End If
-    GoTo NextWord
-    
 perc:
     '.......................................................................... `%` ...
     'ERROR: Cannot be longer than 32-bits
-    If WordLength > 33 Then GoTo ErrorOverflow
+    If WordLength > 33 Then
+        GoTo ErrorOverflow
+    End If
     Let Number = 0: Let Multiplier = 0
     For i = WordLength - 1 To 1 Step -1
         If Word.Char(i) = ASC_1 Then
@@ -3528,28 +3714,6 @@ num:
     Let WordValue = Number
     GoTo NextWord
     
-colon:
-    '.......................................................................... `:` ...
-    'A label can be `:` only, without a name (when used within a PROC)
-    If WordLength = 1 Then
-        Let WordToken = TOKEN_LABEL
-        Let WordValue = TokenStrings.Add(Word.Text)
-    
-    'A label cannot begin with a number but must otherwise be A-Z, 0-9 and "_"
-    ElseIf Not FileParse_IsValidName() Then
-        'ERROR: Not a valid Label name
-        Call RaiseError( _
-            OZ80_ERROR_INVALID, STR_ERR_INVALID_LABEL, STR_ERR_INVALID_NAME _
-        ): GoTo Finish
-    Else
-        'Is this a section name (`::section`) or regular label (`:label`)?
-        If Word.Char(1) = SYNTAX_LABEL _
-            Then Let WordToken = TOKEN_SECTION _
-            Else Let WordToken = TOKEN_LABEL
-        Let WordValue = TokenStrings.Add(Word.Text)
-    End If
-    GoTo NextWord
-    
 lthan:
     '.......................................................................... `<` ...
     'TODO: Less than operator
@@ -3585,8 +3749,6 @@ a:
     ElseIf Word.Equals(STR_ADC) Then Let WordToken = TOKEN_Z80_ADC
     ElseIf Word.Equals(STR_ADD) Then Let WordToken = TOKEN_Z80_ADD
     ElseIf Word.Equals(STR_AND) Then Let WordToken = TOKEN_Z80_AND
-    'Keywords:
-    ElseIf Word.Equals(STR_APPEND) Then Let WordToken = TOKEN_KEYWORD_APPEND
     Else: GoTo WordError: End If
     GoTo NextWord
     
@@ -3932,16 +4094,12 @@ rcb:
     If FileParse_NestOut(TOKEN_BRACES_OPEN, TOKEN_BRACES_CLOSE) Then GoTo Finish
     GoTo NextWord
     
-tilde:
-    '.......................................................................... `~` ...
-    'Nothing, yet
-    GoTo WordError
-    
 NextWord:
     '----------------------------------------------------------------------------------
     'Look up the token attributes (e.g. if it's a Keyword, Expression, List &c.)
     Let WordAttr = TokenAttributes(WordToken)
     
+NextWordSkipAttr:
     'TODO: This block will be removed once we transition from token stream to AST...
     With Files(File)
         'Add the information gleaned to the current token _
@@ -3988,20 +4146,7 @@ WordError:
     '..................................................................................
     'Not a recognised word (typo perhaps?)
     Call RaiseError(OZ80_ERROR_INVALID, _
-        "Encountered an unknown word; it is probably a typo." _
-    )
-    GoTo Finish
-    
-ErrorSystem:
-    '..................................................................................
-    '`SYSTEM` has not been defined before using `SECTION/RAM/START/PROC/TABLE/APPEND`!
-    Call RaiseError(OZ80_ERROR_EXPECTED, _
-        "The target system has not been defined. You cannot use `SECTION`, `RAM`, " _
-      & "`START`, `PROC`, `TABLE` or `APPEND` statements until the target system is " _
-      & "defined. Near the beginning of your source code add a `SYSTEM` statement; " _
-      & "for example: " & vbNewLine _
-      & vbNewLine _
-      & vbTab & "SYSTEM ""SMS""" _
+        "Encountered an unknown word; it is probably a typo" _
     )
     GoTo Finish
     
@@ -4380,30 +4525,9 @@ Private Sub ScopeRoot()
      allowed here. Once all nested scopes are exhausted, we return here
     
 Continue:
-    'Append to an existing Chunk / Type
-    '----------------------------------------------------------------------------------
-    If TokenKind = TOKEN_KEYWORD_APPEND Then
-        'Pass over the `APPEND` keyword
-        If NextTokenError() Then Exit Sub
-        
-        'Is the target a RAM Hash?
-        If TokenKind = TOKEN_RAM Then
-            Dim i As Long
-            For i = 1 To TypeCount
-                If Types(i).Name = TokenText Then
-                    If NextTokenError() Then Exit Sub
-                    Call ScopeType(Types(i), Types(i).Size)
-                    Exit For
-                End If
-            Next i
-        Else
-            'TODO: Implement Chunk appending...
-            Stop
-        End If
-        
     'Define Constant:
     '----------------------------------------------------------------------------------
-    ElseIf TokenKind = TOKEN_KEYWORD_CONST Then
+    If TokenKind = TOKEN_KEYWORD_CONST Then
         'Defining a constant
         Call DefineConst
                 
@@ -4447,7 +4571,7 @@ Continue:
     '----------------------------------------------------------------------------------
     ElseIf TokenKind = TOKEN_KEYWORD_RAM Then
         'Hand off to the function that will process this
-        Call DefineRAMType
+        Call DefineRAM
     
     'Define the starting Procedure:
     '----------------------------------------------------------------------------------
@@ -4549,7 +4673,7 @@ Private Sub DefineType()
     
     'Create the new Type object
     Let TypeCount = TypeCount + 1
-    ReDim Preserve Types(1 To TypeCount) As OZ80Type
+    ReDim Preserve Types(0 To TypeCount) As OZ80Type
     Let Types(TypeCount).Name = TypeName
     
     Call ScopeType(Types(TypeCount))
@@ -5373,16 +5497,13 @@ ErrIndefinite:
     Call RaiseError(OZ80_ERROR_INDEFINITE, "TODO")
 End Sub
 
-'DefineRAMType : Process a RAM block
+'DefineRAM : Process a RAM block
 '======================================================================================
 'RAM       [<expr>]     [ ... ]
 '======================================================================================
-Private Sub DefineRAMType()
+Private Sub DefineRAM()
     'ERROR: The file ended before the first parameter
     If NextTokenError() Then Exit Sub
-    
-    Dim TypeName As String
-    Let TypeName = TokenText
     
 '    Call RaiseMessage(OZ80_LOG_STATUS, "TYPE {$}", TypeName)
 '    Call RaiseMessage(OZ80_LOG_INFO, LOG_LINEDOUBLE)
@@ -5391,20 +5512,22 @@ Private Sub DefineRAMType()
 '    Call RaiseMessage(OZ80_LOG_INFO, _
 '                      "-----¦------¦-------¦----------------------------------------------------")
     
+    Dim TypeName As String
     'Skip the param
-    If NextTokenError() Then Exit Sub
+    If TokenKind = TOKEN_RAM Then
+        Let TypeName = TokenText
+        If NextTokenError() Then Exit Sub
+    Else
+        Let TypeName = "$"
+    End If
     
     'Create the new Type object
     Let TypeCount = TypeCount + 1
-    ReDim Preserve Types(1 To TypeCount) As OZ80Type
+    ReDim Preserve Types(0 To TypeCount) As OZ80Type
     Let Types(TypeCount).Name = TypeName
     
-    'TODO: Do this properly
-    If TypeName = "$" Then
-        Call ScopeType(Types(TypeCount), &HC000& * 8)
-    Else
-        Call ScopeType(Types(TypeCount))
-    End If
+    'TODO: Use the right address
+    Call ScopeType(Types(TypeCount))
     
 '    Call RaiseMessage(OZ80_LOG_INFO, LOG_LINEDOUBLE & vbNewLine)
 End Sub
@@ -7991,13 +8114,24 @@ GetNumber:
         End If
         'Retrieve the Constant value
         Let ReturnValue = Values.Item(TokenText)
-        
+    
+    '----------------------------------------------------------------------------------
+    'Types
+    '----------------------------------------------------------------------------------
+    ElseIf TokenKind = TOKEN_TYPE Then
+        'Has the RAM Name / Type value been defined?
+        If Not Values.Exists(TokenText) Then
+            'Return Indefinite
+            Let ReturnValue = INDEFINITE
+        Else
+            'Retrieve the Type property Value
+            Let ReturnValue = Values.Item(TokenText)
+        End If
+    
     '----------------------------------------------------------------------------------
     'RAM Names
     '----------------------------------------------------------------------------------
-    ElseIf TokenKind = TOKEN_RAM _
-        Or TokenKind = TOKEN_TYPE _
-    Then
+    ElseIf TokenKind = TOKEN_RAM Then
         'Has the RAM Name / Type value been defined?
         If Not Values.Exists(TokenText) Then
             'Return Indefinite
@@ -8033,7 +8167,7 @@ GetNumber:
             If ReturnValue < 0 Then ReturnValue = INDEFINITE
             
         'The "self" Label (`:`) refers to the Chunk's own address
-        ElseIf TokenText = ":" Then
+        ElseIf TokenValue = 0 Then
             'Get the Chunk's address (will be indefinite prior to ROM layout)
             Let ReturnValue = Chunks(ChunkID).AddrSlot
             If ReturnValue < 0 Then ReturnValue = INDEFINITE
@@ -8714,6 +8848,7 @@ Private Function RaiseError( _
         Case OZ80_ERROR_INDEFINITE:     Let Title = "Indefinite Value Error"
         Case OZ80_ERROR_OVERFLOW:       Let Title = "Overflow Error"
         Case OZ80_ERROR_UNDEFINED:      Let Title = "Undefined Error"
+        Case OZ80_ERROR_INTERNAL:       Let Title = "Internal Error"
     End Select
     
     'If no file has yet been processed, we won't be returning a file name

@@ -20,7 +20,7 @@ START
     
 .wait
     ;wait for the scanline to reach 176 (no idea why)
-    in      A`scanline  [$#SMS_PORTS.SCANLINE]
+    in      A`scanline  [$_SMS_PORTS.SCANLINE]
     cp      176
     jr      nz, .wait
     
@@ -99,7 +99,7 @@ PARAMS  IY`vars         ``Address of the common variables (used throughout)
     push    AF', HL', DE', BC'
     
     ;get the status of the VDP
-    in      A`vdpStatus, [$#SMS_PORTS.VDP.CONTROL]
+    in      A`vdpStatus, [$_SMS_PORTS.VDP.CONTROL]
     
     bit     7, [IY`vars+#vars.flags6]           ;check the underwater flag
     jr      z, ._1                              ;if off, skip ahead
@@ -129,16 +129,16 @@ PARAMS  IY`vars         ``Address of the common variables (used throughout)
     ;;set the line interrupt to fire at line 10 (top of the screen),
       we will then set another interrupt to fire where we want the split to occur ;;
     ld      a, 10
-    out     [$#SMS_PORTS.VDP.CONTROL], a
+    out     [$_SMS_PORTS.VDP.CONTROL], a
     ld      a, !VDP_REGISTER_10
-    out     [$#SMS_PORTS.VDP.CONTROL], a
+    out     [$_SMS_PORTS.VDP.CONTROL], a
     
     ;enable line interrupt IRQs (bit 5 of VDP register 0)
     ld      a, [$.VDPREGISTER_0]
     or      %00010000
-    out     [$#SMS_PORTS.VDP.CONTROL], a
+    out     [$_SMS_PORTS.VDP.CONTROL], a
     ld      a, !VDP_REGISTER_0
-    out     [$#SMS_PORTS.VDP.CONTROL], a
+    out     [$_SMS_PORTS.VDP.CONTROL], a
     
     ;initialise the step counter for the water line raster split
     ld      a, 3
@@ -165,7 +165,7 @@ PARAMS  IY`vars         ``Address of the common variables (used throughout)
     
     ;switch in the music engine / data
     ld      A`bank                  ::sound.bank
-    ld      [$#SMS.MAPPER.SLOT1]    A`bank
+    ld      [$_SMS.MAPPER.SLOT1]    A`bank
     ld      [$.SLOT1]               A`bank
     call    ::sound:public.update
     
@@ -176,14 +176,14 @@ PARAMS  IY`vars         ``Address of the common variables (used throughout)
     call    ::main:_LABEL_625_57
     
     ;check for the reset button
-    in      a, [$#SMS_PORTS.JOY.B]                    ;;read 2nd joypad port which has extra
+    in      a, [$_SMS_PORTS.JOY.B]                    ;;read 2nd joypad port which has extra
                                                   bits for lightgun / reset button ;;
     and     %00010000                           ;check bit 4
     jp      z, START                            ;reset!
     
     ;return pages 1 & 2 to the banks before we started messing around here
     pop     HL`banks
-    ld      [$#SMS.MAPPER.SLOT1]    HL`banks
+    ld      [$_SMS.MAPPER.SLOT1]    HL`banks
     ld      [$.SLOT1]               HL`banks
     
     ;pull everything off the stack so that the code that was running
@@ -208,22 +208,22 @@ PARAMS  IY`vars         ``Address of the common variables (used throughout)
     ;blank the screen (remove bit 6 of VDP register 1)
     ld      a, [$.VDPREGISTER_1]                ;get our cache value from RAM
     and     %10111111                           ;remove bit 6
-    out     [$#SMS_PORTS.VDP.CONTROL], a              ;write the value,
+    out     [$_SMS_PORTS.VDP.CONTROL], a              ;write the value,
     ld      a, !VDP_REGISTER_1                 ;followed by the register number
-    out     [$#SMS_PORTS.VDP.CONTROL], a
+    out     [$_SMS_PORTS.VDP.CONTROL], a
     
     ;horizontal scroll
     ld      a, [$.VDPSCROLL_HORZ]
     neg                                         ;I don't understand the reason for this
-    out     [$#SMS_PORTS.VDP.CONTROL], a
+    out     [$_SMS_PORTS.VDP.CONTROL], a
     ld      a, !VDP_REGISTER_8
-    out     [$#SMS_PORTS.VDP.CONTROL], a
+    out     [$_SMS_PORTS.VDP.CONTROL], a
     
     ;vertical scroll
     ld      a, [$.VDPSCROLL_VERT]
-    out     [$#SMS_PORTS.VDP.CONTROL], a
+    out     [$_SMS_PORTS.VDP.CONTROL], a
     ld      a, !VDP_REGISTER_9
-    out     [$#SMS_PORTS.VDP.CONTROL], a
+    out     [$_SMS_PORTS.VDP.CONTROL], a
     
     bit     5, [iy+#vars.flags0]                    
     call    nz, ::main:fillScrollTiles
@@ -234,15 +234,15 @@ PARAMS  IY`vars         ``Address of the common variables (used throughout)
     ;turn the screen back on 
      ;(or if it was already blank before this function, leave it blank)
     ld      a, [$.VDPREGISTER_1]
-    out     [$#SMS_PORTS.VDP.CONTROL], a
+    out     [$_SMS_PORTS.VDP.CONTROL], a
     ld      a, !VDP_REGISTER_1
-    out     [$#SMS_PORTS.VDP.CONTROL], a
+    out     [$_SMS_PORTS.VDP.CONTROL], a
     
     ld      A`bank                  8           ;Sonic sprites?
-    ld      [$#SMS.MAPPER.SLOT1]    A`bank
+    ld      [$_SMS.MAPPER.SLOT1]    A`bank
     ld      [$.SLOT1]               A`bank
     ld      A`bank                  9
-    ld      [$#SMS.MAPPER.SLOT2]    A`bank
+    ld      [$_SMS.MAPPER.SLOT2]    A`bank
     ld      [$.SLOT2]               A`bank
     
     ;does the Sonic sprite need updating?
@@ -251,10 +251,10 @@ PARAMS  IY`vars         ``Address of the common variables (used throughout)
     call    nz, ::mobs:updateSonicSpriteFrame
     
     ld      A`bank                  1
-    ld      [$#SMS.MAPPER.SLOT1]    A`bank
+    ld      [$_SMS.MAPPER.SLOT1]    A`bank
     ld      [$.SLOT1]               A`bank
     ld      A`bank                  2
-    ld      [$#SMS.MAPPER.SLOT2]    A`bank
+    ld      [$_SMS.MAPPER.SLOT2]    A`bank
     ld      [$.SLOT2]               A`bank
     
     ;update sprite table?
@@ -283,10 +283,10 @@ PARAMS  IY`vars         ``Address of the common variables (used throughout)
         $.LOADPALETTE_FLAGS     ;flags to load tile / sprite palettes or both
 {       
     ld      A`bank                  1
-    ld      [$#SMS.MAPPER.SLOT1]    A`bank
+    ld      [$_SMS.MAPPER.SLOT1]    A`bank
     ld      [$.SLOT1]               A`bank
     ld      A`bank                  2
-    ld      [$#SMS.MAPPER.SLOT2]    A`bank
+    ld      [$_SMS.MAPPER.SLOT2]    A`bank
     ld      [$.SLOT2]               A`bank
     
     ;;if the level is underwater then skip loading the palette as the palettes
@@ -319,10 +319,10 @@ PARAMS  IY`vars         ``Address of the common variables (used throughout)
     
     ;switch pages 1 & 2 ($4000-$BFFF) to banks 1 & 2 ($4000-$BFFF)
     ld      A`bank                  1
-    ld      [$#SMS.MAPPER.SLOT1]    A`bank
+    ld      [$_SMS.MAPPER.SLOT1]    A`bank
     ld      [$.SLOT1]               A`bank
     ld      A`bank                  2
-    ld      [$#SMS.MAPPER.SLOT2]    A`bank
+    ld      [$_SMS.MAPPER.SLOT2]    A`bank
     ld      [$.SLOT2]               A`bank
     
     ;;this seems quite pointless but could do with
@@ -403,16 +403,16 @@ PARAMS  IY`vars         ``Address of the common variables (used throughout)
         dec     a`step
         ld      [$.RASTERSPLIT_STEP], a`step
         
-        in      a`scanline, [$#SMS_PORTS.SCANLINE]
+        in      a`scanline, [$_SMS_PORTS.SCANLINE]
         ld      c`scanline, a`scanline
         ld      a`split, [$.RASTERSPLIT_LINE]
         sub     c`scanline                      ;work out the difference
         
         ;set VDP register 10 with the scanline number to interrupt at next
          ;(that is, set the next interrupt to occur at the water line)
-        out     [$#SMS_PORTS.VDP.CONTROL], a`scanline
+        out     [$_SMS_PORTS.VDP.CONTROL], a`scanline
         ld      a`register, !VDP_REGISTER_10
-        out     [$#SMS_PORTS.VDP.CONTROL], a`register
+        out     [$_SMS_PORTS.VDP.CONTROL], a`register
         
         jp      ._3
         
@@ -428,9 +428,9 @@ PARAMS  IY`vars         ``Address of the common variables (used throughout)
         
         ;set the VDP to point at the palette
         ld      a, $00
-        out     [$#SMS_PORTS.VDP.CONTROL], a
+        out     [$_SMS_PORTS.VDP.CONTROL], a
         ld      a, %11000000
-        out     [$#SMS_PORTS.VDP.CONTROL], a
+        out     [$_SMS_PORTS.VDP.CONTROL], a
         
         ld      b, 16
         ld      hl, :S1_UnderwaterPalette
@@ -442,19 +442,19 @@ PARAMS  IY`vars         ``Address of the common variables (used throughout)
 
         ;copy the palette into the VDP
 .loop   ld      a, [hl]
-        out     [$#SMS_PORTS.VDP.DATA], a
+        out     [$_SMS_PORTS.VDP.DATA], a
         inc     hl
         nop
         ld      a, [hl]
-        out     [$#SMS_PORTS.VDP.DATA], a
+        out     [$_SMS_PORTS.VDP.DATA], a
         inc     hl
         djnz    .loop
         
         ld      a, [$.VDPREGISTER_0]
         and     %11101111                       ;remove bit 4: disable line interrupts
-        out     [$#SMS_PORTS.VDP.CONTROL], a
+        out     [$_SMS_PORTS.VDP.CONTROL], a
         ld      a, !VDP_REGISTER_0
-        out     [$#SMS_PORTS.VDP.CONTROL], a
+        out     [$_SMS_PORTS.VDP.CONTROL], a
 
 ._3     pop     bc, de, hl, af
         ei
@@ -479,15 +479,15 @@ RETURN  IY`vars         ``Address of the common variables (used throughout)
 {       
         ;tell the SMS the cartridge has no RAM and to use ROM banking
         ld      a, %10000000
-        ld      [$#SMS.MAPPER], a
+        ld      [$_SMS.MAPPER], a
         ;load banks 0, 1 & 2 of the ROM into the address space
          ;($0000-$BFFF of the address space will be mapped to $0000-$BFFF of this ROM)
         ld      A`bank                  0
-        ld      [$#SMS.MAPPER.SLOT0]    A`bank
+        ld      [$_SMS.MAPPER.SLOT0]    A`bank
         ld      A`bank                  1
-        ld      [$#SMS.MAPPER.SLOT1]    A`bank
+        ld      [$_SMS.MAPPER.SLOT1]    A`bank
         ld      A`bank                  2
-        ld      [$#SMS.MAPPER.SLOT2]    A`bank
+        ld      [$_SMS.MAPPER.SLOT2]    A`bank
         
         ;empty the RAM!
         ld      hl, $.FLOORLAYOUT       ;starting from $C000,
@@ -509,11 +509,11 @@ RETURN  IY`vars         ``Address of the common variables (used throughout)
         ld      [de], a                         ;copy to RAM
         inc     hl                              ;move to the next byte
         inc     de                              
-        out     [$#SMS_PORTS.VDP.CONTROL], a          ;send the VDP lo-byte
+        out     [$_SMS_PORTS.VDP.CONTROL], a          ;send the VDP lo-byte
         ld      a, c                            ;Load A with #$8B
         sub     b                               ;subtract B from A (B is decreasing),
                                                  ;so A will count from #$80 to #8A
-        out     [$#SMS_PORTS.VDP.CONTROL], a          ;send the VDP hi-byte
+        out     [$_SMS_PORTS.VDP.CONTROL], a          ;send the VDP hi-byte
         djnz    .loop                           ;loop until B has reached 0
         
         ;move all sprites off the bottom of the screen!
@@ -542,14 +542,14 @@ PARAMS  A`songIndex     ;;index number of song to play
         
         ;switch page 1 (Z80:$4000-$7FFF) to bank 3 ($C000-$FFFF)
         ld      A`bank                  ::sound.bank
-        ld      [$#SMS.MAPPER.SLOT1]    A`bank
+        ld      [$_SMS.MAPPER.SLOT1]    A`bank
         
         pop     AF`songIndex
         ld      [$.PREVIOUS_MUSIC]  A`songIndex
         call    ::sound:public.playMusic
         
         ld      A`bank                  [$.SLOT1]
-        ld      [$#SMS.MAPPER.SLOT1]    A`bank
+        ld      [$_SMS.MAPPER.SLOT1]    A`bank
         
         ei                                      ;enable interrupts
         ret
@@ -563,10 +563,10 @@ PROC    :muteSound                              SECTION ::interrupts            
         
         ;switch page 1 (Z80:$4000-$7FFF) to bank 3 (ROM:$0C000-$0FFFF)
         ld      A`bank                  ::sound.bank
-        ld      [$#SMS.MAPPER.SLOT1]    A`bank
+        ld      [$_SMS.MAPPER.SLOT1]    A`bank
         call    ::sound:public.stop
         ld      A`bank                  [$.SLOT1]
-        ld      [$#SMS.MAPPER.SLOT1]    A`bank
+        ld      [$_SMS.MAPPER.SLOT1]    A`bank
         
         ei                                      ;enable interrupts
         ret
@@ -581,13 +581,13 @@ PARAMS  a`SFXIndex
         push    AF`SFXIndex
         
         ld      A`bank                  ::sound.bank
-        ld      [$#SMS.MAPPER.SLOT1]    A`bank
+        ld      [$_SMS.MAPPER.SLOT1]    A`bank
         
         pop     AF`SFXIndex
         call    ::sound:public.playSFX
         
         ld      A`bank                  [$.SLOT1]
-        ld      [$#SMS.MAPPER.SLOT1]    A`bank
+        ld      [$_SMS.MAPPER.SLOT1]    A`bank
         
         ei      
         ret
@@ -664,10 +664,10 @@ PARAMS  IY`vars         ``Address of the common variables (used throughout)
         
         ;set the VDP address to $3F00 (sprite info table, Y-positions)
         ld      a, LO $3F00
-        out     [$#SMS_PORTS.VDP.CONTROL], a
+        out     [$_SMS_PORTS.VDP.CONTROL], a
         ld      a, HI $3F00
         or      %01000000               ;add bit 6 to mark an address being given
-        out     [$#SMS_PORTS.VDP.CONTROL], a
+        out     [$_SMS_PORTS.VDP.CONTROL], a
         
         ld      b, [iy+#vars.spriteUpdateCount]
         ld      hl, $.SPRITETABLE+1     ;Y-position of the first sprite
@@ -679,7 +679,7 @@ PARAMS  IY`vars         ``Address of the common variables (used throughout)
 
         ;set sprite Y-positions:
 .yLoop  ld      a, [hl]                 ;get the sprite's Y-position from RAM
-        out     [$#SMS_PORTS.VDP.DATA], a     ;set the sprite's Y-position in the hardware
+        out     [$_SMS_PORTS.VDP.DATA], a     ;set the sprite's Y-position in the hardware
         add     hl, de                  ;move to the next sprite
         djnz    .yLoop
         
@@ -701,7 +701,7 @@ PARAMS  IY`vars         ``Address of the common variables (used throughout)
 
         ;move remaining sprites off screen
 .yOff   ld      a, 224
-        out     [$#SMS_PORTS.VDP.DATA], a
+        out     [$_SMS_PORTS.VDP.DATA], a
         djnz    .yOff
         
         ;--- sprite X positions / indexes ----------------------------------------------
@@ -714,17 +714,17 @@ PARAMS  IY`vars         ``Address of the common variables (used throughout)
         
         ;set the VDP address to $3F80 (sprite info table, X-positions & indexes)
         ld      a, LO $3F80
-        out     [$#SMS_PORTS.VDP.CONTROL], a
+        out     [$_SMS_PORTS.VDP.CONTROL], a
         ld      a, HI $3F80
         or      %01000000                       ;add bit 6 to mark an address is given
-        out     [$#SMS_PORTS.VDP.CONTROL], a
+        out     [$_SMS_PORTS.VDP.CONTROL], a
         
 .xLoop  ld      a, [hl]                         ;set the sprite X-position
-        out     [$#SMS_PORTS.VDP.DATA], a
+        out     [$_SMS_PORTS.VDP.DATA], a
         inc     l                               ;skip Y-position
         inc     l                               
         ld      a, [hl]                         ;set the sprite index number
-        out     [$#SMS_PORTS.VDP.DATA], a
+        out     [$_SMS_PORTS.VDP.DATA], a
         inc     l
         djnz    .xLoop
 
@@ -746,14 +746,14 @@ PARAMS  bc      ;number of bytes to copy
 {
         di      
         ld      a,e
-        out     [$#SMS_PORTS.VDP.CONTROL],a
+        out     [$_SMS_PORTS.VDP.CONTROL],a
         ld      a,d
         or      %01000000
-        out     [$#SMS_PORTS.VDP.CONTROL],a
+        out     [$_SMS_PORTS.VDP.CONTROL],a
         ei      
 
 .loop   ld      a,[hl]
-        out     [$#SMS_PORTS.VDP.DATA],a
+        out     [$_SMS_PORTS.VDP.DATA],a
         inc     hl
         
         dec     bc
@@ -775,19 +775,19 @@ PARAMS  a       ;bank number for page 1, A+1 will be used as the bank number for
 
         ;set the VDP address using DE
         ld      a,e
-        out     [$#SMS_PORTS.VDP.CONTROL],a
+        out     [$_SMS_PORTS.VDP.CONTROL],a
         ld      a,d
         or      %01000000
-        out     [$#SMS_PORTS.VDP.CONTROL],a
+        out     [$_SMS_PORTS.VDP.CONTROL],a
         
         pop     af
         ld      de,[$.SLOT1]
         push    de
         
-        ld      [$#SMS.MAPPER.SLOT1],a
+        ld      [$_SMS.MAPPER.SLOT1],a
         ld      [$.SLOT1],a
         inc     a
-        ld      [$#SMS.MAPPER.SLOT2],a
+        ld      [$_SMS.MAPPER.SLOT2],a
         ld      [$.SLOT2],a
         ei      
 
@@ -798,7 +798,7 @@ PARAMS  a       ;bank number for page 1, A+1 will be used as the bank number for
 ._2     ld      a,[hl]
         cp      e
         jr      z,._3
-        out     [$#SMS_PORTS.VDP.DATA],a
+        out     [$_SMS_PORTS.VDP.DATA],a
         ld      e,a
         inc     hl
         dec     bc
@@ -816,7 +816,7 @@ PARAMS  a       ;bank number for page 1, A+1 will be used as the bank number for
         ld      a,d
         ld      e,[hl]
 
-._4     out     [$#SMS_PORTS.VDP.DATA],a
+._4     out     [$_SMS_PORTS.VDP.DATA],a
         dec     e
         nop     
         nop     
@@ -835,9 +835,9 @@ PARAMS  a       ;bank number for page 1, A+1 will be used as the bank number for
         pop     DE`banks
         ld      [$.SLOT1]       DE`banks        ;restore our copy of the bank numbers
         ld      A`banks         E`banks
-        ld      [$#SMS.MAPPER.SLOT1]   A`banks         ;restore Slot 1 
+        ld      [$_SMS.MAPPER.SLOT1]   A`banks         ;restore Slot 1 
         ld      A`banks         D`banks
-        ld      [$#SMS.MAPPER.SLOT2]   A`banks         ;restore Slot 2
+        ld      [$_SMS.MAPPER.SLOT2]   A`banks         ;restore Slot 2
         
         ;enable interrupts and return
         ei                                      

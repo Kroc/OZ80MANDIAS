@@ -160,9 +160,9 @@ PARAMS  IX`mob          ``Address of the current mob being processed
         ;handle collision with tile underneath Sonic:
         ;-------------------------------------------------------------------------------
         
-        ld      A`bank          15
-        ld      [$#SMS.MAPPER.SLOT2]   A`bank
-        ld      [$.SLOT2]       A`bank
+        ld      A`bank                  15
+        ld      [$_SMS.MAPPER.SLOT2]    A`bank
+        ld      [$.SLOT2]               A`bank
         
         ;$3F9ED = 
         ;0010, 00C4, 0154, 01F4, 02B4, 0374, 044C, 04CC
@@ -220,7 +220,7 @@ PARAMS  IX`mob          ``Address of the current mob being processed
         
         ;switch back to the regular bank layout (where the mob code is)
         ld      A`bank          2
-        ld      [$#SMS.MAPPER.SLOT2]   A`bank
+        ld      [$_SMS.MAPPER.SLOT2]   A`bank
         ld      [$.SLOT2]       A`bank
         
         ;;keep a copy of the callback address
@@ -321,9 +321,11 @@ PARAMS  IX`mob          ``Address of the current mob being processed
         or      L
         or      B
         jr      z,._4b1b
+        
         ld      [IX`mob+#mob.unknown14],$01
         bit     7,B
         jr      nz,._9
+        
         ld      DE,[$.TEMP4]
         ld      A,E
         cpl     
@@ -341,8 +343,8 @@ PARAMS  IX`mob          ``Address of the current mob being processed
         sbc     HL,DE
         pop     DE
         pop     HL
+        jr      c,._4b1b
         
-        jr      C,._4b1b
         ld      DE,[$.TEMP1]
         ld      A,E
         cpl     

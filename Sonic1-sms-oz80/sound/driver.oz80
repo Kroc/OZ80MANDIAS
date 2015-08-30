@@ -79,7 +79,7 @@ TYPE    #track
 ;---------------------------------------------------------------------------------------
 ;(NB: in the original ROM, $DC00-$DC03 go unused)
 ;TODO: Set this to $DC04
-APPEND  $
+RAM
 [
     .playbackMode               BYTE            ;bit 4 dis/enables fading out
     .overriddenTrack            BYTE            ;which music track the SFX is overriding
@@ -360,7 +360,7 @@ PROC    :doStop                                 SECTION ::sound
     
     ;mute all sound channels by sending the right bytes to the sound chip
     ld      b,4
-    ld      c,$#SMS_PORTS.PSG
+    ld      c,$_SMS_PORTS.PSG
     ld      hl,:initPSGValues
     otir
     
@@ -403,7 +403,7 @@ PARAMS  A               ;priority level of SFX being loaded
       (fetch the mask used for that PSG channel);;
     ld      a,[$.track4vars.channelVolumePSG]
     or      %00001111                           ;set volume to "%1111" (mute)
-    out     [$#SMS_PORTS.PSG],a                  ;send change to the PSG
+    out     [$_SMS_PORTS.PSG],a                  ;send change to the PSG
     
     ;--- SFX header --------------------------------------------------------------------
     ;;get which track the sound effect should override -- there are only four
@@ -779,7 +779,7 @@ PROC    :doTrackSoundOut                        SECTION ::sound
     ld      a,c
     ld      [$.noiseMode],a
     or      %11100000                           ;noise channel frequency?
-    out     [$#SMS_PORTS.PSG],a
+    out     [$_SMS_PORTS.PSG],a
     jp      .sendVolume
 
 .doModulation
@@ -838,7 +838,7 @@ PROC    :doTrackSoundOut                        SECTION ::sound
 ._4 ld      a,l
     and     %00001111
     or      [ix+#track.channelFrequencyPSG]
-    out     [$#SMS_PORTS.PSG],a
+    out     [$_SMS_PORTS.PSG],a
     ld      a,h
     rlca    
     rlca    
@@ -853,7 +853,7 @@ PROC    :doTrackSoundOut                        SECTION ::sound
     rrca    
     and     %00001111
     or      c
-    out     [$#SMS_PORTS.PSG],a
+    out     [$_SMS_PORTS.PSG],a
     
 .sendVolume
     ld      a,[ix+#track.fadeTicks+1]
@@ -872,7 +872,7 @@ PROC    :doTrackSoundOut                        SECTION ::sound
 ._5 and     [ix+#track.effectiveVolume]
     xor     %00001111
     or      [ix+#track.channelVolumePSG]
-    out     [$#SMS_PORTS.PSG],a
+    out     [$_SMS_PORTS.PSG],a
     ld      a,[$.playbackMode]
     and     %00001000
     ret     z
@@ -939,7 +939,7 @@ PROC    :cmdFE_stopSFX                          SECTION ::sound
     res     1,[ix+#track.flags]
     ld      a,%00001111
     or      [ix+#track.channelVolumePSG]
-    out     [$#SMS_PORTS.PSG],a
+    out     [$_SMS_PORTS.PSG],a
     ret
 }
 

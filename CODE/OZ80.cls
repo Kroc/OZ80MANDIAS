@@ -206,6 +206,9 @@ End Enum
 'TODO: This should be a class property so that the user can customise
 Private Const TAB_WIDTH As Long = 8
 
+'Look up table for quickly converting ASCII hexadecimal digits to decimal
+Private Hex2Dec(0 To 255) As Long
+
 '--------------------------------------------------------------------------------------
 
 'When we parse a source file we extract the words and convert each _
@@ -1329,6 +1332,32 @@ Private Sub Class_Initialize()
     Let NUMBER_MAX_KB = NUMBER_MAX / 1024
     Let NUMBER_MIN_KB = -NUMBER_MAX_KB
     
+    'Hexadecimal ASCII to decimal lookup table:
+    '----------------------------------------------------------------------------------
+    For i = 0 To 255: Let Hex2Dec(i) = -1: Next i
+    Let Hex2Dec(UCS2.DIGIT_ZERO) = 0
+    Let Hex2Dec(UCS2.DIGIT_ONE) = 1
+    Let Hex2Dec(UCS2.DIGIT_TWO) = 2
+    Let Hex2Dec(UCS2.DIGIT_THREE) = 3
+    Let Hex2Dec(UCS2.DIGIT_FOUR) = 4
+    Let Hex2Dec(UCS2.DIGIT_FIVE) = 5
+    Let Hex2Dec(UCS2.DIGIT_SIX) = 6
+    Let Hex2Dec(UCS2.DIGIT_SEVEN) = 7
+    Let Hex2Dec(UCS2.DIGIT_EIGHT) = 8
+    Let Hex2Dec(UCS2.DIGIT_NINE) = 9
+    Let Hex2Dec(UCS2.LATIN_SMALL_LETTER_A) = 10
+    Let Hex2Dec(UCS2.LATIN_CAPITAL_LETTER_A) = 10
+    Let Hex2Dec(UCS2.LATIN_SMALL_LETTER_B) = 11
+    Let Hex2Dec(UCS2.LATIN_CAPITAL_LETTER_B) = 11
+    Let Hex2Dec(UCS2.LATIN_SMALL_LETTER_C) = 12
+    Let Hex2Dec(UCS2.LATIN_CAPITAL_LETTER_C) = 12
+    Let Hex2Dec(UCS2.LATIN_SMALL_LETTER_D) = 13
+    Let Hex2Dec(UCS2.LATIN_CAPITAL_LETTER_D) = 13
+    Let Hex2Dec(UCS2.LATIN_SMALL_LETTER_E) = 14
+    Let Hex2Dec(UCS2.LATIN_CAPITAL_LETTER_E) = 14
+    Let Hex2Dec(UCS2.LATIN_SMALL_LETTER_F) = 15
+    Let Hex2Dec(UCS2.LATIN_CAPITAL_LETTER_F) = 15
+    
     '8 & 16-bit hexadecimal numbers:
     '----------------------------------------------------------------------------------
     'TODO: We need to make this stupidly fast...
@@ -1840,6 +1869,11 @@ End Sub
 Private Sub Class_Terminate()
     Call Reset
     
+    'Free the look-up tables:
+    Erase OpcodeP_RegisterPair, OpcodeY_Bit, OpcodeY_Condition, _
+          OpcodeY_Register, OpcodeY_RST, OpcodeZ_Register, TokenRegister
+    Erase Hex2Dec
+    
     'Erase the caches
     Erase HexStr8, HexStr16
     Erase TokenNames, ParamText
@@ -1847,11 +1881,6 @@ Private Sub Class_Terminate()
     'Clear the token stream Text store
     Call TokenStrings.Clear
     Set TokenStrings = Nothing
-    
-    'Free the look-up tables for opcode building
-    Erase OpcodeP_RegisterPair, OpcodeY_Bit, OpcodeY_Condition, _
-          OpcodeY_Register, OpcodeY_RST, OpcodeZ_Register
-    Erase TokenRegister
     
     Set Profiler = Nothing
     
@@ -2836,7 +2865,7 @@ ScopeType:
         "Type definition block expected" _
     ): GoTo Finish
     'Add the opening bracket to the tree
-'        Call RaiseMessage(OZ80_LOG_INFO, "SCOPE <type> " & vbTab & vbTab & "| " & Word.Text)
+'    Call RaiseMessage(OZ80_LOG_INFO, "SCOPE <type> " & vbTab & vbTab & "| " & Word.Text)
     GoSub AddNode
     
     Do
@@ -3372,7 +3401,7 @@ TokenWord:
     Dim Number As Double, Multiplier As Long
     
 isName:
-    '[a]    Defined Names (i.e. Constants, Labels &c.)
+    '[a]    Defined Names & Hexadecimal Numbers
     '----------------------------------------------------------------------------------
     '[a.1]  Check the one-letter names:
     '..................................................................................
@@ -3404,7 +3433,7 @@ isName:
         GoTo NextWordSkipAttr
     End If
     
-    '[a.2]  Walk through the characters and validate
+    '[a.2]  Determine Name Type:
     '..................................................................................
     
     'Get raw access to the characters in the word; this will be faster than using _
@@ -3438,42 +3467,45 @@ isName:
             Let WordAttr = TokenAttributes(WordToken) Or ATTR_NAME_LABEL
             Let i = 1
         End If
-        
+    
+    '[a.3]  Hexadecimal Numbers:
+    '..................................................................................
     ElseIf FirstChar = SYNTAX_NUMBER_HEX Then
         'Check for a valid hexadecimal digit after the "$"
         If (Unicode(Chars(1)) And C1_XDIGIT) <> 0 Then
-        
-            'TODO: Gotta go fast...
-    
-            'Any more than 8-digits will be an overflow (32-bit number maximum)
-            If WordLength > 9 Then
-                'TODO: Will not unlock the `Word` bluString
-                GoTo ErrorOverflow
-            End If
-            'Check the digits are 0-9, A-F
-            For i = 1 To WordLength - 1
+            
+            'Any more than 8 hexadecimal digits will be an overflow _
+             (32-bit number maximum). Note "9" because of the "$" prefix
+            If WordLength > 9 Then Call RaiseError(OZ80_ERROR_INVALID, _
+                "Invalid hexadecimal number. Hexadecimal numbers begin with '$', " _
+              & "followed by up to 8 hexadecimal digits (0-9 & A-F). Your word is " _
+              & "too long. Note that RAM Names also begin with '$', but are followed " _
+              & "by dot or underscore to avoid clashes with valid hexadecimal " _
+              & "numbers like $DEADBEEF" _
+            ): GoTo NameErrorOut
+            
+            'Prime the value with the first hexadecimal digit
+            Let WordValue = Hex2Dec(Chars(1))
+            
+            'Walk the hexadecimal digits
+            For i = 2 To WordLength - 1
+                'Thanks to Vadym Stetsiak for the simple, fast hex ASCII conversion:
+                '<vadmyst.blogspot.co.uk/2012/02/fast-convertion-of-hex-string-into.html>
+                Let WordValue = WordValue * 16
+                Let WordValue = WordValue + Hex2Dec(Chars(i))
+                
                 'ERROR: Invalid hexadecimal number!
-                If Not Word.CharIsHex(i) Then Call RaiseError( _
+                If WordValue < 0 Then Call RaiseError( _
                     OZ80_ERROR_INVALID, STR_ERR_INVALID_NUMBER_HEX _
                 ): GoTo NameErrorOut
             Next i
             
-            'Now cast the string into a real number _
-             (Note: The digits are valid, but it could be an overflow)
-            'TODO: Will not unlock the `Word` bluString, _
-                   replace with look-up tables or something
-            On Error GoTo ErrorOverflow
-            Let Number = Val("&H" & Mid$(Word.Text, 2) & "&")
-            On Error GoTo 0
-            
             'Add the token for the number
             Let WordToken = TOKEN_NUMBER
-            Let WordValue = Number
-            
             'Free the array reference into the bluString
             Call Word.CharArrayUnaccess(Chars)
             GoTo NextWord
-        
+            
         End If
         
         Let WordToken = TOKEN_RAM
@@ -3481,7 +3513,7 @@ isName:
         Let i = 1
     End If
     
-    '[a.3]
+    '[a.4]
     '..................................................................................
     
     'Now walk the remainder of the Name and validate
@@ -3537,35 +3569,6 @@ NameErrorOut:
     'Free the array reference into the bluString
     Call Word.CharArrayUnaccess(Chars)
     GoTo Finish
-    
-isHexadecimal:
-    '[b]    Hexadecimal Numbers:
-    '----------------------------------------------------------------------------------
-    'TODO: Gotta go fast...
-    
-    'Any more than 8-digits will be an overflow (32-bit number maximum)
-    If WordLength > 9 Then
-        GoTo ErrorOverflow
-    End If
-    'Check the digits are 0-9, A-F
-    For i = 1 To WordLength - 1
-        'ERROR: Invalid hexadecimal number!
-        If Not Word.CharIsHex(i) Then Call RaiseError( _
-            OZ80_ERROR_INVALID, STR_ERR_INVALID_NUMBER_HEX _
-        ): GoTo Finish
-    Next i
-    
-    'Now cast the string into a real number _
-     (Note: The digits are valid, but it could be an overflow)
-    On Error GoTo ErrorOverflow
-    Let Number = Val("&H" & Mid$(Word.Text, 2) & "&")
-    On Error GoTo 0
-    
-    'Add the token for the number
-    Let WordToken = TOKEN_NUMBER
-    Let WordValue = Number
-        
-    GoTo NextWord
     
 excl:
     '`!CONSTANT`

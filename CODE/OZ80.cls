@@ -3381,8 +3381,8 @@ TokenWord:
     ' { | } ~                           'Tilde is unused at this moment
     
     On FirstChar - 32 GoTo _
-        isName, smark, hash, isName, perc, amp, SkipWord, lbr, rbr _
-      , star, plus, SkipWord, dash, dot, fs _
+        isName, smark, isName, isName, perc, amp, SkipWord, lbr, rbr _
+      , star, plus, SkipWord, dash, isName, fs _
       , num, num, num, num, num, num, num, num, num, num _
       , isName, SkipWord, WordError, WordError, WordError, WordError, WordError _
       , a, b, c, d, e, WordError, WordError, h, i, j, k, l, m _
@@ -3492,8 +3492,13 @@ isName:
     
     ElseIf FirstChar = SYNTAX_PROPERTY Then
         'TODO: NEW/USE property tokens (or do away with this distinction entirely)
+        'If the property appears on a new line, it's a label-property definition _
+         i.e. it defines a new sub-label of a chunk
+        If TokenLine <> PrevLine _
+            Then Let WordToken = TOKEN_PROPERTY_NEW _
+            Else Let WordToken = TOKEN_PROPERTY_USE
         'A property can only be followed by other properties
-        Let WordAttr = TokenAttributes(TOKEN_PROPERTY_USE) Or ATTR_NAME_PROPERTY
+        Let WordAttr = TokenAttributes(WordToken) Or ATTR_NAME_PROPERTY
         'Begin validating after the dot
         Let i = 1
         
@@ -3514,6 +3519,11 @@ isName:
     ElseIf FirstChar = SYNTAX_CONSTANT Then
         Let WordToken = TOKEN_CONST
         Let WordAttr = TokenAttributes(WordToken) Or ATTR_NAME_CONST
+        Let i = 1
+    
+    ElseIf FirstChar = SYNTAX_TYPE Then
+        Let WordToken = TOKEN_TYPE
+        Let WordAttr = TokenAttributes(WordToken) Or ATTR_NAME_TYPE
         Let i = 1
     Else
         Call RaiseError(OZ80_ERROR_INTERNAL, _
@@ -3586,19 +3596,6 @@ smark:
     Let WordValue = TokenStrings.Add(Word.Mid(1).Text)
     GoTo NextWord
     
-hash:
-    '.......................................................................... `#` ...
-    'ERROR: Invalid type name?
-    If Not FileParse_IsValidName() Then Call RaiseError( _
-        OZ80_ERROR_INVALID, STR_ERR_INVALID_TYPE, STR_ERR_INVALID_NAME _
-    ): GoTo Finish
-    
-    'TODO: Define type name
-    'Add the index key to the token so that we can retrieve the string later
-    Let WordToken = TOKEN_TYPE
-    Let WordValue = TokenStrings.Add(Word.Text)
-    GoTo NextWord
-    
 perc:
     '.......................................................................... `%` ...
     'ERROR: Cannot be longer than 32-bits
@@ -3652,35 +3649,6 @@ plus:
 dash:
     '.......................................................................... `-` ...
     Let WordToken = TOKEN_OPERATOR_SUB
-    GoTo NextWord
-    
-dot:
-    '.......................................................................... `.` ...
-    'At this stage the grammer is not validated, so we have no idea which label _
-     this property attaches to. We store the name in an array and add the index _
-     to the token stream -- the assembler will handle the context for same-name _
-     properties
-    
-    'A property can be `.` only, without a name, _
-     this is used to add padding in binary types (such as RAM definitions)
-    If WordLength = 1 Then
-        'It has its own token so that we don't need to do string comparisons later
-        Let WordToken = TOKEN_PROPERTY_ANON
-    
-    'A property cannot begin with a number but must otherwise be A-Z, 0-9 and "_"
-    ElseIf Not FileParse_IsValidName() Then
-        'ERROR: Invalid Property name
-        Call RaiseError( _
-            OZ80_ERROR_INVALID, STR_ERR_INVALID_PROPERTY, STR_ERR_INVALID_NAME _
-        ): GoTo Finish
-    Else
-        'If the property appears on a new line, it's a label-property definition _
-         i.e. it defines a new sub-label of a chunk
-        If TokenLine <> PrevLine _
-            Then Let WordToken = TOKEN_PROPERTY_NEW _
-            Else Let WordToken = TOKEN_PROPERTY_USE
-        Let WordValue = TokenStrings.Add(Word.Text)
-    End If
     GoTo NextWord
     
 fs:
@@ -4318,79 +4286,6 @@ Private Function FormatToken( _
         
     '*** TIMER END ***
     Call Profiler.EventEnd(EVENT_FORMATTOKEN)
-End Function
-
-'FileParse_IsValidName : Check validity for named items
-'======================================================================================
-'Returns        | True if the captured word conforms to name item syntax
-'======================================================================================
-Private Function FileParse_IsValidName( _
-) As Boolean
-    'Variable, label and property names can contain A-Z, 0-9 underscore and dot with _
-     the exceptions that the first letter cannot be a number or a dot, two dots cannot _
-     occur in a row nor can a number follow a dot and the name cannot end in a dot
-    Dim WordChar0 As OZ80_SYNTAX
-    Let WordChar0 = Word.Char(0)
-    
-    'The first letter must be the type identifier; _
-     `!CONST`, `:label`, `.property`, `#type`, `$.RAM`, `?function`, `@macro`
-    If WordChar0 <> SYNTAX_CONSTANT And _
-       WordChar0 <> SYNTAX_LABEL And _
-       WordChar0 <> SYNTAX_PROPERTY And _
-       WordChar0 <> SYNTAX_TYPE And _
-       WordChar0 <> SYNTAX_RAM And _
-       WordChar0 <> SYNTAX_FUNCT And _
-       WordChar0 <> SYNTAX_MACRO _
-    Then
-        Exit Function
-    End If
-    
-    'Check for special names with two character prefixes, _
-     e.g. "::section", "$.RAM" and "$#RAM"
-    Dim Begin As Long
-    'TODO: Watch out for word-length! Could be a 1-letter label
-    'TODO: Could change this function to use bluString's CharPull
-    If (WordChar0 = SYNTAX_LABEL And Word.Char(1) = SYNTAX_LABEL) _
-    Or (WordChar0 = SYNTAX_RAM And Word.Char(1) = SYNTAX_PROPERTY) _
-    Or (WordChar0 = SYNTAX_RAM And Word.Char(1) = SYNTAX_TYPE) _
-    Then
-        Let Begin = 2
-    Else
-        Let Begin = 1
-    End If
-    
-    'The name cannot begin with a number or a dot
-    If Word.Char(Begin) = SYNTAX_PROPERTY Then Exit Function
-    If Word.CharIsNumeric(Begin, True) Then Exit Function
-    
-    'Cannot end in a dot
-    Dim Last As Long
-    Let Last = Word.Length - 1
-    If Word.Char(Last) = SYNTAX_PROPERTY Then Exit Function
-    
-    Dim i As Long
-    For i = Begin To Last
-        If Word.Char(i) = SYNTAX_LABEL Then
-            'TODO: Validate fully-qualified names properly ("::Section:label.prop")
-        ElseIf Word.Char(i) = SYNTAX_PROPERTY Then
-            'If a dot, ensure that the next letter is not a number. _
-             (the check for the last letter as a dot has already been done, _
-              so we can safely assume there remains at least one letter)
-            If Word.CharIsNumeric(i + 1, True) Then Exit Function
-            'Two dots in a row not allowed
-            If Word.Char(i + 1) = SYNTAX_PROPERTY Then Exit Function
-            
-        'Not a dot?
-        Else
-            'Is letter not alphanumeric?
-            If Not Word.CharIsAlphaNumeric(i, True) Then
-                'Finally, not an underscore?
-                If Word.Char(i) <> ASC_USC Then Exit Function
-            End If
-        End If
-    Next i
-    
-    Let FileParse_IsValidName = True
 End Function
 
 'FileParse_NestIn : Track an additional level of bracket nesting

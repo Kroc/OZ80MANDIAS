@@ -3381,7 +3381,7 @@ TokenWord:
     ' { | } ~                           'Tilde is unused at this moment
     
     On FirstChar - 32 GoTo _
-        excl, smark, hash, isName, perc, amp, SkipWord, lbr, rbr _
+        isName, smark, hash, isName, perc, amp, SkipWord, lbr, rbr _
       , star, plus, SkipWord, dash, dot, fs _
       , num, num, num, num, num, num, num, num, num, num _
       , isName, SkipWord, WordError, WordError, WordError, WordError, WordError _
@@ -3424,17 +3424,13 @@ isName:
             
         Else
             'It's life Jim, but not as we know it
-            Call RaiseError(OZ80_ERROR_INTERNAL, _
-                "A one-letter word was believed to be a Name (such as a Label, " _
-              & "Constant or Property) but was not identified by its first letter. " _
-              & "This is a mistake on OZ80's part." _
+            Call RaiseError(OZ80_ERROR_INVALID, _
+                "Invalid Name. A 1-letter Name was not recognised, " _
+              & "only ':', '.' and '$' are defined 1-letter names" _
             ): GoTo Finish
         End If
         GoTo NextWordSkipAttr
     End If
-    
-    '[a.2]  Determine Name Type:
-    '..................................................................................
     
     'Get raw access to the characters in the word; this will be faster than using _
      the `Word.Char` accessor repeatedly, though we will have to avoid leaving the _
@@ -3447,30 +3443,9 @@ isName:
     Let i = 0
     
     'The beginning of the name will determine what is allowed to follow
-    If FirstChar = SYNTAX_PROPERTY Then
-        'TODO: NEW/USE property tokens (or do away with this distinction entirely)
-        'A property can only be followed by other properties
-        Let WordAttr = TokenAttributes(TOKEN_PROPERTY_USE) Or ATTR_NAME_PROPERTY
-        'Begin validating after the dot
-        Let i = 1
-        
-    ElseIf FirstChar = SYNTAX_LABEL Then
-        'Could be a Label, ":", or a Section, "::"
-        If Chars(1) = SYNTAX_LABEL Then
-            'It's a Section name
-            Let WordToken = TOKEN_SECTION
-            Let WordAttr = TokenAttributes(WordToken) Or ATTR_NAME_SECTION
-            Let i = 2
-        Else
-            'It's a Label
-            Let WordToken = TOKEN_LABEL
-            Let WordAttr = TokenAttributes(WordToken) Or ATTR_NAME_LABEL
-            Let i = 1
-        End If
-    
-    '[a.3]  Hexadecimal Numbers:
-    '..................................................................................
-    ElseIf FirstChar = SYNTAX_NUMBER_HEX Then
+    If FirstChar = SYNTAX_NUMBER_HEX Then
+        'Hexadecimal Number:
+        '..............................................................................
         'Check for a valid hexadecimal digit after the "$"
         If (Unicode(Chars(1)) And C1_XDIGIT) <> 0 Then
             
@@ -3508,9 +3483,43 @@ isName:
             
         End If
         
+        'RAM Name:
+        '..............................................................................
         Let WordToken = TOKEN_RAM
         Let WordAttr = TokenAttributes(WordToken) Or ATTR_NAME_RAM
         Let i = 1
+        
+    
+    ElseIf FirstChar = SYNTAX_PROPERTY Then
+        'TODO: NEW/USE property tokens (or do away with this distinction entirely)
+        'A property can only be followed by other properties
+        Let WordAttr = TokenAttributes(TOKEN_PROPERTY_USE) Or ATTR_NAME_PROPERTY
+        'Begin validating after the dot
+        Let i = 1
+        
+    ElseIf FirstChar = SYNTAX_LABEL Then
+        'Could be a Label, ":", or a Section, "::"
+        If Chars(1) = SYNTAX_LABEL Then
+            'It's a Section name
+            Let WordToken = TOKEN_SECTION
+            Let WordAttr = TokenAttributes(WordToken) Or ATTR_NAME_SECTION
+            Let i = 2
+        Else
+            'It's a Label
+            Let WordToken = TOKEN_LABEL
+            Let WordAttr = TokenAttributes(WordToken) Or ATTR_NAME_LABEL
+            Let i = 1
+        End If
+        
+    ElseIf FirstChar = SYNTAX_CONSTANT Then
+        Let WordToken = TOKEN_CONST
+        Let WordAttr = TokenAttributes(WordToken) Or ATTR_NAME_CONST
+        Let i = 1
+    Else
+        Call RaiseError(OZ80_ERROR_INTERNAL, _
+            "Unimplemented Name checking. The word was recognised as a Name, but the " _
+          & "first character was not handled. This is a mistake on OZ80's part" _
+        ): GoTo NameErrorOut
     End If
     
     '[a.4]
@@ -3569,21 +3578,6 @@ NameErrorOut:
     'Free the array reference into the bluString
     Call Word.CharArrayUnaccess(Chars)
     GoTo Finish
-    
-excl:
-    '`!CONSTANT`
-    '.......................................................................... `!` ...
-    'ERROR: Invalid Constant name?
-    If Not FileParse_IsValidName() Then Call RaiseError( _
-        OZ80_ERROR_INVALID, STR_ERR_INVALID_CONSTANT, STR_ERR_INVALID_NAME _
-    ): GoTo Finish
-    
-    'TODO: Pre-define constant name?
-    
-    'Add the index key to the token so that we can retrieve the string later
-    Let WordToken = TOKEN_CONST
-    Let WordValue = TokenStrings.Add(Word.Text)
-    GoTo NextWord
     
 smark:
     'Quoted Text:

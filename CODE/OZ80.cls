@@ -377,16 +377,13 @@ Private Enum OZ80_TOKEN
     TOKEN_PARENS_OPEN                   '"(" Expression nesting,
     TOKEN_PARENS_CLOSE                  '")" e.g. `HI ($8000 + $80)`
     
-    TOKEN_CONST                         'e.g. `!CONST`
-    TOKEN_LABEL                         'e.g. `:label`
-    TOKEN_PROPERTY_USE
+    'A defined Name; i.e. Constant, Section, Label &c.
+     'The particular kind of Name is given by the token attributes (below this enum)
+    TOKEN_NAME
     TOKEN_PROPERTY_NEW
     TOKEN_PROPERTY_ANON                 'Anonymous Property, i.e. `.`
-    TOKEN_RAM
-    TOKEN_SECTION                       'e.g. `::section`
-    TOKEN_TEXT                          'e.g. `"..."`
-    TOKEN_TYPE                          'e.g. `#type`
     
+    TOKEN_TEXT                          'e.g. `"..."`
     TOKEN_DOC                           'Documentation text, i.e. "``..."
     
     [_TOKEN_LAST]                       'Do not go above 255!
@@ -416,11 +413,13 @@ Private Enum OZ80_ATTR
     ' (for example, when only a Section name is allowed, not a fully-qualified Label)
     
     ATTR_NAME_CONST = 2 ^ 9             'A Constant, e.g. "!BLUE"
-    ATTR_NAME_LABEL = 2 ^ 11            'A Label name, e.g. ":Label", incl. ":"
-    ATTR_NAME_PROPERTY = 2 ^ 12         'A Property name, e.g. ".property"
-    ATTR_NAME_RAM = 2 ^ 13              'A RAM page name, e.g. "$_SRAM", incl. "$"
-    ATTR_NAME_SECTION = 2 ^ 10          'A Section name, e.g. "::section"
-    ATTR_NAME_TYPE = 2 ^ 15             'A Type name, e.g. "#type"
+    ATTR_NAME_LABEL = 2 ^ 10            'A Label name, e.g. ":Label", incl. ":"
+    ATTR_NAME_PROPERTY = 2 ^ 11         'A Property name, e.g. ".property"
+    ATTR_NAME_RAM = 2 ^ 12              'A RAM page name, e.g. "$_SRAM", incl. "$"
+    ATTR_NAME_SECTION = 2 ^ 13          'A Section name, e.g. "::section"
+    ATTR_NAME_TYPE = 2 ^ 14             'A Type name, e.g. "#type"
+    
+    ATTR_NAMES = ATTR_NAME_CONST Or ATTR_NAME_LABEL Or ATTR_NAME_PROPERTY Or ATTR_NAME_RAM Or ATTR_NAME_SECTION Or ATTR_NAME_TYPE
     
     'Lists can contains Lists and Expressions
     ATTR_LISTEXPR = ATTR_LIST Or ATTR_EXPR
@@ -576,12 +575,9 @@ Private SectionCount As Long
 
 '--------------------------------------------------------------------------------------
 
-'The database of named item values. _
- This includes Constants, RAM Names and Type values
+'The database of defined Name values _
+ (i.e. Constants, Sections, Labels &c.)
 Private Values As Scripting.Dictionary
-
-'The database of Label locations (in ROM) and their properties
-Private Labels As Scripting.Dictionary
 
 '--------------------------------------------------------------------------------------
 'Type Definition:
@@ -1517,15 +1513,10 @@ Private Sub Class_Initialize()
     Let i = i + 1: Let TokenNames(TOKEN_SQUARE_OPEN) = ChrW$(SYNTAX_SQUARE_OPEN)
     Let i = i + 1: Let TokenNames(TOKEN_SQUARE_CLOSE) = ChrW$(SYNTAX_SQUARE_CLOSE)
     '
-    Let i = i + 1: Let TokenNames(TOKEN_CONST) = ChrW$(SYNTAX_CONSTANT)
-    Let i = i + 1: Let TokenNames(TOKEN_LABEL) = ChrW$(SYNTAX_LABEL)
-    Let i = i + 1: Let TokenNames(TOKEN_PROPERTY_USE) = ChrW$(SYNTAX_PROPERTY)
+    Let i = i + 1: Let TokenNames(TOKEN_NAME) = vbNullString
     Let i = i + 1: Let TokenNames(TOKEN_PROPERTY_NEW) = ChrW$(SYNTAX_PROPERTY)
     Let i = i + 1: Let TokenNames(TOKEN_PROPERTY_ANON) = ChrW$(SYNTAX_PROPERTY)
-    Let i = i + 1: Let TokenNames(TOKEN_RAM) = ChrW$(SYNTAX_NUMBER_HEX)
-    Let i = i + 1: Let TokenNames(TOKEN_SECTION) = String(2, ChrW$(SYNTAX_LABEL))
     Let i = i + 1: Let TokenNames(TOKEN_TEXT) = ChrW$(SYNTAX_TEXT)
-    Let i = i + 1: Let TokenNames(TOKEN_TYPE) = ChrW$(SYNTAX_TYPE)
     
     Let i = i + 1: Let TokenNames(TOKEN_DOC) = "``"
     
@@ -1678,15 +1669,10 @@ Private Sub Class_Initialize()
     Let i = i + 1: Let TokenAttributes(TOKEN_SQUARE_CLOSE) = ATTR_NONE
     Let i = i + 1: Let TokenAttributes(TOKEN_PARENS_OPEN) = ATTR_LISTEXPR
     Let i = i + 1: Let TokenAttributes(TOKEN_PARENS_CLOSE) = ATTR_NONE
-    Let i = i + 1: Let TokenAttributes(TOKEN_CONST) = ATTR_LISTEXPR
-    Let i = i + 1: Let TokenAttributes(TOKEN_LABEL) = ATTR_LISTEXPR
-    Let i = i + 1: Let TokenAttributes(TOKEN_PROPERTY_USE) = ATTR_LISTEXPR
+    Let i = i + 1: Let TokenAttributes(TOKEN_NAME) = ATTR_LISTEXPR
     Let i = i + 1: Let TokenAttributes(TOKEN_PROPERTY_NEW) = ATTR_NONE
     Let i = i + 1: Let TokenAttributes(TOKEN_PROPERTY_ANON) = ATTR_NONE
-    Let i = i + 1: Let TokenAttributes(TOKEN_RAM) = ATTR_LISTEXPR Or ATTR_PARAM
-    Let i = i + 1: Let TokenAttributes(TOKEN_SECTION) = ATTR_LISTEXPR
     Let i = i + 1: Let TokenAttributes(TOKEN_TEXT) = ATTR_LIST
-    Let i = i + 1: Let TokenAttributes(TOKEN_TYPE) = ATTR_LISTEXPR
     Let i = i + 1: Let TokenAttributes(TOKEN_DOC) = ATTR_NONE
     'The token attributes list needs to be kept up to date, _
      so if we've missed one I can alert you here
@@ -1930,9 +1916,8 @@ Private Sub Reset()
      Index 0 is reserved as a default for Chunks without a specified Section
     ReDim Sections(0 To 0) As oz80Section
     
-    'Reset the value stores
+    'Reset the value store
     Set Values = Nothing: Set Values = New Scripting.Dictionary
-    Set Labels = Nothing: Set Labels = New Scripting.Dictionary
     
     'Erase the Types (which includes `RAM`)
     Erase Types
@@ -2454,7 +2439,7 @@ ScopeRoot:
         GoSub AddNode
         
         'The next word must be a Constant name
-        If WordToken <> TOKEN_CONST Then Call RaiseError(OZ80_ERROR_EXPECTED, _
+        If (WordAttr And ATTR_NAME_CONST) = 0 Then Call RaiseError(OZ80_ERROR_EXPECTED, _
             "A Constant name must follow the `CONST` statement. A Constant name " _
           & "begins with an exclamation mark; for example: " & vbNewLine _
           & vbNewLine _
@@ -2509,10 +2494,9 @@ ScopeRoot:
 '        Call RaiseMessage(OZ80_LOG_INFO, "SCOPE <root> " & vbTab & vbTab & "| " & Word.Text)
         GoSub AddNode
         
-        'The next word must be a Section name
-        'TODO: Need to check that this is not a fully-qualified Label, _
-               e.g. "::section:label.property"
-        If WordToken <> TOKEN_SECTION Then Call RaiseError(OZ80_ERROR_EXPECTED, _
+        'The next word must be a Section name. This checks for a Section only, _
+         to avoid accepting fully-qualified Labels, .e.g. "::section:label.property"
+        If (WordAttr And ATTR_NAMES) <> ATTR_NAME_SECTION Then Call RaiseError(OZ80_ERROR_EXPECTED, _
             "A Section name must follow the `SECTION` statement. " _
           & "Section names begin with two colons, e.g. ""::stuff""" _
         ): GoTo Finish
@@ -2547,7 +2531,7 @@ ScopeRoot:
         GoSub AddNode
         
         'The next word must be a Type name
-        If WordToken <> TOKEN_TYPE Then Call RaiseError(OZ80_ERROR_EXPECTED, _
+        If (WordAttr And ATTR_NAMES) <> ATTR_NAME_TYPE Then Call RaiseError(OZ80_ERROR_EXPECTED, _
             "Expected Type name following `TYPE` statement. " _
           & "See the documentation on how to define Types" _
         ): GoTo Finish
@@ -2567,7 +2551,7 @@ ScopeRoot:
         GoSub AddNode
         
         'TODO: For now skip the param
-        If WordToken = TOKEN_RAM Then
+        If (WordAttr And ATTR_NAMES) = ATTR_NAME_RAM Then
 '            Call RaiseMessage(OZ80_LOG_INFO, "SCOPE <root> " & vbTab & vbTab & "| " & Word.Text)
             GoSub AddNode
         End If
@@ -2591,7 +2575,7 @@ ScopeRoot:
         GoSub AddNode
         
         'The Label name follows (cannot be anonymous)
-        If WordToken <> TOKEN_LABEL Then Call RaiseError(OZ80_ERROR_EXPECTED, _
+        If (WordAttr And ATTR_NAMES) <> ATTR_NAME_LABEL Then Call RaiseError(OZ80_ERROR_EXPECTED, _
             "TODO" _
         ): GoTo Finish
         '        Call RaiseMessage(OZ80_LOG_INFO, "SCOPE <root> " & vbTab & vbTab & "| " & Word.Text)
@@ -2603,9 +2587,7 @@ ScopeRoot:
 '            Call RaiseMessage(OZ80_LOG_INFO, "SCOPE <root> " & vbTab & vbTab & "| " & Word.Text)
             GoSub AddNode
             
-            'TODO: Check that this isn't a fully-qualified label _
-                   e.g, "::section:label.property"
-            If WordToken <> TOKEN_SECTION Then Call RaiseError(OZ80_ERROR_EXPECTED, _
+            If (WordAttr And ATTR_NAMES) <> ATTR_NAME_SECTION Then Call RaiseError(OZ80_ERROR_EXPECTED, _
                 "TODO" _
             ): GoTo Finish
             
@@ -2616,8 +2598,8 @@ ScopeRoot:
         'Process the table's guts
         GoSub ScopeCode
         
-    '[i]    `PROC [SECTION ::<name> | INTERRUPT <expr>] [HELP <text>] _
-                  [PARAMS <paramlist>] [RETURN <paramlist>]
+    '[i]    `PROC :<name> [SECTION ::<name> | INTERRUPT <expr>] [HELP <text>] _
+                          [PARAMS <paramlist>] [RETURN <paramlist>]
     '..................................................................................
     ElseIf WordToken = TOKEN_KEYWORD_PROC Then
         'Add this keyword to the tree
@@ -2625,7 +2607,7 @@ ScopeRoot:
         GoSub AddNode
         
         'The Label name follows (cannot be anonymous)
-        If WordToken <> TOKEN_LABEL Then Call RaiseError(OZ80_ERROR_EXPECTED, _
+        If (WordAttr And ATTR_NAMES) <> ATTR_NAME_LABEL Then Call RaiseError(OZ80_ERROR_EXPECTED, _
             "TODO" _
         ): GoTo Finish
 '        Call RaiseMessage(OZ80_LOG_INFO, "SCOPE <root> " & vbTab & vbTab & "| " & Word.Text)
@@ -2647,7 +2629,7 @@ ProcParams:
 '            Call RaiseMessage(OZ80_LOG_INFO, "SCOPE <root> " & vbTab & vbTab & "| " & Word.Text)
             GoSub AddNode
             
-            If WordToken <> TOKEN_SECTION Then Call RaiseError(OZ80_ERROR_EXPECTED, _
+            If (WordAttr And ATTR_NAMES) <> ATTR_NAME_SECTION Then Call RaiseError(OZ80_ERROR_EXPECTED, _
                 "TODO" _
             ): GoTo Finish
             
@@ -2891,7 +2873,7 @@ ScopeType:
 '            Call RaiseMessage(OZ80_LOG_INFO, "SCOPE <type> " & vbTab & vbTab & "| " & Word.Text)
             GoSub AddNode
             'Either a Type name follows or a Type definition block
-            If WordToken = TOKEN_TYPE Then
+            If (WordAttr And ATTR_NAMES) = ATTR_NAME_TYPE Then
 '                Call RaiseMessage(OZ80_LOG_INFO, "SCOPE <type> " & vbTab & vbTab & "| " & Word.Text)
                 GoSub AddNode
             Else
@@ -2956,9 +2938,9 @@ ScopeExpr:
     If (WordAttr And ATTR_EXPR) = 0 Then
         Return
     
-    '[a]    `!CONSTANT`
+    '[a]    Defined Name, `!CONST`, `$_RAM`, `::Section`, `:Label` etc
     '..................................................................................
-    ElseIf WordToken = TOKEN_CONST Then
+    ElseIf WordToken = TOKEN_NAME Then
         'TODO:
 '        Call RaiseMessage(OZ80_LOG_INFO, "SCOPE <expr> " & vbTab & vbTab & "| " & Word.Text)
         GoSub AddNode
@@ -2986,13 +2968,6 @@ ScopeExpr:
 '        Call RaiseMessage(OZ80_LOG_INFO, "SCOPE <expr> " & vbTab & vbTab & "| " & Word.Text)
         GoSub AddNode
         
-    '[e]    `:<name>`
-    '..................................................................................
-    ElseIf WordToken = TOKEN_LABEL Then
-        'TODO
-'        Call RaiseMessage(OZ80_LOG_INFO, "SCOPE <expr> " & vbTab & vbTab & "| " & Word.Text)
-        GoSub AddNode
-        
     '[f]    `255`, `$FF`, `%11111111`
     '..................................................................................
     ElseIf WordToken = TOKEN_NUMBER Then
@@ -3015,34 +2990,6 @@ ScopeExpr:
         GoSub ScopeExpr
         
         'TODO: The parens should end here
-'        Call RaiseMessage(OZ80_LOG_INFO, "SCOPE <expr> " & vbTab & vbTab & "| " & Word.Text)
-        GoSub AddNode
-        
-    '[h]    `.property`
-    '..................................................................................
-    ElseIf WordToken = TOKEN_PROPERTY_USE Then
-        'TODO
-'        Call RaiseMessage(OZ80_LOG_INFO, "SCOPE <expr> " & vbTab & vbTab & "| " & Word.Text)
-        GoSub AddNode
-        
-    '[i]    `$.RAM`, `$#RAM.RAM`
-    '..................................................................................
-    ElseIf WordToken = TOKEN_RAM Then
-        'TODO
-'        Call RaiseMessage(OZ80_LOG_INFO, "SCOPE <expr> " & vbTab & vbTab & "| " & Word.Text)
-        GoSub AddNode
-        
-    '[j]    `::section`
-    '..................................................................................
-    ElseIf WordToken = TOKEN_SECTION Then
-        'TODO
-'        Call RaiseMessage(OZ80_LOG_INFO, "SCOPE <expr> " & vbTab & vbTab & "| " & Word.Text)
-        GoSub AddNode
-        
-    '[k]    `#type`
-    '..................................................................................
-    ElseIf WordToken = TOKEN_TYPE Then
-        'TODO
 '        Call RaiseMessage(OZ80_LOG_INFO, "SCOPE <expr> " & vbTab & vbTab & "| " & Word.Text)
         GoSub AddNode
     
@@ -3414,12 +3361,12 @@ isName:
             
         ElseIf FirstChar = SYNTAX_LABEL Then
             'Self-reference Label, ":"
-            Let WordToken = TOKEN_LABEL
+            Let WordToken = TOKEN_NAME
             Let WordAttr = TokenAttributes(WordToken) Or ATTR_NAME_LABEL
             
         ElseIf FirstChar = SYNTAX_RAM Then
             'Default RAM page, "$"
-            Let WordToken = TOKEN_RAM
+            Let WordToken = TOKEN_NAME
             Let WordAttr = TokenAttributes(WordToken) Or ATTR_NAME_RAM
             
         Else
@@ -3485,8 +3432,8 @@ isName:
         
         'RAM Name:
         '..............................................................................
-        Let WordToken = TOKEN_RAM
-        Let WordAttr = TokenAttributes(WordToken) Or ATTR_NAME_RAM
+        Let WordToken = TOKEN_NAME
+        Let WordAttr = TokenAttributes(WordToken) Or ATTR_NAME_RAM Or ATTR_PARAM
         Let i = 1
         
     
@@ -3496,7 +3443,7 @@ isName:
          i.e. it defines a new sub-label of a chunk
         If TokenLine <> PrevLine _
             Then Let WordToken = TOKEN_PROPERTY_NEW _
-            Else Let WordToken = TOKEN_PROPERTY_USE
+            Else Let WordToken = TOKEN_NAME
         'A property can only be followed by other properties
         Let WordAttr = TokenAttributes(WordToken) Or ATTR_NAME_PROPERTY
         'Begin validating after the dot
@@ -3506,23 +3453,23 @@ isName:
         'Could be a Label, ":", or a Section, "::"
         If Chars(1) = SYNTAX_LABEL Then
             'It's a Section name
-            Let WordToken = TOKEN_SECTION
+            Let WordToken = TOKEN_NAME
             Let WordAttr = TokenAttributes(WordToken) Or ATTR_NAME_SECTION
             Let i = 2
         Else
             'It's a Label
-            Let WordToken = TOKEN_LABEL
+            Let WordToken = TOKEN_NAME
             Let WordAttr = TokenAttributes(WordToken) Or ATTR_NAME_LABEL
             Let i = 1
         End If
         
     ElseIf FirstChar = SYNTAX_CONSTANT Then
-        Let WordToken = TOKEN_CONST
+        Let WordToken = TOKEN_NAME
         Let WordAttr = TokenAttributes(WordToken) Or ATTR_NAME_CONST
         Let i = 1
     
     ElseIf FirstChar = SYNTAX_TYPE Then
-        Let WordToken = TOKEN_TYPE
+        Let WordToken = TOKEN_NAME
         Let WordAttr = TokenAttributes(WordToken) Or ATTR_NAME_TYPE
         Let i = 1
     Else
@@ -4191,7 +4138,7 @@ Private Function FormatToken( _
         Let Format_Msg.Text = TokenNames(TokenKind)
         Let Format_TokenType = FORMAT_TOKEN_SQUARE
         
-    ElseIf TokenKind = TOKEN_CONST Then
+    ElseIf (TokenAttr And ATTR_NAME_CONST) <> 0 Then
         '..............................................................................
         Let Format_Msg.Text = TokenStrings.Item(TokenValue)
         Call Format_Msg.Wrap(FORMAT_QUOTE)
@@ -4202,7 +4149,7 @@ Private Function FormatToken( _
         Let Format_Msg.Text = TokenNames(TokenKind)
         Let Format_TokenType = FORMAT_TOKEN_FLAG
         
-    ElseIf TokenKind = TOKEN_TYPE Then
+    ElseIf (TokenAttr And ATTR_NAME_TYPE) <> 0 Then
         '..............................................................................
         Let Format_Msg.Text = TokenStrings.Item(TokenValue)
         Call Format_Msg.Wrap(FORMAT_QUOTE)
@@ -4219,7 +4166,13 @@ Private Function FormatToken( _
         Call Format_Msg.UCase
         Let Format_TokenType = FORMAT_TOKEN_KEYWORD
         
-    ElseIf TokenKind = TOKEN_LABEL Then
+    ElseIf (TokenAttr And ATTR_NAME_SECTION) <> 0 Then
+        '..............................................................................
+        Let Format_Msg.Text = TokenStrings.Item(TokenValue)
+        Call Format_Msg.Wrap(FORMAT_QUOTE)
+        Let Format_TokenType = FORMAT_TOKEN_SECTION
+        
+    ElseIf (TokenAttr And ATTR_NAME_LABEL) <> 0 Then
         '..............................................................................
         Let Format_Msg.Text = TokenStrings.Item(TokenValue)
         Call Format_Msg.Wrap(FORMAT_QUOTE)
@@ -4243,13 +4196,13 @@ Private Function FormatToken( _
         Let Format_TokenType = FORMAT_TOKEN_PREFIX
         
     ElseIf TokenKind = TOKEN_PROPERTY_NEW _
-        Or TokenKind = TOKEN_PROPERTY_USE Then
+        Or (TokenAttr And ATTR_NAME_PROPERTY) <> 0 Then
         '..............................................................................
         Let Format_Msg.Text = TokenStrings.Item(TokenValue)
         Call Format_Msg.Wrap(FORMAT_QUOTE)
         Let Format_TokenType = FORMAT_TOKEN_PROPERTY
             
-    ElseIf TokenKind = TOKEN_RAM Then
+    ElseIf (TokenAttr And ATTR_NAME_RAM) <> 0 Then
         '..............................................................................
         Let Format_Msg.Text = TokenStrings.Item(TokenValue)
         Call Format_Msg.Wrap(FORMAT_QUOTE)
@@ -4259,12 +4212,6 @@ Private Function FormatToken( _
         '..............................................................................
         Let Format_Msg.Text = TokenNames(TokenKind)
         Let Format_TokenType = FORMAT_TOKEN_REGISTER
-        
-    ElseIf TokenKind = TOKEN_SECTION Then
-        '..............................................................................
-        Let Format_Msg.Text = TokenStrings.Item(TokenValue)
-        Call Format_Msg.Wrap(FORMAT_QUOTE)
-        Let Format_TokenType = FORMAT_TOKEN_SECTION
         
     ElseIf TokenKind = TOKEN_TEXT Then
         '..............................................................................
@@ -4693,7 +4640,7 @@ Continue:
         
         'Is this a pre-existing Type name?
         '..............................................................................
-        If TokenKind = TOKEN_TYPE Then
+        If (TokenAttr And ATTR_NAMES) = ATTR_NAME_TYPE Then
             'Retrieve the name of the Type
             Dim CopyTypeName As String
             Let CopyTypeName = TokenText
@@ -4940,7 +4887,7 @@ Private Sub DefineProc()
     If NextTokenError() Then GoTo Finish
     
     'ERROR: No Label name for Procedure
-    If TokenKind <> TOKEN_LABEL Then Call RaiseError( _
+    If (TokenAttr And ATTR_NAMES) <> ATTR_NAME_LABEL Then Call RaiseError( _
         OZ80_ERROR_EXPECTED, "TODO" _
     ): GoTo Finish
     
@@ -4982,7 +4929,7 @@ ReadParams:
         If NextTokenError() Then GoTo Finish
         
         'ERROR: Not a Section name following the Section keyword
-        If TokenKind <> TOKEN_SECTION Then Call RaiseError( _
+        If (TokenAttr And ATTR_NAMES) <> ATTR_NAME_SECTION Then Call RaiseError( _
             OZ80_ERROR_EXPECTED, "TODO" _
         ): GoTo Finish
         
@@ -5055,9 +5002,7 @@ ReadParams:
         
         Do
             'Check for a valid `PARAMS` item
-            If (TokenAttr And ATTR_Z80_REGISTER) <> 0 _
-            Or TokenKind = TOKEN_RAM _
-            Then
+            If (TokenAttr And ATTR_PARAM) <> 0 Then
                 'Skip over the list item, these are not recorded just yet _
                  but will be in the future (for auto-documentation)
                 'ERROR: File cannot end in the midst of the List
@@ -5110,9 +5055,7 @@ ReadParams:
         
         Do
             'Check for a valid `RETURN` item
-            If (TokenAttr And ATTR_Z80_REGISTER) <> 0 _
-            Or TokenKind = TOKEN_RAM _
-            Then
+            If (TokenAttr And ATTR_PARAM) <> 0 Then
                 'Skip over the list item, these are not recorded just yet _
                  but will be in the future (for auto-documentation)
                 'ERROR: File cannot end in the midst of the List
@@ -5283,7 +5226,7 @@ Private Sub DefineSection()
     If NextTokenError() Then Exit Sub
     
     'ERROR: Not a section name following the section keyword
-    If TokenKind <> TOKEN_SECTION Then Call RaiseError( _
+    If (TokenAttr And ATTR_NAMES) <> ATTR_NAME_SECTION Then Call RaiseError( _
         OZ80_ERROR_EXPECTED, "TODO" _
     ): Exit Sub
     
@@ -5372,7 +5315,7 @@ Finish:
     Let Sections(SectionCount).ID = SectionID
     Let Sections(SectionCount).Slot = Slot
     
-    Call Labels.Add(SectionName, INDEFINITE)
+    Call Values.Add(SectionName, INDEFINITE)
     
     Exit Sub
     
@@ -5406,7 +5349,7 @@ Private Sub DefineRAM()
     
     Dim TypeName As String
     'Skip the param
-    If TokenKind = TOKEN_RAM Then
+    If (TokenAttr And ATTR_NAMES) = ATTR_NAME_RAM Then
         Let TypeName = TokenText
         If NextTokenError() Then Exit Sub
     Else
@@ -5493,7 +5436,7 @@ Private Sub DefineTable()
     If NextTokenError() Then GoTo Finish
     
     'ERROR: No Label name for Table
-    If TokenKind <> TOKEN_LABEL Then Call RaiseError( _
+    If (TokenAttr And ATTR_NAMES) <> ATTR_NAME_LABEL Then Call RaiseError( _
         OZ80_ERROR_EXPECTED, "TODO" _
     ): GoTo Finish
     
@@ -5522,7 +5465,7 @@ ReadParams:
         If NextTokenError() Then GoTo Finish
         
         'ERROR: Not a Section name following the Section keyword
-        If TokenKind <> TOKEN_SECTION Then Call RaiseError( _
+        If (TokenAttr And ATTR_NAMES) <> ATTR_NAME_SECTION Then Call RaiseError( _
             OZ80_ERROR_EXPECTED, "TODO" _
         ): GoTo Finish
         
@@ -5639,7 +5582,7 @@ Continue:
         If NextTokenError() Then Exit Sub
         
         'The next token should be a Local Label name
-        If TokenKind <> TOKEN_PROPERTY_USE Then
+        If (TokenAttr And ATTR_NAMES) <> ATTR_NAME_PROPERTY Then
             Call RaiseError(OZ80_ERROR_EXPECTED, "TODO")
             Exit Sub
         End If
@@ -7995,110 +7938,86 @@ GetNumber:
         End If
     
     '----------------------------------------------------------------------------------
-    'Constants
+    'Defined Name (Constants, Sections, Labels, RAM Names &c.)
     '----------------------------------------------------------------------------------
-    ElseIf TokenKind = TOKEN_CONST Then
-        'Has the constant been defined?
-        If Not Values.Exists(TokenText) Then
+    ElseIf TokenKind = TOKEN_NAME Then
+        'Constants:
+        If (TokenAttr And ATTR_NAMES) = ATTR_NAME_CONST Then
             'ERROR: Constant not yet defined. Constants cannot be indefinite
-            Call RaiseError(OZ80_ERROR_UNDEFINED, "TODO")
-            Exit Sub
-        End If
-        'Retrieve the Constant value
-        Let ReturnValue = Values.Item(TokenText)
-    
-    '----------------------------------------------------------------------------------
-    'Types
-    '----------------------------------------------------------------------------------
-    ElseIf TokenKind = TOKEN_TYPE Then
-        'Has the RAM Name / Type value been defined?
-        If Not Values.Exists(TokenText) Then
-            'Return Indefinite
-            Let ReturnValue = INDEFINITE
-        Else
-            'Retrieve the Type property Value
+            If Not Values.Exists(TokenText) Then Call RaiseError(OZ80_ERROR_INDEFINITE, _
+                "Constant cannot be indefinite" _
+            ): Exit Sub
+            
+            'Retrieve the Constant value
             Let ReturnValue = Values.Item(TokenText)
-        End If
-    
-    '----------------------------------------------------------------------------------
-    'RAM Names
-    '----------------------------------------------------------------------------------
-    ElseIf TokenKind = TOKEN_RAM Then
-        'Has the RAM Name / Type value been defined?
-        If Not Values.Exists(TokenText) Then
-            'Return Indefinite
-            Let ReturnValue = INDEFINITE
-        Else
-            'Retrieve the RAM address / Has Value
-            Let ReturnValue = Values.Item(TokenText)
-        End If
         
+        ElseIf (TokenAttr And ATTR_NAMES) = ATTR_NAME_SECTION Then
+            'Already fully-qualified names are used to reference between Sections
+            If Not Values.Exists(TokenText) Then
+                'Return Indefinite
+                Let ReturnValue = INDEFINITE
+            Else
+                'Retrieve the Label address
+                Let ReturnValue = Values.Item(TokenText)
+                If ReturnValue < 0 Then ReturnValue = INDEFINITE
+            End If
+        
+        ElseIf (TokenAttr And ATTR_NAME_LABEL) <> 0 Then
+            'If no scope is provided, we cannot qualify local names to global names
+            If ChunkID = 0 Then
+                'In this case you can only refer to Sectionless Labels
+                If Values.Exists(TokenText) _
+                    Then Let ReturnValue = Values.Item(TokenText) _
+                    Else Let ReturnValue = INDEFINITE
+                If ReturnValue < 0 Then ReturnValue = INDEFINITE
+                
+            'The "self" Label (`:`) refers to the Chunk's own address
+            ElseIf TokenValue = 0 Then
+                'TODO: ChunkID = 0?
+                'Get the Chunk's address (will be indefinite prior to ROM layout)
+                Let ReturnValue = Chunks(ChunkID).AddrSlot
+                If ReturnValue < 0 Then ReturnValue = INDEFINITE
+            
+            'Check for Labels within the current Section scope
+            ElseIf Values.Exists(Chunks(ChunkID).SectionName & TokenText) Then
+                Let ReturnValue = Values.Item(Chunks(ChunkID).SectionName & TokenText)
+                If ReturnValue < 0 Then ReturnValue = INDEFINITE
+            
+            'Check for global Labels
+            ElseIf Values.Exists(TokenText) Then
+                Let ReturnValue = Values.Item(TokenText)
+                If ReturnValue < 0 Then ReturnValue = INDEFINITE
+            Else
+                Let ReturnValue = INDEFINITE
+            End If
+        
+        ElseIf (TokenAttr And ATTR_NAMES) = ATTR_NAME_PROPERTY Then
+            'Property names have to be expanded to their fully-qualified form
+            If Not Values.Exists(Chunks(ChunkID).FullName & TokenText) Then
+                'Return Indefinite
+                Let ReturnValue = INDEFINITE
+            Else
+                'Retrieve the sub-routine address
+                Let ReturnValue = Values.Item(Chunks(ChunkID).FullName & TokenText)
+            End If
+        
+        Else
+            If Not Values.Exists(TokenText) _
+                Then Let ReturnValue = INDEFINITE _
+                Else Let ReturnValue = Values.Item(TokenText)
+        End If
+                
     '----------------------------------------------------------------------------------
     'The `START` keyword refers to the System's boot vector
     '----------------------------------------------------------------------------------
     ElseIf TokenKind = TOKEN_KEYWORD_START Then
         'TODO: This is determined by the System, so we can forgo having to reference it
-        If Not Labels.Exists(STR_START) Then
+        If Not Values.Exists(STR_START) Then
             'Return Indefinite
             Let ReturnValue = INDEFINITE
         Else
             'Retrieve the START address
-            Let ReturnValue = Labels.Item(STR_START)
-        End If
-    
-    '----------------------------------------------------------------------------------
-    'Labels
-    '----------------------------------------------------------------------------------
-    ElseIf TokenKind = TOKEN_LABEL Then
-        'If no scope is provided, we cannot qualify local names to global names
-        If ChunkID = 0 Then
-            'In this case you can only refer to Sectionless Labels
-            If Labels.Exists(TokenText) _
-                Then Let ReturnValue = Labels.Item(TokenText) _
-                Else Let ReturnValue = INDEFINITE
-            If ReturnValue < 0 Then ReturnValue = INDEFINITE
-            
-        'The "self" Label (`:`) refers to the Chunk's own address
-        ElseIf TokenValue = 0 Then
-            'Get the Chunk's address (will be indefinite prior to ROM layout)
-            Let ReturnValue = Chunks(ChunkID).AddrSlot
-            If ReturnValue < 0 Then ReturnValue = INDEFINITE
-        
-        'Check for Labels within the current Section scope
-        ElseIf Labels.Exists(Chunks(ChunkID).SectionName & TokenText) Then
-            Let ReturnValue = Labels.Item(Chunks(ChunkID).SectionName & TokenText)
-            If ReturnValue < 0 Then ReturnValue = INDEFINITE
-        
-        'Check for global Labels
-        ElseIf Labels.Exists(TokenText) Then
-            Let ReturnValue = Labels.Item(TokenText)
-            If ReturnValue < 0 Then ReturnValue = INDEFINITE
-        Else
-            Let ReturnValue = INDEFINITE
-        End If
-    
-    ElseIf TokenKind = TOKEN_SECTION Then
-        'Already fully-qualified names are used to reference between Sections
-        If Not Labels.Exists(TokenText) Then
-            'Return Indefinite
-            Let ReturnValue = INDEFINITE
-        Else
-            'Retrieve the Label address
-            Let ReturnValue = Labels.Item(TokenText)
-            If ReturnValue < 0 Then ReturnValue = INDEFINITE
-        End If
-        
-    '----------------------------------------------------------------------------------
-    'Properties
-    '----------------------------------------------------------------------------------
-    ElseIf TokenKind = TOKEN_PROPERTY_USE Then
-        'Property names have to be expanded to their fully-qualified form
-        If Not Labels.Exists(Chunks(ChunkID).FullName & TokenText) Then
-            'Return Indefinite
-            Let ReturnValue = INDEFINITE
-        Else
-            'Retrieve the sub-routine address
-            Let ReturnValue = Labels.Item(Chunks(ChunkID).FullName & TokenText)
+            Let ReturnValue = Values.Item(STR_START)
         End If
         
     '----------------------------------------------------------------------------------
@@ -8114,7 +8033,10 @@ GetNumber:
             ): Exit Sub
         End If
         
+        Call RaiseError(OZ80_ERROR_INTERNAL, "NOPE")
+        
         Stop
+        Exit Sub
     End If
     
     'Move over the processed token, the parent expects the token pointer _
@@ -8188,9 +8110,9 @@ Private Sub AddUpdateLabel( _
     ByRef Value As Double _
 )
     'Add a new label or update an existing label value?
-    If Not Labels.Exists(LabelName) _
-        Then Call Labels.Add(LabelName, Value) _
-        Else Let Labels.Item(LabelName) = Value
+    If Not Values.Exists(LabelName) _
+        Then Call Values.Add(LabelName, Value) _
+        Else Let Values.Item(LabelName) = Value
 End Sub
 
 'ROMLayout : Calculate the placement of the code/data Chunks in the output ROM

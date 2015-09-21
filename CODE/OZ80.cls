@@ -112,11 +112,6 @@ Private Const STR_ERR_INVALID_NUMBER_DEC As String = _
     "contain numeric characters (0-9) and optionally one decimal point. " & _
     "For numbers with a decimal point, there must always be at least one number " & _
     "preceeding the decimal point and another proceeding it, i.e. '9.9'."
-
-Private Const STR_ERR_INVALID_NUMBER_HEX As String = _
-    "Not a valid hexadecimal number." & vbNewLine & vbNewLine & _
-    "A hexadecimal number begins with '$' followed by 1-8 hexadecimal digits " & _
-    "(0-9, A-F)."
     
 Private Const STR_ERR_OVERFLOW As String = _
     "Overflow."
@@ -1284,7 +1279,6 @@ Private Sub Class_Initialize()
     'Register the events we'll be timing with the profiler
     With Profiler
         Call .RegisterEvent(EVENT_INITIALIZE, "Initialize")
-        Call .RegisterEvent(EVENT_FILELOAD_VB6, "bluString.ReadFile - InputB")
         Call .RegisterEvent(EVENT_FILELOAD_API, "bluString.FileLoad - api_CreateFile")
         Call .RegisterEvent(EVENT_PARSE, "FileParse")
         Call .RegisterEvent(EVENT_PARSE_WORD, "FileParse:ReadWord")
@@ -2350,6 +2344,8 @@ Private Sub FileParse( _
     
     '[1]    Read Source File
     '==================================================================================
+    '[1.1]  Load File:
+    '----------------------------------------------------------------------------------
     'This function will be called by `FileAssemble`, so the file path will already _
      have been normalised and file existance checked
     
@@ -2361,8 +2357,13 @@ Private Sub FileParse( _
     Set Source = New bluString
     
     'Attempt to laod the source file
-    'TODO: Error handling
-    Call Source.Load(FilePath, LoadOption_NormalizeWhitespace)
+    'TODO: More precise error handling?
+    If _
+        Source.Load(FilePath, LoadOption_NormalizeWhitespace) <> 0 _
+    Then Call RaiseError( _
+        OZ80_ERROR_FILE_READ, _
+        "Could not read the file" _
+    ): Exit Sub
     
     'For speed we will walk through the source text as Unicode characters; _
      this array will be mapped to the source text held within the bluString
@@ -2374,7 +2375,7 @@ Private Sub FileParse( _
     Call Profiler.EventEnd(EVENT_FILELOAD_API)
     '*** TIMER END ***
     
-    '[1.1]  Initialise Parsing:
+    '[1.2]  Initialise Parsing:
     '----------------------------------------------------------------------------------
     
     'Which character in the source code we're parsing. Since the way the routine is _
@@ -2388,16 +2389,27 @@ Private Sub FileParse( _
     Dim Line As Long, Col As Long
     Let Line = 1: Let PrevLine = 1
     
+    'Get a reference to the Unicode properties look-up table. This doesn't need to be _
+     manually freed as that Class only goes out of scope when the application quits
+    Dim Unicode() As Integer
+    Let Unicode = blu.Strings.UnicodeProperties()
+    
     'These will be the deduced information from the word; _
      when we work out the scope, these will be written to the syntax tree
     Dim WordToken As OZ80_TOKEN         'An index number to represent the word
     Dim WordAttr As OZ80_ATTR           'Attributes of the word, e.g. Keyword, List
     Dim WordValue As Double             'If a number, the numerical value
     
-    'Get a reference to the Unicode properties look-up table. This doesn't need to be _
-     manually freed as that Class only goes out of scope when the application quits
-    Dim Unicode() As Integer
-    Let Unicode = blu.Strings.UnicodeProperties()
+    'As we join the nodes in the Syntax Tree, we'll need to keep track of the _
+     previous node so that we can link together a continuous chain
+    Dim NodePrev As Long
+    'When a particular branch ends, we want to be able to quickly get back to the _
+     branch-point without having to traverse every node. We keep track of the last _
+     parent-node as we go for this reason
+    Dim NodeParent As Long
+    'As we add nodes in a List, we must link the new node to the previous, though _
+     we must avoid linking the first node (child) with its previous (parent)
+    Dim NodeSibling As Long
     
     'TODO: This block can be removed once we move fully to the syntax tree
     '---
@@ -2416,8 +2428,12 @@ Private Sub FileParse( _
     'Even though we are reading words from the source one-by-one, we can keep track _
      of their relation to one another (the scope) as we go; building and validating _
      the syntax tree at the same time and avoiding a second pass over the source
-BuildTree:
     
+    'Prepare the log line (clear it and fill to 20 spaces)
+    Call LogStr.Clear().Left(20)
+    
+    '[2.1]  Walk the Source Code:
+    '----------------------------------------------------------------------------------
     'Seed the parsing by reading our first word
     GoSub ReadWord
     
@@ -2425,21 +2441,21 @@ BuildTree:
      any time I use `Goto` with the intention of using the destination's `Return`
      
 ScopeRoot:
-'    Call RaiseMessage(OZ80_LOG_INFO, "----------------------¦")
     '----------------------------------------------------------------------------------
-    '[2.A]  SCOPE <root>
+    '[A]    SCOPE <root>
     '----------------------------------------------------------------------------------
-    'Upon the start of a file, only a specific set of statements are allowed:
+    'Upon the start of a file, only a specific set of statements are allowed
     
-    '[a]    `CONST !<name> <expr>`
+    '..................................................................................
+    '[A.1]  `CONST !<name> <expr>`
     '..................................................................................
     If WordToken = TOKEN_KEYWORD_CONST Then
-        'Add the `CONST` keyword
-'        Call RaiseMessage(OZ80_LOG_INFO, "SCOPE <root> " & vbTab & vbTab & "| " & Word.Text)
-        GoSub AddNode
+        'Add the `CONST` keyword to the syntax tree
+        GoSub AddNodeSibling
         
         'The next word must be a Constant name
-        If (WordAttr And ATTR_NAME_CONST) = 0 Then Call RaiseError(OZ80_ERROR_EXPECTED, _
+        If (WordAttr And ATTR_NAMES) <> ATTR_NAME_CONST Then Call RaiseError( _
+            OZ80_ERROR_EXPECTED, _
             "A Constant name must follow the `CONST` statement. A Constant name " _
           & "begins with an exclamation mark; for example: " & vbNewLine _
           & vbNewLine _
@@ -2447,172 +2463,226 @@ ScopeRoot:
         ): GoTo Finish
         
         'Add the constant name to the tree
-'        Call RaiseMessage(OZ80_LOG_INFO, "SCOPE <root> " & vbTab & vbTab & "| " & Word.Text)
-        GoSub AddNode
+        GoSub AddNodeParam
         
-        'An optional Expression follows to define the value
-        If (WordAttr And ATTR_EXPR) <> 0 Then GoSub ScopeExpr
+        'An optional Expression follows to define the value:
+        If (WordAttr And ATTR_EXPR) <> 0 Then
+            'Prepare the empty node as a parameter of the previous, _
+             the Expression scope will fill in the details
+            GoSub AddParam
+            GoSub ScopeExpr
+            'Leave the parameter branch and return to the constant name
+            GoSub UpScope
+        End If
+        
+        'Leave the parameter branch (Constant name) and return to root
+        GoSub UpScope
     
-    '[b]    `INCLUDE <list>`
+    '..................................................................................
+    '[A.2]  `INCLUDE <list>`
     '..................................................................................
     ElseIf WordToken = TOKEN_KEYWORD_INCLUDE Then
         'Add this word to the syntax tree
-'        Call RaiseMessage(OZ80_LOG_INFO, "SCOPE <root> " & vbTab & vbTab & "| " & Word.Text)
-        GoSub AddNode
+        GoSub AddNodeSibling
         
         'The List that follows (the file name) is not optional
-        If (WordAttr And ATTR_LIST) = 0 Then Call RaiseError(OZ80_ERROR_EXPECTED, _
+        If (WordAttr And ATTR_LIST) = 0 Then Call RaiseError( _
+            OZ80_ERROR_EXPECTED, _
             "The `INCLUDE` statement must be followed by a List " _
           & "(the file to include). For example: " & vbNewLine _
           & vbNewLine _
           & vbTab & "INCLUDE ""library.oz80""" _
         ): GoTo Finish
         
+        'Prepare a parameter branch
+        GoSub AddParam
         'Look for the list that follows
         GoSub ScopeList
         
-    '[c]    `SYSTEM <list>
+        'Leave the parameter branch and return to root
+        GoSub UpScope
+        
+    '..................................................................................
+    '[A.3]  `SYSTEM <list>
     '..................................................................................
     ElseIf WordToken = TOKEN_KEYWORD_SYSTEM Then
         'Add this word to the syntax tree
-'        Call RaiseMessage(OZ80_LOG_INFO, "SCOPE <root> " & vbTab & vbTab & "| " & Word.Text)
-        GoSub AddNode
+        GoSub AddNodeSibling
         
         'There must be a List following the `SYSTEM` statement
-        If (WordAttr And ATTR_LIST) = 0 Then Call RaiseError(OZ80_ERROR_EXPECTED, _
+        If (WordAttr And ATTR_LIST) = 0 Then Call RaiseError( _
+            OZ80_ERROR_EXPECTED, _
             "The `SYSTEM` statement must be followed by a List (the target System " _
           & "name). See the documentation for supported target Systems" _
         ): GoTo Finish
         
+        'Prepare a parameter branch
+        GoSub AddParam
         'Look for the List that follows
         GoSub ScopeList
         
-    '[d]    `SECTION ::<name> [SLOT <list>]`
+        'Leave the parameter branch and return to root
+        GoSub UpScope
+        
+    '..................................................................................
+    '[A.4]  `SECTION ::<name> [SLOT <list>]`
     '..................................................................................
     ElseIf WordToken = TOKEN_KEYWORD_SECTION Then
         'Add this word to the syntax tree
-'        Call RaiseMessage(OZ80_LOG_INFO, "SCOPE <root> " & vbTab & vbTab & "| " & Word.Text)
-        GoSub AddNode
+        GoSub AddNodeSibling
         
-        'The next word must be a Section name. This checks for a Section only, _
-         to avoid accepting fully-qualified Labels, .e.g. "::section:label.property"
-        If (WordAttr And ATTR_NAMES) <> ATTR_NAME_SECTION Then Call RaiseError(OZ80_ERROR_EXPECTED, _
+        'The next word must be a Section name. This checks for a Section only, to _
+         avoid accepting fully-qualified Labels, .e.g. "::section:label.property"
+        If (WordAttr And ATTR_NAMES) <> ATTR_NAME_SECTION Then Call RaiseError( _
+            OZ80_ERROR_EXPECTED, _
             "A Section name must follow the `SECTION` statement. " _
           & "Section names begin with two colons, e.g. ""::stuff""" _
         ): GoTo Finish
         
         'Add the Section name to the tree
-'        Call RaiseMessage(OZ80_LOG_INFO, "SCOPE <root> " & vbTab & vbTab & "| " & Word.Text)
-        GoSub AddNode
+        GoSub AddNodeParam
         
         'Check for the optional `SLOT` parameter
         If WordToken = TOKEN_KEYWORD_SLOT Then
-            'Add the keyword to the tree
-'            Call RaiseMessage(OZ80_LOG_INFO, "SCOPE <root> " & vbTab & vbTab & "| " & Word.Text)
-            GoSub AddNode
+            'Add the `SLOT` keyword to the tree
+            GoSub AddNodeSibling
             
             'The Slot pattern that follows is not optional. We won't validate the _
              specific Slot pattern here as it could be dynamic and is System dependent
-            If (WordAttr And ATTR_LIST) = 0 Then Call RaiseError(OZ80_ERROR_EXPECTED, _
+            If (WordAttr And ATTR_LIST) = 0 Then Call RaiseError( _
+                OZ80_ERROR_EXPECTED, _
                 "A List must follow the `SLOT` parameter of the `SECTION` statement. " _
               & "The format of the Slot List is dependent on the target System, " _
               & "so view the documentation for specifics" _
             ): GoTo Finish
             
+            'Prepare a parameter branch
+            GoSub AddParam
             'Fetch the Slot patten following
             GoSub ScopeList
+            
+            'Leave the parameter branch and return to keyword param
+            GoSub UpScope
         End If
         
-    '[e]    `TYPE #<name> [...]`
+        'Leave the parameter branch and return to root
+        GoSub UpScope
+        
+    '..................................................................................
+    '[A.5]  `TYPE #<name> [...]`
     '..................................................................................
     ElseIf WordToken = TOKEN_KEYWORD_TYPE Then
         'Add this keyword to the syntax tree
-'        Call RaiseMessage(OZ80_LOG_INFO, "SCOPE <root> " & vbTab & vbTab & "| " & Word.Text)
-        GoSub AddNode
+        GoSub AddNodeSibling
         
         'The next word must be a Type name
-        If (WordAttr And ATTR_NAMES) <> ATTR_NAME_TYPE Then Call RaiseError(OZ80_ERROR_EXPECTED, _
+        If (WordAttr And ATTR_NAMES) <> ATTR_NAME_TYPE Then Call RaiseError( _
+            OZ80_ERROR_EXPECTED, _
             "Expected Type name following `TYPE` statement. " _
           & "See the documentation on how to define Types" _
         ): GoTo Finish
         
-        'Add the type name to the tree
-'        Call RaiseMessage(OZ80_LOG_INFO, "SCOPE <root> " & vbTab & vbTab & "| " & Word.Text)
-        GoSub AddNode
-        
+        'Add the type name as parameter to the `TYPE` keyword
+        GoSub AddNodeParam
+        'Leave the param branch...;
+        GoSub UpScope
         'And walk the Type definition block
         GoSub ScopeType
         
-    '[f]    `RAM [$_<name>] {[...]}`
+    '..................................................................................
+    '[A.6]  `RAM [$_<name>]`
     '..................................................................................
     ElseIf WordToken = TOKEN_KEYWORD_RAM Then
         'Add the `RAM` keyword to the tree
-'        Call RaiseMessage(OZ80_LOG_INFO, "SCOPE <root> " & vbTab & vbTab & "| " & Word.Text)
-        GoSub AddNode
+        GoSub AddNodeSibling
         
-        'TODO: For now skip the param
+        'The parameter must be RAM Page name, not a fully-qualified RAM name
         If (WordAttr And ATTR_NAMES) = ATTR_NAME_RAM Then
-'            Call RaiseMessage(OZ80_LOG_INFO, "SCOPE <root> " & vbTab & vbTab & "| " & Word.Text)
-            GoSub AddNode
+            'The RAM page name will be the parameter of the keyword
+            GoSub AddNodeParam
+            'Leave the parameter branch
+            GoSub UpScope
         End If
         
+        'As an aide, anything other than the opening square bracket _
+         can provide a more specific error message
+        If WordToken <> TOKEN_SQUARE_OPEN Then Call RaiseError( _
+            OZ80_ERROR_EXPECTED, _
+            "Expected either a RAM Page name, or an opening square bracket. " _
+          & "The `RAM` keyword can optionally be followed by a RAM Page name " _
+          & "and then must be followed by the opening square bracket of a RAM block" _
+          & "definition" _
+        ): GoTo Finish
+        
+        'Process the RAM block that follows
         GoSub ScopeType
         
-    '[g]    `START {[...]}`
+    '..................................................................................
+    '[A.7]  `START {[...]}`
     '..................................................................................
     ElseIf WordToken = TOKEN_KEYWORD_START Then
         'Add the `START` keyword to the tree
-'        Call RaiseMessage(OZ80_LOG_INFO, "SCOPE <root> " & vbTab & vbTab & "| " & Word.Text)
-        GoSub AddNode
-        
+        GoSub AddNodeSibling
+        'Process the code Chunk that follows "{...}"
         GoSub ScopeCode
         
-    '[h]    `TABLE [SECTION ::<name>] {[...]}`
+    '..................................................................................
+    '[A.8]  `TABLE :<name> [SECTION ::<name>] {[...]}`
     '..................................................................................
     ElseIf WordToken = TOKEN_KEYWORD_TABLE Then
         'Add the `TABLE` keyword to the tree
-'        Call RaiseMessage(OZ80_LOG_INFO, "SCOPE <root> " & vbTab & vbTab & "| " & Word.Text)
-        GoSub AddNode
+        GoSub AddNodeSibling
         
         'The Label name follows (cannot be anonymous)
-        If (WordAttr And ATTR_NAMES) <> ATTR_NAME_LABEL Then Call RaiseError(OZ80_ERROR_EXPECTED, _
-            "TODO" _
+        If (WordAttr And ATTR_NAMES) <> ATTR_NAME_LABEL Then Call RaiseError( _
+            OZ80_ERROR_EXPECTED, _
+            "Expected a Label name following the `TABLE` keyword. " _
+          & "The Label name must not include a Section or Property component." _
         ): GoTo Finish
-        '        Call RaiseMessage(OZ80_LOG_INFO, "SCOPE <root> " & vbTab & vbTab & "| " & Word.Text)
-        GoSub AddNode
+        
+        'Add the Label name as a parameter
+        GoSub AddNodeParam
         
         'Check for the optional Section name
         If WordToken = TOKEN_KEYWORD_SECTION Then
             'Add the `SECTION` keyword to the tree
-'            Call RaiseMessage(OZ80_LOG_INFO, "SCOPE <root> " & vbTab & vbTab & "| " & Word.Text)
-            GoSub AddNode
+            GoSub AddNodeSibling
             
-            If (WordAttr And ATTR_NAMES) <> ATTR_NAME_SECTION Then Call RaiseError(OZ80_ERROR_EXPECTED, _
-                "TODO" _
+            'A Section name must follow
+            If (WordAttr And ATTR_NAMES) <> ATTR_NAME_SECTION Then Call RaiseError( _
+                OZ80_ERROR_EXPECTED, _
+                "Expected a Section name" _
             ): GoTo Finish
             
-            'Add the Section name to the tree
-'            Call RaiseMessage(OZ80_LOG_INFO, "SCOPE <root> " & vbTab & vbTab & "| " & Word.Text)
-            GoSub AddNode
+            'Add the Section name as parameter
+            GoSub AddNodeParam
+            GoSub UpScope
         End If
+        
         'Process the table's guts
+        GoSub UpScope
         GoSub ScopeCode
         
-    '[i]    `PROC :<name> [SECTION ::<name> | INTERRUPT <expr>] [HELP <text>] _
+    '..................................................................................
+    '[A.9]  `PROC :<name> [SECTION ::<name> | INTERRUPT <expr>] [HELP <text>] _
                           [PARAMS <paramlist>] [RETURN <paramlist>]
     '..................................................................................
     ElseIf WordToken = TOKEN_KEYWORD_PROC Then
         'Add this keyword to the tree
-'        Call RaiseMessage(OZ80_LOG_INFO, "SCOPE <root> " & vbTab & vbTab & "| " & Word.Text)
-        GoSub AddNode
+        GoSub AddNodeSibling
         
-        'The Label name follows (cannot be anonymous)
-        If (WordAttr And ATTR_NAMES) <> ATTR_NAME_LABEL Then Call RaiseError(OZ80_ERROR_EXPECTED, _
-            "TODO" _
+        'The Label name that follows (cannot be anonymous)
+        If (WordAttr And ATTR_NAMES) <> ATTR_NAME_LABEL Then Call RaiseError( _
+            OZ80_ERROR_EXPECTED, _
+            "Expected a Label name following the `PROC` keyword. " _
+          & "The Label name must not include a Section or Property component." _
         ): GoTo Finish
-'        Call RaiseMessage(OZ80_LOG_INFO, "SCOPE <root> " & vbTab & vbTab & "| " & Word.Text)
-        GoSub AddNode
         
+        'Add the Label as parameter to the keyword, _
+         the `PROC` params that follow will be siblings of this
+        GoSub AddNodeParam
+        
+ProcParams:
         'The `PROC` statement has a number of optional parameters, and not all can _
          be combined. We keep track of which we've encountered and avoid duplicates
         Dim IsProcSectionDefined As Long
@@ -2621,71 +2691,155 @@ ScopeRoot:
         Dim IsProcParamsDefined As Long
         Dim IsProcReturnDefined As Long
         
-ProcParams:
         '`PROC ... SECTION ::<name>`
+        '..............................................................................
         If WordToken = TOKEN_KEYWORD_SECTION Then
-            Let IsProcSectionDefined = 1
-            'Add the `SECTION` keyword to the tree
-'            Call RaiseMessage(OZ80_LOG_INFO, "SCOPE <root> " & vbTab & vbTab & "| " & Word.Text)
-            GoSub AddNode
-            
-            If (WordAttr And ATTR_NAMES) <> ATTR_NAME_SECTION Then Call RaiseError(OZ80_ERROR_EXPECTED, _
-                "TODO" _
+            'The Section parameter cannot be defined twice!
+            If IsProcSectionDefined <> 0 Then Call RaiseError( _
+                OZ80_ERROR_DUPLICATE, _
+                "`SECTION` parameter defined twice!" _
             ): GoTo Finish
             
-'            Call RaiseMessage(OZ80_LOG_INFO, "SCOPE <root> " & vbTab & vbTab & "| " & Word.Text)
-            GoSub AddNode
+            'Add the `SECTION` keyword to the tree
+            GoSub AddNodeSibling
             
+            'A Section name must follow
+            If (WordAttr And ATTR_NAMES) <> ATTR_NAME_SECTION Then Call RaiseError( _
+                OZ80_ERROR_EXPECTED, _
+                "Expected a Section name" _
+            ): GoTo Finish
+            
+            'Add the Section name as parameter to the `SECTION` keyword
+            GoSub AddNodeParam
+            GoSub UpScope
+            
+            'Now mark Section parameter defined, _
+             and go to the next parameter
+            Let IsProcSectionDefined = 1
             GoTo ProcParams
             
         '`PROC ... INTERRUPT <expr>`
+        '..............................................................................
         ElseIf WordToken = TOKEN_KEYWORD_INTERRUPT Then
+            'The Interrupt parameter cannot be defined twice!
+            If IsProcInterruptDefined <> 0 Then Call RaiseError( _
+                OZ80_ERROR_DUPLICATE, _
+                "`INTERRUPT` parameter defined twice!" _
+            ): GoTo Finish
+            
+            'Add the `INTERRUPT` keyword
+            GoSub AddNodeSibling
+            
+            'An Expression must follow
+            If (WordAttr And ATTR_EXPR) = 0 Then Call RaiseError( _
+                OZ80_ERROR_EXPECTED, _
+                "Expected an Expression" _
+            ): GoTo Finish
+            
+            'Add the Expression as parameter to the keyword
+            GoSub AddParam
+            GoSub ScopeExpr
+            GoSub UpScope
+            
+            'Now mark Interrupt parameter defined, _
+             and go to the next parameter
             Let IsProcInterruptDefined = 1
-            
-'            Call RaiseMessage(OZ80_LOG_INFO, "SCOPE <root> " & vbTab & vbTab & "| " & Word.Text)
-            GoSub AddNode
-'            Call RaiseMessage(OZ80_LOG_INFO, "SCOPE <root> " & vbTab & vbTab & "| " & Word.Text)
-            GoSub AddNode
-            
             GoTo ProcParams
             
         '`PROC ... HELP ``...`
+        '..............................................................................
         ElseIf WordToken = TOKEN_KEYWORD_HELP Then
-            Let IsProcHelpDefined = 1
-            'Add the `HELP` keyword to the tree
-'            Call RaiseMessage(OZ80_LOG_INFO, "SCOPE <root> " & vbTab & vbTab & "| " & Word.Text)
-            GoSub AddNode
-            'TODO: Add the Doc text to the tree
-'            Call RaiseMessage(OZ80_LOG_INFO, "SCOPE <root> " & vbTab & vbTab & "| " & Word.Text)
-            GoSub AddNode
+            'The Help parameter cannot be defined twice!
+            If IsProcHelpDefined <> 0 Then Call RaiseError( _
+                OZ80_ERROR_DUPLICATE, _
+                "`HELP` parameter defined twice!" _
+            ): GoTo Finish
             
+            'Add the `HELP` keyword to the tree
+            GoSub AddNodeSibling
+            
+            'Documentation text must follow
+            If WordToken <> TOKEN_DOC Then Call RaiseError( _
+                OZ80_ERROR_EXPECTED, _
+                "Expected documentation text following the `HELP` keyword" _
+            ): GoTo Finish
+            
+            'The text will be parameter of the `HELP` keyword
+            GoSub AddNodeParam
+            
+            'Now loop and add documentation text
+            Do While WordToken = TOKEN_DOC
+                GoSub AddNodeSibling
+            Loop
+            
+            'Leave the documentation text parameter branch
+            GoSub UpScope
+            
+            'Now mark Help parameter defined, _
+             and go to the next parameter
+            Let IsProcHelpDefined = 1
             GoTo ProcParams
             
         '`PROC ... PARAMS <params>`
+        '..............................................................................
         ElseIf WordToken = TOKEN_KEYWORD_PARAMS Then
-            Let IsProcParamsDefined = 1
-'            Call RaiseMessage(OZ80_LOG_INFO, "SCOPE <root> " & vbTab & vbTab & "| " & Word.Text)
-            GoSub AddNode
+            'The `PARAMS` parameter cannot be defined twice!
+            If IsProcParamsDefined <> 0 Then Call RaiseError( _
+                OZ80_ERROR_DUPLICATE, _
+                "`HELP` parameter defined twice!" _
+            ): GoTo Finish
+            
+            'Add the `PARAMS` keyword to the tree, _
+             and prepare a branch for the following list
+            GoSub AddNodeSibling
+            GoSub AddParam
+            
             GoSub ScopeProcParams
+            'Leave the parameter branch
+            GoSub UpScope
+            
+            'Now mark `PARAMS` parameter defined, _
+             and go to the next parameter
+            Let IsProcParamsDefined = 1
             GoTo ProcParams
             
         '`PROC ... RETURN <params>`
+        '..............................................................................
         ElseIf WordToken = TOKEN_KEYWORD_RETURN Then
-            Let IsProcReturnDefined = 1
-'            Call RaiseMessage(OZ80_LOG_INFO, "SCOPE <root> " & vbTab & vbTab & "| " & Word.Text)
-            GoSub AddNode
+            'The `RETURN` parameter cannot be defined twice!
+            If IsProcReturnDefined <> 0 Then Call RaiseError( _
+                OZ80_ERROR_DUPLICATE, _
+                "`HELP` parameter defined twice!" _
+            ): GoTo Finish
+            
+            'Add the `RETURN` keyword to the tree, _
+             and prepare a branch for the following list
+            GoSub AddNodeSibling
+            GoSub AddParam
             GoSub ScopeProcParams
+            GoSub UpScope
+            
+            'Now mark `RETURN` parameter defined, _
+             and go to the next parameter
+            Let IsProcReturnDefined = 1
             GoTo ProcParams
             
         '`PROC ... { ... }`
+        '..............................................................................
         ElseIf WordToken = TOKEN_BRACES_OPEN Then
+            'Leave the parameter branch, _
+             the code Chunk will attach to the `PROC` keyword
+            GoSub UpScope
             GoSub ScopeCode
             
+        'ERROR: Not a valid `PROC` parameter
+        '..............................................................................
         Else
-            Call RaiseError(OZ80_ERROR_EXPECTED, "TODO")
+            Call RaiseError( _
+                OZ80_ERROR_EXPECTED, _
+                "TODO" _
+            )
             GoTo Finish
-            Stop
-            
         End If
         
         'Reset the param checks for the next `PROC`
@@ -2697,117 +2851,156 @@ ProcParams:
         
     '..................................................................................
     Else
-        Debug.Print "***"
-        Debug.Print TokenNames(WordToken)
-        
         'ERROR - Only valid statements allowed at root
         Call RaiseError(OZ80_ERROR_EXPECTED, _
             "Unexpected word at the root scope (that is, statements not within " _
-          & "other statement blocks such as `TABLE`). This could be that you have " _
+          & "other statement blocks such as `PROC`). This could be that you have " _
           & "one stray closing-brace '}' causing another scope to end incorrectly. " _
-          & "it could also be a simple typo; the following words are allowed in " _
-          & "the root scope:" & vbNewLine _
+          & "it could also be a simple typo; only the following words are allowed " _
+          & "in the root scope:" & vbNewLine _
           & vbNewLine _
-          & vbTab & "APPEND, CONST, INCLUDE, PROC, RAM, SECTION, START, SYSTEM, " _
+          & vbTab & "CONST, INCLUDE, PROC, RAM, SECTION, START, SYSTEM, " _
                   & "TABLE, TYPE" _
         )
         GoTo Finish
     End If
-    
     GoTo ScopeRoot
     
 ScopeProcParams:
     '----------------------------------------------------------------------------------
-    '[2.B]  SCOPE <params>
+    '[B]    SCOPE <params>
     '----------------------------------------------------------------------------------
-    If (WordAttr And ATTR_PARAM) <> 0 Then
-'        Call RaiseMessage(OZ80_LOG_INFO, "SCOPE <params> " & vbTab & "| " & Word.Text)
-        GoSub AddNode
-        Do While WordToken = TOKEN_DOC
-            GoSub AddNode
-        Loop
-        GoTo ScopeProcParams
-    End If
+    'Procedures (`PROC`), allow the documentation of the parameters they accept. _
+     Because Procedures are assembly code, parameter use is not enforced; they are _
+     provided purely as a programmer aid since it may not be obvious how the stack / _
+     registers must be set up for any given Provedure. The `PARAMS` / `RETURN` _
+     keywords accept a very limited list, applicable to assembly use
+    
+    'Once a `PROC` param list is exepected, it's not optional
+    If (WordAttr And ATTR_PARAM) = 0 Then Call RaiseError( _
+        OZ80_ERROR_EXPECTED, _
+        "Expected a `PROC` parameter: That is, a Z80 Register or a RAM Name" _
+    ): GoTo Finish
+    
+    'As long as there are params, keep going:
+    Do While (WordAttr And ATTR_PARAM) <> 0
+        'Add the param to the list
+        GoSub AddNodeSibling
+        'Check for documentation text to describe the param
+        If WordToken = TOKEN_DOC Then
+            'Documentation text is the prameter (syntax tree) of the `PROC` param
+            GoSub AddParam
+            'Allow multiple documentation texts in a row
+            Do While WordToken = TOKEN_DOC
+                GoSub AddNodeSibling
+            Loop
+            'Leave the parameter branch (for the documentation text) _
+             and return to the `PROC` param list
+            GoSub UpScope
+        End If
+    'Check for the next param in the list
+    Loop
+    
+    'Once the list ends, return
     Return
     
 ScopeCode:
     '----------------------------------------------------------------------------------
-    '[2.C]  SCOPE <code>
+    '[C]    SCOPE <code>
     '----------------------------------------------------------------------------------
-    If WordToken <> TOKEN_BRACES_OPEN Then
-        'TODO: ERROR: Braces expected
-    End If
+    'All assembly blocks must begin with an opening curly brace
+    If WordToken <> TOKEN_BRACES_OPEN Then Call RaiseError( _
+        OZ80_ERROR_EXPECTED, _
+        "Expected opening curly-brace" _
+    ): GoTo Finish
     
-'    Call RaiseMessage(OZ80_LOG_INFO, "SCOPE <code> " & vbTab & vbTab & "| " & Word.Text)
-    GoSub AddNode
+    'Begin a child branch in the syntax tree
+    GoSub AddChild
     
-ScopeCodeLoop:
-    If WordToken = TOKEN_BRACES_CLOSE Then
-'        Call RaiseMessage(OZ80_LOG_INFO, "SCOPE <code> " & vbTab & vbTab & "| " & Word.Text)
-        GoSub ReadWord
-        Return
+    'Continue walking the assembly block so long as the block remains open
+    Do While WordToken <> TOKEN_BRACES_CLOSE
         
-    ElseIf WordToken = TOKEN_PROPERTY_NEW Then
-        'Add the property to the tree
-'        Call RaiseMessage(OZ80_LOG_INFO, "SCOPE <code> " & vbTab & vbTab & "| " & Word.Text)
-        GoSub AddNode
+        'A Z80 instuction:
+        If (WordAttr And ATTR_Z80_MNEMONIC) <> 0 Then
+            'TODO: To what extent we should validate Z80 instructions and their _
+                   parameters before assembly I am not certain. The `Z80Assemble` _
+                   function does this for us as part of necessary work to identify _
+                   what opcodes are needed. For simplicity we will remain dumb here _
+                   and look at shifting responsibility sometime in the future
+            
+            'Add the instruction mnemonic to the tree
+            GoSub AddNodeSibling
+            'TODO: No params?
+            'Begin a parameter branch from the instruction
+            GoSub AddParam
+            'Add the Z80 parameters
+            GoSub ScopeZ80Param
+            'Leave the parameter branch, _
+             returning to the Z80 instruction
+            GoSub UpScope
+            
+        'A binary list: (Bytes, Words, Trips, Longs &c)
+        ElseIf (WordAttr And ATTR_UNIT) <> 0 Then
+            'Add the binary type keyword
+            GoSub AddNodeSibling
+            'Begin a parameter branch for the following list
+            GoSub AddParam
+            'Walk the list
+            'TODO: First element cannot be optional
+            GoSub ScopeList
+            'Leave the parameter branch
+            GoSub UpScope
+            
+        'Define a sub-routine:
+        ElseIf WordToken = TOKEN_PROPERTY_NEW Then
+            'Add the property to the tree
+            GoSub AddNodeSibling
+            
+        'Define a Table Index:
+        ElseIf WordToken = TOKEN_KEYWORD_INDEX Then
+            GoSub AddNodeSibling
+            GoSub AddNodeParam
+            GoSub UpScope
+            
+        Else
+            Call RaiseError( _
+                OZ80_ERROR_EXPECTED, _
+                "U WOT M8?" _
+            )
+            GoTo Finish
+        End If
+    Loop
     
-    'TODO: To what extent we should validate Z80 instructions and their parameters _
-           before assembly I am not certain. The `Z80Assemble` function does this _
-           for us as part of necessary work to identify what opcodes are needed. _
-           For simplicity we will remain dumb here and look at shifting _
-           responsibility sometime in the future
-           
-    ElseIf (WordAttr And ATTR_Z80_MNEMONIC) <> 0 Then
-        'Add the instruction mnemonic to the tree
-'        Call RaiseMessage(OZ80_LOG_INFO, "SCOPE <code> " & vbTab & vbTab & "| " & Word.Text)
-        GoSub AddNode
-        GoSub ScopeZ80Param
-
-    ElseIf (WordAttr And ATTR_UNIT) <> 0 Then
-'        Call RaiseMessage(OZ80_LOG_INFO, "SCOPE <code> " & vbTab & vbTab & "| " & Word.Text)
-        GoSub AddNode
-        GoSub ScopeList
-        
-    ElseIf WordToken = TOKEN_KEYWORD_INDEX Then
-'        Call RaiseMessage(OZ80_LOG_INFO, "SCOPE <code> " & vbTab & vbTab & "| " & Word.Text)
-        GoSub AddNode
-'        Call RaiseMessage(OZ80_LOG_INFO, "SCOPE <code> " & vbTab & vbTab & "| " & Word.Text)
-        GoSub AddNode
-        
-    Else
-        Call RaiseError(OZ80_ERROR_EXPECTED, "U WOT M8?")
-        GoTo Finish
-    End If
-    GoTo ScopeCodeLoop
+    GoSub UpScope
+    GoSub ReadWord
+    Return
 
 ScopeZ80Param:
     '----------------------------------------------------------------------------------
-    '[2.I]  SCOPE <z80param>
+    '[D]    SCOPE <z80param>
     '----------------------------------------------------------------------------------
     'Memory reference?
     If WordToken = TOKEN_SQUARE_OPEN Then
-'        Call RaiseMessage(OZ80_LOG_INFO, "SCOPE <z80Param> " & vbTab & "| " & Word.Text)
-        GoSub AddNode
+        GoSub AddChild
         
         'IX or IY?
         If (WordToken = TOKEN_Z80_IX) _
         Or (WordToken = TOKEN_Z80_IY) _
         Then
-'            Call RaiseMessage(OZ80_LOG_INFO, "SCOPE <z80Param> " & vbTab & "| " & Word.Text)
-            GoSub AddNode
+            GoSub AddNodeSibling
             
             'Optional "+"?
             If WordToken = TOKEN_OPERATOR_ADD Then
-'                Call RaiseMessage(OZ80_LOG_INFO, "SCOPE <z80Param> " & vbTab & "| " & Word.Text)
-                GoSub AddNode
+                GoSub AddNodeParam
+                GoSub AddParam
                 'Expression follows (not optional, given the plus)
                 GoSub ScopeExpr
+                GoSub UpScope
+                GoSub UpScope
             End If
         
         ElseIf (WordAttr And ATTR_Z80_REGISTER) <> 0 Then
-'            Call RaiseMessage(OZ80_LOG_INFO, "SCOPE <z80Param> " & vbTab & "| " & Word.Text)
-            GoSub AddNode
+            GoSub AddNodeSibling
             
         ElseIf (WordAttr And ATTR_EXPR) <> 0 Then
             GoSub ScopeExpr
@@ -2819,8 +3012,7 @@ ScopeZ80Param:
         End If
         
         If WordToken = TOKEN_SQUARE_CLOSE Then
-'            Call RaiseMessage(OZ80_LOG_INFO, "SCOPE <z80Param> " & vbTab & "| " & Word.Text)
-            GoSub AddNode
+            GoSub UpScope: GoSub ReadWord
         Else
             Stop
         End If
@@ -2829,8 +3021,8 @@ ScopeZ80Param:
         GoSub ScopeExpr
             
     ElseIf (WordAttr And ATTR_Z80_REGFLAG) <> 0 Then
-'        Call RaiseMessage(OZ80_LOG_INFO, "SCOPE <z80Param> " & vbTab & "| " & Word.Text)
-        GoSub AddNode
+        'Add the register to the z80-list
+        GoSub AddNodeSibling
     
     Else
         Return
@@ -2839,17 +3031,17 @@ ScopeZ80Param:
     
 ScopeType:
     '----------------------------------------------------------------------------------
-    '[2.D]  SCOPE <type>
+    '[E]    SCOPE <type>
     '----------------------------------------------------------------------------------
     
     'The Type definition must open with square brackets
     If WordToken <> TOKEN_SQUARE_OPEN Then Call RaiseError(OZ80_ERROR_EXPECTED, _
         "Type definition block expected" _
     ): GoTo Finish
-    'Add the opening bracket to the tree
-'    Call RaiseMessage(OZ80_LOG_INFO, "SCOPE <type> " & vbTab & vbTab & "| " & Word.Text)
-    GoSub AddNode
     
+    GoSub AddChild
+    
+    'TODO: Could be empty
     Do
         'Each definition within the Type begins with _
          the Property name or the anonymous Property `.`
@@ -2859,8 +3051,8 @@ ScopeType:
             "Expected a Property" _
         ): GoTo Finish
         
-'        Call RaiseMessage(OZ80_LOG_INFO, "SCOPE <type> " & vbTab & vbTab & "| " & Word.Text)
-        GoSub AddNode
+        GoSub AddNodeSibling
+        
         'The unit size should follow
         If (WordAttr And ATTR_UNIT) = 0 Then
             Call RaiseError(OZ80_ERROR_EXPECTED, "TODO!")
@@ -2870,57 +3062,59 @@ ScopeType:
          or a Type definition block
         If WordToken = TOKEN_KEYWORD_TYPE Then
             'Add the `TYPE` unit to the tree
-'            Call RaiseMessage(OZ80_LOG_INFO, "SCOPE <type> " & vbTab & vbTab & "| " & Word.Text)
-            GoSub AddNode
+            GoSub AddNodeParam
             'Either a Type name follows or a Type definition block
             If (WordAttr And ATTR_NAMES) = ATTR_NAME_TYPE Then
-'                Call RaiseMessage(OZ80_LOG_INFO, "SCOPE <type> " & vbTab & vbTab & "| " & Word.Text)
-                GoSub AddNode
+                GoSub AddNodeParam
+                GoSub UpScope
             Else
                 'Now process the Type-within-a-Type
                 GoSub ScopeType
             End If
+            GoSub UpScope
         Else
             'Add the Unit size to the tree
-'            Call RaiseMessage(OZ80_LOG_INFO, "SCOPE <type> " & vbTab & vbTab & "| " & Word.Text)
-            GoSub AddNode
+            GoSub AddNodeParam
             'If the repeat operator `x` follows, define the block size
             If WordToken = TOKEN_OPERATOR_REP Then
-'                Call RaiseMessage(OZ80_LOG_INFO, "SCOPE <type> " & vbTab & vbTab & "| " & Word.Text)
-                GoSub AddNode
+                GoSub AddNodeParam
+                GoSub AddParam
                 'TODO: Not optional
                 GoSub ScopeExpr
+                GoSub UpScope
+                GoSub UpScope
             End If
             'TODO: Default Value
+            GoSub UpScope
         End If
         
     Loop While WordToken <> TOKEN_SQUARE_CLOSE
     
+    GoSub UpScope
     GoSub ReadWord
     Return
     
 ScopeList:
     '----------------------------------------------------------------------------------
-    '[2.E]  SCOPE <list>
+    '[F]    SCOPE <list>
     '----------------------------------------------------------------------------------
-    '[a]    Text is a list of its own, but not an Expression _
+    '[F.1]  Text is a list of its own, but not an Expression _
             (it's a series of bytes; more than one Value)
     '..................................................................................
     If WordToken = TOKEN_TEXT Then
         'Prepare the information for this
         Let SourceTree(SourceTreeNodeCount).Value = TokenStrings.Add(Word.Text)
         'TODO: Add the Text as a sibling in the List
-'        Call RaiseMessage(OZ80_LOG_INFO, "SCOPE <list> " & vbTab & vbTab & "| " & Word.Text)
-        GoSub AddNode
+        GoSub AddNodeSibling
         'Check for the next item in the list...
         GoTo ScopeList
         
-    '[b]    The List scope also encompases the Expression scope, so we cannot _
+    '[F.2]  The List scope also encompases the Expression scope, so we cannot _
             consider the List scope finished until we check for Expressions too
     '..................................................................................
     ElseIf (WordAttr And ATTR_EXPR) <> 0 Then
-        'Go fetch an Expression; we return here as a List _
-         may comprise more than one Expression
+        'Go fetch an Expression; we return here because _
+         a List may comprise more than one Expression
         GoSub ScopeExpr
         'Now check again for another List item
         GoTo ScopeList
@@ -2931,68 +3125,66 @@ ScopeList:
     
 ScopeExpr:
     '----------------------------------------------------------------------------------
-    '[2.F]  SCOPE <expr>
+    '[G]    SCOPE <expr>
     '----------------------------------------------------------------------------------
     'When a non-Expression token occurs, the Expression ends and it's _
      up to the parent Scope to determine if the token is valid
     If (WordAttr And ATTR_EXPR) = 0 Then
         Return
     
-    '[a]    Defined Name, `!CONST`, `$_RAM`, `::Section`, `:Label` etc
+    '[G.1]  Defined Name, `!CONST`, `$_RAM`, `::Section`, `:Label` etc
     '..................................................................................
     ElseIf WordToken = TOKEN_NAME Then
         'TODO:
-'        Call RaiseMessage(OZ80_LOG_INFO, "SCOPE <expr> " & vbTab & vbTab & "| " & Word.Text)
-        GoSub AddNode
+        GoSub AddNodeSibling
         
-    '[b]    `HI <expr>`
+    '[G.2]  `HI <expr>`
     '..................................................................................
     ElseIf WordToken = TOKEN_KEYWORD_HI Then
         'TODO: `HI` function has a parameter Expression
-'        Call RaiseMessage(OZ80_LOG_INFO, "SCOPE <expr> " & vbTab & vbTab & "| " & Word.Text)
-        GoSub AddNode
+        GoSub AddNodeSibling
+        GoSub AddParam
         GoSub ScopeExpr
+        GoSub UpScope
         
-    '[c]    `LO <expr>`
+    '[G.3]  `LO <expr>`
     '..................................................................................
     ElseIf WordToken = TOKEN_KEYWORD_LO Then
         'TODO: `LO` function has a parameter Expression
-'        Call RaiseMessage(OZ80_LOG_INFO, "SCOPE <expr> " & vbTab & vbTab & "| " & Word.Text)
-        GoSub AddNode
+        GoSub AddNodeSibling
+        GoSub AddParam
         GoSub ScopeExpr
+        GoSub UpScope
         
-    '[d]    `START`
+    '[G.4]  `START`
     '..................................................................................
     ElseIf WordToken = TOKEN_KEYWORD_START Then
         'TODO
-'        Call RaiseMessage(OZ80_LOG_INFO, "SCOPE <expr> " & vbTab & vbTab & "| " & Word.Text)
-        GoSub AddNode
+        GoSub AddNodeSibling
         
-    '[f]    `255`, `$FF`, `%11111111`
+    '[G.5]  `255`, `$FF`, `%11111111`
     '..................................................................................
     ElseIf WordToken = TOKEN_NUMBER Then
         'TODO
-'        Call RaiseMessage(OZ80_LOG_INFO, "SCOPE <expr> " & vbTab & vbTab & "| " & Word.Text)
-        GoSub AddNode
+        GoSub AddNodeSibling
         'Check for number prefix
         'TODO: This should be decimal only
         If (WordToken = TOKEN_SUFFIX_K) Or (WordToken = TOKEN_SUFFIX_KB) Then
-'            Call RaiseMessage(OZ80_LOG_INFO, "SCOPE <expr> " & vbTab & vbTab & "| " & Word.Text)
-            GoSub AddNode
+            GoSub AddNodeParam
+            GoSub UpScope
         End If
         
-    '[g]    `(` ...
+    '[G.6]  `(` ...
     '..................................................................................
     ElseIf WordToken = TOKEN_PARENS_OPEN Then
         'TODO
-'        Call RaiseMessage(OZ80_LOG_INFO, "SCOPE <expr> " & vbTab & vbTab & "| " & Word.Text)
-        GoSub AddNode
+        GoSub AddChild
         GoSub ScopeExpr
+        GoSub UpScope
         
         'TODO: The parens should end here
-'        Call RaiseMessage(OZ80_LOG_INFO, "SCOPE <expr> " & vbTab & vbTab & "| " & Word.Text)
-        GoSub AddNode
-    
+        GoSub ReadWord
+        
     Else
         MsgBox "This token is classified as an Expression, but it not handled"
         Stop
@@ -3004,51 +3196,165 @@ ScopeExpr:
 
 ScopeOperator:
     '----------------------------------------------------------------------------------
-    '[2.G]  SCOPE {operator}
+    '[H]    SCOPE {operator}
     '----------------------------------------------------------------------------------
     'TODO: Repeat Operator `x` is not wanted here, needs to be reclassified
     If (WordAttr And ATTR_OPERTATOR) <> 0 Then
-'        Call RaiseMessage(OZ80_LOG_INFO, "SCOPE <operator> " & vbTab & "| " & Word.Text)
-        GoSub AddNode
+        GoSub AddNodeParam
+        GoSub AddParam
         GoSub ScopeExpr
+        GoSub UpScope
+        GoSub UpScope
     End If
     Return
-
-ScopeZ80:
-    '----------------------------------------------------------------------------------
-    '[2.H]  SCOPE <z80>
-    '----------------------------------------------------------------------------------
-    'Handle Z80 instructions and their parameters
     
     
-    
-    'Abstract Syntax Tree support routines:
+    '[2.2]  Abstract Syntax Tree support routines:
     '----------------------------------------------------------------------------------
-AddNode:
-    'TODO: Make this actually link nodes, of course
+    'This variable keeps track of how deeply-nested our syntax tree is. If this isn't _
+     zero when we hit the end of the file then there's an error with the user's code
+    Dim ScopeDepth As Long
+    
+UpScope:
+    'When a particular branch of the tree comes to an end, trace back
     '..................................................................................
-'    'Add the current word to the syntax tree
-'    With SourceTree(SourceTreeNodeCount)
-'        Let .Token = WordToken
-'        Let .Attributes = ATTR_KEYWORD
-'        'Location of word in the source file, for error messages
-'        Let .File = File: Let .Line = TokenLine: Let .Col = TokenCol
-'    End With
-'
-'    'Define a new node
-'    Let SourceTreeNodeCount = SourceTreeNodeCount + 1
-'    ReDim Preserve SourceTree(1 To SourceTreeNodeCount) As oz80TreeNode
-'
-'    'Now that word has been filed, pre-fetch the next one for processing. _
-'     NOTE: `Goto` instead of `Gosub` has been used here so that the `Return` in _
-'           `ReadWord` will return from here for us
+    Let NodePrev = NodeParent
+    If NodePrev <> 0 _
+        Then Let NodeParent = SourceTree(NodePrev).NodeParent _
+        Else Let NodeParent = 0
+    Let NodeSibling = NodePrev
+    Let ScopeDepth = ScopeDepth - 1
+    Return
+    
+AddChild:
+    'This node is the child of the previous node:
+    '..................................................................................
+    'Set the length of the log message according to the scope depth
+    Let ScopeDepth = ScopeDepth + 1
+    'Display the current log line, as this node will appear on the next
+'    Call RaiseMessage(OZ80_LOG_STATUS, LogStr.Text)
+    'Prepare the next line
+    Call LogStr.Clear.Left(20 * (ScopeDepth + 1))
+    
+    If NodePrev <> 0 Then
+        'Link the previous node with this one
+        Let SourceTree(NodePrev).NodeChild = SourceTreeNodeCount
+    End If
+    'The parent node is now the previous _
+     (the previous remains the same)
+    Let NodeParent = NodePrev
+    'This is the first sibling, don't link the parent & child as siblings!
+    Let NodeSibling = 0
+    'We do not need to add a new node, the current one will be used. _
+     This is because braces and brackets are implied by the tree structure _
+     and do not need to be explicitly added as a node
+    GoTo ReadWord
+
+AddParam:
+    'Makes the current (unset) node a param of the previous
+    '..................................................................................
+    'Set the length of the log message according to the scope depth
+    Let ScopeDepth = ScopeDepth + 1
+    Call LogStr.Left(20 * (ScopeDepth + 1))
+    
+    If NodePrev <> 0 Then
+        'Link the previous node with this one
+        Let SourceTree(NodePrev).NodeParam = SourceTreeNodeCount
+    End If
+    'The parent node is now the previous _
+     (the previous remains the same)
+    Let NodeParent = NodePrev
+    'This is the first sibling, don't link the parent & param as siblings!
+    Let NodeSibling = 0
+    Return
+    
+AddNodeParam:
+    'This node is a parameter of the previous node:
+    '..................................................................................
+    'Set the length of the log message according to the scope depth
+    Let ScopeDepth = ScopeDepth + 1
+    Call LogStr.Left(20 * (ScopeDepth + 1))
+    
+    If NodePrev <> 0 Then
+        'Link the previous node with this one
+        Let SourceTree(NodePrev).NodeParam = SourceTreeNodeCount
+    End If
+    'The previous node is now the parent node
+    Let NodeParent = NodePrev
+    'This is the first sibling, don't link the parent & param as siblings!
+    Let NodeSibling = SourceTreeNodeCount
+    GoTo AddNode
+    
+AddNodeSibling:
+    'This node is the sibling of the previous node:
+    '..................................................................................
+    If NodeSibling <> 0 Then
+        'Display the current log line, as this node will appear on the next
+'        Call RaiseMessage(OZ80_LOG_STATUS, LogStr.Text)
+        'Prepare the next line
+        Call LogStr.Clear.Left(20 * (ScopeDepth + 1))
+        
+        'Link the previous node with this one
+        Let SourceTree(NodeSibling).NodeNext = SourceTreeNodeCount
+    End If
+    'This will now be the sibling to link to
+    Let NodeSibling = SourceTreeNodeCount
+    Let NodePrev = SourceTreeNodeCount
+    
+AddNode:
+    '..................................................................................
+    'Add the current word to the syntax tree
+    'TODO: Use a large buffer for this
+    With SourceTree(SourceTreeNodeCount)
+        Let .Token = WordToken
+        Let .Attributes = ATTR_KEYWORD
+        Let .Value = WordValue
+        Let .NodeParent = NodeParent
+        'Location of word in the source file, for error messages
+        Let .File = File: Let .Line = TokenLine: Let .Col = TokenCol
+    End With
+    
+    'Formulate a log message:
+    
+    'Numerical literals:
+    If WordToken = TOKEN_NUMBER Then
+        'Display the original text from the source file, since this will retain _
+         the formatting and base-type of the number (binary / decimal / hexadecimal)
+        Call LogStr.Overwrite(20 * ScopeDepth, Word.Truncate(19).Text)
+    'Defined Names:
+    ElseIf WordToken = TOKEN_NAME Then
+        Call LogStr.Overwrite(20 * ScopeDepth, Word.Truncate(19).Text)
+    'Property definitions:
+    ElseIf WordToken = TOKEN_PROPERTY_NEW Then
+        Call LogStr.Overwrite(20 * ScopeDepth, Word.Truncate(19).Text)
+    'Quoted text:
+    ElseIf WordToken = TOKEN_TEXT Then
+        Call LogStr.Overwrite(20 * ScopeDepth, Word.Truncate(17).Wrap("""").Text)
+    'Documentation text:
+    ElseIf WordToken = TOKEN_DOC Then
+        Call LogStr.Overwrite(20 * ScopeDepth, Word.Truncate(19).Text)
+    'For all other tokens, used the cached names
+    Else
+        Call LogStr.Overwrite(20 * ScopeDepth, TokenNames(WordToken))
+    End If
+    
+    'This node is now the reference
+    Let NodePrev = SourceTreeNodeCount
+    
+    'Define a new node
+    Let SourceTreeNodeCount = SourceTreeNodeCount + 1
+    ReDim Preserve SourceTree(1 To SourceTreeNodeCount) As oz80TreeNode
+
+    'Now that word has been filed, pre-fetch the next one for processing. _
+     NOTE: `Goto` instead of `Gosub` has been used here so that the `Return` in _
+           `ReadWord` will return from here for us
     GoTo ReadWord
     
     
 SkipWord:
     'When we need to ignore a word (comments for example), it's faster to jump up _
      here and drop into the routine again. We also need to ensure that our profiling _
-     timer does not stretch across multiple ignored words and real words
+     timer does not stretch across multiple ignored words & real words
     Call Profiler.EventEnd(EVENT_PARSE_WORD)
     
     '[3]    Extract Word From Source Text
@@ -3284,8 +3590,7 @@ ReadChar:
     End If
            
     '----------------------------------------------------------------------------------
-           
-'NextChar:
+    
     'Since this is a valid letter, capture it
     Call Word.CharPush(Char): Let WordLength = WordLength + 1
     GoTo SkipChar
@@ -3418,7 +3723,10 @@ isName:
                 
                 'ERROR: Invalid hexadecimal number!
                 If WordValue < 0 Then Call RaiseError( _
-                    OZ80_ERROR_INVALID, STR_ERR_INVALID_NUMBER_HEX _
+                    OZ80_ERROR_INVALID, _
+                    "Not a valid hexadecimal number." & vbNewLine & vbNewLine _
+                  & "A hexadecimal number begins with '$' followed by 1-8 " _
+                  & "hexadecimal digits (0-9, A-F)." _
                 ): GoTo NameErrorOut
             Next i
             

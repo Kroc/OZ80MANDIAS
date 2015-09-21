@@ -19,7 +19,7 @@
 
 ::  "Channel"
     The PSG has four channels of sound that the chip mixes into the mono output.
-    Three of the channels produce waves (notes) and the fourth produces noise
+    Three of the channels produce waves (musical notes) and the fourth produces noise
     (for percussion or sound effects)
 ;;
 
@@ -103,8 +103,8 @@ RAM
     .track3dataPointer          WORD
     .track4dataPointer          WORD
     
-    ;the `_loadMusic` routine assumes that the track RAM follows the data pointers
-     ;above, so just take note in case of rearranging the RAM here
+    ;; the `_loadMusic` routine assumes that the track RAM follows the data pointers
+       above, so just take note in case of rearranging the RAM here ;;
     .track0vars                 TYPE #track
     .track1vars                 TYPE #track
     .track2vars                 TYPE #track
@@ -116,16 +116,16 @@ RAM
 
 ;---------------------------------------------------------------------------------------
 
-;;this is the public interface that passes forward to the internal implementation;
-  this style of implementation is unique to the sound driver -- perhaps it's reused
-  in other Ancient games, or it could be a 3rd-party piece of code;;
-
+;; this is the public interface that passes forward to the internal implementation;
+   this style of implementation is unique to the sound driver -- perhaps it's reused
+   in other Ancient games, or it could be a 3rd-party piece of code
+;;
 PROC    :public                                 SECTION ::sound
 {
 .update
     jp      :doUpdate
 .loadMusic
-    jp      :doLoadMusic                        ;this public call is not used in the game
+    jp      :doLoadMusic                        ;this public call is not used in-game
 .stop 
     jp      :doStop
 .unpause
@@ -133,7 +133,7 @@ PROC    :public                                 SECTION ::sound
 .fadeOut
     jp      :doFadeOut
 .loadSFX
-    jp      :doLoadSFX                          ;this public call is not used in the game
+    jp      :doLoadSFX                          ;this public call is not used in-game
 .playMusic
     jp      :doPlayMusic                        ;this is used externally to start a song
 .playSFX
@@ -243,8 +243,8 @@ PARAMS  HL              ;address of song data to load
 
 TABLE   :initTrackValues_words                  SECTION ::sound
 {
-    ;;set the master loop address to 0 so that the song will, by default, loop wholly:
-      the point of the master loop can be set by the '88' command in the music data;;
+    ;; set the master loop address to 0 so that the song will, by default, loop wholly:
+       the point of the master loop can be set by the '88' command in the music data ;;
     WORD    $.track0vars.masterLoopAddress, $0000
     WORD    $.track1vars.masterLoopAddress, $0000
     WORD    $.track2vars.masterLoopAddress, $0000
@@ -296,8 +296,8 @@ TABLE   :initTrackValues_bytes                  SECTION ::sound
     WORD    $.track3vars.flags                  BYTE    %00000010
     WORD    $.track4vars.flags                  BYTE    %00000000
 
-    ;;is there a reason this var is not set using the WORD table above
-      instead of two separate bytes as is the case here?;;
+    ;; is there a reason this var is not set using the WORD table above
+       instead of two separate bytes as is the case here? ;;
     WORD    $.track0vars.initModulationDelay+0  BYTE    $00
     WORD    $.track1vars.initModulationDelay+0  BYTE    $00
     WORD    $.track2vars.initModulationDelay+0  BYTE    $00
@@ -334,29 +334,29 @@ PROC    :doStop                                 SECTION ::sound
     push    AF, HL, BC
     
     ;mark the tracks as not "in-use" (bit 2) of the track's flags variable
-    ld      a,[$.track0vars.flags]
+    ld      A`flags                 [$.track0vars.flags]
     and     %11111101
-    ld      [$.track0vars.flags],a
+    ld      [$.track0vars.flags]    A`flags
     
-    ld      a,[$.track1vars.flags]
+    ld      A`flags                 [$.track1vars.flags]
     and     %11111101
-    ld      [$.track1vars.flags],a
+    ld      [$.track1vars.flags]    A`flags
     
-    ld      a,[$.track2vars.flags]
+    ld      A`flags                 [$.track2vars.flags]
     and     %11111101
-    ld      [$.track2vars.flags],a
+    ld      [$.track2vars.flags]    A`flags
     
-    ld      a,[$.track3vars.flags]
+    ld      A`flags                 [$.track3vars.flags]
     and     %11111101
-    ld      [$.track3vars.flags],a
+    ld      [$.track3vars.flags]    A`flags
     
-    ld      a,[$.track4vars.flags]
+    ld      A`flags                 [$.track4vars.flags]
     and     %11111101
-    ld      [$.track4vars.flags],a
+    ld      [$.track4vars.flags]    A`flags
     
     ;reset the SFX priority, any sound effect will now play
-    xor     a                                   ;set A to 0
-    ld      [$.SFXpriority],a
+    xor     A`zero                              ;set A to 0
+    ld      [$.SFXpriority]         A`zero
     
     ;mute all sound channels by sending the right bytes to the sound chip
     ld      b,4
@@ -376,8 +376,8 @@ PROC    :doStop                                 SECTION ::sound
 ;_______________________________________________________________________________________
 
 PROC    :doLoadSFX                              SECTION ::sound
-PARAMS  A               ;priority level of SFX being loaded
-        HL              ;address of SFX data
+PARAMS  A               ``Priority level of SFX being loaded
+        HL              ``Address of SFX data
 {
     push    AF, DE, HL
     

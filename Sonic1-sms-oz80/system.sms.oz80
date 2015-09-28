@@ -16,6 +16,12 @@ TYPE    #SMS_HEADER
 
 ;SEGA Master System Memory Map
 ;=======================================================================================
+;; Define a page of RAM that fills the address-space;
+   The default main RAM (`$`) where you place your game variables will be defined by
+   the `SYSTEM` statement, this RAM page describes the whole memory map rather than
+   just the 'work RAM' where game variables go
+;;
+RAMPAGE $_SMS
 RAM     $_SMS
 [
     .SLOT0                      BYTE x 16 KB                                    ;$0000
@@ -23,12 +29,13 @@ RAM     $_SMS
     .SLOT2                      BYTE x 16 KB                                    ;$8000
     .RAM                        TYPE                                            ;$C000
     [                                                                           
-        .                       BYTE x (16 KB - 16)
+        .                       BYTE x (8 KB - 16)
         ;the typical default location of the Stack Pointer, which works downwards 
         .STACK                  BYTE                                            ;$DFF0
     ]
     
-    .                           BYTE x (16 KB - 8)                              ;$E000
+    ;the RAM is mirrored in the next 8 KB
+    .MIRROR                     BYTE x (8 KB - 8)                               ;$E000
     
     .GLASSES                    BYTE x 4                                        ;$FFF8-
                                                                                 ;$FFFB
@@ -61,6 +68,7 @@ RAM     $_SMS
 ]
 
 ;---------------------------------------------------------------------------------------
+RAMPAGE $_SMS_PORTS             $0000 $FF
 RAM     $_SMS_PORTS
 [
     .                           BYTE x $3E
@@ -124,6 +132,7 @@ RAM     $_SMS_PORTS
     ]
 ]
 
+RAMPAGE $_SMS_VRAM              $0000 16 KB
 RAM     $_SMS_VRAM
 [
     .                           BYTE x $37FF

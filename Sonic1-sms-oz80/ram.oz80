@@ -39,42 +39,6 @@ TYPE    #levelHeader
 
 ;---------------------------------------------------------------------------------------
 
-TYPE    #mob                    ;26 bytes
-[
-    .type                       BYTE    ;IX+$00    - the object type index number
-    .Xsubpixel                  BYTE    ;IX+$01    - sub-pixel accuracy of X position
-    .X                          WORD    ;IX+$02/03 - in px
-    .Ysubpixel                  BYTE    ;IX+$04    - sub-pixel accuracy of Y position
-    .Y                          WORD    ;IX+$05/06 - in px
-    .Xspeed                     WORD    ;IX+$07/08 - in px, signed (i.e. $F??? = left)
-    .Xdirection                 BYTE    ;IX+$09    - $FF for left, else $00
-    .Yspeed                     WORD    ;IX+$0A/0B - in px, signed  (i.e. $F??? = up)
-    .Ydirection                 BYTE    ;IX+$0C    - $FF for up, else $00
-    .width                      BYTE    ;IX+$0D    - in px
-    .height                     BYTE    ;IX+$0E    - in px
-    .spriteLayout               WORD    ;IX+$0F/10 - address to current sprite layout
-    .unknown11                  BYTE    
-    .unknown12                  BYTE    
-    .unknown13                  BYTE    
-    .unknown14                  BYTE    
-    .unknown15                  BYTE    
-    .unknown16                  BYTE    
-    .unknown17                  BYTE    
-    .flags                      TYPE [  ;various mob flags
-            .unknown0           BOOL
-            .unknown1           BOOL
-            .unknown2           BOOL
-            .unknown3           BOOL
-            .underwater         BOOL    ;4 - underwater flag
-            .noCollision        BOOL    ;5 - whether the mob adheres to the floor or not
-            .unknown6           BOOL
-            .unknown7           BOOL
-                                ]
-    .unknown19                  BYTE    ;unused?
-]
-
-;---------------------------------------------------------------------------------------
-
 ;;the programmers use the IY register as a short-cut to $D200
   to access commonly used variables and flags;;   
 TYPE    #vars                           ;$D200:
@@ -162,12 +126,11 @@ TYPE    #vars                           ;$D200:
 
 ;---------------------------------------------------------------------------------------
 
-RAM
-    ;name                       ;size                                           ;addr
+RAM ;name                       ;size                                           ;addr
 [       
-    ;;the floor layout (i.e. the tiles Sonic runs around on).
-      a 'level' is a sub-portion of this floor layout since sometimes multiple
-      levels are crammed into one layout (such as the special stages);;
+    ;; the floor layout (i.e. the tiles Sonic runs around on).
+       a 'level' is a sub-portion of this floor layout since sometimes multiple
+       levels are crammed into one layout (such as the special stages) ;;
     .FLOORLAYOUT                BYTE x 4 KB                                     ;$C000
     
     ;X/Y/I data for the 64 sprites
@@ -175,22 +138,22 @@ RAM
     
     .D0C0                       BYTE x 64                                       ;UNUSED
     
-    ;;when the screen scrolls and new tiles need to be filled in, they are pulled from
-      these caches which have the necessary tiles already in horizontal / vertical
-      order for speed ;;
+    ;; when the screen scrolls and new tiles need to be filled in, they are pulled from
+       these caches which have the necessary tiles already in horizontal / vertical
+       order for speed ;;
     ;(NOTE: though these are 128 bytes each, I don't think that much is used)
     .OVERSCROLLCACHE_VERT       BYTE x 128                                      ;$D100
     .OVERSCROLLCACHE_HORZ       BYTE x 128                                      ;$D180
     
-    ;;throughout the codebase, IY is used as a shorthand to $D200 where many
-      commonly used RAM variables exist. therefore these use the `[iy+#VARS.abc]`
-      form of addressing. for the sake of completeness, we'll also define the
-      absolute location of these variables too, i.e. `$.VARS.abc`;;
+    ;; throughout the codebase, IY is used as a shorthand to $D200 where many
+       commonly used RAM variables exist. therefore these use the `[iy+#VARS.abc]`
+       form of addressing. for the sake of completeness, we'll also define the
+       absolute location of these variables too, i.e. `$.VARS.abc` ;;
     .VARS                       TYPE #vars                                      ;$D200
     
-    ;;these temporary variables are reused throughout, some times for passing
-      extra parameters to a function and sometimes as extra working space within
-      a function;;
+    ;; these temporary variables are reused throughout, some times for passing
+       extra parameters to a function and sometimes as extra working space within
+       a function ;;
     .TEMP1                      BYTE                                            ;$D20E
     .TEMP2                      BYTE                                            ;$D20F
     .TEMP3                      WORD                                            ;$D210
@@ -222,14 +185,14 @@ RAM
     .UNUSED_D227                WORD                                            ;$D227
     .UNUSED_D229                WORD                                            ;$D229
     
-    ;;":loadPaletteOnInterrupt" and ":loadPaletteFromInterrupt"
-      use these to pass parameters;;
+    ;; `:loadPaletteOnInterrupt` and `:loadPaletteFromInterrupt`
+       use these to pass parameters ;;
     .LOADPALETTE_ADDRESS        WORD                                            ;$D22B
     .D22D                       WORD                                            ;UNUSED
     .LOADPALETTE_FLAGS          BYTE                                            ;$D22F
     
-    ;;":loadPalette" uses these to pass the addresses of the
-    tile/sprite palettes to load;;
+    ;; `:loadPalette` uses these to pass the addresses of the
+       tile/sprite palettes to load ;;
     .LOADPALETTE_TILE           WORD                                            ;$D230
     .LOADPALETTE_SPRITE         WORD                                            ;$D232
     
@@ -291,8 +254,8 @@ RAM
     .CAMERA_Y_UP                WORD ;used to check if the camera went up       ;$D271
     
     .LEVEL_LEFT                 WORD                                            ;$D273
-    ;;prevents the level scrolling past this left-most point (i.e. sets an
-      effective right-hand limit to the level -- this + width of the screen);;
+    ;; prevents the level scrolling past this left-most point (i.e. sets an
+       effective right-hand limit to the level -- this + width of the screen) ;;
     .LEVEL_RIGHT                WORD                                            ;$D275
     .LEVEL_TOP                  WORD                                            ;$D277
     .LEVEL_BOTTOM               WORD                                            ;$D279
@@ -372,8 +335,8 @@ RAM
     
     .D2D1                       BYTE                                            ;UNUSED
     
-    ;;the previous song played is checked during level load to avoid starting
-    the same song again (for example, when teleporting in Scrap Brain);;
+    ;; the previous song played is checked during level load to avoid starting
+       the same song again (for example, when teleporting in Scrap Brain) ;;
     .PREVIOUS_MUSIC             BYTE                                            ;$D2D2
     
     .D2D3                       BYTE ;UNKNOWN                                   ;$D2D3
@@ -414,8 +377,8 @@ RAM
     .D2F8                       BYTE x 3                                        ;UNUSED
     
     .D2FB                       BYTE                                            ;$D2FB
-    ;;a copy of the level music index is kept so that the music can be started
-    again (?) after other sound events like invincibility;;
+    ;; a copy of the level music index is kept so that the music can be started
+       again (?) after other sound events like invincibility ;;
     .LEVEL_MUSIC                BYTE                                            ;$D2FC
     .SCORE_1UP                  BYTE ;number of thousands of pts for exta life  ;$D2FD
     .D2FE                       BYTE                                            ;$D2FE
@@ -445,9 +408,9 @@ RAM
     ;2-bytes per level, 19 levels (excluding warps and special stages)
     .D32E                       WORD x 19                                       ;$D32E
     
-    ;;the level's header is copied here, though little of it seems actually used;
-    other addresses are used as duplicates of these values. NOTE: 40 bytes are
-    copied instead of 37, the header was probably reduced during development);;
+    ;; the level's header is copied here, though little of it seems actually used;
+       other addresses are used as duplicates of these values. NOTE: 40 bytes are
+       copied instead of 37, the header was probably reduced during development) ;;
     .LEVEL_HEADER               TYPE #levelHeader                               ;$D354
                                 ;.solidity                               ;$D354 ;UNUSED
                                 ;.floorWidth                             ;$D355 ;UNUSED
@@ -484,35 +447,4 @@ RAM
     .PALETTE                    BYTE x 32                                       ;$D3BC
     
     .D3DE                       BYTE x 32                                       ;UNUSED
-    
-    ;mobs: the 32 mobs in the level begin here:
-    ;---------------------------------------------------------------------------------------
-    
-    ;the player is a mob like any other and has reserved parameters in memory
-    .SONIC                      TYPE #mob                                       ;$D3FC
-                                ;.type                                          ;$D3FC
-                                ;.Xsubpixel                                     ;$D3FD
-                                ;.X                                             ;$D3FE
-                                ;.Ysubpixel                                     ;$D400
-                                ;.Y                                             ;$D401
-                                ;.Xspeed                                        ;$D403
-                                ;.Xdirection                                    ;$D405
-                                ;.Yspeed                                        ;$D406
-                                ;.Ydirecton                                     ;$D408
-                                ;.width                                         ;$D409
-                                ;.height                                        ;$D40A
-                                ;.spriteLayout                                  ;$D40B
-                                ;.unknown11                                     ;$D40D
-                                ;.unknown12                                     ;$D40E
-                                ;.unknown13                                     ;$D40F
-                                ;.unknown14                                     ;$D410
-                                ;.unknown15                                     ;$D411
-                                ;.unknown16                                     ;$D412
-                                ;.unknown17                                     ;$D413
-                                ;.flags                                         ;$D414
-                                ;.unknown19                                     ;$D415
-                            
-    ;remaining 31 mobs are here
-    .MOBS                       BYTE x (#mob.size * 31)                         ;$D416-
-                                                                                ;$D73C
 ]

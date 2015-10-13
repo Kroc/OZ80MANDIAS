@@ -303,10 +303,10 @@ Private Enum OZ80_TOKEN
     TOKEN_KEYWORD_LO                    '`LO` function -- low byte of a 16-bit Value
     TOKEN_KEYWORD_LONG                  'Long data type (4-bytes)
     TOKEN_KEYWORD_NYBL                  'Nybble data type (4-bits)
+    TOKEN_KEYWORD_PAGE                  'RAM Page definition
     TOKEN_KEYWORD_PARAMS                'Parameter list `PROC :<label> PARAMS <list>`
     TOKEN_KEYWORD_PROC                  'Procedure Chunk `PROC :<label> { ... }`
     TOKEN_KEYWORD_RAM                   'RAM block
-    TOKEN_KEYWORD_RAMPAGE               'RAM Page definition
     TOKEN_KEYWORD_RETURN                'Returns list `PROC :<label> RETURN <list>`
     TOKEN_KEYWORD_SECTION               'Section definition `SECTION ::<section>
     TOKEN_KEYWORD_SLOT                  'Section Slot pattern `SLOT 0, 1, 2`
@@ -1035,6 +1035,7 @@ Private Const STR_OTDR                  As String = "otdr"
 Private Const STR_OUTI                  As String = "outi"
 Private Const STR_OTIR                  As String = "otir"
 Private Const STR_P                     As String = "P"
+Private Const STR_PAGE                  As String = "PAGE"
 Private Const STR_PARAMS                As String = "PARAMS"
 Private Const STR_PE                    As String = "PE"
 Private Const STR_PO                    As String = "PO"
@@ -1043,7 +1044,6 @@ Private Const STR_PROC                  As String = "PROC"
 Private Const STR_PUSH                  As String = "push"
 Private Const STR_R                     As String = "R"
 Private Const STR_RAM                   As String = "RAM"
-Private Const STR_RAMPAGE               As String = "RAMPAGE"
 Private Const STR_RES                   As String = "res"
 Private Const STR_RET                   As String = "ret"
 Private Const STR_RETI                  As String = "reti"
@@ -1441,10 +1441,10 @@ Private Sub Class_Initialize()
     Let i = i + 1: Let TokenNames(TOKEN_KEYWORD_LO) = STR_LO
     Let i = i + 1: Let TokenNames(TOKEN_KEYWORD_LONG) = STR_LONG
     Let i = i + 1: Let TokenNames(TOKEN_KEYWORD_NYBL) = STR_NYBL
+    Let i = i + 1: Let TokenNames(TOKEN_KEYWORD_PAGE) = STR_PAGE
     Let i = i + 1: Let TokenNames(TOKEN_KEYWORD_PARAMS) = STR_PARAMS
     Let i = i + 1: Let TokenNames(TOKEN_KEYWORD_PROC) = STR_PROC
     Let i = i + 1: Let TokenNames(TOKEN_KEYWORD_RAM) = STR_RAM
-    Let i = i + 1: Let TokenNames(TOKEN_KEYWORD_RAMPAGE) = STR_RAMPAGE
     Let i = i + 1: Let TokenNames(TOKEN_KEYWORD_RETURN) = STR_RETURN
     Let i = i + 1: Let TokenNames(TOKEN_KEYWORD_SECTION) = STR_SECTION
     Let i = i + 1: Let TokenNames(TOKEN_KEYWORD_SLOT) = STR_SLOT
@@ -1600,10 +1600,10 @@ Private Sub Class_Initialize()
     Let i = i + 1: Let TokenAttributes(TOKEN_KEYWORD_LO) = ATTR_LISTEXPR
     Let i = i + 1: Let TokenAttributes(TOKEN_KEYWORD_LONG) = ATTR_UNIT
     Let i = i + 1: Let TokenAttributes(TOKEN_KEYWORD_NYBL) = ATTR_UNIT
+    Let i = i + 1: Let TokenAttributes(TOKEN_KEYWORD_PAGE) = ATTR_KEYWORD
     Let i = i + 1: Let TokenAttributes(TOKEN_KEYWORD_PARAMS) = ATTR_KEYWORD
     Let i = i + 1: Let TokenAttributes(TOKEN_KEYWORD_PROC) = ATTR_KEYWORD
     Let i = i + 1: Let TokenAttributes(TOKEN_KEYWORD_RAM) = ATTR_KEYWORD
-    Let i = i + 1: Let TokenAttributes(TOKEN_KEYWORD_RAMPAGE) = ATTR_KEYWORD
     Let i = i + 1: Let TokenAttributes(TOKEN_KEYWORD_RETURN) = ATTR_KEYWORD
     Let i = i + 1: Let TokenAttributes(TOKEN_KEYWORD_SECTION) = ATTR_KEYWORD
     Let i = i + 1: Let TokenAttributes(TOKEN_KEYWORD_SLOT) = ATTR_KEYWORD
@@ -3128,6 +3128,7 @@ p:
     ElseIf Word.Equals(STR_POP) Then Let WordToken = TOKEN_Z80_POP
     ElseIf Word.Equals(STR_PUSH) Then Let WordToken = TOKEN_Z80_PUSH
     'Keywords
+    ElseIf Word.Equals(STR_PAGE) Then Let WordToken = TOKEN_KEYWORD_PAGE
     ElseIf Word.Equals(STR_PARAMS) Then Let WordToken = TOKEN_KEYWORD_PARAMS
     ElseIf Word.Equals(STR_PROC) Then Let WordToken = TOKEN_KEYWORD_PROC
     Else: GoTo WordError: End If
@@ -3156,7 +3157,6 @@ r:
     ElseIf Word.Equals(STR_RST) Then Let WordToken = TOKEN_Z80_RST
     'Keywords:
     ElseIf Word.Equals(STR_RAM) Then Let WordToken = TOKEN_KEYWORD_RAM
-    ElseIf Word.Equals(STR_RAMPAGE) Then Let WordToken = TOKEN_KEYWORD_RAMPAGE
     ElseIf Word.Equals(STR_RETURN) Then Let WordToken = TOKEN_KEYWORD_RETURN
     Else: GoTo WordError: End If
     GoTo NextWord
@@ -3542,10 +3542,10 @@ ScopeRoot:
         GoSub ScopeType
         
     '..................................................................................
-    '[A.6]  `RAMPAGE [$_<name>] [<address>] [<length>]`
+    '[A.6]  `PAGE [$_<name>] [<address>] [<length>]`
     '..................................................................................
-    ElseIf Token.Kind = TOKEN_KEYWORD_RAMPAGE Then
-        'Add the `RAMPAGE` keyword to the tree
+    ElseIf Token.Kind = TOKEN_KEYWORD_PAGE Then
+        'Add the `PAGE` keyword to the tree
         GoSub AddNodeSibling
         
         'The first parameter is the RAM Page name
@@ -4723,9 +4723,9 @@ End Sub
 '
 '    'Define a RAM Page:
 '    '----------------------------------------------------------------------------------
-'    '`RAMPAGE [$_<name>] [<expr>] [<expr>]`
+'    '`PAGE [$_<name>] [<expr>] [<expr>]`
 '    '----------------------------------------------------------------------------------
-'    ElseIf TokenKind = TOKEN_KEYWORD_RAMPAGE Then
+'    ElseIf TokenKind = TOKEN_KEYWORD_PAGE Then
 '        Call DefineRAMPage
 '
 '    'Create some RAM variables:

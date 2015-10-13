@@ -21,7 +21,7 @@ TYPE    #SMS_HEADER
    the `SYSTEM` statement, this RAM page describes the whole memory map rather than
    just the 'work RAM' where game variables go
 ;;
-RAMPAGE $_SMS
+PAGE    $_SMS
 RAM     $_SMS
 [
     .SLOT0                      BYTE x 16 KB                                    ;$0000
@@ -68,7 +68,7 @@ RAM     $_SMS
 ]
 
 ;---------------------------------------------------------------------------------------
-RAMPAGE $_SMS_PORTS             $0000 $FF
+PAGE    $_SMS_PORTS             $0000 $FF
 RAM     $_SMS_PORTS
 [
     .                           BYTE x $3E
@@ -132,7 +132,7 @@ RAM     $_SMS_PORTS
     ]
 ]
 
-RAMPAGE $_SMS_VRAM              $0000 16 KB
+PAGE    $_SMS_VRAM              $0000 16 KB
 RAM     $_SMS_VRAM
 [
     .                           BYTE x $37FF

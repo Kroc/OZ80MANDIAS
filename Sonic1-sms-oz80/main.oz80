@@ -305,9 +305,9 @@ PARAMS  A`bank          ``Bank number for the relative address HL
 
 PROC    :decompressScreen                       SECTION ::main                  ;$0501
         ;===============================================================================
-        ;;a screen layout is compressed using RLE (run-length-encoding). any byte that
-          there are multiple of in a row are listed as two repeating bytes, followed
-          by another byte specifying the remaining number of times to repeat;;
+        ;; a screen layout is compressed using RLE (run-length-encoding). any byte that
+           there are multiple of in a row are listed as two repeating bytes, followed
+           by another byte specifying the remaining number of times to repeat ;;
  
 PARAMS  bc              ;length of the compressed data
         de              ;VDP register number (D) and value byte (E) to send to the VDP
@@ -522,8 +522,8 @@ PARAMS  hl`addr         ``Address to memory with column & row numbers,
         ;;we multiply by 64 by first multiplying by 256 -- very simple, we just make
           the value the hi-byte in a 16-bit word, e.g. "$0C00" -- and then divide
           by 4 by rotating the bits to the right;;
-        rrca                                    ;divide by two
-        rrca                                    ;and again, making it four times
+        rrca                                    ;divide by two (equal to multiply 128)
+        rrca                                    ;and again (equal to multiply by 64)
         
         ld      e, a
         and     %00111111                       ;strip off the rotated bits
@@ -598,29 +598,34 @@ PARAMS  IY`vars         ``Address of the common variables (used throughout)
         ret
 }
 
-PROC    :decimalMultiplyBy10                    SECTION ::main                  ;$05FC
+PROC    :multiply                               SECTION ::main                  ;$05FC
         ;===============================================================================
-        ;does a decimal multiplication by 10. e.g. 3 > 30
+        ``Multiplies input HL by C
         
-PARAMS  hl              ;input number, e.g. RAM_LIVES
-        c               ;base? i.e. 10
-{        
-        xor     a`zero                          ;set A to 0
-        ld      b`loop, 7                       ;we will be looping 7 times
-        ex      de, hl                          ;transfer the HL parameter to DE
-        ld      l`zero, a`zero                  ;set HL as $0000
-        ld      h`zero, a`zero
+PARAMS  HL              ``The starting value
+        C               ``The number to multiply by (i.e. HL × C)
+RETURN  HL`result       ``The value after multiplication
+        DE              ``Is clobbered with the starting value
+        A               ``Set to 0
+        B               ``Set to 0 due to countdown loop
+        C               ``The last bit of input C, 0 or 1
+{       
+        xor     A`zero                          ;set A to 0
+        ld      B`loop      7                   ;we will process all 8-bits of C
+        ex      DE          HL`result           ;transfer the HL parameter to DE
+        ld      L`result    A`zero              ;set HL as $0000
+        ld      H`result    A`zero
         
-.loop   rl      c                               ;shift the bits in C up one
+.loop   rl      C                               ;shift the bits in C up one
         jp      nc, ._1                         ;skip if it hasn't overflowed yet
-        add     hl, de                          ;add the parameter value
-._1     add     hl, hl                          ;double the current value
+        add     HL          DE                  ;add the parameter value to the total
+._1     add     HL          HL                  ;double the current total
         djnz    .loop
         
         ;is there any carry remaining?
-        or      c                               ;check if C is 0
+        or      C                               ;check if C is 0
         ret     z                               ;if so, no carry the number is final
-        add     hl, de                          ;otherwise add one more
+        add     HL          DE                  ;otherwise add one more
         ret
 }
 
@@ -1324,8 +1329,8 @@ PROC    :fillScreenWithFloorLayout              SECTION ::main                  
         
         ;-------------------------------------------------------------------------------
         ld      de,$_SMS_VRAM.SCREENNAMETABLE
-        ;;in 192-line mode, the screen is 6 blocks tall,
-          in 224-line mode it's 7 blocks tall;;
+        ;; in 192-line mode, the screen is 6 blocks tall,
+           in 224-line mode it's 7 blocks tall ;;
         ld      b,!SCREENHEIGHT_BLOCKS
         
 ._1     push    bc, hl, de
@@ -1352,16 +1357,16 @@ PROC    :fillScreenWithFloorLayout              SECTION ::main                  
         add     hl,de                           ;offset block index into solidity data
         ld      a,[hl]                          ;and get the solidity value
         
-        ;;in the solidity data, bit 7 determines that the tile should appear in front
-          of sprites. rotate the byte three times to position bit 7 at bit 4. 
-          this byte will form the high-byte of the 16-bit value for the name table
-          entry (bit 4 will therefore become bit 12);;
+        ;; in the solidity data, bit 7 determines that the tile should appear in
+           front of sprites. rotate the byte three times to position bit 7 at bit 4. 
+           this byte will form the high-byte of the 16-bit value for the name table
+           entry (bit 4 will therefore become bit 12) ;;
         rrca
         rrca
         rrca
         
-        ;bit 12 of a name table entry specifies if the tile should appear in front of 
-         ;sprites. allow just this bit if it's set
+        ;; bit 12 of a name table entry specifies if the tile should appear
+           in front of sprites. allow just this bit if it's set ;;
         and     %00010000
         ld      c,a
         exx

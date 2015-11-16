@@ -440,8 +440,8 @@ RAM ;name                       ;size                                           
     
     .D379                       BYTE x 3                                        ;UNUSED
     
-    ;a list of the active objects in the level?
-    .D37C                       BYTE x 64                                       ;$D37C
+    ;a list of the active mobs in the level?
+    .D37C                       WORD x 32                                       ;$D37C
     
     ;a working-copy of the palette, for fade effects
     .PALETTE                    BYTE x 32                                       ;$D3BC

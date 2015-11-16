@@ -378,7 +378,7 @@ PARAMS  IY`vars         ``Address of the common variables (used throughout)
         add     a, $80
         ld      [$.LAYOUT_BUFFER], a
         ld      c, 10
-        call    ::main:decimalMultiplyBy10
+        call    ::main:multiply
         
         ex      de, hl
         
@@ -1867,7 +1867,7 @@ PROC    :_1aca                                  SECTION ::screens               
         add     A,$80
         ld      [$.LAYOUT_BUFFER],A
         ld      C,10
-        call    ::main:decimalMultiplyBy10
+        call    ::main:multiply
         
         ex      DE,HL
         ld      A,[$.LIVES]

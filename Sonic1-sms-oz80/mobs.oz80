@@ -172,52 +172,102 @@ INDEX   .platform_flyingUpDown
 
 ;_______________________________________________________________________________________
 
-TABLE   :_2ba2                                  SECTION ::mobs                  ;$2BA2
+TABLE   :mobBounds                              SECTION ::mobs                  ;$2BA2
 {
-        BYTE    $00 $01 $00 $02
-        BYTE    $00 $01 $00 $02 $20 $00 $20 $01 $20 $00 $E0 $00 $20 $00 $20 $01
-        BYTE    $20 $00 $E0 $00 $20 $00 $20 $01 $20 $00 $E0 $00 $20 $00 $20 $01
-        BYTE    $20 $00 $E0 $00 $20 $00 $20 $01 $20 $00 $E0 $00 $20 $00 $20 $01
-        BYTE    $20 $00 $E0 $00 $20 $00 $20 $01 $60 $00 $E0 $00 $10 $00 $10 $01
-        BYTE    $20 $00 $E0 $00 $A0 $00 $A0 $01 $40 $00 $00 $01 $40 $00 $40 $01
-        BYTE    $40 $00 $00 $01 $20 $00 $20 $01 $20 $00 $E0 $00 $20 $00 $20 $01
-        BYTE    $30 $00 $F0 $00 $00 $01 $00 $02 $00 $01 $C0 $01 $40 $00 $40 $01
-        BYTE    $40 $00 $00 $01 $A0 $00 $A0 $01 $20 $00 $E0 $00 $10 $00 $10 $01
-        BYTE    $10 $00 $D0 $00 $10 $00 $10 $01 $10 $00 $D0 $00 $C0 $00 $C0 $01
-        BYTE    $80 $00 $40 $01 $20 $00 $20 $01 $20 $00 $E0 $00 $08 $00 $40 $01
-        BYTE    $10 $00 $D0 $00 $40 $00 $08 $01 $10 $00 $D0 $00 $10 $00 $10 $01
-        BYTE    $20 $00 $E0 $00 $20 $00 $20 $01 $30 $00 $CC $00 $20 $00 $20 $01
-        BYTE    $30 $00 $CC $00 $20 $00 $20 $01 $30 $00 $CC $00 $20 $00 $20 $01
-        BYTE    $20 $00 $DA $00 $30 $00 $30 $01 $30 $00 $F0 $00 $00 $01 $80 $01
-        BYTE    $00 $01 $C0 $01 $10 $00 $10 $01 $10 $00 $D0 $00 $20 $00 $20 $01
-        BYTE    $30 $00 $C8 $00 $20 $00 $20 $01 $20 $00 $E0 $00 $20 $00 $20 $01
-        BYTE    $20 $00 $E0 $00 $20 $00 $20 $01 $80 $00 $40 $01 $10 $00 $10 $01
-        BYTE    $80 $00 $F0 $00 $20 $00 $20 $01 $10 $00 $D0 $00 $20 $00 $20 $01
-        BYTE    $10 $00 $D0 $00 $20 $00 $20 $01 $20 $00 $E0 $00 $10 $00 $10 $01
-        BYTE    $60 $00 $00 $01 $28 $00 $28 $01 $00 $01 $C0 $01 $28 $00 $28 $01
-        BYTE    $00 $01 $C0 $01 $10 $00 $10 $01 $10 $00 $D0 $00 $20 $00 $20 $01
-        BYTE    $20 $00 $E0 $00 $10 $00 $10 $01 $10 $00 $D0 $00 $40 $00 $40 $01
-        BYTE    $C0 $00 $80 $01 $10 $00 $10 $01 $10 $00 $D0 $00 $80 $00 $80 $01
-        BYTE    $40 $00 $C0 $01 $20 $00 $20 $01 $20 $00 $E0 $00 $00 $08 $00 $08
-        BYTE    $30 $00 $F0 $00 $10 $00 $10 $01 $20 $00 $E0 $00 $20 $00 $20 $01
-        BYTE    $20 $00 $E0 $00 $00 $00 $00 $01 $00 $00 $C0 $00 $00 $02 $00 $03
-        BYTE    $00 $02 $C0 $02 $10 $00 $10 $01 $10 $00 $D0 $00 $40 $00 $40 $01
-        BYTE    $40 $00 $00 $01 $10 $00 $10 $01 $10 $00 $D0 $00 $40 $00 $40 $01
-        BYTE    $20 $00 $E0 $00 $80 $00 $80 $01 $50 $00 $D0 $00 $10 $00 $10 $01
-        BYTE    $10 $00 $D0 $00 $10 $00 $10 $01 $60 $00 $20 $01 $10 $00 $10 $01
-        BYTE    $10 $00 $D0 $00 $60 $00 $60 $01 $60 $00 $20 $01 $10 $00 $10 $01
-        BYTE    $10 $00 $D0 $00 $20 $00 $20 $01 $20 $00 $E0 $00 $00 $20 $00 $21
-        BYTE    $20 $00 $E0 $00 $08 $00 $08 $01 $08 $00 $C8 $00 $20 $00 $20 $01
-        BYTE    $20 $00 $E0 $00 $20 $00 $20 $01 $20 $00 $E0 $00 $20 $00 $20 $01
-        BYTE    $20 $00 $E0 $00 $28 $00 $28 $01 $28 $00 $E8 $00 $60 $00 $60 $01
-        BYTE    $20 $00 $E0 $00 $00 $01 $00 $02 $00 $01 $C0 $01 $10 $00 $10 $01
-        BYTE    $10 $00 $D0 $00 $10 $00 $10 $01 $00 $01 $C0 $01 $10 $00 $10 $01
-        BYTE    $10 $00 $D0 $00 $10 $00 $10 $01 $10 $00 $D0 $00 $20 $00 $20 $01
-        BYTE    $20 $00 $E0 $00 $20 $00 $20 $01 $20 $00 $E0 $00 $38 $00 $28 $01
-        BYTE    $30 $00 $F0 $00 $20 $00 $20 $01 $20 $00 $E0 $00 $10 $00 $10 $01
-        BYTE    $10 $00 $D0 $00 $20 $00 $20 $01 $20 $00 $E0 $00 $20 $00 $20 $01
-        BYTE    $20 $00 $E0 $00 $00 $01 $E0 $01 $C0 $00 $80 $01 $00 $01 $00 $02
-        BYTE    $00 $01 $C0 $01 $00 $08 $00 $09 $00 $08 $C0 $08
+        ;;
+            1.  the X-distance the mob can be left of the camera without despawning 
+            2.  the X-distance the mob can be right of the camera without despawning
+                NOTE: this has to include the screen width of $0100 (256)
+            3.  the Y-distance the mob can be above the camera without despawning
+            4.  the Y-distance the mob can be below of the camera without despawning
+                NOTE: this has to include the screen height of $00C0 (192)
+        ;;
+        WORD    $0100 $0200 $0100 $0200         ;#00: Sonic
+        WORD    $0020 $0120 $0020 $00E0         ;#01: monitor - ring
+        WORD    $0020 $0120 $0020 $00E0         ;#02: monitor - speed shoes
+        WORD    $0020 $0120 $0020 $00E0         ;#03: monitor - life
+        WORD    $0020 $0120 $0020 $00E0         ;#04: monitor - shield
+        WORD    $0020 $0120 $0020 $00E0         ;#05: monitor - invincibility
+        WORD    $0020 $0120 $0020 $00E0         ;#06: chaos emerald
+        WORD    $0020 $0120 $0060 $00E0         ;#07: end sign
+        WORD    $0010 $0110 $0020 $00E0         ;#08: badnick - crabmeat
+        WORD    $00A0 $01A0 $0040 $0100         ;#09: wooden platform - swinging (Green Hill)
+        WORD    $0040 $0140 $0040 $0100         ;#0A: explosion
+        WORD    $0020 $0120 $0020 $00E0         ;#0B: wooden platform (Green Hill)
+        WORD    $0020 $0120 $0030 $00F0         ;#0C: wooden platform - falling (Green Hill)
+        WORD    $0100 $0200 $0100 $01C0         ;#0D: UNKNOWN
+        WORD    $0040 $0140 $0040 $0100         ;#0E: badnick - buzz bomber
+        WORD    $00A0 $01A0 $0020 $00E0         ;#0F: wooden platform - moving (Green Hill)
+        WORD    $0010 $0110 $0010 $00D0         ;#10: badnick - motobug
+        WORD    $0010 $0110 $0010 $00D0         ;#11: badnick - newtron
+        WORD    $00C0 $01C0 $0080 $0140         ;#12: boss (Green Hill)
+        WORD    $0020 $0120 $0020 $00E0         ;#13: UNKNOWN - bullet?
+        WORD    $0008 $0140 $0010 $00D0         ;#14: UNKNOWN - fireball right?
+        WORD    $0040 $0108 $0010 $00D0         ;#15: UNKNOWN - fireball left?
+        WORD    $0010 $0110 $0020 $00E0         ;#16: flame thrower (Scrap Brain)
+        WORD    $0020 $0120 $0030 $00CC         ;#17: door - one way left (Scrap Brain)
+        WORD    $0020 $0120 $0030 $00CC         ;#18: door - one way right (Scrap Brain)
+        WORD    $0020 $0120 $0030 $00CC         ;#19: door (Scrap Brain)
+        WORD    $0020 $0120 $0020 $00DA         ;#1A: electric sphere (Scrap Brain)
+        WORD    $0030 $0130 $0030 $00F0         ;#1B: badnick - ball hog (Scrap Brain)
+        WORD    $0100 $0180 $0100 $01C0         ;#1C: UNKNOWN - ball from ball hog?
+        WORD    $0010 $0110 $0010 $00D0         ;#1D: switch
+        WORD    $0020 $0120 $0030 $00C8         ;#1E: switch door
+        WORD    $0020 $0120 $0020 $00E0         ;#1F: badnick - caterkiller
+        WORD    $0020 $0120 $0020 $00E0         ;#20: UNKNOWN
+        WORD    $0020 $0120 $0080 $0140         ;#21: moving bumper (Special Stage)
+        WORD    $0010 $0110 $0080 $00F0         ;#22: boss (Scrap Brain)
+        WORD    $0020 $0120 $0010 $00D0         ;#23: free animal - rabbit
+        WORD    $0020 $0120 $0010 $00D0         ;#24: free animal - bird
+        WORD    $0020 $0120 $0020 $00E0         ;#25: capsule
+        WORD    $0010 $0110 $0060 $0100         ;#26: badnick - chopper
+        WORD    $0028 $0128 $0100 $01C0         ;#27: log - vertical (Jungle)
+        WORD    $0028 $0128 $0100 $01C0         ;#28: log - horizontal (Jungle)
+        WORD    $0010 $0110 $0010 $00D0         ;#29: log - floating (Jungle)
+        WORD    $0020 $0120 $0020 $00E0         ;#2A: UNKNOWN
+        WORD    $0010 $0110 $0010 $00D0         ;#2B: UNKNOWN
+        WORD    $0040 $0140 $00C0 $0180         ;#2C: boss (Jungle)
+        WORD    $0010 $0110 $0010 $00D0         ;#2D: badnick - yadrin (Bridge)
+        WORD    $0080 $0180 $0040 $01C0         ;#2E: falling bridge (Bridge)
+        WORD    $0020 $0120 $0020 $00E0         ;#2F: UNKNOWN - wave moving projectile?
+        WORD    $0800 $0800 $0030 $00F0         ;#30: meta - clouds (Sky Base)
+        WORD    $0010 $0110 $0020 $00E0         ;#31: propeller (Sky Base)
+        WORD    $0020 $0120 $0020 $00E0         ;#32: badnick - bomb (Sky Base)
+        WORD    $0000 $0100 $0000 $00C0         ;#33: cannon (Sky Base)
+        WORD    $0200 $0300 $0200 $02C0         ;#34: cannon ball (Sky Base)
+        WORD    $0010 $0110 $0010 $00D0         ;#35: badnick - unidos (Sky Base)
+        WORD    $0040 $0140 $0040 $0100         ;#36: UNKNOWN - stationary, lethal
+        WORD    $0010 $0110 $0010 $00D0         ;#37: rotating turret (Sky Base)
+        WORD    $0040 $0140 $0020 $00E0         ;#38: flying platform (Sky Base)
+        WORD    $0080 $0180 $0050 $00D0         ;#39: moving spiked wall (Sky Base)
+        WORD    $0010 $0110 $0010 $00D0         ;#3A: fixed turret (Sky Base)
+        WORD    $0010 $0110 $0060 $0120         ;#3B: flying platform - up/down (Sky Base)
+        WORD    $0010 $0110 $0010 $00D0         ;#3C: badnick - jaws (Labyrinth)
+        WORD    $0060 $0160 $0060 $0120         ;#3D: spike ball (Labyrinth)
+        WORD    $0010 $0110 $0010 $00D0         ;#3E: spear (Labyrinth)
+        WORD    $0020 $0120 $0020 $00E0         ;#3F: fire ball head (Labyrinth)
+        WORD    $2000 $2100 $0020 $00E0         ;#40: meta - water line position
+        WORD    $0008 $0108 $0008 $00C8         ;#41: bubbles (Labyrinth)
+        WORD    $0020 $0120 $0020 $00E0         ;#42: UNKNOWN
+        WORD    $0020 $0120 $0020 $00E0         ;#43: NO-CODE
+        WORD    $0020 $0120 $0020 $00E0         ;#44: badnick - burrobot
+        WORD    $0028 $0128 $0028 $00E8         ;#45: platform - float up (Labyrinth)
+        WORD    $0060 $0160 $0020 $00E0         ;#46: boss - electric beam (Sky Base)
+        WORD    $0100 $0200 $0100 $01C0         ;#47: UNKNOWN
+        WORD    $0010 $0110 $0010 $00D0         ;#48: boss (Bridge)
+        WORD    $0010 $0110 $0100 $01C0         ;#49: boss (Labyrinth)
+        WORD    $0010 $0110 $0010 $00D0         ;#4A: boss (Sky Base)
+        WORD    $0010 $0110 $0010 $00D0         ;#4B: trip zone (Green Hill)
+        WORD    $0020 $0120 $0020 $00E0         ;#4C: Flipper (Special Stage)
+        WORD    $0020 $0120 $0020 $00E0         ;#4D: RESET!
+        WORD    $0038 $0128 $0030 $00F0         ;#4E: balance (Bridge)
+        WORD    $0020 $0120 $0020 $00E0         ;#4F: RESET!
+        WORD    $0010 $0110 $0010 $00D0         ;#50: flower (Green Hill)
+        WORD    $0020 $0120 $0020 $00E0         ;#51: monitor - checkpoint
+        WORD    $0020 $0120 $0020 $00E0         ;#52: monitor - continue
+        WORD    $0100 $01E0 $00C0 $0180         ;#53: final animation
+        WORD    $0100 $0200 $0100 $01C0         ;#54: all emeralds animation
+        WORD    $0800 $0900 $0800 $08C0         ;#55: "make sonic blink"
 }
 ;ring count HUD
 TABLE   :_2e52                                  SECTION ::mobs                  ;$2E52
@@ -237,13 +287,13 @@ PROC    :_2e5a                                  SECTION ::mobs                  
         
 PARAMS  IY`vars         ``Address of the common variables (used throughout)
 {        
-        ;do not update the Sonic sprite frame
+        ;do not update the Sonic sprite frame (upon Interrupt)
         res     7,[IY+#vars.timeLightningFlags]
         
         ;-------------------------------------------------------------------------------
         
-        ;;populate the layout buffer with the bytes in the table above, 
-          $A0, $A2, $A4, $00 $FF -- the Sonic icon, x, and placeholder for lives;;
+        ;; populate the layout buffer with the bytes in the table above, 
+           $A0, $A2, $A4, $00 $FF -- the Sonic icon, "x", and placeholder for lives ;;
         ld      HL      :_2e55
         ld      DE      $.LAYOUT_BUFFER
         ld      BC      5
@@ -320,7 +370,8 @@ PARAMS  IY`vars         ``Address of the common variables (used throughout)
         ld      [$.D269]        HL`zero
         ld      [$.D26B]        HL`zero
         ld      [$.D26D]        HL`zero
-        call    :_31e6
+        
+        call    :checkMobsOutOfBounds
         
         ;run the code for all the different mobs in the level (including the player)
         call    :doMobs
@@ -409,7 +460,7 @@ HELP  ``Draws the level time on the screen
         jr      c,._1
         
         ;position the time in the centre of the screen on special stages
-         ;(TODO: this is inefficient changing the position twice)
+        ;TODO: this is inefficient changing the position twice
         ld      C`xpos          112
         ld      B`ypos          56
         
@@ -811,114 +862,198 @@ PARAMS  IY`vars         ``Address of the common variables (used throughout)
         ret
 }
 
-PROC    :_31e6                                  SECTION ::mobs                  ;$31E6
+PROC    :checkMobsOutOfBounds                   SECTION ::mobs                  ;$31E6
         ;===============================================================================
-PARAMS  IX`mob          ``Address of the current mob being processed
-{        
-        ld      a,[$.FRAMECOUNT]
-        and     $07
-        ld      c,a
-        ld      hl,$0068
-        call    ::main:decimalMultiplyBy10
-        ld      de,$.SONIC
-        add     hl,de
-        ex      de,hl
-        ld      a,[$.FRAMECOUNT]
-        and     $07
-        add     a,a
-        add     a,a
-        add     a,a
-        ld      c,a
-        ld      b,$00
-        ld      hl,$.D37C                       ;list of current on-screen objects
-        add     hl,bc
-        ld      c,b
-        ld      b,$04
-.loop   ld      a,[de]
-        cp      $56
-        jp      nc,._4
-        push    de
-        pop     ix
-        exx     
-        add     a,a
-        ld      l,a
-        ld      h,$00
-        add     hl,hl
-        add     hl,hl
-        ld      de,:_2ba2
-        add     hl,de
-        ld      c,[hl]
-        inc     hl
-        ld      b,[hl]
-        inc     hl
-        ld      de,$.TEMP1
+{       
+        ;check only 4 mobs per frame:
+        ;-------------------------------------------------------------------------------
+        
+        ld      A`frame         [$.FRAMECOUNT]
+        and     %00000111                       ;"MOD 8"
+        ;TODO: a look-up table for this multiplication should be faster
+        ld      C`multiply      A`frame
+        ld      HL`fourMobs     $0068           ;=104 (size of 4 mob structures)
+        call    ::main:multiply                 ;multiply 104 by the frame number 0-7
+        
+        ld      DE`mobAddr      $.SONIC         ;address of first mob's data
+        add     HL`fourMobs     DE`mobAddr      ;offset to the chosen group of 4 mobs
+        ex      DE`mobAddr      HL`fourMobs     ;put this aside for now
+        
+        ;; skips through the list of current mobs 4 at a time
+           i.e. mob number 0, 4, 8, 12, 16, 20, 24, 28 ;;
+        
+        ;; TODO: Could transfer the "A MOD 8" result via register I
+                 to avoid having to redo this calculation ;;
+        ld      A`frame         [$.FRAMECOUNT]
+        and     %00000111                       ;"MOD 8"
+        add     A`mobIndex      A`mobIndex      ;x 2
+        add     A`mobIndex      A`mobIndex      ;x 4
+        add     A`mobIndex      A`mobIndex      ;x 8
+        ld      C`mobOffset     A`mobIndex
+        ld      B`mobOffset     $00
+        ld      HL`mobPointer   $.D37C          ;list of current mob pointers
+        add     HL`mobPointer   BC`mobOffset
+        
+        ld      C`zero          B`zero          ;this will be used to remove mobs
+        ld      B`counter       4               ;load loop counter for 4 mobs
+        
+        ;fetch the mob's boundary data:
+        ;-------------------------------------------------------------------------------
+        
+.loop   ld      A`mobID         [DE`mobAddr]    ;get the mob ID (which type it is)
+        cp      $56                             ;> length of the mob code pointers list?
+        jp      nc, .removeMob                  ;skip this loop
+        
+        ;switch the mob address to IX
+        push    DE`mobAddr
+        pop     IX`mobAddr
+        
+        ;swap BC/DE/HL with their shadow values
+        exx
+        
+        ;TODO: perhaps a lookup table could be faster here
+        add     A`dataOffset    A`mobID         ;double the mob ID
+        ld      L'dataOffset    A`dataOffset    ;put this into HL'
+        ld      H'dataOffset    $00
+        add     HL'dataOffset   HL'dataOffset   ;ID x 4
+        add     HL'dataOffset   HL'dataOffset   ;ID x 8, i.e. 8 bytes per ID
+        
+        ld      DE'dataTable    :mobBounds
+        add     HL'dataOffset   DE'dataTable    ;offset into the table, 8 bytes per ID
+        
+        ;; load BC with the first WORD, the maxmimum distance left of the camera
+           the mob can go before despawning ;;
+        ld      C'leftLimit     [HL'data]
+        inc     HL'data
+        ld      B'leftLimit     [HL'data]
+        
+        ;copy the remaining data into the temporary space
+        inc     HL'data
+        ld      DE'temp         $.TEMP1
+        ;; BUG: this reduces BC' by 6, likely unintended as the leftLimit value
+           does not already factor this in and does not benefit from it ;;
+        ldi
+        ldi
         ldi     
         ldi     
         ldi     
-        ldi     
-        ldi     
-        ldi     
-        ld      hl,[$.CAMERA_X]
-        xor     a`zero
-        sbc     hl,bc
-        jr      nc,._1
-        ld      l,a`zero
-        ld      h,a`zero
-        xor     a`zero
-._1     ld      e,[ix+#mob.X+0]
-        ld      d,[ix+#mob.X+1]
-        sbc     hl,de
-        jp      nc,._3
-        ld      hl,[$.TEMP1]
-        ld      bc,[$.CAMERA_X]
-        add     hl,bc
-        xor     a`zero
-        sbc     hl,de
-        jp      c,._3
-        ld      hl,[$.CAMERA_Y]
-        ld      bc,[$.TEMP3]
-        sbc     hl,bc
-        jr      nc,._2
-        ld      l,a
-        ld      h,a
-        xor     a`zero
-._2     ld      e,[ix+#mob.Y+0]
-        ld      d,[ix+#mob.Y+1]
-        sbc     hl,de
-        jp      nc,._3
-        ld      hl,[$.TEMP4]
-        ld      bc,[$.CAMERA_Y]
-        add     hl,bc
-        xor     a`zero
-        sbc     hl,de
-        jp      c,._3
-        exx     
-        ld      [hl],e
-        inc     hl
-        ld      [hl],d
-        inc     hl
-        push    hl
-        ld      hl,$001a
-        add     hl,de
-        ex      de,hl
-        pop     hl
+        ldi
+        
+        ;left & right bounds:
+        ;-------------------------------------------------------------------------------
+        
+        ;; if the camera is near the left edge of the Floor Layout then the mob's
+           area of offscreen allowance will overhang void-space. we check for this
+           to avoid miscalculation further down the line ;;
+        ld      HL'cameraX      [$.CAMERA_X]
+        xor     A`zero                          ;reset carry flag
+        sbc     HL'cameraX      BC'leftLimit     
+        jr      nc, .x
+        
+        ;; the camera is at the left-most side of the floor, 
+           so don't underflow and believe the camera is at the far-right instead ;;
+        ld      L'cameraX       A`zero
+        ld      H'cameraX       A`zero
+        xor     A`zero
+        
+        ;has the mob gone too far left of the camera?
+.x      ld      E'mobXpos       [IX+#mob.X+0]
+        ld      D'mobXpos       [IX+#mob.X+1]
+        sbc     HL'leftLimit    DE'mobXpos
+        jp      nc, .removeMobExx               ;if so, remove it
+        
+        ;; the next WORD is how far right of the camera the mob can go before
+           despawning. note that this value has the width of the screen included ;;
+        ;TODO: would adding 256 to the left limit be faster / good enough?
+        ld      HL'rightLimit   [$.TEMP1]
+        ld      BC'cameraX      [$.CAMERA_X]
+        add     HL'rightLimit   BC'cameraX
+        xor     A`zero                          ;reset carry flag
+        sbc     HL'rightLimit   DE'mobXpos      ;has the mob gone too far right?
+        jp      c, .removeMobExx                ;if so, remove it
+        
+        ;top & bottom bounds:
+        ;-------------------------------------------------------------------------------
+        
+        ;; if the camera is near the top edge of the Floor Layout then the mob's
+           area of offscreen allowance will overhang void-space. we check for this
+           to avoid miscalculation further down the line ;;
+        ld      HL'cameraY      [$.CAMERA_Y]
+        ld      BC'topLimit     [$.TEMP3]
+        sbc     HL'cameraY      BC'
+        jr      nc, .y 
+        
+        ;; the camera is at the top-most side of the floor, 
+           so don't underflow and believe the camera is at the bottom instead ;;
+        ld      L'cameraY       A`zero
+        ld      H'cameraY       A`zero
+        xor     A`zero
+        
+.y      ;has the mob gone too far above the camera?
+        ld      E'mobYpos       [IX+#mob.Y+0]
+        ld      D'mobYpos       [IX+#mob.Y+1]
+        sbc     HL'             DE'mobYpos
+        jp      nc, .removeMobExx               ;if so, remove it
+        
+        ;; the next WORD is how far below the camera the mob can go before
+           despawning. note that this value has the height of the screen included ;;
+        ;; TODO: would adding 192 to the bottom limit be faster / good enough?
+                 also this would help with dynamically supporting 224-lines ;;
+        ld      HL'bottomLimit  [$.TEMP4]
+        ld      BC'cameraY      [$.CAMERA_Y]
+        add     HL'bottomLimit  BC'cameraY
+        xor     A`zero
+        sbc     HL'bottomLimit  DE'mobYpos
+        jp      c, .removeMobExx
+        
+        ;-------------------------------------------------------------------------------
+        
+        ;return to the non-shadow BC/DE/HL values
+        exx
+        
+        ;TODO: why do we need to write the same pointer back again?
+        ld      [HL`mobPointer] E`mobAddr
+        inc     HL`mobPointer
+        ld      [HL`mobPointer] D`mobAddr
+        inc     HL`mobPointer
+        
+        ;move on to the next mob to process
+        push    HL`mobPointer
+        ld      HL`dataSize     $001A           ;=26, size of a mob structure
+        add     HL`dataSize     DE`mobAddr
+        ex      DE`dataSize     HL`mobAddr
+        pop     HL`mobPointer
+        
         djnz    .loop
         
         ret
         
-._3     exx     
+        ;remove the out-of-bounds mob!
+        ;-------------------------------------------------------------------------------
         
-._4     ld      [hl],c
-        inc     hl
-        ld      [hl],c
-        inc     hl
-        push    hl
-        ld      hl,$001a
-        add     hl,de
-        ex      de,hl
-        pop     hl
-        dec     b
-        jp      nz,.loop
+.removeMobExx
+        ;return to the non-shadow BC/DE/HL values
+        exx
+        
+.removeMob
+        ;zero out the pointer to the mob in the active mob list
+        ld      [HL`mobPointer] C`zero
+        inc     HL`mobPointer
+        ld      [HL`mobPointer] C`zero
+        inc     HL`mobPointer
+        
+        ;move on to the next mob to process
+        push    HL`mobPointer
+        ld      HL`dataSize     $001A           ;=26, size of a mob structure
+        add     HL`dataSize     DE`mobAddr
+        ex      DE`dataSize     HL`mobAddr
+        pop     HL`mobPointer
+        
+        ;; TODO: djnz cannot be used here probably because of >-128 relative jump.
+                 reorganisation of code might solve this ;;
+        dec     B`coutner
+        jp      nz, .loop
+        
         ret
 }
 
@@ -928,23 +1063,26 @@ PROC    :doMobs                                 SECTION ::mobs                  
         
 PARAMS  IY`vars         ``Address of the common variables (used throughout)
 {        
-        ;;starting from $D37E, read 16-bit numbers until a non-zero one is found,
-          or 31 numbers have been read;;
+        ;; starting from $D37E (we skip Sonic), read pointers until a non-zero one
+           is found, or 31 pointers have been read ;;
         ld      HL      $.D37C+2
         ld      B       31
         
+        ;read the pointer into DE
 .loop   ld      E       [HL]
         inc     HL
         ld      D       [HL]
         inc     HL
         
-        ;is the value greater than zero?
+        ;is the pointer non-zero?
         ld      A       E
         or      D
-        call    nz, :doMob
+        call    nz, :doMob                      ;if so process as a mob
         
         ;keep reading memory until either something non-zero is found or we hit $D3BC
         djnz    .loop
+        
+        ;-------------------------------------------------------------------------------
         
         ld      a,[iy+#vars.spriteUpdateCount]
         ld      hl,[$.SPRITETABLE_ADDR]
@@ -967,10 +1105,10 @@ PARAMS  IY`vars         ``Address of the common variables (used throughout)
 
 PROC    :doMob                                  SECTION ::mobs                  ;$32C8
         ;-------------------------------------------------------------------------------
-PARAMS  DE
-{        
+PARAMS  DE              ``Address of a mob structure
+{       
         ld      A       [DE]                    ;get mob from the list
-        cp      $FF                             ;ignore mob #$FF
+        cp      $FF                             ;ignore mob type $FF
         ret     z
         
         push    BC, HL
@@ -979,34 +1117,34 @@ PARAMS  DE
         push    DE
         pop     IX
         
-        ;double the index number and put it into DE
+        ;double the mob type number and put it into DE
         add     a,a
         ld      e,a
         ld      d,$00
         
-        ;offset into the mob pointers table
+        ;offset into the mob code pointers table
         ld      hl,:mobPointers
         add     hl,de
         
-        ;get the mob's pointer address into HL
+        ;get the mob's code address into HL
         ld      a,[hl]
         inc     hl
         ld      h,[hl]
         ld      l,a
         
-        ;once the mob's own code has been run,
-         ;handle the common actions for all mobs
-        ld      de,:doMobGeneric
+        ;; once the mob's own code has been run,
+           handle the common actions for all mobs ;;
+        ld      de,:doMobCommon
         push    de
         
         ;run the mob's code
         jp      [hl]
 }
         
-PROC    :doMobGeneric                          SECTION ::mobs                   ;$32E2
+PROC    :doMobCommon                            SECTION ::mobs                   ;$32E2
         ;-------------------------------------------------------------------------------
-        ;;once a mob has run its personal code, this routine handles things that
-          all mobs share, such as moving the mob, and collision with Sonic;;
+        ;; once a mob has run its personal code, this routine handles things that
+           all mobs share, such as moving the mob, and collision with Sonic ;;
         
 PARAMS  IX`mob          ``Address of the current mob being processed
 {       
@@ -2650,7 +2788,7 @@ INDEX   .skyBaseExterior                                                        
 
 ;=======================================================================================
 
-;referenced by ":doMobGeneric"
+;referenced by ":doMobCommon"
 ;UNKNOWN DATA -- something to do with mob floor collision
 
 TABLE   :Unknown                                SECTION ::mobs                  ;$4000
@@ -3025,53 +3163,53 @@ PARAMS  IX`mob          ``Address of the current mob being processed
         ret
 
 ;sprite layout
-._7922  BYTE $2A, $2C, $2E, $30, $32, $FF
-        BYTE $4A, $4C, $4E, $50, $52, $FF
-        BYTE $6A, $6C, $6E, $70, $72, $FF
-        
-        BYTE $20, $10, $12, $14, $28, $FF
-        BYTE $40, $42, $44, $46, $48, $FF
-        BYTE $60, $62, $64, $66, $68, $FF
-        
-        BYTE $2A, $16, $18, $1A, $32, $FF
-        BYTE $4A, $4C, $4E, $50, $52, $FF
-        BYTE $6A, $6C, $6E, $70, $72, $FF
-        
-        BYTE $20, $3A, $3C, $3E, $28, $FF
-        BYTE $40, $42, $44, $46, $48, $FF
-        BYTE $60, $62, $64, $66, $68, $FF
-        
-        BYTE $2A, $34, $36, $38, $32, $FF
-        BYTE $4A, $4C, $4E, $50, $52, $FF
-        BYTE $6A, $6C, $6E, $70, $72, $FF
-        
-        BYTE $20, $10, $12, $14, $28, $FF
-        BYTE $40, $42, $44, $46, $48, $FF
-        BYTE $60, $54, $56, $66, $68, $FF
-        
-        BYTE $2A, $16, $18, $1A, $32, $FF
-        BYTE $4A, $4C, $4E, $50, $52, $FF
-        BYTE $6A, $5A, $5C, $70, $72, $FF
-        
-        BYTE $20, $3A, $3C, $3E, $28, $FF
-        BYTE $40, $42, $44, $46, $48, $FF
-        BYTE $60, $54, $56, $66, $68, $FF
-        
-        BYTE $2A, $34, $36, $38, $32, $FF
-        BYTE $4A, $4C, $4E, $50, $52, $FF
-        BYTE $6A, $5A, $5C, $70, $72, $FF
-        
-        BYTE $20, $06, $08, $0A, $28, $FF
-        BYTE $40, $42, $44, $46, $48, $FF
-        BYTE $60, $62, $64, $66, $68, $FF
-        
-        BYTE $20, $06, $08, $0A, $28, $FF
-        BYTE $40, $42, $44, $46, $48, $FF
-        BYTE $60, $62, $64, $66, $68, $FF
-        
-        BYTE $0E, $10, $12, $14, $16, $FF
-        BYTE $40, $42, $44, $46, $48, $FF
-        BYTE $60, $62, $64, $66, $68, $FF
+._7922  BYTE    $2A, $2C, $2E, $30, $32, $FF
+        BYTE    $4A, $4C, $4E, $50, $52, $FF
+        BYTE    $6A, $6C, $6E, $70, $72, $FF
+            
+        BYTE    $20, $10, $12, $14, $28, $FF
+        BYTE    $40, $42, $44, $46, $48, $FF
+        BYTE    $60, $62, $64, $66, $68, $FF
+            
+        BYTE    $2A, $16, $18, $1A, $32, $FF
+        BYTE    $4A, $4C, $4E, $50, $52, $FF
+        BYTE    $6A, $6C, $6E, $70, $72, $FF
+            
+        BYTE    $20, $3A, $3C, $3E, $28, $FF
+        BYTE    $40, $42, $44, $46, $48, $FF
+        BYTE    $60, $62, $64, $66, $68, $FF
+            
+        BYTE    $2A, $34, $36, $38, $32, $FF
+        BYTE    $4A, $4C, $4E, $50, $52, $FF
+        BYTE    $6A, $6C, $6E, $70, $72, $FF
+            
+        BYTE    $20, $10, $12, $14, $28, $FF
+        BYTE    $40, $42, $44, $46, $48, $FF
+        BYTE    $60, $54, $56, $66, $68, $FF
+            
+        BYTE    $2A, $16, $18, $1A, $32, $FF
+        BYTE    $4A, $4C, $4E, $50, $52, $FF
+        BYTE    $6A, $5A, $5C, $70, $72, $FF
+            
+        BYTE    $20, $3A, $3C, $3E, $28, $FF
+        BYTE    $40, $42, $44, $46, $48, $FF
+        BYTE    $60, $54, $56, $66, $68, $FF
+            
+        BYTE    $2A, $34, $36, $38, $32, $FF
+        BYTE    $4A, $4C, $4E, $50, $52, $FF
+        BYTE    $6A, $5A, $5C, $70, $72, $FF
+            
+        BYTE    $20, $06, $08, $0A, $28, $FF
+        BYTE    $40, $42, $44, $46, $48, $FF
+        BYTE    $60, $62, $64, $66, $68, $FF
+            
+        BYTE    $20, $06, $08, $0A, $28, $FF
+        BYTE    $40, $42, $44, $46, $48, $FF
+        BYTE    $60, $62, $64, $66, $68, $FF
+            
+        BYTE    $0E, $10, $12, $14, $16, $FF
+        BYTE    $40, $42, $44, $46, $48, $FF
+        BYTE    $60, $62, $64, $66, $68, $FF
 }
 
 PROC    :_79fa                                  SECTION ::mobs                  ;$79FA
@@ -3210,12 +3348,16 @@ PARAMS  IX`mob          ``Address of the current mob being processed
 
 PROC    :findEmptyMob                           SECTION ::mobs                  ;$7C7B
         ;===============================================================================
-        ;;search through the mob storage and find the first empty mob available
-          (this is used for spawning new mobs, such as bullets);;
+HELP ```search through the mob storage and find the first empty mob available
+        (this is used when spawning new mobs, such as bullets)
+        ```
+RETURN  AF              ``carry is set if no mob was found
+        B               ``mob slot index number (0-31)
+        HL              ``address of the empty mob slot selected
 {
         ld      hl,$.MOBS
         ld      de,#mob.size
-        ld      b, 31
+        ld      b, 31                           ;number of mob slots, less Sonic?
         
 .loop   ld      a,[hl]
         cp      $FF                             ;"No Mob" number

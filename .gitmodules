@@ -2,6 +2,3 @@
 	path = CODE/blu
 	url = git://github.com/Kroc/blu.git
         
-[submodule "CODE/SIXTH"]
-	path = CODE/SIXTH
-	url = git://github.com/Kroc/SIXTH.git

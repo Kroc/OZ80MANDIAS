@@ -1,164 +1,186 @@
-;; Sonic 1 Master System Disassembly <github.com/Kroc/Sonic1-SMS-OZ80>
-   for MaSS1VE: The Master System Sonic 1 Visual Editor <github.com/Kroc/MaSS1VE>
-   using OZ80MANDIAS, a high-level Z80 assembler <github.com/Kroc/OZ80MANDIAS>
-   -------------------------------------------------------------------------------------
-   created by Kroc Camen <kroc@camendesign.com> and given to the Public Domain;
-   you may do anything you like with this code as long as you respect the TradeMarks
-   and (any) Copyrights within. absolutely no warranty implied
-   =====================================================================================
+;; Sonic 1 Master System Disassembly:
+   created by Kroc Camen <kroc@camendesign.com> and given to the Public Domain; you may do anything
+   you like with this code as long as you respect the TradeMarks and (any) Copyrights within.
+   absolutely no warranty implied
 ;;
 
-PROC    :mob_sonic                              SECTION ::mobs                  ;$48C8
-        ;===============================================================================
+;; the mob's ID is an index number in a table of pointers to each mob's code
+   (defined in "/mob.oz80"). we add this mob to the list, which assigns its ID
+   via the `!MOBS` enum
+;;
+ROW     .sonic                                              TABLE :mobPointers              ;=$00
+        ;-------------------------------------------------------------------------------------------
+{       ;for the original ROM, `!MOBS.sonic` = $00
+        WORD    :mob_sonic                      
+}
+
+;define the off-screen boundaries for this mob:
+;(this table must be in the same order as the ":mobPointers" table mentioned above)
+
+ROW     .                                                   TABLE :mobBounds
+        ;-------------------------------------------------------------------------------------------
+{
+        ;; 1. the X-distance the mob can be left of the camera without despawning 
+           2. the X-distance the mob can be right of the camera without despawning
+              NOTE: this has to include the screen width of $0100 (256)
+           3. the Y-distance the mob can be above the camera without despawning
+           4. the Y-distance the mob can be below of the camera without despawning
+              NOTE: this has to include the screen height of $00C0 (192)
+        ;;
+        WORD    $0100 $0200 $0100 $0200
+}
+
+PROC    :mob_sonic                                          SECTION ::mobs                  ;$49C8
+        ;===========================================================================================
 PARAMS  IX`mob          ``Address of the current mob being processed
         IY`vars         ``Address of the common variables (used throughout)
 {       
-        res     1,[IY`vars+#vars.unknown0]
+        res     1   [IY`vars+#vars.unknown0]
         
-        bit     7,[IX`mob+#mob.flags]
-        call    nz,._4e88
+        bit     7   [IX`mob+#mob.flags]
+        call    nz  ._4e88
         
         ;flag to update the Sonic sprite frame
-        set     7,[IY`vars+#vars.timeLightningFlags]
+        set     7   [IY`vars+#vars.timeLightningFlags]
         
         ;is Sonic dead?
-        bit     0,[IY`vars+#vars.scrollRingFlags]
-        jp      nz,._543c
+        bit     0   [IY`vars+#vars.scrollRingFlags]
+        jp      nz  ._543c
         
         ;;reduce this number until it hits 0. appears to only be set when changing
           direction from left to right; something to do with acceleration/skidding?;;
-        ld      A,[$.SONIC.unknown16]
+        ld      A                   [$.SONIC.unknown16]
         and     A
-        call    nz,._4ff0
+        call    nz  ._4ff0
         
         ;;configure the flags on Sonic so that he adheres to the ground.
           I'm not sure why this is done every frame;;
-        res     5,[IX`mob+#mob.flags]
+        res     5   [IX`mob+#mob.flags]
         
         ;is Sonic in damage state?
-        bit     6,[IY`vars+#vars.flags6]
-        call    nz,._510a
+        bit     6   [IY`vars+#vars.flags6]
+        call    nz  ._510a
         
-        ld      A,[$.D28C]
+        ld      A                   [$.D28C]
         and     A
-        call    nz,._568f
+        call    nz  ._568f
         
         ;special stage? (time is centred)
-        bit     0,[IY`vars+#vars.timeLightningFlags]
-        call    nz,._5100
+        bit     0   [IY`vars+#vars.timeLightningFlags]
+        call    nz  ._5100
         
-        bit     0,[IY`vars+#vars.unknown0]
-        call    nz,._4ff5
+        bit     0   [IY`vars+#vars.unknown0]
+        call    nz  ._4ff5
         
         ;is Sonic underwater? -- count down oxygen...
-        bit     4,[IX`mob+#mob.flags]           ;check mob underwater flag
-        call    nz,.drownTimer
+        bit     4   [IX`mob+#mob.flags]                     ;check mob underwater flag
+        call    nz  .drownTimer
         
-        ld      A,[$.D28B]
+        ld      A                   [$.D28B]
         and     A
-        call    nz,._5285
+        call    nz  ._5285
         
-        ld      A,[$.D28A]
+        ld      A                   [$.D28A]
         and     A
-        jp      nz,._5117
+        jp      nz  ._5117
         
-        bit     6,[IY`vars+#vars.unknown0]
-        jp      nz,._5193
+        bit     6   [IY`vars+#vars.unknown0]
+        jp      nz  ._5193
         
-        bit     7,[IY`vars+#vars.unknown0]
-        call    nz,._529c
+        bit     7   [IY`vars+#vars.unknown0]
+        call    nz  ._529c
         
-        ;...............................................................................
+        ;...........................................................................................
         
-        bit     4,[IX`mob+#mob.flags]           ;mob underwater?
-        jp      z,._1
+        bit     4   [IX`mob+#mob.flags]                     ;mob underwater?
+        jp      z   ._1
         
-        ld      HL          ._4ddd
-        ld      DE          $.TEMP1
-        ld      BC          $0009
+        ld      HL                  ._4ddd
+        ld      DE                  $.TEMP1
+        ld      BC                  $0009
         ldir    
         
-        ld      HL          $0100
-        ld      [$.D240]    HL
-        ld      HL          $FD80
-        ld      [$.D242]    HL
-        ld      HL          $0010
-        ld      [$.D244]    HL
+        ld      HL                  $0100
+        ld      [$.D240]            HL
+        ld      HL                  $FD80
+        ld      [$.D242]            HL
+        ld      HL                  $0010
+        ld      [$.D244]            HL
         jp      ._5
         
-        ;...............................................................................
+        ;...........................................................................................
         
-._1     ld      A,[IX`mob+#mob.unknown15]
+._1     ld      A                   [IX`mob+#mob.unknown15]
         and     A
-        jr      nz,._4
+        jr      nz  ._4
         
         ;special stage?
-        bit     0,[IY`vars+#vars.timeLightningFlags]
-        jr      nz,._3
+        bit     0   [IY`vars+#vars.timeLightningFlags]
+        jr      nz  ._3
         
-._2     ld      HL          ._4dcb
-        ld      DE          $.TEMP1
-        ld      BC          $0009
-        ldir    
-        
-        ld      HL          $0300
-        ld      [$.D240]    HL
-        ld      HL          $FC80
-        ld      [$.D242]    HL
-        ld      HL          $0038
-        ld      [$.D244]    HL
-        ld      HL          [$DC0C]
-        ld      [$DC0A]     HL
+._2     ld      HL                  ._4dcb
+        ld      DE                  $.TEMP1
+        ld      BC                  $0009
+        ldir        
+            
+        ld      HL                  $0300
+        ld      [$.D240]            HL
+        ld      HL                  $FC80
+        ld      [$.D242]            HL
+        ld      HL                  $0038
+        ld      [$.D244]            HL
+        ld      HL                  [$DC0C]
+        ld      [$DC0A]             HL
         jp      ._5
         
-._3     bit     7,[IX`mob+#mob.flags]
-        jr      nz,._2
+._3     bit     7   [IX`mob+#mob.flags]
+        jr      nz  ._2
         
-        ld      HL          ._4dd4
-        ld      DE          $.TEMP1
-        ld      BC          $0009
-        ldir    
-        
-        ld      HL          $0c00
-        ld      [$.D240]    HL
-        ld      HL          $fc80
-        ld      [$.D242]    HL
-        ld      HL          $0038
-        ld      [$.D244]    HL
-        ld      HL          [$DC0C]
-        ld      [$DC0A]     HL
+        ld      HL                  ._4dd4
+        ld      DE                  $.TEMP1
+        ld      BC                  $0009
+        ldir        
+            
+        ld      HL                  $0C00
+        ld      [$.D240]            HL
+        ld      HL                  $FC80
+        ld      [$.D242]            HL
+        ld      HL                  $0038
+        ld      [$.D244]            HL
+        ld      HL                  [$DC0C]
+        ld      [$DC0A]             HL
         jp      ._5
         
-._4     ld      HL          ._4de6
-        ld      DE          $.TEMP1
-        ld      BC          $0009
-        ldir
-        
-        ld      HL          $0600
-        ld      [$.D240]    HL
-        ld      HL          $FC80
-        ld      [$.D242]    HL
-        ld      HL          $0038
-        ld      [$.D244]    HL
-        ld      HL          [$DC0C]
-        inc     HL
-        ld      [$DC0A]     HL
-        
-        ld      A           [$.FRAMECOUNT]
+._4     ld      HL                  ._4de6
+        ld      DE                  $.TEMP1
+        ld      BC                  $0009
+        ldir    
+            
+        ld      HL                  $0600
+        ld      [$.D240]            HL
+        ld      HL                  $FC80
+        ld      [$.D242]            HL
+        ld      HL                  $0038
+        ld      [$.D244]            HL
+        ld      HL                  [$DC0C]
+        inc     HL  
+        ld      [$DC0A]             HL
+            
+        ld      A                   [$.FRAMECOUNT]
         and     %00000011
-        call    z,._4fec
+        call    z   ._4fec
         
-        ;-------------------------------------------------------------------------------
+        ;-------------------------------------------------------------------------------------------
         
         ;is up pressed on the joypad?
-._5     bit     1,[IY`vars+#vars.joypad]        ;joypad up?
-        call    z,._50c1
+._5     bit     1   [IY`vars+#vars.joypad]                  ;joypad up?
+        call    z   ._50c1
         
-        bit     1,[IY`vars+#vars.joypad]        ;joypad not up?
-        call    nz,._50e3
+        bit     1   [IY`vars+#vars.joypad]                  ;joypad not up?
+        call    nz  ._50e3
         
         ;handle collision with tile underneath Sonic:
-        ;-------------------------------------------------------------------------------
+        ;-------------------------------------------------------------------------------------------
         
         ld      A`bank                  15
         ld      [$_SMS.MAPPER.SLOT2]    A`bank
@@ -169,768 +191,768 @@ PARAMS  IX`mob          ``Address of the current mob being processed
         ;  (180) (144) (160) (192) (192) (216) (128)
         
         ;locate which block is underneath Sonic?
-        ld      BC`xOff         12
-        ld      DE`yOff         16
+        ld      BC`xOff             12
+        ld      DE`yOff             16
         call    :getFloorLayoutRAMAddressForMob
         
         ;get the block index from the Floor Layout address returned
-        ld      E`block         [HL`addr]
-        ld      D`zero          0
+        ld      E`block             [HL`addr]
+        ld      D`zero              0
         
         ;get the solidity index for the current level
-        ld      A`solidity      [$.LEVEL_SOLIDITY]
+        ld      A`solidity          [$.LEVEL_SOLIDITY]
         ;double it to look it up in a list of pointers (2 bytes each)
-        add     A`solidity      A`solidity
+        add     A`solidity          A`solidity
         ;transfer it into HL so as to add it to the pointer table address
-        ld      L`solidity      A`solidity
-        ld      H`solidity      D`zero
+        ld      L`solidity          A`solidity
+        ld      H`solidity          D`zero
         ;access the table of data offsets at $3F9ED (bank 15)
-        ld      BC`table        $B9ED           ;=$3F9ED
+        ld      BC`table            $B9ED                   ;=$3F9ED
         ;lookup the solidity index in the table of offsets
-        add     HL`solidity     BC`table
+        add     HL`solidity         BC`table
         ;read the 2-byte offset value into HL
-        ld      A`offset        [HL`table]
+        ld      A`offset            [HL`table]
         inc     HL`table
-        ld      H`offset        [HL`table]
-        ld      L`offset        A`offset
+        ld      H`offset            [HL`table]
+        ld      L`offset            A`offset
         ;make an absolute address: $3F9ED + offset for solidity + block index
-        add     HL`offset       DE`block
-        add     HL`offset       BC`table
+        add     HL`offset           DE`block
+        add     HL`offset           BC`table
         ;read the byte of data for the particular block index
-        ld      A`data          [HL`data]
+        ld      A`data              [HL`data]
         ;if it's higher than the number of solidity types, skip ahead
-        cp      $1C                             ;=number of entries in ._58e5
-        jr      nc,.callback
+        cp      $1C                                         ;=number of entries in ._58e5
+        jr      nc  .callback
         
         ;double the data byte read
          ;and transfer to HL for 16-bit use
-        add     A`data          A`data
-        ld      L               A`data
-        ld      H               D`zero
-        ld      DE              ._58e5
-        add     HL              DE
+        add     A`data              A`data
+        ld      L                   A`data
+        ld      H                   D`zero
+        ld      DE                  ._58e5
+        add     HL                  DE
         ;load HL with the address in the lookup table
-        ld      A               [HL]
+        ld      A                   [HL]
         inc     HL
-        ld      H               [HL]
-        ld      L               A
+        ld      H                   [HL]
+        ld      L                   A
         
         ;load DE with the callback address
-        ld      DE`callback     .callback
+        ld      DE`callback         .callback
         
         ;switch back to the regular bank layout (where the mob code is)
-        ld      A`bank          2
-        ld      [$_SMS.MAPPER.SLOT2]   A`bank
-        ld      [$.SLOT2]       A`bank
+        ld      A`bank                  2
+        ld      [$_SMS.MAPPER.SLOT2]    A`bank
+        ld      [$.SLOT2]               A`bank
         
-        ;;keep a copy of the callback address
-          and jump to the specific solidity routine for the tile under Sonic;;
+        ;; keep a copy of the callback address
+           and jump to the specific solidity routine for the tile under Sonic ;;
         push    DE`callback
         jp      [HL]
         
 .callback
         ;has Sonic fallen out of the level?
-        ;-------------------------------------------------------------------------------
-        ld      HL`sonicY       [$.SONIC.Y]
-        ld      DE`sonicH       $0024           ;height of Sonic?
-        add     HL`sonicY       DE`sonicH
+        ;-------------------------------------------------------------------------------------------
+        ld      HL`sonicY           [$.SONIC.Y]
+        ld      DE`sonicH           $0024                   ;height of Sonic?
+        add     HL`sonicY           DE`sonicH
         ex      DE, HL
-        ld      HL`levelBottom  [$.LEVEL_BOTTOM]
-        ld      BC`screenH      $00C0           ;height of the screen
-        add     HL`levelBottom  BC`screenH
-        xor     A`flags                         ;set A to zero, clearing the carry flag
-        sbc     HL`levelBottom  DE`sonicY
-        call    c,:hitPlayer.kill               ;if over, die!
+        ld      HL`levelBottom      [$.LEVEL_BOTTOM]
+        ld      BC`screenH          $00C0                   ;height of the screen
+        add     HL`levelBottom      BC`screenH
+        xor     A`flags                                     ;set A to zero, clearing the carry flag
+        sbc     HL`levelBottom      DE`sonicY
+        call    c   :hitPlayer.kill                         ;if over, die!
         
         ;idle timer:
-        ;-------------------------------------------------------------------------------
-        ld      HL`timer        $0000           ;reset the idle timer?
+        ;-------------------------------------------------------------------------------------------
+        ld      HL`timer            $0000                   ;reset the idle timer?
         
-        ld      A,[IY`vars+#vars.joypad]        ;check joypad state
-        cp      $FF                             ;is any button being pressed?
-        jr      nz,._7                          ;skip the idle timer update
+        ld      A                   [IY`vars+#vars.joypad]  ;check joypad state
+        cp      $FF                                         ;is any button being pressed?
+        jr      nz  ._7                                     ;skip the idle timer update
         
         ;is player moving left or right?
-        ld      DE,[$.SONIC.Xspeed]             ;get the horizontal speed
-        ld      A,E                             ;shift E into A for next instruction
-        or      D                               ;combine E & D
-        jr      nz,._7                          ;if it's not zero, skip
+        ld      DE                  [$.SONIC.Xspeed]        ;get the horizontal speed
+        ld      A                   E                       ;shift E into A for next instruction
+        or      D                                           ;combine E & D
+        jr      nz  ._7                                     ;if it's not zero, skip
         
-        ld      A,[$.SONIC.flags]
+        ld      A                   [$.SONIC.flags]
         rlca    
-        jr      nc,._7
+        jr      nc  ._7
         
-        ld      HL`timer        [$.IDLE_TIME]
+        ld      HL`timer            [$.IDLE_TIME]
         inc     HL`timer
         
         ;update the idle timer
-._7     ld      [$.IDLE_TIME]   HL`timer
+._7     ld      [$.IDLE_TIME]       HL`timer
         
-        ;-------------------------------------------------------------------------------
+        ;-------------------------------------------------------------------------------------------
         
-        bit     7,[IY`vars+#vars.flags6]
-        call    nz,._50e8
+        bit     7   [IY`vars+#vars.flags6]
+        call    nz  ._50e8
         
-        ld      [IX`mob+#mob.unknown14],$05
-        ld      HL`idleTime     [$.IDLE_TIME]
-        ld      DE`idleWait     $0168           ;idle time until waiting animation
-        and     A`zero                          ;clear the carry flag for below
-        sbc     HL`idleTime     DE`idleWait
-        call    nc,._5105
+        ld      [IX`mob+#mob.unknown14] $05
+        ld      HL`idleTime         [$.IDLE_TIME]
+        ld      DE`idleWait         !IDLE_TIME              ;idle time until waiting animation
+        and     A`zero                                      ;clear the carry flag for below
+        sbc     HL`idleTime         DE`idleWait
+        call    nc  ._5105
         
         ;is up pressed?
-        ld      A,[IY`vars+#vars.joypad]
+        ld      A                   [IY`vars+#vars.joypad]
         cp      %11111110
-        call    z,._4edd
+        call    z   ._4edd
         
         ;up not pressed?
-        bit     0,[IY`vars+#vars.joypad]
-        call    nz,._4fd3
+        bit     0   [IY`vars+#vars.joypad]
+        call    nz  ._4fd3
         
-        bit     0,[IX`mob+#mob.flags]
-        jp      nz,._532e
+        bit     0   [IX`mob+#mob.flags]
+        jp      nz  ._532e
         
-        `;ducking or spinning?
-        ld      A,[IX`mob+#mob.height]
+        ;ducking or spinning?
+        ld      A                   [IX`mob+#mob.height]
         cp      $20
-        jr      z,._8
+        jr      z   ._8
         
         ;falling?
-        ld      HL          [$.SONIC.Y]
-        ld      DE          $FFF8
-        add     HL          DE
-        ld      [$.SONIC.Y] hl
+        ld      HL                  [$.SONIC.Y]
+        ld      DE                  $FFF8
+        add     HL                  DE
+        ld      [$.SONIC.Y]         HL
         
 ._8     ld      [IX`mob+#mob.width]     $18
         ld      [IX`mob+#mob.height]    $20
-        ld      HL,[$.SONIC.Xspeed]
-        ld      B,[IX`mob+#mob.Xdirection]
-        ld      C,$00
-        ld      E,C
-        ld      D,C
+        ld      HL                  [$.SONIC.Xspeed]
+        ld      B                   [IX`mob+#mob.Xdirection]
+        ld      C                   $00
+        ld      E                   C
+        ld      D                   C
         
         ;is right pressed?
-        bit     3,[IY`vars+#vars.joypad]
-        jp      z,._4f01
+        bit     3   [IY`vars+#vars.joypad]
+        jp      z   ._4f01
         
         ;is left pressed?
-        bit     2,[IY`vars+#vars.joypad]
-        jp      z,._4f5c
+        bit     2   [IY`vars+#vars.joypad]
+        jp      z   ._4f5c
         
-        ld      A,H
+        ld      A                   H
         or      L
         or      B
-        jr      z,._4b1b
+        jr      z   ._4b1b
         
-        ld      [IX`mob+#mob.unknown14],$01
-        bit     7,B
-        jr      nz,._9
+        ld      [IX`mob+#mob.unknown14] $01
+        bit     7   B
+        jr      nz  ._9
         
-        ld      DE,[$.TEMP4]
-        ld      A,E
+        ld      DE                  [$.TEMP4]
+        ld      A                   E
         cpl     
-        ld      E,A
-        ld      A,D
+        ld      E                   A
+        ld      A                   D
         cpl     
-        ld      d,a
+        ld      D                   A
         inc     DE
-        ld      C,$FF
+        ld      C                   $FF
         
         push    HL
         push    DE
-        ld      DE,[$.D240]
+        ld      DE                  [$.D240]
         xor     A`zero
-        sbc     HL,DE
+        sbc     HL                  DE
         pop     DE
         pop     HL
-        jr      c,._4b1b
+        jr      c   ._4b1b
         
-        ld      DE,[$.TEMP1]
-        ld      A,E
+        ld      DE                  [$.TEMP1]
+        ld      A                   E
         cpl     
-        ld      E,A
-        ld      A,D
+        ld      E                   A
+        ld      A                   D
         cpl     
-        ld      D,A
+        ld      D                   A
         inc     DE
-        ld      C,$FF
-        ld      A,[$.D216]
-        ld      [IX`mob+#mob.unknown14],A
+        ld      C                   $FF
+        ld      A                   [$.D216]
+        ld      [IX`mob+#mob.unknown14] A
         jp      ._4b1b
         
-._9     ld      DE,[$.TEMP4]
-        ld      C,$00
+._9     ld      DE                  [$.TEMP4]
+        ld      C                   $00
         
         push    HL
         push    DE
-        ld      A,L
+        ld      A                   L
         cpl     
-        ld      L,A
-        ld      A,H
+        ld      L                   A
+        ld      A                   H
         cpl     
-        ld      H,A
+        ld      H                   A
         inc     HL
-        ld      DE,[$.D240]
+        ld      DE                  [$.D240]
         xor     A`zero
-        sbc     HL,DE
+        sbc     HL                  DE
         pop     DE
         pop     HL
         
-        jr      C,._4b1b
-        ld      DE,[$.TEMP1]
-        ld      A,[$.D216]
-        ld      [IX`mob+#mob.unknown14],A
+        jr      c   ._4b1b
+        ld      DE                  [$.TEMP1]
+        ld      A                   [$.D216]
+        ld      [IX`mob+#mob.unknown14] A
 ._4b1b
-        ld      A,B
+        ld      A                   B
         and     A
-        jp      m,._10
-        add     HL,DE
-        adc     A,C
-        ld      C,A
-        jp      p,._11
-        ld      A,[$.SONIC.Xspeed]
+        jp      m   ._10
+        add     HL                  DE
+        adc     A                   C
+        ld      C                   A
+        jp      p   ._11
+        ld      A                   [$.SONIC.Xspeed]
         or      [IX`mob+#mob.Xspeed+1]
         or      [IX`mob+#mob.Xdirection]
-        jr      z,._11
-        ld      C,$00
-        ld      L,C
-        ld      H,C
+        jr      z   ._11
+        ld      C                   $00
+        ld      L                   C
+        ld      H                   C
         jp      ._11
         
-._10    add     HL,DE
-        adc     A,C
-        ld      C,A
-        jp      m,._11
-        ld      C,$00
-        ld      L,C
-        ld      H,C
-._11    ld      A,C
-        ld      [$.SONIC.Xspeed],HL
-        ld      [$.SONIC.Xdirection],A
+._10    add     HL                  DE
+        adc     A                   C
+        ld      C                   A
+        jp      m   ._11
+        ld      C                   $00
+        ld      L                   C
+        ld      H                   C
+._11    ld      A                   C
+        ld      [$.SONIC.Xspeed]    HL
+        ld      [$.SONIC.Xdirection]    A
 ._4b49
-        ld      HL,[$.SONIC.Yspeed]
-        ld      B,[IX`mob+#mob.Ydirection]
-        ld      C,$00
-        ld      E,C
-        ld      D,C
-        bit     7,[IX`mob+#mob.flags]
-        call    nz,._50af
-        bit     0,[IX`mob+#mob.flags]
-        jp      nz,._5407
-        ld      A,[$.D28E]
+        ld      HL                  [$.SONIC.Yspeed]
+        ld      B                   [IX`mob+#mob.Ydirection]
+        ld      C                   $00
+        ld      E                   C
+        ld      D                   C
+        bit     7   [IX`mob+#mob.flags]
+        call    nz  ._50af
+        bit     0   [IX`mob+#mob.flags]
+        jp      nz  ._5407
+        ld      A                   [$.D28E]
         and     A
-        jr      nz,._12
-        bit     7,[IX`mob+#mob.flags]
-        jr      z,._13
-        bit     3,[IX`mob+#mob.flags]
-        jr      nz,._12
+        jr      nz  ._12
+        bit     7   [IX`mob+#mob.flags]
+        jr      z   ._13
+        bit     3   [IX`mob+#mob.flags]
+        jr      nz  ._12
         ;button 2 pressed?
-        bit     5,[IY`vars+#vars.joypad]
-        jr      z,._13
+        bit     5   [IY`vars+#vars.joypad]
+        jr      z   ._13
         ;button 2 not pressed?
-._12    bit     5,[IY`vars+#vars.joypad]
-        jr      nz,._14
+._12    bit     5   [IY`vars+#vars.joypad]
+        jr      nz  ._14
 ._4b7f
-        ld      A,[$.D28E]
+        ld      A                   [$.D28E]
         and     A
-        call    z,._509d
-        ld      HL,[$.D242]
-        ld      B,$ff
-        ld      C,$00
-        ld      E,C
-        ld      D,C
-        ld      A,[$.D28E]
+        call    z   ._509d
+        ld      HL                  [$.D242]
+        ld      B                   $FF
+        ld      C                   $00
+        ld      E                   C
+        ld      D                   C
+        ld      A                   [$.D28E]
         dec     A
-        ld      [$.D28E],A
-        set     2,[IX`mob+#mob.flags]
+        ld      [$.D28E]            A
+        set     2   [IX`mob+#mob.flags]
         jp      ._17
         
-._13    res     3,[IX`mob+#mob.flags]
+._13    res     3   [IX`mob+#mob.flags]
         jp      ._15
         
-._14    set     3,[IX`mob+#mob.flags]
+._14    set     3   [IX`mob+#mob.flags]
 ._15    xor     A`zero
-        ld      [$.D28E],A`zero
+        ld      [$.D28E]            A`zero
 ._4bac
-        bit     7,H
-        jr      nz,._16
-        ld      A,[$.TEMP7]
+        bit     7                   H
+        jr      nz  ._16
+        ld      A                   [$.TEMP7]
         cp      H
-        jr      z,._17
-        jr      C,._17
-._16    ld      DE,[$.D244]
-        ld      C,$00
+        jr      z   ._17
+        jr      c   ._17
+._16    ld      DE                  [$.D244]
+        ld      C                   $00
         
-._17    bit     0,[IY`vars+#vars.flags6]
-        jr      z,._18
+._17    bit     0   [IY`vars+#vars.flags6]
+        jr      z   ._18
         
         push    HL
-        ld      A,E
+        ld      A                   E
         cpl     
-        ld      E,A
-        ld      A,D
+        ld      E                   A
+        ld      A                   D
         cpl     
-        ld      D,A
-        ld      A,C
+        ld      D                   A
+        ld      A                   C
         cpl     
-        ld      HL,$0001
-        add     HL,DE
-        ex      DE,HL
-        adc     A,$00
-        ld      C,A
+        ld      HL                  $0001
+        add     HL                  DE
+        ex      DE                  HL
+        adc     A                   $00
+        ld      C                   A
         pop     HL
-._18    add     HL,DE
-        ld      A,B
-        adc     A,C
-        ld      [$.SONIC.Yspeed],HL
-        ld      [$.SONIC.Ydirection],A
+._18    add     HL                  DE
+        ld      A                   B
+        adc     A                   C
+        ld      [$.SONIC.Yspeed]    HL
+        ld      [$.SONIC.Ydirection]    A
         push    HL
-        ld      A,E
+        ld      A                   E
         cpl     
-        ld      L,A
-        ld      A,D
+        ld      L                   A
+        ld      A                   D
         cpl     
-        ld      H,A
-        ld      A,C
+        ld      H                   A
+        ld      A                   C
         cpl     
-        ld      DE,$0001
-        add     HL,DE
-        adc     A,$00
-        ld      [$.D2E6],HL
-        ld      [$.D2E8],A
+        ld      DE                  $0001
+        add     HL                  DE
+        adc     A                   $00
+        ld      [$.D2E6]            HL
+        ld      [$.D2E8]            A
         pop     HL
-        bit     2,[IX+#mob.flags]
-        call    nz,._5280
-        ld      A,H
+        bit     2   [IX+#mob.flags]
+        call    nz  ._5280
+        ld      A                   H
         and     A
-        jp      p,._19
-        ld      A,H
+        jp      p   ._19
+        ld      A                   H
         cpl     
-        ld      H,A
-        ld      A,L
+        ld      H                   A
+        ld      A                   L
         cpl     
-        ld      L,A
+        ld      L                   A
         inc     HL
-._19    ld      DE,$0100
-        ex      DE,HL
+._19    ld      DE                  $0100
+        ex      DE                  HL
         and     A
-        sbc     HL,DE
-        jr      nc,._21
-        ld      A,[$.SONIC.flags]
+        sbc     HL                  DE
+        jr      nc  ._21
+        ld      A                   [$.SONIC.flags]
         and     $85
-        jr      nz,._21
-        bit     7,[IX`mob+#mob.Ydirection]
-        jr      z,._20
-        ld      [IX`mob+#mob.unknown14],$13
+        jr      nz  ._21
+        bit     7   [IX`mob+#mob.Ydirection]
+        jr      z   ._20
+        ld      [IX`mob+#mob.unknown14] $13
         jr      ._21
-._20    ld      [IX`mob+#mob.unknown14],$01
-._21    ld      BC,$000c
-        ld      DE,$0008
+._20    ld      [IX`mob+#mob.unknown14] $01
+._21    ld      BC                  $000c
+        ld      DE                  $0008
         call    :getFloorLayoutRAMAddressForMob
-        ld      A,[HL]
-        and     $7f
+        ld      A                   [HL]
+        and     $7F
         cp      $79
-        call    nc,._4def
+        call    nc  ._4def
 ._4c39
-        ld      A,[$.D28C]
+        ld      A                   [$.D28C]
         and     A
-        call    nz,._51b3
-        bit     6,[IY`vars+#vars.flags6]
-        call    nz,._51bc
-        bit     2,[IY`vars+#vars.unknown0]
-        call    nz,._51dd
-        ld      A,[$.SONIC.unknown14]
-        cp      $0a
-        call    z,._51f3
-        ld      l,[ix+#mob.unknown14]
-        ld      c,l
-        ld      h,$00
-        add     hl,hl
-        ld      de,._5965
-        add     hl,de
-        ld      e,[hl]
-        inc     hl
-        ld      d,[hl]
-        ld      [$.SONIC.unknown11],de
-        ld      a,[$.D2DF]
-        sub     c
-        call    nz,._521f
-        ld      a,[$.SONIC.unknown13]
+        call    nz  ._51b3
+        bit     6   [IY`vars+#vars.flags6]
+        call    nz  ._51bc
+        bit     2   [IY`vars+#vars.unknown0]
+        call    nz  ._51dd
+        ld      A                   [$.SONIC.unknown14]
+        cp      $0A
+        call    z   ._51f3
+        ld      L                   [IX`mob+#mob.unknown14]
+        ld      C                   L
+        ld      H                   $00
+        add     HL                  HL
+        ld      DE                  ._5965
+        add     HL                  DE
+        ld      E                   [HL]
+        inc     HL
+        ld      D                   [HL]
+        ld      [$.SONIC.unknown11] DE
+        ld      A                   [$.D2DF]
+        sub     C
+        call    nz  ._521f
+        ld      A                   [$.SONIC.unknown13]
         
-._22    ld      h,$00
-        ld      l,a
-        add     hl,de
-        ld      a,[hl]
-        and     a
-        jp      p,._23
-        inc     hl
-        ld      a,[hl]
-        ld      [$.SONIC.unknown13],a
+._22    ld      H                   $00
+        ld      L                   A
+        add     HL                  DE
+        ld      A                   [HL]
+        and     A
+        jp      p   ._23
+        inc     HL
+        ld      A                   [HL]
+        ld      [$.SONIC.unknown13] A
         jp      ._22
         
-._23    ld      d,a
-        ld      bc,::sound:public.update
-        bit     1,[ix+#mob.flags]
-        jr      z,._24
-        ld      bc,:_7000                       ;immediate $7000 or label?
-._24    bit     5,[iy+#vars.flags6]
-        call    nz,._5206
-        ld      a,[$.D302]
-        and     a
-        call    nz,._4e48
-        ld      a,d
+._23    ld      D                   A
+        ld      BC                  ::sound:public.update
+        bit     1   [IX`mob+#mob.flags]
+        jr      z   ._24
+        ld      BC                  :_7000                  ;immediate $7000 or label?
+._24    bit     5   [IY`mob+#vars.flags6]
+        call    nz  ._5206
+        ld      A                   [$.D302]
+        and     A
+        call    nz                  ._4e48
+        ld      A                   D
         rrca    
         rrca    
         rrca    
-        ld      e,a
-        and     $e0
-        ld      l,a
-        ld      a,e
-        and     $1f
-        add     a,d
-        ld      h,a
-        add     hl,bc
-        ld      [$.SONIC_CURRENT_FRAME],hl
-        ld      hl,._591d
+        ld      E                   A
+        and     $E0
+        ld      L                   A
+        ld      A                   E
+        and     $1F
+        add     A                   D
+        ld      H                   A
+        add     HL                  BC
+        ld      [$.SONIC_CURRENT_FRAME] HL
+        ld      HL                  ._591d
         
-        bit     0,[iy+#vars.flags6]
-        call    nz,._520f
+        bit     0   [IY`vars+#vars.flags6]
+        call    nz  ._520f
         
-        ld      a,[$.SONIC.unknown14]
+        ld      A                   [$.SONIC.unknown14]
         cp      $13
-        call    z,._5213
-        ld      a,[$.D302]
-        and     a
-        call    nz,._4e4d
-        ld      [$.SONIC.spriteLayout],hl
-        ld      c,$10
-        ld      a,[$.SONIC.Xspeed+1]
-        and     a
-        jp      p,._25
+        call    z   ._5213
+        ld      A                   [$.D302]
+        and     A
+        call    nz  ._4e4d
+        ld      [$.SONIC.spriteLayout]  HL
+        ld      C                   $10
+        ld      A                   [$.SONIC.Xspeed+1]
+        and     A
+        jp      p   ._25
         neg     
-        ld      c,$f0
+        ld      C                   $F0
 ._25    cp      $10
-        jr      c,._26
-        ld      a,c
-        ld      [$.SONIC.Xspeed+1],a
-._26    ld      c,$10
-        ld      a,[$.SONIC.Yspeed+1]
-        and     a
-        jp      p,._27
+        jr      c   ._26
+        ld      A                   C
+        ld      [$.SONIC.Xspeed+1]  A
+._26    ld      C                   $10
+        ld      A                   [$.SONIC.Yspeed+1]
+        and     A
+        jp      p   ._27
         neg     
-        ld      c,$f0
+        ld      C                   $F0
 ._27    cp      $10
-        jr      c,._28
-        ld      a,c
-        ld      [$.SONIC.Yspeed+1],a
-._28    ld      de,[$.SONIC.Y]
-        ld      hl,$0010
-        and     a
-        sbc     hl,de
-        jr      c,._29
-        add     hl,de
-        ld      [$.SONIC.Y],hl
-._29    bit     7,[iy+#vars.flags6]
-        call    nz,._5224
-        bit     0,[iy+#vars.unknown0]
-        call    nz,._4e8d
-        ld      a,[$.D2E1]
-        and     a
-        call    nz,._5231
-        ld      a,[$.D321]
-        and     a
-        call    nz,._4e51
-        bit     1,[iy+#vars.flags6]
-        jr      nz,._31
-        ld      hl,[$.LEVEL_LEFT]
-        ld      bc,$0008
-        add     hl,bc
-        ex      de,hl
-        ld      hl,[$.SONIC.X]
-        and     a
-        sbc     hl,de
-        jr      nc,._30
-        ld      [$.SONIC.X],de
-        ld      a,[$.SONIC.Xdirection]
-        and     a
-        jp      p,._31
+        jr      c   ._28
+        ld      A                   C
+        ld      [$.SONIC.Yspeed+1]  A
+._28    ld      DE                  [$.SONIC.Y]
+        ld      HL                  $0010
+        and     A
+        sbc     HL                  DE
+        jr      c   ._29
+        add     HL                  DE
+        ld      [$.SONIC.Y]         HL
+._29    bit     7   [IY`vars+#vars.flags6]
+        call    nz  ._5224
+        bit     0   [IY`vars+#vars.unknown0]
+        call    nz  ._4e8d
+        ld      A                   [$.D2E1]
+        and     A
+        call    nz  ._5231
+        ld      A                   [$.D321]
+        and     A
+        call    nz  ._4e51
+        bit     1   [IY`vars+#vars.flags6]
+        jr      nz  ._31
+        ld      HL                  [$.LEVEL_LEFT]
+        ld      BC                  $0008
+        add     HL                  BC
+        ex      DE                  HL
+        ld      HL                  [$.SONIC.X]
+        and     A
+        sbc     HL                  DE
+        jr      nc  ._30
+        ld      [$.SONIC.X]         DE
+        ld      A                   [$.SONIC.Xdirection]
+        and     A
+        jp      p   ._31
         
-        xor     A`zero                          ;(set A to zero)
+        xor     A`zero                                      ;(set A to zero)
         ld      [$.SONIC.Xspeed+0]      A`zero
         ld      [$.SONIC.Xspeed+1]      A`zero
         ld      [$.SONIC.Xdirection]    A`zero
         jp      ._31
         
-._30    ld      hl,[$.LEVEL_RIGHT]
-        ld      de,$00f8                        ;248 -- screen width less 8?
-        add     hl,de
+._30    ld      HL                  [$.LEVEL_RIGHT]
+        ld      DE                  $00F8                   ;248 -- screen width less 8?
+        add     HL                  DE
         
-        ex      de,hl
-        ld      hl,[$.SONIC.X]
-        ld      c,$18
-        add     hl,bc
-        and     a
-        sbc     hl,de
-        jr      c,._31
-        ex      de,hl
+        ex      DE                  HL
+        ld      HL                  [$.SONIC.X]
+        ld      C                   $18
+        add     HL                  BC
+        and     A
+        sbc     HL                  DE
+        jr      c   ._31
+        ex      DE                  HL
         scf     
-        sbc     hl,bc
-        ld      [$.SONIC.X],hl
-        ld      a,[$.SONIC.Xdirection]
-        and     a
-        jp      m,._31
-        ld      hl,[$.SONIC.Xspeed+1]
-        or      h
-        or      l
-        jr      z,._31
+        sbc     HL                  BC
+        ld      [$.SONIC.X]         HL
+        ld      A                   [$.SONIC.Xdirection]
+        and     A
+        jp      m   ._31
+        ld      HL                  [$.SONIC.Xspeed+1]
+        or      H
+        or      L
+        jr      z   ._31
         
-        xor     A`zero                          ;(set A to 0)
+        xor     A`zero                                      ;(set A to 0)
         ld      [$.SONIC.Xspeed+0]      A`zero
         ld      [$.SONIC.Xspeed+1]      A`zero
         ld      [$.SONIC.Xdirection]    A`zero
         
-._31    ld      a,[$.SONIC.flags]
-        ld      [$.D2B9],a
-        ld      a,[$.SONIC.unknown14]
-        ld      [$.D2DF],a
-        ld      d,$01
-        ld      c,$30
+._31    ld      A                   [$.SONIC.flags]
+        ld      [$.D2B9]            A
+        ld      A                   [$.SONIC.unknown14]
+        ld      [$.D2DF]            A
+        ld      D                   $01
+        ld      C                   $30
         cp      $01
-        jr      z,._32
-        ld      d,$06
-        ld      c,$50
+        jr      z   ._32
+        ld      D                   $06
+        ld      C                   $50
         cp      $09
-        jr      z,._32
-        inc     [ix+#mob.unknown13]
+        jr      z   ._32
+        inc     [IX`mob+#mob.unknown13]
         ret
         
-._32    ld      a,[$.D2E0]
-        ld      b,a
-        ld      hl,[$.SONIC.Xspeed]
-        bit     7,h
-        jr      z,._33
-        ld      a,l
+._32    ld      A                   [$.D2E0]
+        ld      B                   A
+        ld      HL                  [$.SONIC.Xspeed]
+        bit     7   H
+        jr      z   ._33
+        ld      A                   L
         cpl     
-        ld      l,a
-        ld      a,h
+        ld      L                   A
+        ld      A                   H
         cpl     
-        ld      h,a
-        inc     hl
-._33    srl     h
-        rr      l
-        ld      a,l
-        add     a,b
-        ld      [$.D2E0],a
-        ld      a,h
-        adc     a,d
-        adc     a,[ix+#mob.unknown13]
-        ld      [$.SONIC.unknown13],a
-        cp      c
+        ld      H                   A
+        inc     HL
+._33    srl     H
+        rr      L
+        ld      A                   L
+        add     A                   B
+        ld      [$.D2E0]            A
+        ld      A                   H
+        adc     A                   D
+        adc     A                   [IX`mob+#mob.unknown13]
+        ld      [$.SONIC.unknown13] A
+        cp      C
         ret     c
-        sub     c
-        ld      [$.SONIC.unknown13],a
+        sub     C
+        ld      [$.SONIC.unknown13] A
         ret     
         
-        ;-------------------------------------------------------------------------------
+        ;-------------------------------------------------------------------------------------------
 
-._4dcb  BYTE    $10, $00, $30, $00, $08, $00, $00, $08, $02                     ;$4DCB
-._4dd4  BYTE    $10, $00, $30, $00, $02, $00, $00, $08, $02                     ;$4DD4
-._4ddd  BYTE    $04, $00, $0c, $00, $02, $00, $00, $02, $01                     ;$4DDD
-._4de6  BYTE    $10, $00, $30, $00, $08, $00, $00, $08, $02                     ;$4DE6
+._4dcb  BYTE    $10 $00 $30 $00 $08 $00 $00 $08 $02                                         ;$4DCB
+._4dd4  BYTE    $10 $00 $30 $00 $02 $00 $00 $08 $02                                         ;$4DD4
+._4ddd  BYTE    $04 $00 $0C $00 $02 $00 $00 $02 $01                                         ;$4DDD
+._4de6  BYTE    $10 $00 $30 $00 $08 $00 $00 $08 $02                                         ;$4DE6
 
-        ;-------------------------------------------------------------------------------
+        ;-------------------------------------------------------------------------------------------
 
-._4def  ex      de,hl                                                           ;$4DEF
+._4def  ex      DE                  HL                                                      ;$4DEF
         
-        ld      hl,[$.SONIC.Y]
-        ld      bc,[$.CAMERA_Y]
-        and     a
-        sbc     hl,bc
+        ld      HL                  [$.SONIC.Y]
+        ld      BC                  [$.CAMERA_Y]
+        and     A
+        sbc     HL                  BC
         ret     c
         
-        ld      bc,$0010
-        and     a
-        sbc     hl,bc
+        ld      BC                  $0010
+        and     A
+        sbc     HL                  BC
         ret     c
         
-        ld      hl,[$.SONIC.X]
-        ld      bc,$000C
-        add     hl,bc
-        ld      a,[de]
-        ld      c,a
-        ld      a,l
+        ld      HL                  [$.SONIC.X]
+        ld      BC                  $000C
+        add     HL                  BC
+        ld      A                   [DE]
+        ld      C                   A
+        ld      A                   L
         rrca    
         rrca    
         rrca    
         rrca    
         and     $01
-        inc     a
-        ld      b,a
-        ld      a,c
-        and     b
+        inc     A
+        ld      B                   A
+        ld      A                   C
+        and     B
         ret     z
-        ld      a,l
+        ld      A                   L
         and     $F0
-        ld      l,a
-        ld      [$.D2AB],hl
-        ld      [$.D31D],hl
-        ld      a,c
-        xor     b
-        ld      [de],a
-        ld      hl,[$.SONIC.Y]
-        ld      bc,$0008
-        add     hl,bc
-        ld      a,l
+        ld      L                   A
+        ld      [$.D2AB]            HL
+        ld      [$.D31D]            HL
+        ld      A                   C
+        xor     B
+        ld      [DE]                A
+        ld      HL                  [$.SONIC.Y]
+        ld      BC                  $0008
+        add     HL                  BC
+        ld      A                   L
         and     $E0
-        add     a,$08
-        ld      l,a
-        ld      [$.D2AD],hl
-        ld      [$.D31F],hl
-        ld      a,$06
-        ld      [$.D321],a
-        ld      hl,._595d
-        ld      [$.D2AF],hl
+        add     A                   $08
+        ld      L                   A
+        ld      [$.D2AD]            HL
+        ld      [$.D31F]            HL
+        ld      A                   $06
+        ld      [$.D321]            A
+        ld      HL                  ._595d
+        ld      [$.D2AF]            HL
         
         ;add one ring to the ring count
-        ld      a,$01
+        ld      A                   $01
         call    :increaseRings
         
         ret
 
-        ;-------------------------------------------------------------------------------
+        ;-------------------------------------------------------------------------------------------
 
-._4e48  ld      d,a                                                             ;$4E48
-        ld      bc,:_7000                       ;immediate $7000 or label?
+._4e48  ld      D                   A                                                       ;$4E48
+        ld      BC                  :_7000                  ;immediate $7000 or label?
         ret
 
-        ;-------------------------------------------------------------------------------
+        ;-------------------------------------------------------------------------------------------
 
-._4e4d  ld      hl,$0000                                                        ;$4E4D
+._4e4d  ld      HL                  $0000                                                   ;$4E4D
         ret
 
-        ;-------------------------------------------------------------------------------
+        ;-------------------------------------------------------------------------------------------
 
-._4e51  dec     a                                                               ;$4E51
-        ld      [$.D321],a
-        ld      hl,[$.D31D]
-        ld      [$.TEMP1],hl
-        ld      hl,[$.D31F]
-        ld      [$.TEMP3],hl
-        ld      hl,$0000
-        ld      [$.TEMP4],hl
-        ld      hl,$fffe
-        ld      [$.TEMP6],hl
+._4e51  dec     A                                                                           ;$4E51
+        ld      [$.D321]            A
+        ld      HL                  [$.D31D]
+        ld      [$.TEMP1]           HL
+        ld      HL                  [$.D31F]
+        ld      [$.TEMP3]           HL
+        ld      HL                  $0000
+        ld      [$.TEMP4]           HL
+        ld      HL                  $FFFE
+        ld      [$.TEMP6]           HL
         cp      $03
-        jr      c,._34
-        ld      a,$b2
+        jr      c   ._34
+        ld      A                   $B2
         call    :_3581
-        ld      hl,$0008
-        ld      [$.TEMP4],hl
-        ld      hl,$0002
-        ld      [$.TEMP6],hl
-._34    ld      a,$5a
+        ld      HL                  $0008
+        ld      [$.TEMP4]           HL
+        ld      HL                  $0002
+        ld      [$.TEMP6]           HL
+._34    ld      A                   $5A
         call    :_3581
         ret
 
-        ;-------------------------------------------------------------------------------
+        ;-------------------------------------------------------------------------------------------
 
-._4e88  set     1,[iy+#vars.unknown0]                                           ;$4E88
+._4e88  set     1   [IY`vars+#vars.unknown0]                                                ;$4E88
         ret
 
-        ;-------------------------------------------------------------------------------
+        ;-------------------------------------------------------------------------------------------
 
-._4e8d  ld      hl,[$.SONIC.X]                                                  ;$4E8D
-        ld      [$.TEMP1],hl
-        ld      hl,[$.SONIC.Y]
-        ld      [$.TEMP3],hl
-        ld      hl,$.D2F3
-        ld      a,[$.FRAMECOUNT]
+._4e8d  ld      HL                  [$.SONIC.X]                                             ;$4E8D
+        ld      [$.TEMP1]           HL
+        ld      HL                  [$.SONIC.Y]
+        ld      [$.TEMP3]           HL
+        ld      HL                  $.D2F3
+        ld      A                   [$.FRAMECOUNT]
         rrca    
         rrca    
-        jr      nc,._35
-        ld      hl,$.D2F7
-._35    ld      de,$.TEMP4
+        jr      nc  ._35
+        ld      HL                  $.D2F7
+._35    ld      DE                  $.TEMP4
         ldi     
         ldi     
         ldi     
         ldi     
         rrca    
-        ld      a,$94
-        jr      nc,._36
-        ld      a,$96
+        ld      A                   $94
+        jr      nc  ._36
+        ld      A                   $96
 ._36    call    :_3581
-        ld      a,[$.FRAMECOUNT]
-        ld      c,a
+        ld      A                   [$.FRAMECOUNT]
+        ld      C                   A
         and     $07
         ret     nz
-        ld      b,$02
-        ld      hl,$.D2F3
-        bit     3,c
-        jr      z,._37
-        ld      hl,$.D2F7
-._37    push    hl
+        ld      B                   $02
+        ld      HL                  $.D2F3
+        bit     3   C
+        jr      z   ._37
+        ld      HL                  $.D2F7
+._37    push    HL
         call    ::main:_LABEL_625_57
-        pop     hl
-        and     $0f
-        ld      [hl],a
-        inc     hl
-        ld      [hl],$00
-        inc     hl
+        pop     HL
+        and     $0F
+        ld      [HL]                A
+        inc     HL
+        ld      [HL]                $00
+        inc     HL
         djnz    ._37
         ret
 
-        ;-------------------------------------------------------------------------------
+        ;-------------------------------------------------------------------------------------------
         
         ;is Sonic moving?
-._4edd  ld      HL`speed        [$.SONIC.Xspeed]                                ;$4EDD
-        ld      A`speed         H`speed
+._4edd  ld      HL`speed            [$.SONIC.Xspeed]                                        ;$4EDD
+        ld      A`speed             H`speed
         or      L`speed
         ret     nz
         
-        ld      a,[$.SONIC.flags]
+        ld      A                   [$.SONIC.flags]
         rlca    
         ret     nc
         
-        ld      [IX+#mob.unknown14], $0C
-        ld      de,[$.D2B7]
-        bit     7,d
-        jr      nz,._38
+        ld      [IX+#mob.unknown14] $0C
+        ld      DE                  [$.D2B7]
+        bit     7   D
+        jr      nz  ._38
         
-        ld      hl,$002C
-        and     a
-        sbc     hl,de
+        ld      HL                  $002C
+        and     A
+        sbc     HL                  DE
         ret     c
-._38    inc     de
-        ld      [$.D2B7],de
+._38    inc     DE
+        ld      [$.D2B7]            DE
         
         ret
 
-        ;-------------------------------------------------------------------------------
+        ;-------------------------------------------------------------------------------------------
         
-._4f01  res     1,[ix+#mob.flags]                                               ;$4F01
-        bit     7,b
-        jr      nz,._39
-        ld      de,[$.TEMP1]
-        ld      c,$00
-        ld      [ix+#mob.unknown14],$01
-        push    hl
+._4f01  res     1   [IX`mob+#mob.flags]                                                     ;$4F01
+        bit     7   B
+        jr      nz  ._39
+        ld      DE                  [$.TEMP1]
+        ld      C                   $00
+        ld      [IX`mob+#mob.unknown14] $01
+        push    HL
         exx     
-        pop     hl
-        ld      de,[$.D240]
-        xor     a`zero
-        sbc     hl,de
+        pop     HL
+        ld      DE                  [$.D240]
+        xor     A`zero
+        sbc     HL                  DE
         exx     
-        jp      c,._4b1b
-        ld      b,a
-        ld      e,a
-        ld      d,a
-        ld      c,a
-        ld      hl,[$.D240]
-        ld      a,[$.D216]
-        ld      [ix+#mob.unknown14],a
+        jp      c   ._4b1b
+        ld      B   A
+        ld      E   A
+        ld      D   A
+        ld      C   A
+        ld      HL  [$.D240]
+        ld      A   [$.D216]
+        ld      [IX`mob+#mob.unknown14] A
         jp      ._4b1b
         
-        ;------------------------------------------------------------------------------
+        ;-------------------------------------------------------------------------------------------
         
 ._39    set     1,[ix+#mob.flags]
         ld      [ix+#mob.unknown14],$0a

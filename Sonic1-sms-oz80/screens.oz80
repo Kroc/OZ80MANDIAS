@@ -2429,8 +2429,8 @@ PROC    :autoscrollUp                           SECTION ::screens               
 
 PROC    :dontScrollDown                         SECTION ::screens               ;$1EFF
         ;==============================================================================
-        ;;fix the bottom of the level to the current screen position, 
-          i.e. Jungle Act 2 ;;
+        ;; fix the bottom of the level to the current screen position, 
+           i.e. Jungle Act 2 ;;
 {        
         ld      hl,[$.CAMERA_Y]
         ld      [$.LEVEL_BOTTOM],hl
@@ -2704,8 +2704,8 @@ PROC    :disableWaterline                       SECTION ::screens               
         ;==============================================================================
 PARAMS  IY`vars         ``Address of the common variables (used throughout)
 {        
-        ;;wait until the water raster effect has finished its work
-         (it requires three interrupts to produce);;
+        ;; wait until the water raster effect has finished its work
+          (it requires three interrupts to produce) ;;
         ld      a,[$.RASTERSPLIT_STEP]
         and     a
         jr      nz,:
@@ -3258,7 +3258,7 @@ PARAMS  IY`vars         ``Address of the common variables (used throughout)
 
         ;fill 64 bytes (32 16-bit numbers) from $D37C-$D3BC
 ._11    ld      b,32
-        ld      hl,$.D37C
+        ld      hl,$.ACTIVEMOBS
         xor     a`zero                  ;set A to 0
 
 ._12    ld      [hl],a

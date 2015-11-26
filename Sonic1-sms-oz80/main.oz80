@@ -12,7 +12,7 @@ PROC    :decompressArt                          SECTION ::main                  
         ;===============================================================================
 PARAMS  A`bank          ``Bank number for the relative address HL
         HL`dataAddr     ``Relative address from the beginning of the intended bank
-                        ``(A) to the art data
+                         ``(A) to the art data
         D`VDPRegister   ``VDP register number to set
         E`VDPData       ``VDP data value to send to VDP register in D
         IY`vars         ``Address of the common variables (used throughout)
@@ -26,11 +26,11 @@ PARAMS  A`bank          ``Bank number for the relative address HL
         ;;is the HL parameter address below the $40xx range?
           --that is, does the relative address extend into the second page?;;
         ld      A`dataAddr      H`dataAddr
-        cp      HI $_SMS.SLOT1.size             ;=$4000
-        jr      c, ._2
+        cp      (HI $_SMS.SLOT1.size)           ;=$4000
+        jr      c ._2
         
         ;remove $40xx (e.g. so $562B becomes $162B)
-        sub     HI $_SMS.SLOT1.size             ;=$4000
+        sub     (HI $_SMS.SLOT1.size)           ;=$4000
         ld      H`dataAddr      A`dataAddr
         
         ;;restore the A parameter (the starting bank number) and increase it so that
@@ -72,7 +72,7 @@ PARAMS  A`bank          ``Bank number for the relative address HL
         ;--- read header ---------------------------------------------------------------
         
         bit     1, [IY`vars+#vars.flags9]
-        jr      nz, ._3
+        jr      nz ._3
         ei
         
 ._3     ld      [$.TEMP4], hl
@@ -1309,9 +1309,9 @@ PARAMS  bc              ;a flag, $0000 or $0001 depending on callee
 
 PROC    :fillScreenWithFloorLayout              SECTION ::main                  ;$0966
         ;===============================================================================
-        ;;this routine is only called during level loading to populate the screen with
-          the visible portion of the Floor Layout. Scrolling fills in only the new
-          tiles, so a full refresh of the screen is not required;;
+        ;; this routine is only called during level loading to populate the screen with
+           the visible portion of the Floor Layout. scrolling fills in only the new
+           tiles, so a full refresh of the screen is not required ;;
 {       
         ;interrupts are disabled during this routine due to it writing to the display
         di
@@ -1324,38 +1324,38 @@ PROC    :fillScreenWithFloorLayout              SECTION ::main                  
         ld      [$_SMS.MAPPER.SLOT2]    A`bank
         ld      [$.SLOT2]               A`bank
         
-        ld      bc,$0000
+        ld      BC $0000
         call    :getFloorLayoutRAMPosition
         
         ;-------------------------------------------------------------------------------
-        ld      de,$_SMS_VRAM.SCREENNAMETABLE
+        ld      DE $_SMS_VRAM.SCREENNAMETABLE
         ;; in 192-line mode, the screen is 6 blocks tall,
            in 224-line mode it's 7 blocks tall ;;
-        ld      b,!SCREENHEIGHT_BLOCKS
+        ld      B  !SCREENHEIGHT_BLOCKS
         
-._1     push    bc, hl, de
-        ld      b,!SCREENWIDTH_BLOCKS
+._1     push    BC HL DE
+        ld      B  !SCREENWIDTH_BLOCKS
         
-._2     push    bc, hl, de
+._2     push    BC HL DE
         
         ;get the block index at the current location in the Floor Layout
-        ld      a,[hl]
+        ld      A [HL]
         
         exx     
-        ld      e,a                             ;copy the block index to E 
-        ld      a,[$.LEVEL_SOLIDITY]            ;load A with level's solidity index
-        add     a,a                             ;double it (i.e. for a 16-bit pointer)
-        ld      c,a                             ;put it into BC'
-        ld      b,$00
-        ld      hl,::mobs:S1_Solidity_Blocks    ;get address of solidity pointer list
-        add     hl,bc                           ;offset solidity index into the list
-        ld      a,[hl]                          ;read the data pointer into HL'
-        inc     hl
-        ld      h,[hl]
-        ld      l,a
-        ld      d,$00                           ;DE' is the block index
-        add     hl,de                           ;offset block index into solidity data
-        ld      a,[hl]                          ;and get the solidity value
+        ld      E'  A                           ;copy the block index to E 
+        ld      A   [$.LEVEL_SOLIDITY]          ;load A with level's solidity index
+        add     A   A                           ;double it (i.e. for a 16-bit pointer)
+        ld      C'  A                           ;put it into BC'
+        ld      B'  $00
+        ld      HL' ::mobs:S1_Solidity_Blocks   ;get address of solidity pointer list
+        add     HL' BC'                         ;offset solidity index into the list
+        ld      A   [HL']                       ;read the data pointer into HL'
+        inc     HL'
+        ld      H'  [HL']
+        ld      L'  A
+        ld      D'  $00                         ;DE' is the block index
+        add     HL' DE'                         ;offset block index into solidity data
+        ld      A   [HL']                       ;and get the solidity value
         
         ;; in the solidity data, bit 7 determines that the tile should appear in
            front of sprites. rotate the byte three times to position bit 7 at bit 4. 
@@ -1368,23 +1368,23 @@ PROC    :fillScreenWithFloorLayout              SECTION ::main                  
         ;; bit 12 of a name table entry specifies if the tile should appear
            in front of sprites. allow just this bit if it's set ;;
         and     %00010000
-        ld      c,a
+        ld      C'  A
         exx
         
         ;return the block index to HL
-        ld      l,[hl]
-        ld      h,$00
+        ld      L   [HL]
+        ld      H   $00
         ;block mappings are 16 bytes each
-        add     hl,hl                           ;x2 ...
-        add     hl,hl                           ;x4 ...
-        add     hl,hl                           ;x8 ...
-        add     hl,hl                           ;x16
-        ld      bc,[$.BLOCKMAPPINGS]
-        add     hl,bc
+        add     HL  HL                          ;x2 ...
+        add     HL  HL                          ;x4 ...
+        add     HL  HL                          ;x8 ...
+        add     HL  HL                          ;x16
+        ld      BC  [$.BLOCKMAPPINGS]
+        add     HL  BC
         
         ;DE will be the address of block mapping
         ;HL will be an address in the screen name table
-        ex      de,hl
+        ex      DE  HL
         
         ;-------------------------------------------------------------------------------
         ld      b,4                             ;4 rows of the block mapping
